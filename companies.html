@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Browse all Ethiopian bus companies on ET Transport. Search, filter by rating or verified operators, sort results, and favorite your preferred companies.">
+    <title>Bus Companies | ET Transport</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" type="image/x-icon" href="assets/icons/favicon.svg">
+</head>
+<body>
+
+    <!-- ============ Navigation Bar ============ -->
+    <header class="site-header">
+        <nav class="navbar container">
+            <a href="index.html" class="logo" aria-label="ET Transport home">
+                <span class="logo-icon" aria-hidden="true">&#128652;</span>
+                <span class="logo-text">ET<span>Transport</span></span>
+            </a>
+
+            <ul class="nav-links" id="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="search.html">Search</a></li>
+                <li><a href="companies.html" class="active">Companies</a></li>
+                <li><a href="dashboard.html">My Trips</a></li>
+                <li><a href="index.html#about">About</a></li>
+            </ul>
+
+            <div class="nav-actions" data-nav-auth="1">
+            </div>
+
+            <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </button>
+        </nav>
+    </header>
+
+    <main class="results-page container">
+
+        <!-- Hero -->
+        <section class="companies-hero">
+            <div class="container">
+                <h1>Bus Companies</h1>
+                <p class="section-subtitle">Browse, compare and favorite Ethiopia's trusted bus operators.</p>
+            </div>
+        </section>
+
+        <!-- Search / filter / sort toolbar -->
+        <div class="company-directory-toolbar" role="search">
+            <input type="search" id="company-search" class="company-search" placeholder="Search companies by name, route or destination..." autocomplete="off">
+
+            <label class="sort-control" for="company-sort">Sort by
+                <select id="company-sort" class="company-sort">
+                    <option value="rating">Rating</option>
+                    <option value="reviews">Most Reviewed</option>
+                    <option value="name">Name</option>
+                    <option value="destinations">Most Destinations</option>
+                    <option value="buses">Largest Fleet</option>
+                </select>
+            </label>
+
+            <label class="sort-control" for="company-filter-rating">Min rating
+                <select id="company-filter-rating" class="company-filter-rating">
+                    <option value="">Any rating</option>
+                    <option value="4.5">4.5+ stars</option>
+                    <option value="4">4+ stars</option>
+                    <option value="3.5">3.5+ stars</option>
+                </select>
+            </label>
+
+            <label class="filter-option" for="company-filter-verified" style="white-space: nowrap;">
+                <input type="checkbox" id="company-filter-verified"> Verified only
+            </label>
+
+            <button type="button" id="company-clear-filters" class="btn chips-clear">Clear</button>
+        </div>
+
+        <!-- Results stats -->
+        <p id="company-stats-bar" class="company-stats-bar">Loading companies...</p>
+
+        <!-- Company grid (rendered by js/companies.js) -->
+        <div id="company-list" class="company-directory-grid"></div>
+        <div id="company-directory-empty" class="company-directory-empty" hidden>
+            <p>No companies match your search. Try adjusting the filters or clearing them.</p>
+            <button type="button" id="empty-clear" class="btn btn-primary" style="margin-top: var(--space-sm);">Clear Filters</button>
+        </div>
+    </main>
+
+    <!-- ============ Footer ============ -->
+    <footer class="site-footer">
+        <div class="container footer-grid">
+            <div class="footer-col">
+                <h4>ET Transport</h4>
+                <p>Your trusted partner for intercity bus travel in Ethiopia.</p>
+            </div>
+
+            <div class="footer-col">
+                <h4>Quick Links</h4>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="search.html">Search</a></li>
+                    <li><a href="companies.html">Companies</a></li>
+                    <li><a href="index.html#about">About</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <h4>Popular Routes</h4>
+                <ul>
+                    <li>Addis Ababa &rarr; Bahir Dar</li>
+                    <li>Addis Ababa &rarr; Hawassa</li>
+                    <li>Addis Ababa &rarr; Mekelle</li>
+                    <li>Addis Ababa &rarr; Dire Dawa</li>
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <h4>Contact</h4>
+                <ul>
+                    <li>Addis Ababa, Ethiopia</li>
+                    <li>info@ettransport.com</li>
+                    <li>+251 11 123 4567</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <div class="container">
+                <p>&copy; 2026 ET Transport. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts: shared data (company.js) must load before companies.js -->
+    <script src="js/main.js"></script>
+        <script src="js/auth.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/company.js"></script>
+    <script src="js/companies.js"></script>
+</body>
+</html>

@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Admin dashboard — company approval controls for ET Transport">
+    <title>Admin Dashboard | ET Transport</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" type="image/x-icon" href="assets/icons/favicon.svg">
+    <style>
+ /* admin dashboard shell styles. Scoped to .ad-* on this
+           page so the shared stylesheet is untouched (same convention as the
+           company dashboard's .cd-* rules). */
+        .ad-card { background: var(--color-white); border: 1px solid #e5e7eb; border-radius: 10px; padding: 1rem 1.2rem; margin-top: var(--space-md); }
+        .ad-card-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+        .ad-card-head h2 { font-size: 1.15rem; color: var(--color-dark); margin: 0; }
+        .ad-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-sm); margin-top: var(--space-md); }
+        .ad-stat { padding: 0.9rem 1rem; }
+        .ad-stat-value { display: block; font-size: 1.5rem; font-weight: 800; color: var(--color-dark); line-height: 1.2; }
+        .ad-stat-label { display: block; font-size: 0.72rem; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+        @media (max-width: 768px) { .ad-stats { grid-template-columns: repeat(2, 1fr); } }
+        .ad-filters { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+        .ad-filters label { font-size: 0.8rem; font-weight: 600; color: var(--color-dark); }
+        .ad-filters select { padding: 0.4rem 0.6rem; font-size: 0.85rem; border: 1px solid #cbd5e1; border-radius: 6px; }
+        .ad-empty { padding: 1rem; border: 1px dashed #e5e7eb; border-radius: 8px; color: var(--color-muted); text-align: center; }
+        .ad-table-wrap { overflow-x: auto; margin-top: var(--space-sm); }
+        .ad-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .ad-table th { text-align: left; color: var(--color-muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; padding: 0.5rem 0.6rem; border-bottom: 1px solid #e5e7eb; }
+        .ad-table td { padding: 0.6rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        .ad-co-name { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; color: var(--color-dark); }
+        .ad-co-logo { width: 30px; height: 30px; border-radius: 6px; object-fit: contain; background: #fff; border: 1px solid #e5e7eb; }
+        .ad-co-slug { display: block; font-size: 0.74rem; color: var(--color-muted); }
+        .ad-badge { display: inline-block; padding: 0.18rem 0.55rem; border-radius: 20px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--color-white); background: #6b7280; }
+        .ad-badge.approved, .ad-badge.active { background: #16a34a; }
+        .ad-badge.pending { background: #d97706; }
+        .ad-badge.suspended { background: #dc2626; }
+        .ad-badge.rejected { background: #7c3aed; }
+        .ad-actions-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
+        .ad-detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.5rem 1rem; margin-top: var(--space-sm); }
+        .ad-detail-field .k { display: block; font-size: 0.7rem; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+        .ad-detail-field .v { font-size: 0.92rem; color: var(--color-dark); font-weight: 600; }
+        .ad-detail-desc { margin-top: var(--space-sm); font-size: 0.88rem; color: var(--color-muted); }
+        .ad-modal { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.55); z-index: 60; }
+        .ad-modal[hidden] { display: none; }
+        .ad-modal-box { width: min(420px, 90vw); background: var(--color-white); border-radius: 12px; padding: 1.25rem 1.4rem; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28); }
+        .ad-modal-box h3 { margin: 0 0 0.5rem; font-size: 1.05rem; color: var(--color-dark); }
+        .ad-modal-box p { margin: 0 0 1rem; font-size: 0.9rem; color: var(--color-muted); }
+        .ad-modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
+ /* read-only operational oversight (Trips / Bookings / Manifest). */
+        .ad-tabs { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; }
+        .ad-tab { padding: 0.45rem 0.9rem; border: 1px solid #cbd5e1; background: var(--color-white); border-radius: 8px; font-size: 0.85rem; font-weight: 600; color: var(--color-dark); cursor: pointer; }
+        .ad-tab.active { background: var(--color-dark); color: var(--color-white); border-color: var(--color-dark); }
+        .ad-filter-row { display: flex; align-items: flex-end; gap: 0.6rem; flex-wrap: wrap; }
+        .ad-filter-field { display: flex; flex-direction: column; gap: 0.2rem; }
+        .ad-filter-field label { font-size: 0.72rem; font-weight: 700; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+        .ad-filter-field select, .ad-filter-field input { padding: 0.4rem 0.6rem; font-size: 0.85rem; border: 1px solid #cbd5e1; border-radius: 6px; }
+        .ad-route { font-weight: 600; color: var(--color-dark); }
+        .ad-sub { display: block; font-size: 0.74rem; color: var(--color-muted); }
+        .ad-muted { color: var(--color-muted); }
+        .ad-manifest { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.55); z-index: 70; }
+        .ad-manifest[hidden] { display: none; }
+        .ad-manifest-box { width: min(640px, 92vw); max-height: 88vh; overflow-y: auto; background: var(--color-white); border-radius: 12px; padding: 1.25rem 1.4rem; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28); }
+        .ad-manifest-box h3 { margin: 0 0 0.75rem; font-size: 1.05rem; color: var(--color-dark); }
+        .ad-manifest-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; }
+        .ad-manifest h4 { margin: 1rem 0 0.4rem; font-size: 0.8rem; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+        .ad-manifest-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.4rem 1rem; }
+        .ad-manifest-grid .k { display: block; font-size: 0.7rem; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+        .ad-manifest-grid .v { font-size: 0.88rem; color: var(--color-dark); font-weight: 600; }
+        .ad-manifest-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .ad-manifest-table th { text-align: left; color: var(--color-muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; padding: 0.4rem 0.5rem; border-bottom: 1px solid #e5e7eb; }
+        .ad-manifest-table td { padding: 0.5rem; border-bottom: 1px solid #f1f5f9; color: var(--color-dark); }
+        .ad-cancelled-note { font-size: 0.74rem; color: #b91c1c; font-weight: 600; }
+    </style>
+</head>
+<body data-auth-required="1" data-auth-role="admin">
+    <header class="site-header">
+        <nav class="navbar container">
+            <a href="index.html" class="logo" aria-label="ET Transport home">
+                <span class="logo-icon" aria-hidden="true">&#128652;</span>
+                <span class="logo-text">ET<span>Transport</span></span>
+            </a>
+            <ul class="nav-links" id="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="admin.html" class="active">Admin Dashboard</a></li>
+            </ul>
+            <div class="nav-actions">
+                <a href="#" class="btn btn-login" data-auth-logout="1">Logout</a>
+            </div>
+            <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+                <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+            </button>
+        </nav>
+    </header>
+
+    <main class="container" style="padding-top: 2rem; padding-bottom: 2rem;">
+        <section class="search-card">
+            <h1>Admin Dashboard</h1>
+            <p>Review and manage company applications. Company identity is always resolved from the authenticated server session; the browser can never change a company's status itself.</p>
+            <p id="ad-admin-identity" class="auth-identity" hidden></p>
+            <p id="auth-identity" data-auth-identity class="auth-identity" hidden></p>
+            <div id="ad-error" class="auth-message" hidden></div>
+            <div class="ad-tabs" id="ad-tabs">
+                <button type="button" class="ad-tab active" data-section="overview">Overview</button>
+                <button type="button" class="ad-tab" data-section="companies">Companies</button>
+                <button type="button" class="ad-tab" data-section="trips">Trips</button>
+                <button type="button" class="ad-tab" data-section="bookings">Bookings</button>
+            </div>
+        </section>
+
+        <section id="section-overview" class="ad-card" hidden>
+            <div class="ad-card-head">
+                <h2>Platform Overview</h2>
+                <button type="button" id="btn-refresh-overview" class="btn btn-secondary btn-sm">Refresh</button>
+            </div>
+            <div class="ad-stats">
+                <div class="ad-stat search-card"><span class="ad-stat-value" id="ad-stat-totalCompanies">0</span><span class="ad-stat-label">Companies</span></div>
+                <div class="ad-stat search-card"><span class="ad-stat-value" id="ad-stat-pendingCompanies">0</span><span class="ad-stat-label">Pending</span></div>
+                <div class="ad-stat search-card"><span class="ad-stat-value" id="ad-stat-approvedCompanies">0</span><span class="ad-stat-label">Approved</span></div>
+                <div class="ad-stat search-card"><span class="ad-stat-value" id="ad-stat-suspendedCompanies">0</span><span class="ad-stat-label">Suspended</span></div>
+                <div class="ad-stat search-card"><span class="ad-stat-value" id="ad-stat-rejectedCompanies">0</span><span class="ad-stat-label">Rejected</span></div>
+                <div class="ad-stat search-card"><span class="ad-stat-value" id="ad-stat-totalCompanyUsers">0</span><span class="ad-stat-label">Company Users</span></div>
+                <div class="ad-stat search-card"><span class="ad-stat-value" id="ad-stat-totalBuses">0</span><span class="ad-stat-label">Buses</span></div>
+                <div class="ad-stat search-card"><span class="ad-stat-value" id="ad-stat-totalTrips">0</span><span class="ad-stat-label">Trips</span></div>
+                <div class="ad-stat search-card"><span class="ad-stat-value" id="ad-stat-totalBookings">0</span><span class="ad-stat-label">Bookings</span></div>
+                <div class="ad-stat search-card"><span class="ad-stat-value" id="ad-stat-totalPaidRevenue">0</span><span class="ad-stat-label">Paid Revenue (ETB)</span></div>
+            </div>
+        </section>
+<section id="section-companies" class="ad-card">
+            <div class="ad-card-head">
+                <h2>Company Applications</h2>
+                <div class="ad-filters">
+                    <label for="ad-status-filter">Status</label>
+                    <select id="ad-status-filter">
+                        <option value="">All statuses</option>
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                        <option value="suspended">Suspended</option>
+                        <option value="rejected">Rejected</option>
+                    </select>
+                    <button type="button" id="btn-refresh-companies" class="btn btn-secondary btn-sm">Refresh</button>
+                </div>
+            </div>
+
+            <p id="ad-list-loading" class="auth-identity" hidden>Loading companies&hellip;</p>
+            <div id="ad-list-error" class="auth-message" hidden></div>
+            <div id="ad-list-empty" class="ad-empty" hidden>No companies match the current filter.</div>
+
+            <div class="ad-table-wrap">
+                <table class="ad-table" id="ad-company-table">
+                    <thead>
+                        <tr>
+                            <th>Company</th>
+                            <th>Status</th>
+                            <th>Account</th>
+                            <th>Buses</th>
+                            <th>Trips</th>
+                            <th>Bookings</th>
+                            <th>Rating</th>
+                            <th>Registered</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="ad-company-rows"></tbody>
+                </table>
+            </div>
+        </section>
+<section id="section-detail" class="ad-card" hidden>
+            <div class="ad-card-head">
+                <h2 id="ad-detail-title">Company Detail</h2>
+                <button type="button" id="btn-close-detail" class="btn btn-secondary btn-sm">Close</button>
+            </div>
+
+            <p id="ad-detail-loading" class="auth-identity" hidden>Loading company&hellip;</p>
+            <div id="ad-detail-error" class="auth-message" hidden></div>
+
+            <div id="ad-detail-body" hidden>
+                <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+                    <img id="ad-detail-logo" class="ad-co-logo" style="width:44px; height:44px;" alt="Company logo" hidden>
+                    <div>
+                        <span id="ad-detail-name" class="ad-co-name" style="font-size:1.1rem;"></span>
+                        <span id="ad-detail-slug" class="ad-co-slug"></span>
+                    </div>
+                    <span class="ad-badge" id="ad-detail-status"></span>
+                    <span class="ad-badge" id="ad-detail-account-status"></span>
+                </div>
+
+                <div class="ad-detail-grid">
+                    <div class="ad-detail-field"><span class="k">Owner</span><span class="v" id="ad-detail-owner"></span></div>
+                    <div class="ad-detail-field"><span class="k">Owner Email</span><span class="v" id="ad-detail-email"></span></div>
+                    <div class="ad-detail-field"><span class="k">Phone</span><span class="v" id="ad-detail-phone"></span></div>
+                    <div class="ad-detail-field"><span class="k">Address</span><span class="v" id="ad-detail-address"></span></div>
+                    <div class="ad-detail-field"><span class="k">Fleet Size</span><span class="v" id="ad-detail-buses"></span></div>
+                    <div class="ad-detail-field"><span class="k">Trips</span><span class="v" id="ad-detail-trips"></span></div>
+                    <div class="ad-detail-field"><span class="k">Bookings</span><span class="v" id="ad-detail-bookings"></span></div>
+                    <div class="ad-detail-field"><span class="k">Passengers</span><span class="v" id="ad-detail-passengers"></span></div>
+                    <div class="ad-detail-field"><span class="k">Rating</span><span class="v" id="ad-detail-rating"></span></div>
+                    <div class="ad-detail-field"><span class="k">Paid Revenue (ETB)</span><span class="v" id="ad-detail-revenue"></span></div>
+                    <div class="ad-detail-field"><span class="k">Registered</span><span class="v" id="ad-detail-created"></span></div>
+                    <div class="ad-detail-field"><span class="k">Last Updated</span><span class="v" id="ad-detail-updated"></span></div>
+                </div>
+                <p class="ad-detail-desc" id="ad-detail-description"></p>
+
+                <div class="ad-actions-row" id="ad-detail-actions"></div>
+            </div>
+        </section>
+
+        <section id="section-trips" class="ad-card" hidden>
+            <div class="ad-card-head">
+                <h2>Trips — Operational Oversight</h2>
+                <div class="ad-filter-row">
+                    <div class="ad-filter-field">
+                        <label for="ad-trip-company">Company</label>
+                        <select id="ad-trip-company"><option value="">All companies</option></select>
+                    </div>
+                    <div class="ad-filter-field">
+                        <label for="ad-trip-status">Status</label>
+                        <select id="ad-trip-status">
+                            <option value="">All statuses</option>
+                            <option value="scheduled">Scheduled</option>
+                            <option value="departed">Departed</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="ad-filter-field">
+                        <label for="ad-trip-date-from">From</label>
+                        <input type="date" id="ad-trip-date-from">
+                    </div>
+                    <div class="ad-filter-field">
+                        <label for="ad-trip-date-to">To</label>
+                        <input type="date" id="ad-trip-date-to">
+                    </div>
+                    <button type="button" id="btn-apply-trips" class="btn btn-secondary btn-sm">Apply</button>
+                    <button type="button" id="btn-refresh-trips" class="btn btn-secondary btn-sm">Refresh</button>
+                </div>
+            </div>
+
+            <p id="ad-trips-loading" class="auth-identity" hidden>Loading trips&hellip;</p>
+            <div id="ad-trips-error" class="auth-message" hidden></div>
+            <div id="ad-trips-empty" class="ad-empty" hidden>No trips match the current filter.</div>
+
+            <div class="ad-table-wrap">
+                <table class="ad-table" id="ad-trips-table">
+                    <thead>
+                        <tr>
+                            <th>Company</th>
+                            <th>Route</th>
+                            <th>Bus</th>
+                            <th>Departure</th>
+                            <th>Arrival</th>
+                            <th>Price</th>
+                            <th>Capacity</th>
+                            <th>Booked</th>
+                            <th>Available</th>
+                            <th>Cancelled bookings</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ad-trips-rows"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="section-bookings" class="ad-card" hidden>
+            <div class="ad-card-head">
+                <h2>Bookings — Operational Oversight</h2>
+                <div class="ad-filter-row">
+                    <div class="ad-filter-field">
+                        <label for="ad-booking-company">Company</label>
+                        <select id="ad-booking-company"><option value="">All companies</option></select>
+                    </div>
+                    <div class="ad-filter-field">
+                        <label for="ad-booking-trip">Trip</label>
+                        <input type="number" id="ad-booking-trip" min="1" placeholder="Trip ID">
+                    </div>
+                    <div class="ad-filter-field">
+                        <label for="ad-booking-status">Booking Status</label>
+                        <select id="ad-booking-status">
+                            <option value="">All</option>
+                            <option value="pending">Pending</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="cancelled">Cancelled</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+                    <div class="ad-filter-field">
+                        <label for="ad-payment-status">Payment Status</label>
+                        <select id="ad-payment-status">
+                            <option value="">All</option>
+                            <option value="pending">Pending</option>
+                            <option value="paid">Paid</option>
+                            <option value="failed">Failed</option>
+                            <option value="refunded">Refunded</option>
+                        </select>
+                    </div>
+                    <div class="ad-filter-field">
+                        <label for="ad-booking-date-from">From</label>
+                        <input type="date" id="ad-booking-date-from">
+                    </div>
+                    <div class="ad-filter-field">
+                        <label for="ad-booking-date-to">To</label>
+                        <input type="date" id="ad-booking-date-to">
+                    </div>
+                    <button type="button" id="btn-apply-bookings" class="btn btn-secondary btn-sm">Apply</button>
+                    <button type="button" id="btn-refresh-bookings" class="btn btn-secondary btn-sm">Refresh</button>
+                </div>
+            </div>
+
+            <p id="ad-bookings-loading" class="auth-identity" hidden>Loading bookings&hellip;</p>
+            <div id="ad-bookings-error" class="auth-message" hidden></div>
+            <div id="ad-bookings-empty" class="ad-empty" hidden>No bookings match the current filter.</div>
+
+            <div class="ad-table-wrap">
+                <table class="ad-table" id="ad-bookings-table">
+                    <thead>
+                        <tr>
+                            <th>Reference</th>
+                            <th>Company</th>
+                            <th>Route</th>
+                            <th>Departure</th>
+                            <th>Bus</th>
+                            <th>Pax</th>
+                            <th>Amount</th>
+                            <th>Booking</th>
+                            <th>Payment</th>
+                            <th>Created</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="ad-bookings-rows"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <div id="ad-modal" class="ad-modal" hidden role="dialog" aria-modal="true" aria-labelledby="ad-modal-title">
+        <div class="ad-modal-box">
+            <h3 id="ad-modal-title">Confirm action</h3>
+            <p id="ad-modal-message"></p>
+            <div class="ad-modal-actions">
+                <button type="button" id="ad-modal-cancel" class="btn btn-secondary">Cancel</button>
+                <button type="button" id="ad-modal-confirm" class="btn btn-primary">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="ad-manifest-modal" class="ad-manifest" hidden role="dialog" aria-modal="true" aria-labelledby="ad-manifest-title">
+        <div class="ad-manifest-box">
+            <div class="ad-manifest-head">
+                <h3 id="ad-manifest-title">Booking Manifest</h3>
+                <button type="button" id="ad-manifest-close" class="btn btn-secondary btn-sm">Close</button>
+            </div>
+            <p id="ad-manifest-loading" class="auth-identity" hidden>Loading manifest&hellip;</p>
+            <div id="ad-manifest-error" class="auth-message" hidden></div>
+            <div id="ad-manifest-content" hidden>
+                <h4>Booking</h4>
+                <div class="ad-manifest-grid" id="ad-manifest-booking"></div>
+                <h4>Trip</h4>
+                <div class="ad-manifest-grid" id="ad-manifest-trip"></div>
+                <h4>Passengers</h4>
+                <table class="ad-manifest-table" id="ad-manifest-passengers-table">
+                    <thead>
+                        <tr>
+                            <th>Seat</th>
+                            <th>Name</th>
+                            <th>Age</th>
+                            <th>Gender</th>
+                            <th>Phone</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ad-manifest-passengers"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/admin-dashboard.js"></script>
+</body>
+</html>

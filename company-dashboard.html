@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Company operator dashboard for ET Transport">
+    <title>Company Dashboard | ET Transport</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="assets/icons/favicon.svg">
+    <style>
+ /* minimal company dashboard shell styles.
+           Scoped to .cd-* on this page so the shared stylesheet is untouched. */
+        .cd-banner { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+        .cd-logo { width: 56px; height: 56px; border-radius: 10px; object-fit: contain; background: var(--color-white); border: 1px solid #e5e7eb; }
+        .cd-name { font-size: 1.6rem; color: var(--color-dark); margin: 0; }
+        .cd-slug { color: var(--color-muted); font-size: 0.9rem; margin: 0.15rem 0 0; }
+        .cd-status { padding: 0.25rem 0.6rem; border-radius: 20px; color: var(--color-white); background: #16a34a; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+        .cd-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-sm); margin-top: var(--space-md); }
+        .cd-stat { padding: 1rem 1.1rem; }
+        .cd-stat-value { display: block; font-size: 1.75rem; font-weight: 800; color: var(--color-dark); line-height: 1.2; }
+        .cd-stat-label { display: block; font-size: 0.78rem; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+        @media (max-width: 768px) { .cd-stats { grid-template-columns: repeat(2, 1fr); } }
+
+ /* ===== Fleet / Bus management (additive, scoped to .cd-*) ===== */
+        .cd-fleet { margin-top: var(--space-md); }
+        .cd-fleet-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+        .cd-fleet-head h2 { font-size: 1.2rem; color: var(--color-dark); margin: 0; }
+        .cd-fleet-msg { color: var(--color-muted); font-size: 0.9rem; }
+        .cd-fleet-empty { padding: 1rem; border: 1px dashed #e5e7eb; border-radius: 8px; color: var(--color-muted); text-align: center; }
+        .cd-fleet-error { margin-top: 0.5rem; }
+        .cd-bus-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--space-sm); }
+        .cd-bus-card { padding: 1rem; border: 1px solid #e5e7eb; border-radius: 10px; }
+        .cd-bus-name { font-weight: 700; color: var(--color-dark); display: block; }
+        .cd-bus-row-text { display: block; font-size: 0.85rem; color: var(--color-muted); margin-top: 0.2rem; }
+        .cd-bus-badge { display: inline-block; padding: 0.2rem 0.55rem; border-radius: 20px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--color-white); background: #16a34a; margin-top: 0.4rem; }
+        .cd-bus-badge.maintenance { background: #d97706; }
+        .cd-bus-badge.inactive { background: #6b7280; }
+        .cd-bus-actions { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
+        .cd-bus-actions select { padding: 0.4rem 0.5rem; font-size: 0.85rem; }
+        .cd-bus-form { margin-top: var(--space-md); padding: 1rem; border: 1px solid #e5e7eb; border-radius: 10px; }
+        .cd-bus-form h3 { margin: 0 0 0.75rem; font-size: 1.05rem; }
+        .cd-bus-form label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem; }
+        .cd-bus-form input, .cd-bus-form select { width: 100%; padding: 0.6rem 0.7rem; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 6px; }
+        .cd-bus-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
+        .cd-bus-form-error { min-height: 1.1rem; font-size: 0.82rem; color: #b91c1c; }
+        .cd-bus-form-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
+        @media (max-width: 768px) { .cd-bus-list { grid-template-columns: 1fr; } .cd-bus-form-row { grid-template-columns: 1fr; } }
+
+ /* ===== Trip scheduling (additive, scoped to .cd-*) ===== */
+        .cd-trips { margin-top: var(--space-md); }
+        .cd-trips-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+        .cd-trips-head h2 { font-size: 1.2rem; color: var(--color-dark); margin: 0; }
+        .cd-trips-msg { color: var(--color-muted); font-size: 0.9rem; }
+        .cd-trips-empty { padding: 1rem; border: 1px dashed #e5e7eb; border-radius: 8px; color: var(--color-muted); text-align: center; }
+        .cd-trips-error { margin-top: 0.5rem; }
+        .cd-trips-notice { color: #16a34a; font-weight: 600; margin-top: 0.5rem; }
+        .cd-trip-affected { color: #b91c1c; font-weight: 600; }
+        .cd-trip-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-sm); margin-top: var(--space-sm); }
+        .cd-trip-card { padding: 1rem; border: 1px solid #e5e7eb; border-radius: 10px; }
+        .cd-trip-route { font-weight: 700; color: var(--color-dark); display: block; }
+        .cd-trip-row-text { display: block; font-size: 0.85rem; color: var(--color-muted); margin-top: 0.2rem; }
+        .cd-trip-price { display: inline-block; font-weight: 800; color: var(--color-primary, #16a34a); margin-top: 0.4rem; }
+        .cd-trip-badge { display: inline-block; padding: 0.2rem 0.55rem; border-radius: 20px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--color-white); background: #16a34a; margin-left: 0.4rem; }
+        .cd-trip-badge.departed { background: #2563eb; }
+        .cd-trip-badge.completed { background: #6b7280; }
+        .cd-trip-badge.cancelled { background: #b91c1c; }
+        .cd-trip-actions { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
+        .cd-trip-form { margin-top: var(--space-md); padding: 1rem; border: 1px solid #e5e7eb; border-radius: 10px; }
+        .cd-trip-form h3 { margin: 0 0 0.75rem; font-size: 1.05rem; }
+        .cd-trip-form label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem; }
+        .cd-trip-form input, .cd-trip-form select { width: 100%; padding: 0.6rem 0.7rem; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 6px; }
+        .cd-trip-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
+        .cd-trip-form-error { min-height: 1.1rem; font-size: 0.82rem; color: #b91c1c; }
+        .cd-trip-form-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
+        @media (max-width: 768px) { .cd-trip-list { grid-template-columns: 1fr; } .cd-trip-form-row { grid-template-columns: 1fr; } }
+ /* ===== Company bookings / passenger manifests (additive, scoped to .cd-*) ===== */
+        .cd-bookings { margin-top: var(--space-md); }
+        .cd-bookings-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+        .cd-bookings-head h2 { font-size: 1.2rem; color: var(--color-dark); margin: 0; }
+        .cd-bookings-filters { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.75rem; flex-wrap: wrap; }
+        .cd-bookings-filters label { font-size: 0.85rem; font-weight: 600; }
+        .cd-bookings-filters select { padding: 0.4rem 0.6rem; font-size: 0.85rem; min-width: 220px; }
+        .cd-bookings-msg { color: var(--color-muted); font-size: 0.9rem; }
+        .cd-bookings-empty { padding: 1rem; border: 1px dashed #e5e7eb; border-radius: 8px; color: var(--color-muted); text-align: center; }
+        .cd-bookings-error { margin-top: 0.5rem; }
+        .cd-booking-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--space-sm); margin-top: var(--space-sm); }
+        .cd-booking-card { padding: 1rem; border: 1px solid #e5e7eb; border-radius: 10px; }
+        .cd-booking-ref { font-weight: 700; color: var(--color-dark); display: block; }
+        .cd-booking-route { display: block; font-weight: 600; color: var(--color-primary, #16a34a); margin-top: 0.2rem; }
+        .cd-booking-row-text { display: block; font-size: 0.85rem; color: var(--color-muted); margin-top: 0.2rem; }
+        .cd-booking-seats { display: inline-block; font-weight: 700; color: var(--color-dark); margin-top: 0.3rem; }
+        .cd-booking-price { display: inline-block; font-weight: 800; color: var(--color-primary, #16a34a); margin-left: 0.4rem; }
+        .cd-booking-badge { display: inline-block; padding: 0.2rem 0.55rem; border-radius: 20px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--color-white); background: #6b7280; margin-top: 0.4rem; }
+        .cd-booking-badge.confirmed { background: #16a34a; }
+        .cd-booking-badge.cancelled { background: #b91c1c; }
+        .cd-booking-badge.completed { background: #2563eb; }
+        .cd-booking-badge.paid { background: #16a34a; }
+        .cd-booking-badge.pending { background: #d97706; }
+        .cd-booking-badge.failed { background: #b91c1c; }
+        .cd-booking-badge.refunded { background: #6b7280; }
+        .cd-booking-actions { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
+
+ /* ===== Manifest modal (scoped to .cd-*) ===== */
+        .cd-manifest-modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); display: flex; align-items: center; justify-content: center; z-index: 60; padding: 1rem; }
+        .cd-manifest-modal[hidden] { display: none; }
+        .cd-manifest-section-title { margin: 1rem 0 0.4rem; font-size: 0.8rem; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+        .cd-manifest-rows { margin-top: 0.35rem; }
+        .cd-manifest-empty { padding: 0.5rem; border: 1px dashed #e5e7eb; border-radius: 8px; color: var(--color-muted); }
+        .cd-manifest-box { background: var(--color-white, #fff); border-radius: 12px; border: 1px solid #e5e7eb; width: 100%; max-width: 520px; max-height: 90vh; overflow: auto; padding: 1.1rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); }
+        .cd-manifest-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+        .cd-manifest-head h3 { font-size: 1.1rem; color: var(--color-dark); margin: 0; }
+        .cd-manifest-summary { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); margin-top: var(--space-sm); }
+        .cd-manifest-meta { font-size: 0.85rem; color: var(--color-muted); display: flex; gap: 0.5rem; }
+        .cd-manifest-label { color: var(--color-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; display: block; }
+        .cd-manifest-value { font-weight: 700; color: var(--color-dark); display: block; }
+        .cd-manifest-row { padding: 0.5rem; border: 1px solid #e5e7eb; border-radius: 8px; margin-top: 0.3rem; }
+                .cd-manifest-seat { display: inline-block; font-weight: 700; color: var(--color-primary, #16a34a); margin-right: 0.4rem; }
+
+ /* ===== Revenue / Payments (read-only, scoped to .cd-*) ===== */
+        .cd-revenue-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: var(--space-md); }
+        .cd-revenue-head h2 { font-size: 1.2rem; color: var(--color-dark); margin: 0; }
+        .cd-revenue-msg { color: var(--color-muted); font-size: 0.9rem; }
+        .cd-revenue-error { margin-top: 0.5rem; }
+        .cd-revenue-summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-sm); margin-top: var(--space-sm); }
+        .cd-rev-stat { padding: 0.85rem 1rem; border: 1px solid #e5e7eb; border-radius: 10px; text-align: center; }
+        .cd-rev-value { display: block; font-size: 1.4rem; font-weight: 800; color: var(--color-dark); }
+        .cd-rev-label { display: block; font-size: 0.7rem; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+        .cd-revenue-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin-top: var(--space-sm); }
+        .cd-revenue-filters label { font-size: 0.8rem; font-weight: 600; color: var(--color-dark); }
+        .cd-revenue-filters select, .cd-revenue-filters input { padding: 0.4rem 0.6rem; font-size: 0.85rem; border: 1px solid #cbd5e1; border-radius: 6px; }
+        .cd-revenue-empty { padding: 1rem; border: 1px dashed #e5e7eb; border-radius: 8px; color: var(--color-muted); text-align: center; }
+        .cd-payment-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-sm); }
+        .cd-payment-card { padding: 1rem; border: 1px solid #e5e7eb; border-radius: 10px; display: flex; flex-direction: column; gap: 0.15rem; }
+        .cd-payment-ref { font-weight: 700; color: var(--color-dark); }
+        .cd-payment-route { font-size: 0.9rem; color: var(--color-dark); margin: 0.15rem 0; }
+        .cd-payment-row-text { display: block; font-size: 0.82rem; color: var(--color-muted); }
+        .cd-payment-amount { font-weight: 700; color: var(--color-primary, #16a34a); margin-top: 0.25rem; }
+        .cd-payment-badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 20px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--color-white); background: #16a34a; vertical-align: middle; }
+        .cd-payment-badge.pending { background: #d97706; }
+        .cd-payment-badge.failed { background: #dc2626; }
+        .cd-payment-badge.refunded { background: #6b7280; }
+        @media (max-width: 768px) { .cd-revenue-summary { grid-template-columns: repeat(2, 1fr); } }
+
+ /* ===== Company profile (additive, scoped to .cd-*) ===== */
+        .cd-profile { margin-top: var(--space-md); }
+        .cd-profile-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+        .cd-profile-head h2 { font-size: 1.2rem; color: var(--color-dark); margin: 0; }
+        .cd-profile-msg { color: var(--color-muted); font-size: 0.9rem; }
+        .cd-profile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.5rem 1.5rem; margin-top: var(--space-sm); }
+        .cd-profile-field .k { display: block; font-size: 0.7rem; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+        .cd-profile-field .v { font-size: 0.92rem; color: var(--color-dark); font-weight: 600; word-break: break-word; }
+        .cd-profile-desc { margin-top: 0.5rem; font-size: 0.9rem; color: var(--color-dark); }
+        .cd-profile-form { margin-top: var(--space-md); padding: 1.1rem; border: 1px solid #e5e7eb; border-radius: 10px; }
+        .cd-profile-form h3 { margin: 0 0 0.75rem; font-size: 1.05rem; }
+        .cd-profile-form label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem; }
+        .cd-profile-form input, .cd-profile-form textarea { width: 100%; padding: 0.6rem 0.7rem; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 6px; font-family: inherit; }
+        .cd-profile-form textarea { min-height: 90px; resize: vertical; }
+        .cd-profile-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); margin-bottom: var(--space-sm); }
+        .cd-profile-form-hint { font-size: 0.78rem; color: var(--color-muted); }
+        .cd-profile-form-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: var(--space-sm); }
+        .cd-profile-error { margin-top: 0.5rem; }
+        .cd-profile-success { color: #16a34a; font-weight: 600; margin-top: 0.5rem; }
+        .cd-image-upload { display: grid; grid-template-columns: 4.5rem 1fr; gap: .8rem; align-items: center; padding: .75rem; background: #f5f9f7; border: 1px dashed #b9d4c5; border-radius: 10px; }.cd-image-upload-preview { display: grid; place-items: center; width: 4.5rem; height: 4.5rem; overflow: hidden; color: #5c766b; background: #e3f0e9; border-radius: 9px; font-size: .7rem; font-weight: 800; text-align: center; }.cd-image-upload-preview.cover { width: 4.5rem; border-radius: 8px; }.cd-image-upload-preview img { width: 100%; height: 100%; object-fit: cover; }.cd-image-upload input[type="file"] { width: 100%; padding: .3rem; border: 0; background: transparent; font-size: .78rem; }.cd-image-upload label { margin: 0; }.cd-image-upload-hint { display: block; margin-top: .25rem; color: #698076; font-size: .72rem; }.cd-image-remove { display: inline-flex; align-items: center; gap: .35rem; margin-top: .35rem; color: #875042; font-size: .73rem; font-weight: 700; }
+        .cd-passenger-filter { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; align-items: end; padding: 1rem; margin: 1rem 0 1.25rem; background: #f2f7f4; border: 1px solid #d7e8de; border-radius: 14px; }.cd-passenger-filter .cd-day-picker { grid-column: 1 / -1; }.cd-filter-label-row { display: flex; align-items: center; justify-content: space-between; gap: .7rem; }.cd-day-picker strong, .cd-route-picker > strong { color: #244c40; font-size: .78rem; font-weight: 800; letter-spacing: .025em; }.cd-filter-clear { padding: 0; color: #57736a; background: transparent; border: 0; cursor: pointer; font-size: .72rem; font-weight: 800; text-decoration: underline; }.cd-date-head { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; }.cd-day-list { display: flex; gap: .45rem; padding: .55rem 0 .1rem; overflow-x: auto; scrollbar-width: thin; }.cd-day-button { flex: 0 0 3.45rem; min-height: 4rem; padding: .38rem; color: #587068; background: #fff; border: 1px solid #edf1ef; border-radius: 13px; cursor: pointer; }.cd-day-button span, .cd-day-button b { display: block; }.cd-day-button span { font-size: .62rem; font-weight: 800; letter-spacing: .04em; }.cd-day-button b { margin-top: .18rem; color: #1e463a; font-size: 1.08rem; }.cd-day-button:hover { border-color: #6cb48c; }.cd-day-button[aria-pressed="true"] { color: #fff; background: #18b85c; border-color: #18b85c; box-shadow: 0 6px 14px rgba(24,184,92,.24); }.cd-day-button[aria-pressed="true"] b { color: #fff; }.cd-selected-date { min-height: 1.15rem; margin: 0; color: #5c756b; font-size: .7rem; font-weight: 700; text-align: right; }.cd-route-picker { min-width: 0; }.cd-route-fields { display: grid; grid-template-columns: 1fr 1.35rem 1fr; gap: .35rem; align-items: end; margin-top: .45rem; }.cd-route-fields label { position: relative; }.cd-route-fields label span { display: block; margin: 0 0 .25rem; color: #617a70; font-size: .65rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }.cd-route-fields label i { position: absolute; z-index: 1; bottom: .84rem; left: .7rem; color: #fa4e83; font-size: .75rem; font-style: normal; }.cd-route-fields select { width: 100%; min-width: 0; min-height: 2.7rem; padding: .45rem .45rem .45rem 1.45rem; color: #1b473a; background: #fff; border: 1px solid #d2e1d8; border-radius: 8px; font-size: .78rem; font-weight: 800; }.cd-route-arrow { display: grid; place-items: center; height: 2.7rem; color: #274f43; font-weight: 900; }.cd-passenger-filter > .btn { min-height: 2.7rem; white-space: nowrap; }
+        @media (max-width: 980px) { .cd-passenger-filter { grid-template-columns: 1fr; }.cd-passenger-filter > .btn { grid-column: auto; } }
+        .cd-filter-actions { display: flex; justify-content: flex-end; gap: .55rem; align-items: end; }.cd-filter-actions .btn { min-height: 2.7rem; white-space: nowrap; }.cd-filter-actions .btn-secondary { background: #fff; border-color: #c9ddd1; color: #315d4e; }.cd-filter-actions .btn-secondary:hover { background: #e8f3ec; }.cd-filter-actions .btn-primary { background: #187653; border-color: #187653; }.cd-filter-actions .btn-primary:hover { background: #105b3e; border-color: #105b3e; }
+        .cd-revenue-filter { grid-template-columns: minmax(0, 1fr) minmax(10rem, .45fr) auto; }.cd-revenue-status label { display: block; margin-bottom: .35rem; color: #617a70; font-size: .65rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }.cd-revenue-status select { width: 100%; min-height: 2.7rem; padding: .45rem; color: #1b473a; background: #fff; border: 1px solid #d2e1d8; border-radius: 8px; font-size: .78rem; font-weight: 800; }.cd-revenue-filter .cd-filter-actions { align-self: end; }
+        @media (max-width: 980px) { .cd-revenue-filter { grid-template-columns: 1fr 1fr; }.cd-revenue-filter .cd-day-picker, .cd-revenue-filter .cd-filter-actions { grid-column: 1 / -1; } }
+        @media (max-width: 600px) { .cd-revenue-filter { grid-template-columns: 1fr; }.cd-revenue-filter .cd-day-picker, .cd-revenue-filter .cd-filter-actions { grid-column: auto; } }
+        @media (max-width: 600px) { .cd-filter-actions { width: 100%; }.cd-filter-actions .btn { flex: 1; } }
+        .cd-trip-toolbar { display: flex; gap: .45rem; padding: .75rem 0 1rem; margin-bottom: .25rem; overflow-x: auto; border-bottom: 1px solid #e5eee9; }.cd-trip-filter { flex: 0 0 auto; padding: .52rem .78rem; color: #5c736a; background: #f2f7f4; border: 1px solid #dceae2; border-radius: 8px; cursor: pointer; font: 800 .74rem/1 'DM Sans', sans-serif; }.cd-trip-filter:hover { color: #245944; background: #e7f4ec; }.cd-trip-filter.is-active { color: #fff; background: #187653; border-color: #187653; box-shadow: 0 4px 10px rgba(24,118,83,.17); }.cd-trips.cd-pane .cd-trip-list { grid-template-columns: 1fr; gap: .7rem; }.cd-pane .cd-trip-card { display: grid; grid-template-columns: 4.2rem minmax(0, 1fr) auto; column-gap: 1rem; align-items: start; padding: 1rem; border-top: 0; border-left: 4px solid #4f82b6; }.cd-trip-date { display: grid; place-items: center; min-height: 4.3rem; color: #2e6e59; background: #eaf5ef; border-radius: 10px; text-align: center; }.cd-trip-date span, .cd-trip-date b { display: block; }.cd-trip-date span { font-size: .62rem; font-weight: 800; letter-spacing: .05em; }.cd-trip-date b { font: 800 1.28rem/1 'Outfit', sans-serif; }.cd-trip-main { min-width: 0; }.cd-trip-card .cd-record-meta { grid-template-columns: repeat(3, minmax(0, 1fr)); margin: .62rem 0 0; }.cd-trip-card .cd-trip-price { grid-column: 3; grid-row: 1; margin: 0; color: #187653; font-size: .9rem; white-space: nowrap; }.cd-trip-card .cd-trip-actions, .cd-trip-card .cd-trip-row-text, .cd-trip-card .cd-trip-affected { grid-column: 2 / -1; }.cd-trip-card .cd-trip-actions { margin-top: .65rem; }.cd-trip-card:has(.cd-trip-badge.cancelled) { border-left-color: #c95f50; }.cd-trip-card:has(.cd-trip-badge.cancelled) .cd-trip-date { color: #9f4034; background: #fcecea; }
+        @media (max-width: 600px) { .cd-pane .cd-trip-card { grid-template-columns: 3.6rem minmax(0, 1fr); gap: .7rem; }.cd-trip-card .cd-trip-price { grid-column: 2; grid-row: auto; margin-top: .5rem; }.cd-trip-card .cd-record-meta { grid-template-columns: 1fr 1fr; }.cd-trip-card .cd-trip-actions, .cd-trip-card .cd-trip-row-text, .cd-trip-card .cd-trip-affected { grid-column: 2; } }
+        @media (max-width: 600px) { .cd-passenger-filter { grid-template-columns: 1fr; padding: .8rem; }.cd-passenger-filter > .btn { grid-column: auto; width: 100%; }.cd-day-button { flex-basis: 2.85rem; } }
+        @media (max-width: 768px) { .cd-profile-form-row { grid-template-columns: 1fr; } }
+
+        /* ===== Operator workspace redesign ===== */
+        body { background: #f4f7f5; }
+        .cd-page { padding: 2rem 0 3.5rem; }
+        .cd-workspace { max-width: 1240px; margin: 0 auto; }
+        .cd-workspace-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 1.5rem; margin: 0 0 1.5rem; }
+        .cd-workspace-head h1 { margin: 0; color: #102c27; font: 700 clamp(2rem, 4vw, 3.1rem)/1.05 Georgia, 'Times New Roman', serif; letter-spacing: -0.04em; }
+        .cd-workspace-head p { margin: .55rem 0 0; color: #5c6d67; max-width: 37rem; }
+        .cd-live { display: flex; align-items: center; gap: .5rem; color: #38635a; font-size: .8rem; font-weight: 700; white-space: nowrap; }
+        .cd-live i { width: .55rem; height: .55rem; border-radius: 50%; background: #22a06b; box-shadow: 0 0 0 4px #d8f3e7; }
+        .cd-layout { display: grid; grid-template-columns: 234px minmax(0,1fr); gap: 1.25rem; align-items: start; }
+        .cd-sidebar { position: sticky; top: 1rem; padding: .8rem; background: #102c27; border-radius: 18px; box-shadow: 0 16px 35px rgba(12, 47, 39, .14); }
+        .cd-company-mini { display: flex; align-items: center; gap: .7rem; padding: .55rem .5rem 1rem; margin-bottom: .75rem; border-bottom: 1px solid rgba(255,255,255,.12); color: white; }
+        .cd-company-mini img { width: 34px; height: 34px; border-radius: 10px; background: white; object-fit: contain; }
+        .cd-company-mini strong, .cd-company-mini small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .cd-company-mini strong { font-size: .88rem; } .cd-company-mini small { margin-top: .14rem; color: #b5cbc5; font-size: .7rem; }
+        .cd-nav { display: grid; gap: .3rem; }
+        .cd-nav button { display: flex; align-items: center; width: 100%; gap: .75rem; padding: .75rem; color: #d5e3df; font: 650 .88rem/1.1 'Segoe UI', sans-serif; text-align: left; background: transparent; border: 0; border-radius: 10px; cursor: pointer; transition: background .18s ease, color .18s ease, transform .18s ease; }
+        .cd-nav button:hover { color: #fff; background: rgba(255,255,255,.09); }
+        .cd-nav button[aria-selected='true'] { color: #102c27; background: #e2f3e9; box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+        .cd-nav svg { width: 18px; height: 18px; flex: 0 0 auto; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+        .cd-pane { min-width: 0; background: #fff; border: 1px solid #e1e9e5; border-radius: 18px; box-shadow: 0 10px 28px rgba(20, 56, 47, .055); padding: clamp(1rem, 2.5vw, 1.65rem); }
+        .cd-pane[hidden] { display: none; }
+        .cd-pane-title { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; padding-bottom: 1.2rem; margin-bottom: 1.15rem; border-bottom: 1px solid #e7eeea; }
+        .cd-pane-title h2 { margin: 0; color: #163a33; font: 700 1.5rem/1.1 Georgia, 'Times New Roman', serif; letter-spacing: -.025em; }
+        .cd-pane-title p { margin: .3rem 0 0; color: #6b7c76; font-size: .88rem; }
+        .cd-passenger-preview { display: inline-flex; align-items: center; gap: .35rem; padding: .5rem .7rem; color: #176447; background: #eff8f3; border: 1px solid #cce5d7; border-radius: 8px; font-size: .78rem; font-weight: 700; text-decoration: none; white-space: nowrap; }
+        .cd-passenger-preview:hover { background: #e2f3e9; }
+        .cd-pane .cd-banner { margin: 0 0 1.2rem; padding: 1rem; background: linear-gradient(110deg, #eef8f2, #f9fcfa); border: 1px solid #dcece3; border-radius: 14px; }
+        .cd-pane .cd-name { font: 700 1.4rem/1.1 Georgia, 'Times New Roman', serif; color: #173b34; }
+        .cd-pane .cd-logo { border-radius: 12px; border-color: #d6e5dc; }
+        .cd-pane .cd-stats, .cd-pane .cd-revenue-summary { grid-template-columns: repeat(5, minmax(0,1fr)); gap: .75rem; margin-top: 0; }
+        .cd-pane .cd-stat, .cd-pane .cd-rev-stat { position: relative; overflow: hidden; padding: 1rem; border: 1px solid #e0eae4; border-radius: 12px; background: #fff; text-align: left; }
+        .cd-pane .cd-stat::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: #31a476; }
+        .cd-pane .cd-stat:nth-child(2)::before { background: #e3a73a; }.cd-pane .cd-stat:nth-child(3)::before { background: #3a82c5; }.cd-pane .cd-stat:nth-child(4)::before { background: #9b6dcc; }.cd-pane .cd-stat:nth-child(5)::before { background: #df785f; }
+        .cd-pane .cd-stat-value, .cd-pane .cd-rev-value { font: 700 1.45rem/1.1 Georgia, 'Times New Roman', serif; color: #183d35; }
+        .cd-pane .cd-stat-label, .cd-pane .cd-rev-label { margin-top: .36rem; font-size: .65rem; color: #6a7d75; }
+        .cd-quick-actions { display: grid; grid-template-columns: repeat(3,1fr); gap: .75rem; margin-top: 1.2rem; }
+        .cd-quick-action { display: flex; align-items: center; gap: .75rem; padding: .9rem; color: #1b473e; background: #f7faf8; border: 1px solid #e1ebe5; border-radius: 12px; cursor: pointer; text-align: left; }
+        .cd-quick-action:hover { background: #eef8f2; border-color: #b8dbca; }.cd-quick-action span { display: block; font-weight: 700; }.cd-quick-action small { display: block; margin-top: .18rem; color: #70817a; }
+        .cd-quick-icon { display: grid; place-items: center; width: 2.2rem; height: 2.2rem; border-radius: 9px; background: #d9f1e3; color: #177550; font-size: 1.05rem; }
+        .cd-pane .cd-fleet, .cd-pane .cd-trips, .cd-pane .cd-bookings, .cd-pane .cd-profile { margin-top: 0; }.cd-pane .cd-trips, .cd-pane .cd-bookings { padding-top: 1.5rem; margin-top: 1.5rem; border-top: 1px solid #e7eeea; }
+        .cd-pane .cd-fleet-head h2, .cd-pane .cd-trips-head h2, .cd-pane .cd-bookings-head h2, .cd-pane .cd-revenue-head h2, .cd-pane .cd-profile-head h2 { color: #173b34; font: 700 1.2rem/1.1 Georgia, 'Times New Roman', serif; }
+        .cd-pane .cd-bus-card, .cd-pane .cd-trip-card, .cd-pane .cd-booking-card, .cd-pane .cd-payment-card { border-color: #e1eae5; border-radius: 12px; box-shadow: none; transition: transform .18s ease, box-shadow .18s ease; }
+        .cd-pane .cd-bus-card:hover, .cd-pane .cd-trip-card:hover, .cd-pane .cd-booking-card:hover, .cd-pane .cd-payment-card:hover { transform: translateY(-2px); box-shadow: 0 9px 20px rgba(19,63,51,.08); }
+        .cd-pane .btn-primary { background: #177550; border-color: #177550; }.cd-pane .btn-primary:hover { background: #105c3e; border-color: #105c3e; }
+        .cd-pane input, .cd-pane select, .cd-pane textarea { border-color: #ccdcd3; border-radius: 8px; }.cd-pane input:focus, .cd-pane select:focus, .cd-pane textarea:focus { outline: 3px solid rgba(49,164,118,.16); border-color: #31a476; }
+        @media (max-width: 900px) { .cd-layout { grid-template-columns: 1fr; }.cd-sidebar { position: static; }.cd-nav { grid-template-columns: repeat(6, minmax(9rem,1fr)); overflow-x: auto; }.cd-nav button { white-space: nowrap; }.cd-pane .cd-stats, .cd-pane .cd-revenue-summary { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 600px) { .cd-page { padding: 1.15rem 0 2rem; }.cd-workspace-head { align-items: flex-start; flex-direction: column; gap: .75rem; }.cd-workspace-head h1 { font-size: 2rem; }.cd-live { padding: .4rem .65rem; border-radius: 99px; background: #e7f4ec; }.cd-sidebar, .cd-pane { border-radius: 14px; }.cd-nav { grid-template-columns: repeat(6, max-content); }.cd-nav button { padding: .66rem; }.cd-nav button span { display: none; }.cd-pane { padding: 1rem; }.cd-pane .cd-stats, .cd-pane .cd-revenue-summary, .cd-quick-actions { grid-template-columns: repeat(2, 1fr); }.cd-quick-action { align-items: flex-start; }.cd-quick-action:last-child { grid-column: span 2; }.cd-pane .cd-stat-value, .cd-pane .cd-rev-value { font-size: 1.2rem; } }
+
+        /* ===== Operational records refresh: strong sans-serif system ===== */
+        .cd-workspace, .cd-workspace * { font-family: 'DM Sans', 'Segoe UI', sans-serif; }
+        .cd-workspace-head h1, .cd-pane-title h2, .cd-pane .cd-name, .cd-pane .cd-fleet-head h2, .cd-pane .cd-trips-head h2, .cd-pane .cd-bookings-head h2, .cd-pane .cd-revenue-head h2, .cd-pane .cd-profile-head h2, .cd-pane .cd-stat-value, .cd-pane .cd-rev-value { font-family: 'Outfit', 'Segoe UI', sans-serif; font-weight: 800; letter-spacing: -.035em; }
+        .cd-pane .cd-stat-value, .cd-pane .cd-rev-value { font-size: 1.55rem; }
+        .cd-record-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: .45rem; margin: .9rem 0; }.cd-record-meta span { display: block; min-width: 0; padding: .55rem .6rem; color: #547067; background: #f4f8f6; border-radius: 8px; font-size: .73rem; font-weight: 700; }.cd-record-meta b { display: block; overflow: hidden; color: #1d483d; font-size: .84rem; text-overflow: ellipsis; white-space: nowrap; }
+        .cd-pane .cd-bus-list, .cd-pane .cd-trip-list { grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 1rem; }.cd-pane .cd-bus-card, .cd-pane .cd-trip-card { padding: 1.1rem; border-top: 4px solid #3aa377; }.cd-pane .cd-trip-card { border-top-color: #4f82b6; }.cd-pane .cd-bus-name, .cd-pane .cd-trip-route { color: #153a31; font-size: 1rem; font-weight: 800; letter-spacing: -.01em; }.cd-pane .cd-bus-actions, .cd-pane .cd-trip-actions { padding-top: .75rem; border-top: 1px solid #e8efeb; }.cd-pane .cd-bus-actions select { flex: 1; min-width: 8.5rem; }
+        .cd-trips { border: 0 !important; margin: 0 !important; padding: 0 !important; }.cd-bookings { padding-top: 1.5rem !important; margin-top: 1.5rem !important; }
+        .cd-revenue-filters, .cd-bookings-filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .65rem; padding: .85rem; margin: 1rem 0 1.15rem; background: #f2f7f4; border: 1px solid #dce9e1; border-radius: 12px; }.cd-revenue-filters label, .cd-bookings-filters label { align-self: end; margin: 0; font-size: .7rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }.cd-revenue-filters select, .cd-revenue-filters input, .cd-bookings-filters select { width: 100%; min-width: 0; min-height: 2.5rem; margin: 0; background: white; font-weight: 700; }.cd-revenue-filters label { margin-bottom: -.35rem; }.cd-revenue-filters label:nth-of-type(1) { grid-column: 1; grid-row: 1; }.cd-revenue-filters select:nth-of-type(1) { grid-column: 1; grid-row: 2; }.cd-revenue-filters label:nth-of-type(2) { grid-column: 2; grid-row: 1; }.cd-revenue-filters select:nth-of-type(2) { grid-column: 2; grid-row: 2; }.cd-revenue-filters label:nth-of-type(3) { grid-column: 3; grid-row: 1; }.cd-revenue-filters input:nth-of-type(1) { grid-column: 3; grid-row: 2; }.cd-revenue-filters label:nth-of-type(4) { grid-column: 4; grid-row: 1; }.cd-revenue-filters input:nth-of-type(2) { grid-column: 4; grid-row: 2; }
+        .cd-bus-modal { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 1rem; background: rgba(8, 31, 25, .58); backdrop-filter: blur(4px); }.cd-bus-modal[hidden] { display: none; }.cd-bus-modal-box { width: min(100%, 650px); max-height: min(90vh, 760px); overflow: auto; padding: 1.4rem; background: #fff; border: 1px solid #dfe9e3; border-radius: 18px; box-shadow: 0 25px 70px rgba(5, 26, 20, .28); }.cd-bus-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid #e5ede8; }.cd-bus-modal-head p { margin: .3rem 0 0; color: #647a71; font-size: .85rem; }.cd-bus-modal-close { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; padding: 0; color: #275147; background: #edf5f0; border: 0; border-radius: 50%; cursor: pointer; font-size: 1.25rem; line-height: 1; }.cd-bus-modal .cd-bus-form { display: block; padding: 0; margin: 0; border: 0; }.cd-bus-modal .cd-bus-form h3 { display: none; }.cd-bus-modal .cd-bus-form label { margin-top: .8rem; color: #254a40; font-size: .78rem; font-weight: 800; letter-spacing: .025em; }.cd-bus-modal .cd-bus-form input, .cd-bus-modal .cd-bus-form select { min-height: 2.7rem; background: #fbfdfc; }.cd-bus-modal .cd-bus-form-actions { padding-top: 1rem; margin-top: 1.25rem; border-top: 1px solid #e5ede8; }
+        .cd-trip-modal { position: fixed; inset: 0; z-index: 101; display: grid; place-items: center; padding: 1rem; background: rgba(8, 31, 25, .58); backdrop-filter: blur(4px); }.cd-trip-modal[hidden] { display: none; }.cd-trip-modal-box { width: min(100%, 650px); max-height: min(90vh, 760px); overflow: auto; padding: 1.4rem; background: #fff; border: 1px solid #dfe9e3; border-radius: 18px; box-shadow: 0 25px 70px rgba(5, 26, 20, .28); }.cd-trip-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid #e5ede8; }.cd-trip-modal-head p { margin: .3rem 0 0; color: #647a71; font-size: .85rem; }.cd-trip-modal-close { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; padding: 0; color: #275147; background: #edf5f0; border: 0; border-radius: 50%; cursor: pointer; font-size: 1.25rem; line-height: 1; }.cd-trip-modal .cd-trip-form { display: block; padding: 0; margin: 0; border: 0; }.cd-trip-modal .cd-trip-form h3 { display: none; }.cd-trip-modal .cd-trip-form label { margin-top: .8rem; color: #254a40; font-size: .78rem; font-weight: 800; letter-spacing: .025em; }.cd-trip-modal .cd-trip-form input, .cd-trip-modal .cd-trip-form select { min-height: 2.7rem; background: #fbfdfc; }.cd-trip-modal .cd-trip-form-actions { padding-top: 1rem; margin-top: 1.25rem; border-top: 1px solid #e5ede8; }
+        @media (max-width: 900px) { .cd-nav { grid-template-columns: repeat(6, minmax(9rem, 1fr)); }.cd-revenue-filters, .cd-bookings-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }.cd-revenue-filters label:nth-of-type(n), .cd-revenue-filters select:nth-of-type(n), .cd-revenue-filters input:nth-of-type(n) { grid-column: auto; grid-row: auto; } }
+        @media (max-width: 600px) { .cd-nav { grid-template-columns: repeat(6, max-content); }.cd-record-meta { grid-template-columns: 1fr 1fr; }.cd-pane .cd-bus-list, .cd-pane .cd-trip-list { grid-template-columns: 1fr; }.cd-revenue-filters, .cd-bookings-filters { grid-template-columns: 1fr; }.cd-bus-modal { align-items: end; padding: .5rem; }.cd-bus-modal-box { max-height: 94vh; border-radius: 16px 16px 10px 10px; padding: 1.1rem; } }
+    </style>
+</head>
+<body data-auth-required="1" data-auth-role="company" data-auth-company-approved="1">
+    <header class="site-header">
+        <nav class="navbar container">
+            <a href="company-dashboard.html" class="logo" aria-label="ET Transport company dashboard">
+                <span class="logo-icon" aria-hidden="true">&#128652;</span>
+                <span class="logo-text">ET<span>Transport</span></span>
+            </a>
+            <ul class="nav-links" id="nav-links">
+                <li><a href="company-dashboard.html" class="active">Company Dashboard</a></li>
+            </ul>
+            <div class="nav-actions">
+                <a href="#" class="btn btn-login" data-auth-logout="1">Logout</a>
+            </div>
+            <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+                <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+            </button>
+        </nav>
+    </header>
+
+    <main class="container" style="padding-top: 2rem; padding-bottom: 2rem;">
+        <section class="search-card">
+            <h1>Company Dashboard</h1>
+            <p>Business overview for the signed-in operator account. Fleet, trips, bookings and revenue management arrive in later phases.</p>
+            <p id="auth-identity" data-auth-identity class="auth-identity" hidden></p>
+
+            <p id="company-loading" class="auth-identity" hidden>Loading your company overview&hellip;</p>
+            <div id="company-error" class="auth-message" hidden></div>
+
+            <section id="company-banner" class="cd-banner" hidden>
+                <img id="company-logo" class="cd-logo" alt="Company logo" hidden>
+                <div>
+                    <h2 id="company-name" class="cd-name"></h2>
+                    <p id="company-slug" class="cd-slug"></p>
+                </div>
+                <span id="company-status" class="cd-status" hidden></span>
+            </section>
+
+            <section id="company-stats" class="cd-stats" hidden>
+                <div class="cd-stat" data-stat="activeBuses">
+                    <span class="cd-stat-value" id="stat-activeBuses"></span>
+                    <span class="cd-stat-label">Active Buses</span>
+                </div>
+                <div class="cd-stat" data-stat="upcomingTrips">
+                    <span class="cd-stat-value" id="stat-upcomingTrips"></span>
+                    <span class="cd-stat-label">Upcoming Trips</span>
+                </div>
+                <div class="cd-stat" data-stat="upcomingBookings">
+                    <span class="cd-stat-value" id="stat-upcomingBookings"></span>
+                    <span class="cd-stat-label">Upcoming Bookings</span>
+                </div>
+                <div class="cd-stat" data-stat="bookedPassengers">
+                    <span class="cd-stat-value" id="stat-bookedPassengers"></span>
+                    <span class="cd-stat-label">Booked Passengers</span>
+                </div>
+                <div class="cd-stat" data-stat="revenue">
+                    <span class="cd-stat-value" id="stat-revenue"></span>
+                    <span class="cd-stat-label">Revenue (ETB)</span>
+                </div>
+            </section>
+
+            <section id="company-fleet" class="cd-fleet" hidden>
+                <div class="cd-fleet-head">
+                    <h2>Fleet / Buses</h2>
+                    <button type="button" id="btn-add-bus" class="btn btn-primary">Add Bus</button>
+                </div>
+
+                <p id="bus-loading" class="cd-fleet-msg" hidden>Loading your fleet&hellip;</p>
+                <div id="bus-error" class="cd-fleet-error auth-message" hidden></div>
+                <div id="bus-empty" class="cd-fleet-empty" hidden>Your fleet has no buses yet. Add your first bus to get started.</div>
+                <div id="bus-list" class="cd-bus-list" hidden></div>
+
+                <form id="bus-form" class="cd-bus-form" hidden novalidate>
+                    <input type="hidden" id="bus-id">
+                    <h3 id="bus-form-title">Add Bus</h3>
+                    <label for="bus-name">Bus / Fleet Name *</label>
+                    <input type="text" id="bus-name" maxlength="120" placeholder="e.g. Selam Bus Coach 4">
+                    <div class="cd-bus-form-row">
+                        <div>
+                            <label for="bus-model">Model</label>
+                            <input type="text" id="bus-model" maxlength="120" placeholder="e.g. Scania Touring">
+                        </div>
+                        <div>
+                            <label for="bus-reg">Registration Number</label>
+                            <input type="text" id="bus-reg" maxlength="50" placeholder="e.g. ET-SELA04">
+                        </div>
+                    </div>
+                    <div class="cd-bus-form-row">
+                        <div>
+                            <label for="bus-type">Bus Type</label>
+                            <select id="bus-type">
+                                <option value="standard">Standard</option>
+                                <option value="luxury">Luxury</option>
+                                <option value="vip">VIP</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="bus-seats">Seat Count</label>
+                            <input type="number" id="bus-seats" min="1" max="200" step="1" placeholder="45">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="bus-status">Operational Status</label>
+                        <select id="bus-status">
+                            <option value="active">Active</option>
+                            <option value="maintenance">Maintenance</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                    <p id="bus-form-error" class="cd-bus-form-error" role="alert"></p>
+                    <div class="cd-bus-form-actions">
+                        <button type="button" id="bus-form-cancel" class="btn">Cancel</button>
+                        <button type="submit" id="bus-form-submit" class="btn btn-primary">Save Bus</button>
+                    </div>
+                </form>
+            </section>
+
+            <section id="company-trips" class="cd-trips cd-pane" hidden>
+                <div class="cd-trips-head">
+                    <h2>Trips</h2>
+                    <button type="button" id="btn-add-trip" class="btn btn-primary">Create Trip</button>
+                </div>
+                <div class="cd-trip-toolbar" role="group" aria-label="Filter trips by status">
+                    <button type="button" class="cd-trip-filter is-active" data-trip-filter="all" aria-pressed="true">All trips</button>
+                    <button type="button" class="cd-trip-filter" data-trip-filter="scheduled" aria-pressed="false">Scheduled</button>
+                    <button type="button" class="cd-trip-filter" data-trip-filter="cancelled" aria-pressed="false">Cancelled</button>
+                </div>
+
+                <p id="trip-loading" class="cd-trips-msg" hidden>Loading your trips&hellip;</p>
+                <div id="trip-error" class="cd-trips-error auth-message" hidden></div>
+                <div id="trip-notice" class="cd-trips-msg" hidden></div>
+                <div id="trip-empty" class="cd-trips-empty" hidden>You have no trips yet. Create your first trip to get started.</div>
+                <div id="trip-list" class="cd-trip-list" hidden></div>
+
+                <form id="trip-form" class="cd-trip-form" hidden novalidate>
+                    <input type="hidden" id="trip-id">
+                    <h3 id="trip-form-title">Create Trip</h3>
+                    <div class="cd-trip-form-row">
+                        <div>
+                            <label for="trip-route">Route *</label>
+                            <select id="trip-route"></select>
+                        </div>
+                        <div>
+                            <label for="trip-bus">Bus *</label>
+                            <select id="trip-bus"></select>
+                        </div>
+                    </div>
+                    <div class="cd-trip-form-row">
+                        <div>
+                            <label for="trip-date">Departure Date *</label>
+                            <input type="date" id="trip-date">
+                        </div>
+                        <div>
+                            <label for="trip-time">Departure Time *</label>
+                            <input type="time" id="trip-time">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="trip-price">Price (ETB) *</label>
+                        <input type="number" id="trip-price" min="0" step="0.01" placeholder="e.g. 550">
+                    </div>
+                    <p id="trip-form-error" class="cd-trip-form-error" role="alert"></p>
+                    <div class="cd-trip-form-actions">
+                        <button type="button" id="trip-form-cancel" class="btn">Cancel</button>
+                        <button type="submit" id="trip-form-submit" class="btn btn-primary">Save Trip</button>
+                    </div>
+                </form>
+            </section>
+
+            <section id="company-bookings" class="cd-bookings" hidden>
+                <div class="cd-bookings-head">
+                    <h2>Bookings / Passengers</h2>
+                </div>
+
+                <div class="cd-passenger-filter" aria-label="Filter passenger bookings">
+                    <div class="cd-day-picker">
+                        <div class="cd-date-head"><strong>Departure date</strong><p id="booking-date-label" class="cd-selected-date">All upcoming departure dates</p></div>
+                        <div id="booking-day-list" class="cd-day-list" role="group" aria-label="Departure date"></div>
+                    </div>
+                    <div class="cd-route-picker">
+                        <div class="cd-filter-label-row"><strong>Search passenger bookings</strong></div>
+                        <div class="cd-route-fields">
+                            <label><span>Leaving from</span><i aria-hidden="true">●</i><select id="booking-from-filter"><option value="">All cities</option></select></label>
+                            <span class="cd-route-arrow" aria-hidden="true">→</span>
+                            <label><span>Destination</span><i aria-hidden="true">●</i><select id="booking-to-filter"><option value="">All cities</option></select></label>
+                        </div>
+                    </div>
+                    <div class="cd-filter-actions"><button type="button" id="btn-clear-booking-filters" class="btn btn-secondary">Clear filters</button><button type="button" id="btn-refresh-bookings" class="btn btn-primary">Refresh bookings</button></div>
+                </div>
+
+                <p id="booking-loading" class="cd-bookings-msg" hidden>Loading bookings&hellip;</p>
+                <div id="booking-error" class="cd-bookings-error auth-message" hidden></div>
+                <div id="booking-empty" class="cd-bookings-empty" hidden>No bookings on your trips yet. Bookings will appear here once passengers book your scheduled trips.</div>
+                <div id="booking-list" class="cd-booking-list" hidden></div>
+
+                <div id="manifest-modal" class="cd-manifest-modal" hidden>
+                    <div class="cd-manifest-box" role="dialog" aria-modal="true" aria-labelledby="manifest-title">
+                        <div class="cd-manifest-head">
+                            <h3 id="manifest-title">Passenger Manifest</h3>
+                            <button type="button" id="manifest-close" class="btn" aria-label="Close manifest">&times;</button>
+                        </div>
+                        <p id="manifest-loading" class="cd-bookings-msg" hidden>Loading manifest&hellip;</p>
+                        <div id="manifest-error" class="cd-bookings-error auth-message" hidden></div>
+                        <div id="manifest-content" hidden></div>
+                    </div>
+                </div>
+            </section>
+
+        <section id="company-revenue" class="cd-revenue" hidden>
+            <div class="cd-revenue-head">
+                <h2>Revenue / Payments</h2>
+                <button type="button" id="btn-refresh-revenue" class="btn btn-secondary btn-sm">Refresh</button>
+            </div>
+
+            <p id="revenue-loading" class="cd-revenue-msg" hidden>Loading your revenue&hellip;</p>
+            <div id="revenue-error" class="cd-revenue-error auth-message" hidden></div>
+
+            <!-- A. Revenue summary cards -->
+            <section id="revenue-summary" class="cd-revenue-summary" hidden>
+                <div class="cd-rev-stat">
+                    <span class="cd-rev-value" id="rev-totalPaidRevenue">0</span>
+                    <span class="cd-rev-label">Total Paid Revenue (ETB)</span>
+                </div>
+                <div class="cd-rev-stat">
+                    <span class="cd-rev-value" id="rev-paidPayments">0</span>
+                    <span class="cd-rev-label">Paid Payments</span>
+                </div>
+                <div class="cd-rev-stat">
+                    <span class="cd-rev-value" id="rev-pendingPayments">0</span>
+                    <span class="cd-rev-label">Pending Payments</span>
+                </div>
+                <div class="cd-rev-stat">
+                    <span class="cd-rev-value" id="rev-failedPayments">0</span>
+                    <span class="cd-rev-label">Failed Payments</span>
+                </div>
+                <div class="cd-rev-stat">
+                    <span class="cd-rev-value" id="rev-refundedPayments">0</span>
+                    <span class="cd-rev-label">Refunded Payments</span>
+                </div>
+            </section>
+
+            <div class="cd-passenger-filter cd-revenue-filter" aria-label="Filter revenue payments">
+                <div class="cd-day-picker">
+                    <div class="cd-date-head"><strong>Departure date</strong><p id="revenue-date-label" class="cd-selected-date">All upcoming departure dates</p></div>
+                    <div id="revenue-day-list" class="cd-day-list" role="group" aria-label="Payment departure date"></div>
+                </div>
+                <div class="cd-route-picker">
+                    <div class="cd-filter-label-row"><strong>Search payment records</strong></div>
+                    <div class="cd-route-fields">
+                        <label><span>Leaving from</span><i aria-hidden="true">●</i><select id="revenue-from-filter"><option value="">All cities</option></select></label>
+                        <span class="cd-route-arrow" aria-hidden="true">→</span>
+                        <label><span>Destination</span><i aria-hidden="true">●</i><select id="revenue-to-filter"><option value="">All cities</option></select></label>
+                    </div>
+                </div>
+                <div class="cd-revenue-status"><label for="revenue-status-filter">Payment status</label><select id="revenue-status-filter">
+                    <option value="">All statuses</option>
+                    <option value="paid">Paid</option>
+                    <option value="pending">Pending</option>
+                    <option value="failed">Failed</option>
+                    <option value="refunded">Refunded</option>
+                </select></div>
+                <div class="cd-filter-actions"><button type="button" id="btn-clear-revenue-filters" class="btn btn-secondary">Clear filters</button><button type="button" id="btn-refresh-revenue" class="btn btn-primary">Refresh payments</button></div>
+            </div>
+
+            <!-- C. Payment list / cards -->
+            <p id="payment-loading" class="cd-revenue-msg" hidden>Loading your payments&hellip;</p>
+            <div id="payment-error" class="cd-revenue-error auth-message" hidden></div>
+            <div id="payment-empty" class="cd-revenue-empty" hidden>No payments found for your trips yet. Payments will appear here once passengers pay for seats on your scheduled trips.</div>
+            <div id="payment-list" class="cd-payment-list" hidden></div>
+        </section>
+
+        <!-- ===== Company Profile ===== -->
+        <section id="company-profile" class="cd-profile" hidden>
+            <div class="cd-profile-head">
+                <h2>Company Profile</h2>
+                <button type="button" id="btn-edit-profile" class="btn btn-secondary btn-sm">Edit Profile</button>
+            </div>
+            <p id="profile-loading" class="cd-profile-msg" hidden>Loading your profile&hellip;</p>
+            <div id="profile-error" class="cd-profile-error auth-message" hidden></div>
+            <p id="profile-success" class="cd-profile-success" hidden></p>
+
+            <div id="profile-view" hidden>
+                <div class="cd-profile-grid">
+                    <div class="cd-profile-field"><span class="k">Company Name</span><span class="v" id="profile-name"></span></div>
+                    <div class="cd-profile-field"><span class="k">Slug</span><span class="v" id="profile-slug"></span></div>
+                    <div class="cd-profile-field"><span class="k">Contact Email</span><span class="v" id="profile-email"></span></div>
+                    <div class="cd-profile-field"><span class="k">Phone</span><span class="v" id="profile-phone"></span></div>
+                    <div class="cd-profile-field"><span class="k">Address</span><span class="v" id="profile-address"></span></div>
+                    <div class="cd-profile-field"><span class="k">Status</span><span class="v" id="profile-status"></span></div>
+                </div>
+                <p class="cd-profile-desc" id="profile-desc"></p>
+            </div>
+
+            <form id="profile-form" class="cd-profile-form" hidden novalidate>
+                <h3>Edit Company Profile</h3>
+                <div class="cd-profile-form-row">
+                    <div>
+                        <label for="profile-input-name">Company Name *</label>
+                        <input id="profile-input-name" name="name" type="text" maxlength="160" required>
+                    </div>
+                    <div>
+                        <label for="profile-input-email">Contact Email</label>
+                        <input id="profile-input-email" name="email" type="email" maxlength="190">
+                    </div>
+                </div>
+                <div class="cd-profile-form-row">
+                    <div>
+                        <label for="profile-input-phone">Phone</label>
+                        <input id="profile-input-phone" name="phone" type="text" maxlength="30" placeholder="+251 91 234 5678">
+                    </div>
+                    <div>
+                        <label for="profile-input-address">Address</label>
+                        <input id="profile-input-address" name="address" type="text" maxlength="255">
+                    </div>
+                </div>
+                <div class="cd-profile-form-row">
+                    <div>
+                        <label for="profile-input-logo">Company Logo</label>
+                        <div class="cd-image-upload">
+                            <div class="cd-image-upload-preview" id="profile-logo-preview"><span>LOGO</span><img alt="Current company logo" hidden></div>
+                            <div><input id="profile-input-logo" name="logo_file" type="file" accept="image/png,image/jpeg,image/webp"><span class="cd-image-upload-hint">PNG, JPEG or WebP · up to 5 MB</span><label class="cd-image-remove"><input id="profile-remove-logo" name="remove_logo" type="checkbox" value="1"> Remove current logo</label></div>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="profile-input-cover">Cover Image</label>
+                        <div class="cd-image-upload">
+                            <div class="cd-image-upload-preview cover" id="profile-cover-preview"><span>COVER</span><img alt="Current cover image" hidden></div>
+                            <div><input id="profile-input-cover" name="cover_file" type="file" accept="image/png,image/jpeg,image/webp"><span class="cd-image-upload-hint">PNG, JPEG or WebP · up to 5 MB</span><label class="cd-image-remove"><input id="profile-remove-cover" name="remove_cover" type="checkbox" value="1"> Remove current cover image</label></div>
+                        </div>
+                    </div>
+                </div>
+                <label for="profile-input-description">Description</label>
+                <textarea id="profile-input-description" name="description" maxlength="4000" placeholder="Tell passengers about your company."></textarea>
+
+                <div id="profile-form-error" class="cd-profile-error auth-message" hidden></div>
+
+                <div class="cd-profile-form-actions">
+                    <button type="button" id="btn-profile-cancel" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" id="btn-profile-save" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </section>
+    </section>
+    </main>
+
+    <script src="js/main.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/company-dashboard.js?v=20260826-trip-layout-fix"></script>
+</body>
+</html>

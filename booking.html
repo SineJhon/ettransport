@@ -1,0 +1,158 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Choose your seats for your intercity bus trip with ET Transport.">
+    <title>Choose Your Seats | ET Transport</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" type="image/x-icon" href="assets/icons/favicon.svg">
+</head>
+<body>
+
+    <!-- ============ Navigation Bar ============ -->
+    <header class="site-header">
+        <nav class="navbar container">
+            <a href="index.html" class="logo" aria-label="ET Transport home">
+                <span class="logo-icon" aria-hidden="true">&#128652;</span>
+                <span class="logo-text">ET<span>Transport</span></span>
+            </a>
+
+            <ul class="nav-links" id="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="search.html">Search</a></li>
+                <li><a href="companies.html">Companies</a></li>
+                <li><a href="dashboard.html">My Trips</a></li>
+                <li><a href="index.html#about">About</a></li>
+            </ul>
+
+            <div class="nav-actions" data-nav-auth="1">
+            </div>
+
+            <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+                <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+            </button>
+        </nav>
+    </header>
+
+    <main class="booking-page container">
+
+        <h1 class="page-title">Choose Your Seats</h1>
+
+        <div class="booking-layout">
+
+            <!-- ============ Seat panel ============ -->
+            <section class="seat-panel">
+
+                <!-- Trip summary -->
+                <div class="card trip-summary">
+                    <div class="trip-head">
+                        <h2 id="trip-company">Bus Company</h2>
+                        <span id="trip-route" class="trip-route">City &rarr; City</span>
+                    </div>
+                    <ul class="trip-details">
+                        <li><span>Departure</span><strong id="trip-depart"></strong></li>
+                        <li><span>Arrival</span><strong id="trip-arrive"></strong></li>
+                        <li><span>Duration</span><strong id="trip-duration"></strong></li>
+                        <li><span>Date</span><strong id="booking-date"></strong></li>
+                        <li><span>Passengers</span><strong id="passenger-count"></strong></li>
+                    </ul>
+                </div>
+
+                <!-- Seat selection -->
+                <div class="card seat-selection">
+                    <div class="selection-top">
+                        <h2>Select Seats</h2>
+                        <span id="selected-count" class="selected-count"></span>
+                    </div>
+                    <p id="selected-seats" class="selected-seats"></p>
+
+                    <div class="bus-shell">
+                        <div class="driver-area">DRIVER</div>
+                        <div id="seat-map" class="seat-grid" role="group" aria-label="Bus seat map"></div>
+                    </div>
+
+                    <p id="limit-msg" class="limit-msg" hidden></p>
+
+                    <ul class="seat-legend">
+                        <li><span class="swatch available" aria-hidden="true"></span>Available</li>
+                        <li><span class="swatch selected" aria-hidden="true"></span>Selected</li>
+                        <li><span class="swatch occupied" aria-hidden="true"></span>Occupied</li>
+                        <li><span class="swatch unavailable" aria-hidden="true"></span>Unavailable</li>
+                    </ul>
+                </div>
+
+            </section>
+
+            <!-- ============ Booking summary ============ -->
+            <aside class="card booking-summary">
+                <h2>Booking Summary</h2>
+                <dl>
+                    <dt>Trip</dt><dd id="sum-trip"></dd>
+                    <dt>Route</dt><dd id="sum-route"></dd>
+                    <dt>Date</dt><dd id="sum-date"></dd>
+                    <dt>Passengers</dt><dd id="sum-passengers"></dd>
+                    <dt>Selected Seats</dt><dd id="sum-seats"></dd>
+                    <dt>Price</dt><dd id="sum-price" class="sum-price"></dd>
+                </dl>
+                <button id="continue-btn" class="btn btn-continue" disabled>Continue</button>
+                <p id="continue-msg" class="continue-msg" hidden></p>
+            </aside>
+
+        </div>
+    </main>
+
+    <!-- ============ Footer ============ -->
+    <footer class="site-footer">
+        <div class="container footer-grid">
+            <div class="footer-col">
+                <h4>ET Transport</h4>
+                <p>Your trusted partner for intercity bus travel in Ethiopia.</p>
+            </div>
+
+            <div class="footer-col">
+                <h4>Quick Links</h4>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="search.html">Search</a></li>
+                    <li><a href="companies.html">Companies</a></li>
+                    <li><a href="index.html#about">About</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <h4>Popular Routes</h4>
+                <ul>
+                    <li>Addis Ababa &rarr; Bahir Dar</li>
+                    <li>Addis Ababa &rarr; Hawassa</li>
+                    <li>Addis Ababa &rarr; Mekelle</li>
+                    <li>Addis Ababa &rarr; Dire Dawa</li>
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <h4>Contact</h4>
+                <ul>
+                    <li>Addis Ababa, Ethiopia</li>
+                    <li>info@ettransport.com</li>
+                    <li>+251 11 123 4567</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <div class="container">
+                <p>&copy; 2026 ET Transport. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/main.js"></script>
+        <script src="js/auth.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/booking.js"></script>
+</body>
+</html>
+

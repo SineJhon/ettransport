@@ -1,0 +1,218 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Bus company profile on ET Transport — routes, fleet, services and available trips.">
+    <title>Bus Company | ET Transport</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" type="image/x-icon" href="assets/icons/favicon.svg">
+</head>
+<body>
+
+    <!-- ============ Navigation Bar ============ -->
+    <header class="site-header">
+        <nav class="navbar container">
+            <a href="index.html" class="logo" aria-label="ET Transport home">
+                <span class="logo-icon" aria-hidden="true">&#128652;</span>
+                <span class="logo-text">ET<span>Transport</span></span>
+            </a>
+
+            <ul class="nav-links" id="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="search.html">Search</a></li>
+                <li><a href="companies.html">Companies</a></li>
+                <li><a href="dashboard.html">My Trips</a></li>
+                <li><a href="index.html#about">About</a></li>
+            </ul>
+
+            <div class="nav-actions" data-nav-auth="1">
+            </div>
+
+            <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+                <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+            </button>
+        </nav>
+    </header>
+
+    <main>
+        <!-- ============ Company profile app (rendered by js/company.js) ============ -->
+        <div id="company-app">
+
+            <!-- 1. Company Hero -->
+            <section class="company-hero">
+                <img id="hero-cover" class="company-cover" alt="">
+                <div class="company-hero-overlay"></div>
+                <div class="container company-hero-content">
+                    <p class="company-crumb" id="company-crumb"><a href="companies.html">&larr; All Bus Companies</a></p>
+                    <div class="company-hero-row">
+                        <img id="hero-logo" class="company-logo-hero" alt="">
+                        <div class="company-hero-text">
+                            <div id="hero-verified"></div>
+                            <h1 id="hero-name" class="company-name"></h1>
+                            <p id="hero-tagline" class="company-tagline"></p>
+                            <p id="hero-rating" class="hero-rating"></p>
+                            <div class="hero-actions">
+                                <button id="hero-fav" class="fav-btn fav-btn-hero" type="button" hidden aria-pressed="false"></button>
+                                <a href="#company-trips" class="btn btn-primary btn-hero-cta">View Available Trips</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. Company Quick Stats -->
+            <section class="company-stats" aria-label="Company quick statistics">
+                <div class="container stats-grid" id="company-stats"></div>
+            </section>
+
+            <!-- 3. About -->
+            <section class="company-section">
+                <div class="container">
+                    <h2 class="section-title" id="about-title">About</h2>
+                    <p id="about-text" class="about-text"></p>
+                    <p class="demo-note">
+                        Company profile content is illustrative sample data built for the ET Transport prototype.
+                        Ratings, reviews, schedules and contact details are NOT verified real-world facts.
+                    </p>
+                </div>
+            </section>
+
+            <!-- 4. Services / Amenities -->
+            <section class="company-section company-section-alt">
+                <div class="container">
+                    <h2 class="section-title">Services &amp; Amenities</h2>
+                    <p class="section-subtitle">What passengers can expect on board.</p>
+                    <ul id="amenity-grid" class="amenity-grid"></ul>
+                </div>
+            </section>
+
+            <!-- 5. Popular Routes -->
+            <section class="company-section">
+                <div class="container">
+                    <h2 class="section-title">Popular Routes</h2>
+                    <p class="section-subtitle">Frequent departures from Addis Ababa.</p>
+                    <div id="route-grid" class="route-grid"></div>
+                </div>
+            </section>
+
+            <!-- 6. Fleet -->
+            <section class="company-section company-section-alt">
+                <div class="container">
+                    <h2 class="section-title">Our Fleet</h2>
+                    <p class="section-subtitle">A look at the coaches used on these routes.</p>
+                    <div id="fleet-grid" class="fleet-grid"></div>
+                </div>
+            </section>
+
+            <!-- 7. Upcoming Trips -->
+            <section class="company-section" id="company-trips">
+                <div class="container">
+                    <h2 class="section-title">Upcoming Trips</h2>
+                    <p class="section-subtitle">Select a trip to continue into the ET Transport booking flow.</p>
+                    <div id="trip-grid" class="trip-grid"></div>
+                </div>
+            </section>
+
+            <!-- 8. Sample Passenger Reviews -->
+            <section class="company-section company-section-alt">
+                <div class="container">
+                    <h2 class="section-title">Sample Passenger Reviews</h2>
+                    <p class="section-subtitle">Illustrative reviews shown for the prototype demo — not real customer testimonials.</p>
+                    <div class="review-layout">
+                        <div id="review-summary" class="review-summary"></div>
+                        <div id="review-grid" class="review-grid"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 9. Company Information -->
+            <section class="company-section">
+                <div class="container">
+                    <h2 class="section-title">Company Information</h2>
+                    <ul id="info-grid" class="info-grid"></ul>
+                </div>
+            </section>
+
+            <!-- 10. Contact / Offices -->
+            <section class="company-section company-section-alt">
+                <div class="container">
+                    <h2 class="section-title" id="contact-title">Contact</h2>
+                    <div id="contact-grid" class="contact-grid"></div>
+                </div>
+            </section>
+
+            <!-- 11. Final CTA -->
+            <section class="company-final-cta">
+                <div class="container final-cta-inner">
+                    <h2>Ready for your next journey?</h2>
+                    <p>Explore available trips from <span id="final-cta-company"></span></p>
+                    <a href="search.html" class="btn btn-primary btn-large">Search Trips</a>
+                </div>
+            </section>
+        </div>
+
+        <!-- ============ Error / empty state (no or invalid company param) ============ -->
+        <div id="company-error" class="company-error container" hidden>
+            <h1>Company not found</h1>
+            <p id="company-error-msg"></p>
+            <div class="company-error-actions">
+                <a href="search.html" class="btn btn-primary">Back to Search</a>
+                <a href="companies.html" class="btn btn-secondary">Browse Companies</a>
+            </div>
+        </div>
+    </main>
+
+    <!-- ============ Footer ============ -->
+    <footer class="site-footer">
+        <div class="container footer-grid">
+            <div class="footer-col">
+                <h4>ET Transport</h4>
+                <p>Your trusted partner for intercity bus travel in Ethiopia.</p>
+            </div>
+
+            <div class="footer-col">
+                <h4>Quick Links</h4>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="search.html">Search</a></li>
+                    <li><a href="companies.html">Companies</a></li>
+                    <li><a href="index.html#about">About</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <h4>Popular Routes</h4>
+                <ul>
+                    <li>Addis Ababa &rarr; Bahir Dar</li>
+                    <li>Addis Ababa &rarr; Hawassa</li>
+                    <li>Addis Ababa &rarr; Mekelle</li>
+                    <li>Addis Ababa &rarr; Dire Dawa</li>
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <h4>Contact</h4>
+                <ul>
+                    <li>Addis Ababa, Ethiopia</li>
+                    <li>info@ettransport.com</li>
+                    <li>+251 11 123 4567</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <div class="container">
+                <p>&copy; 2026 ET Transport. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/main.js"></script>
+        <script src="js/auth.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/company.js"></script>
+</body>
+</html>

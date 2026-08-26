@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Your ET Transport passenger dashboard — upcoming trips, digital tickets, favorites, notifications, booking history and profile. Demo data, no account required.">
+    <title>My Trips & Dashboard | ET Transport</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" type="image/x-icon" href="assets/icons/favicon.svg">
+</head>
+<body>
+
+    <!-- ============ Navigation Bar ============ -->
+    <header class="site-header">
+        <nav class="navbar container">
+            <a href="index.html" class="logo" aria-label="ET Transport home">
+                <span class="logo-icon" aria-hidden="true">&#128652;</span>
+                <span class="logo-text">ET<span>Transport</span></span>
+            </a>
+
+            <ul class="nav-links" id="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="search.html">Search</a></li>
+                <li><a href="companies.html">Companies</a></li>
+                <li><a href="dashboard.html" class="active">My Trips</a></li>
+                <li><a href="index.html#about">About</a></li>
+            </ul>
+
+            <div class="nav-actions" data-nav-auth="1">
+            </div>
+
+            <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+                <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+            </button>
+        </nav>
+    </header>
+
+    <main class="dashboard-page container">
+
+        <!-- ============ Dashboard header ============ -->
+        <section class="dashboard-head" aria-labelledby="dash-title">
+            <p class="search-eyebrow">Passenger Dashboard</p>
+            <h1 id="dash-title">Dashboard</h1>
+            <p class="dashboard-subtitle">Welcome back, <strong id="dash-greeting">Passenger</strong> &mdash; manage your trips, tickets and account.</p>
+            <p class="demo-note" role="status">Demo experience &mdash; all dashboard data is illustrative and stored only in this browser.</p>
+        </section>
+
+        <div class="dashboard-layout">
+
+            <!-- ============ Sidebar / section navigation ============ -->
+            <nav class="dashboard-sidebar" id="dashboard-sidebar" aria-label="Dashboard sections">
+                <button type="button" class="dash-nav-btn active" data-section="overview" aria-current="true">Overview</button>
+                <button type="button" class="dash-nav-btn" data-section="trips">My Trips <span class="dash-nav-count" id="count-trips" hidden></span></button>
+                <button type="button" class="dash-nav-btn" data-section="tickets">Tickets <span class="dash-nav-count" id="count-tickets" hidden></span></button>
+                <button type="button" class="dash-nav-btn" data-section="favorites">Favorites <span class="dash-nav-count" id="count-favs" hidden></span></button>
+                <button type="button" class="dash-nav-btn" data-section="notifications">Notifications <span class="dash-nav-count" id="count-unread" hidden></span></button>
+                <button type="button" class="dash-nav-btn" data-section="profile">Profile</button>
+                <button type="button" class="dash-nav-btn" data-section="support">Support</button>
+            </nav>
+
+            <!-- ============ Dashboard content ============ -->
+            <div class="dashboard-content">
+
+                <!-- ============ Overview ============ -->
+                <section class="dash-section" id="section-overview" aria-labelledby="overview-title">
+                    <h2 id="overview-title" class="dash-section-title">Overview</h2>
+                    <div id="dash-upcoming"></div>
+                    <div id="dash-stats" class="dash-stats"></div>
+
+                    <h3 class="dash-block-title">Recent Bookings</h3>
+                    <div id="dash-recent-bookings" class="dash-bookings-wrap"></div>
+
+                    <h3 class="dash-block-title">Favorite Companies</h3>
+                    <div id="dash-overview-fav"></div>
+
+                    <h3 class="dash-block-title">Recent Notifications</h3>
+                    <div id="dash-overview-notif"></div>
+                </section>
+<!-- ============ My Trips ============ -->
+                <section class="dash-section" id="section-trips" aria-labelledby="trips-title" hidden>
+                    <h2 id="trips-title" class="dash-section-title">My Trips</h2>
+                    <p class="dash-section-note">Browse your upcoming, completed and cancelled journeys. Demo records are included so the dashboard never looks empty.</p>
+                                        <div class="dash-tabs" role="tablist" aria-label="Trip status filter">
+                        <button type="button" class="dash-tab active" role="tab" aria-selected="true" data-tab="upcoming">Upcoming</button>
+                        <button type="button" class="dash-tab" role="tab" aria-selected="false" data-tab="all">All</button>
+                        <button type="button" class="dash-tab" role="tab" aria-selected="false" data-tab="completed">Completed</button>
+                        <button type="button" class="dash-tab" role="tab" aria-selected="false" data-tab="cancelled">Cancelled</button>
+                    </div>
+                    <div class="dash-booking-search">
+                        <p class="dash-block-title">Find a booking</p>
+                        <input type="search" id="trips-search" class="dash-search-input" placeholder="Search booking reference, route or company…" autocomplete="off" aria-label="Search your bookings" aria-describedby="trips-search-hint">
+                        <p id="trips-search-hint" class="dash-search-hint">Searches your booking reference, route or company across your own bookings only.</p>
+                        <p id="trips-search-status" class="dash-search-status" role="status" hidden></p>
+                    </div>
+                    <div class="dash-sort-controls" id="trips-sort" hidden>
+                        <label class="dash-sort-label" for="trips-sort-select">Sort:</label>
+                        <select id="trips-sort-select" class="dash-sort-select" aria-label="Sort My Trips" autocomplete="off">
+                            <option value="newest">Newest bookings</option>
+                            <option value="oldest">Oldest bookings</option>
+                            <option value="travel_soon">Travel date: soonest</option>
+                            <option value="travel_later">Travel date: latest</option>
+                            <option value="price_low">Price: low to high</option>
+                            <option value="price_high">Price: high to low</option>
+                        </select>
+                    </div>
+                    <div id="trips-content" class="dash-cards" role="tabpanel" tabindex="0"></div>
+                    <div id="trips-loadmore" class="dash-loadmore" hidden>
+                        <button type="button" id="trips-loadmore-btn" class="btn-dash-loadmore">Load more</button>
+                        <p id="trips-loadmore-status" class="dash-loadmore-status" role="status" hidden>Loading more trips&hellip;</p>
+                    </div>
+                </section>
+
+                <!-- ============ Tickets ============ -->
+                <section class="dash-section" id="section-tickets" aria-labelledby="tickets-title" hidden>
+                    <h2 id="tickets-title" class="dash-section-title">Digital Tickets</h2>
+                                        <p class="dash-section-note">View, print or share a digital ticket for any confirmed booking. QR codes shown are demo-only.</p>
+                    <div class="dash-booking-search">
+                        <p class="dash-block-title">Find a ticket</p>
+                        <input type="search" id="tickets-search" class="dash-search-input" placeholder="Search booking reference, route or company…" autocomplete="off" aria-label="Search your tickets" aria-describedby="tickets-search-hint">
+                        <p id="tickets-search-hint" class="dash-search-hint">Search is limited to your own bookings.</p>
+                        <p id="tickets-search-status" class="dash-search-status" role="status" hidden></p>
+                    </div>
+                    <div id="tickets-list" class="dash-cards"></div>
+                </section>
+
+                <!-- ============ Favorites ============ -->
+                <section class="dash-section" id="section-favorites" aria-labelledby="favorites-title" hidden>
+                    <h2 id="favorites-title" class="dash-section-title">Favorites</h2>
+                    <p class="dash-section-note">Companies you starred on their profile page, and routes you saved for quick searches. Stored in this browser only.</p>
+
+                    <h3 class="dash-block-title">Favorite Companies</h3>
+                    <div id="fav-companies" class="dash-fav-grid"></div>
+
+                    <h3 class="dash-block-title">Favorite Routes</h3>
+                    <div id="fav-routes"></div>
+
+                    <div class="card dash-add-route">
+                        <h3 class="dash-card-title">Add a Favorite Route</h3>
+                        <form id="fav-route-form" class="fav-route-form">
+                            <div class="form-group">
+                                <label for="fav-from">From</label>
+                                <select id="fav-from" name="from"></select>
+                            </div>
+                            <div class="form-group">
+                                <label for="fav-to">To</label>
+                                <select id="fav-to" name="to"></select>
+                            </div>
+                            <button type="submit" class="btn btn-search">Save Route</button>
+                        </form>
+                        <p id="fav-route-msg" class="fav-route-msg" role="status" hidden></p>
+                    </div>
+                </section>
+<!-- ============ Notifications ============ -->
+                <section class="dash-section" id="section-notifications" aria-labelledby="notifications-title" hidden>
+                    <div class="dash-section-head">
+                        <h2 id="notifications-title" class="dash-section-title">Notifications</h2>
+                        <button type="button" id="mark-all-read" class="btn btn-secondary btn-sm">Mark All as Read</button>
+                    </div>
+                    <p class="dash-section-note">Mock notifications for this demo &mdash; no push, SMS or email is sent.</p>
+                    <div id="notifications-list"></div>
+                </section>
+
+                <!-- ============ Profile ============ -->
+                <section class="dash-section" id="section-profile" aria-labelledby="profile-title" hidden>
+                    <h2 id="profile-title" class="dash-section-title">Profile</h2>
+                    <p class="dash-section-note">A demo passenger profile. There is no real account &mdash; changes are kept in this browser only.</p>
+
+                    <div class="card dash-profile-card">
+                        <div class="profile-avatar" id="profile-avatar" aria-hidden="true">A</div>
+                        <div class="profile-summary">
+                            <h3 id="profile-name">Passenger</h3>
+                            <p id="profile-phone" class="profile-meta"></p>
+                            <p id="profile-email" class="profile-meta"></p>
+                        </div>
+                        <button type="button" id="edit-profile-btn" class="btn btn-search">Edit Profile</button>
+                    </div>
+
+                    <dl class="card profile-details">
+                        <div class="profile-detail"><dt>Full Name</dt><dd id="p-name"></dd></div>
+                        <div class="profile-detail"><dt>Phone</dt><dd id="p-phone"></dd></div>
+                        <div class="profile-detail"><dt>Email</dt><dd id="p-email"></dd></div>
+                        <div class="profile-detail"><dt>Gender</dt><dd id="p-gender"></dd></div>
+                        <div class="profile-detail"><dt>Date of Birth</dt><dd id="p-dob"></dd></div>
+                    </dl>
+                </section>
+
+                <!-- ============ Support ============ -->
+                <section class="dash-section" id="section-support" aria-labelledby="support-title" hidden>
+                    <h2 id="support-title" class="dash-section-title">Support</h2>
+                    <p class="dash-section-note">Help topics for the demo. Submitting a form only records a message in this browser &mdash; no real ticket is created.</p>
+                    <div id="support-cards" class="support-grid"></div>
+
+                    <div class="card support-contact">
+                        <h3 class="dash-card-title">Contact Support</h3>
+                        <p class="support-callout">Call <a href="tel:+251111234567">+251 11 123 4567</a> or email <a href="mailto:support@ettransport.com">support@ettransport.com</a> &mdash; or send a message below.</p>
+                        <form id="support-form" novalidate>
+                            <div class="form-group">
+                                <label for="support-name">Your Name</label>
+                                <input type="text" id="support-name" name="name" required autocomplete="name">
+                                <span class="field-error" id="support-name-err" role="alert"></span>
+                            </div>
+                            <div class="form-group">
+                                <label for="support-email">Email Address</label>
+                                <input type="email" id="support-email" name="email" required autocomplete="email">
+                                <span class="field-error" id="support-email-err" role="alert"></span>
+                            </div>
+                            <div class="form-group">
+                                <label for="support-topic">Topic</label>
+                                <select id="support-topic" name="topic">
+                                    <option>Booking Help</option>
+                                    <option>Payment Help</option>
+                                    <option>Cancellation &amp; Refund</option>
+                                    <option>Lost Items</option>
+                                    <option>Technical Support</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="support-message">Message</label>
+                                <textarea id="support-message" name="message" rows="4" required></textarea>
+                                <span class="field-error" id="support-message-err" role="alert"></span>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Send Support Request</button>
+                            <p id="support-form-msg" class="continue-msg" role="status" hidden></p>
+                        </form>
+                    </div>
+                </section>
+
+            </div><!-- /.dashboard-content -->
+        </div><!-- /.dashboard-layout -->
+    </main>
+<!-- ============================================================
+     Digital Ticket modal (reuses the ticket visual language)
+     ============================================================ -->
+    <div id="ticket-modal" class="dash-modal" role="dialog" aria-modal="true" aria-labelledby="ticket-modal-title" hidden>
+        <div class="dash-modal-backdrop" data-ticket-close></div>
+        <div class="dash-modal-box dash-modal-ticket">
+            <div class="dash-modal-head">
+                <h2 id="ticket-modal-title">Digital Ticket</h2>
+                <button type="button" id="ticket-modal-close" class="dash-modal-close" aria-label="Close ticket">&times;</button>
+            </div>
+            <div class="ticket" id="dash-ticket">
+                <div class="ticket-head">
+                    <span class="ticket-brand">ET Transport &mdash; Digital Ticket</span>
+                    <span class="ticket-ref" id="dt-ref"></span>
+                </div>
+                <div class="ticket-body">
+                    <div class="ticket-route">
+                        <div class="ticket-city-block">
+                            <span class="t-city" id="dt-departure-city"></span>
+                            <span class="t-time" id="dt-depart-time"></span>
+                        </div>
+                        <div class="ticket-journey">
+                            <span class="journey-arrow" aria-hidden="true">&rarr;</span>
+                            <span class="t-duration" id="dt-duration"></span>
+                        </div>
+                        <div class="ticket-city-block right">
+                            <span class="t-city" id="dt-arrival-city"></span>
+                            <span class="t-time" id="dt-arrival-time"></span>
+                        </div>
+                    </div>
+                    <div class="ticket-status" id="dt-status" hidden></div>
+                    <dl class="ticket-grid">
+                        <div class="t-cell"><dt>Passenger</dt><dd id="dt-passengers"></dd></div>
+                        <div class="t-cell"><dt>Company</dt><dd id="dt-company"></dd></div>
+                        <div class="t-cell"><dt>Date</dt><dd id="dt-date"></dd></div>
+                        <div class="t-cell"><dt>Departure</dt><dd id="dt-depart"></dd></div>
+                        <div class="t-cell"><dt>Arrival</dt><dd id="dt-arrive"></dd></div>
+                        <div class="t-cell"><dt>Seat</dt><dd id="dt-seats"></dd></div>
+                        <div class="t-cell"><dt>Bus type</dt><dd id="dt-type"></dd></div>
+                        <div class="t-cell"><dt>Booking number</dt><dd id="dt-ref2"></dd></div>
+                        <div class="t-cell total-cell"><dt>Total paid</dt><dd id="dt-total"></dd></div>
+                    </dl>
+                </div>
+                <div class="ticket-footer">
+                    <div class="ticket-qr">
+                        <canvas id="dt-qr" width="120" height="120"
+                            role="img" aria-label="QR code for ticket verification"></canvas>
+                        <span class="qr-label">Scan to verify ticket</span>
+                    </div>
+                    <p class="qr-disclaimer">Demo QR &mdash; not connected to a real verification backend.</p>
+                </div>
+            </div>
+            <div class="ticket-actions">
+                <button type="button" id="dt-print-btn" class="btn btn-primary">Download / Print Ticket</button>
+                <button type="button" id="dt-share-btn" class="btn btn-secondary">Share Ticket</button>
+                <button type="button" id="dt-cancel-btn" class="btn btn-danger" hidden>Cancel Booking</button>
+            </div>
+            <p id="dt-share-msg" class="continue-msg" hidden></p>
+        </div>
+    </div>
+<!-- ============================================================
+     Cancel booking confirmation modal
+     ============================================================ -->
+    <div id="cancel-modal" class="dash-modal" role="dialog" aria-modal="true" aria-labelledby="cancel-modal-title" hidden>
+        <div class="dash-modal-backdrop" data-cancel-close></div>
+        <div class="dash-modal-box cancel-box">
+            <div class="dash-modal-head">
+                <h2 id="cancel-modal-title">Cancel this booking?</h2>
+                <button type="button" id="cancel-modal-close" class="dash-modal-close" aria-label="Close">&times;</button>
+            </div>
+            <p class="cancel-intro">Are you sure you want to cancel this booking?</p>
+            <dl class="cancel-summary">
+                <div><dt>Booking reference</dt><dd class="mono" id="cancel-ref"></dd></div>
+                <div><dt>Route</dt><dd id="cancel-route"></dd></div>
+                <div><dt>Travel date</dt><dd id="cancel-date"></dd></div>
+                <div><dt>Seats</dt><dd id="cancel-seats"></dd></div>
+            </dl>
+            <p class="cancel-note">Your booked seats will be released and can be booked by other passengers.</p>
+            <p id="cancel-msg" class="cancel-msg" role="alert" hidden></p>
+            <div class="cancel-actions">
+                <button type="button" id="cancel-keep-btn" class="btn btn-secondary">Keep my booking</button>
+                <button type="button" id="cancel-confirm-btn" class="btn btn-danger">Yes, cancel booking</button>
+            </div>
+        </div>
+    </div>
+<!-- ============================================================
+     Review modal
+     ============================================================ -->
+    <div id="review-modal" class="dash-modal" role="dialog" aria-modal="true" aria-labelledby="review-modal-title" hidden>
+        <div class="dash-modal-backdrop" data-review-close></div>
+        <div class="dash-modal-box review-box">
+            <div class="dash-modal-head">
+                <h2 id="review-modal-title">Write a Review</h2>
+                <button type="button" id="review-modal-close" class="dash-modal-close" aria-label="Close">&times;</button>
+            </div>
+            <p class="review-intro">How was your trip with <strong id="review-company"></strong>?</p>
+            <p class="review-route" id="review-route"></p>
+            <p class="review-date" id="review-date"></p>
+
+            <label class="review-field-label" for="review-stars">Rating</label>
+            <div id="review-stars" class="review-stars" role="radiogroup" aria-label="Rating"></div>
+
+            <label class="review-field-label" for="review-comment">Comment (optional)</label>
+            <textarea id="review-comment" class="field-input review-textarea" rows="3" maxlength="1000"
+                placeholder="Tell other passengers about the journey..."></textarea>
+
+            <p id="review-msg" class="review-msg" role="alert" hidden></p>
+            <div class="review-actions">
+                <button type="button" id="review-cancel-btn" class="btn btn-secondary">Cancel</button>
+                <button type="button" id="review-submit-btn" class="btn btn-primary">Submit Review</button>
+            </div>
+        </div>
+    </div>
+<!-- ============================================================
+     Profile edit modal
+     ============================================================ -->
+    <div id="profile-modal" class="dash-modal" role="dialog" aria-modal="true" aria-labelledby="profile-modal-title" hidden>
+        <div class="dash-modal-backdrop" data-profile-close></div>
+        <div class="dash-modal-box">
+            <div class="dash-modal-head">
+                <h2 id="profile-modal-title">Edit Profile</h2>
+                <button type="button" id="profile-modal-close" class="dash-modal-close" aria-label="Close profile editor">&times;</button>
+            </div>
+            <form id="profile-form" novalidate>
+                <div class="form-group">
+                    <label for="p-full-name">Full Name</label>
+                    <input type="text" id="p-full-name" name="fullName" required autocomplete="name">
+                    <span class="field-error" id="p-full-name-err" role="alert"></span>
+                </div>
+                <div class="form-group">
+                    <label for="p-phone-input">Phone</label>
+                    <div class="phone-field">
+                        <span class="phone-prefix" aria-hidden="true">+251</span>
+                        <input type="tel" id="p-phone-input" name="phone" class="field-input" placeholder="9XXXXXXXX" inputmode="numeric" autocomplete="tel">
+                    </div>
+                    <span class="phone-info" id="p-phone-info"></span>
+                    <span class="field-error" id="p-phone-err" role="alert"></span>
+                </div>
+                <div class="form-group">
+                    <label for="p-email-input">Email</label>
+                    <input type="email" id="p-email-input" name="email" autocomplete="email">
+                    <span class="field-error" id="p-email-err" role="alert"></span>
+                </div>
+                <div class="form-group">
+                    <label for="p-gender-input">Gender</label>
+                    <select id="p-gender-input" name="gender">
+                        <option value="">Select gender</option>
+                        <option>Male</option>
+                        <option>Female</option>
+                        <option>Prefer not to say</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="p-dob-input">Date of Birth</label>
+                    <input type="date" id="p-dob-input" name="dob">
+                </div>
+                <div class="profile-form-actions">
+                    <button type="submit" class="btn btn-primary">Save Profile</button>
+                    <button type="button" class="btn btn-secondary" id="profile-cancel-btn">Cancel</button>
+                </div>
+                <p id="profile-form-msg" class="continue-msg" role="status" hidden></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============ Footer ============ -->
+    <footer class="site-footer">
+        <div class="container footer-grid">
+            <div class="footer-col">
+                <h4>ET Transport</h4>
+                <p>Your trusted partner for intercity bus travel in Ethiopia.</p>
+            </div>
+
+            <div class="footer-col">
+                <h4>Quick Links</h4>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="search.html">Search</a></li>
+                    <li><a href="companies.html">Companies</a></li>
+                    <li><a href="dashboard.html">My Trips</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <h4>Popular Routes</h4>
+                <ul>
+                    <li>Addis Ababa &rarr; Bahir Dar</li>
+                    <li>Addis Ababa &rarr; Hawassa</li>
+                    <li>Addis Ababa &rarr; Mekelle</li>
+                    <li>Addis Ababa &rarr; Dire Dawa</li>
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <h4>Contact</h4>
+                <ul>
+                    <li>Addis Ababa, Ethiopia</li>
+                    <li>info@ettransport.com</li>
+                    <li>+251 11 123 4567</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <div class="container">
+                <p>&copy; 2026 ET Transport. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+ <!-- ============ Toast ============ -->
+    <div id="dash-toast" class="dash-toast" role="status" hidden></div>
+
+    <!-- Scripts: shared nav/data first, then the dashboard app -->
+    <script src="js/main.js"></script>
+        <script src="js/auth.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/company.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

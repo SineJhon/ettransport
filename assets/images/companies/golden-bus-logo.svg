@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#1d6fb8"/><stop offset="1" stop-color="#123f66"/>
+  </linearGradient></defs>
+  <rect width="160" height="160" rx="30" fill="url(#g)"/>
+  <circle cx="132" cy="30" r="18" fill="#f59e0b" opacity="0.9"/>
+  <text x="80" y="102" font-family="Segoe UI, Arial, sans-serif" font-size="52" font-weight="700" fill="#ffffff" text-anchor="middle">GB</text>
+</svg>

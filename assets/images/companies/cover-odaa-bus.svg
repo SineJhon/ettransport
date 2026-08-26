@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="640" viewBox="0 0 1600 640">
+  <defs><linearGradient id="c" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#16263c"/><stop offset="1" stop-color="#0c1a2c"/>
+  </linearGradient></defs>
+  <rect width="1600" height="640" fill="url(#c)"/>
+  <circle cx="1380" cy="130" r="110" fill="#f59e0b" opacity="0.55"/>
+  <circle cx="260" cy="540" r="70" fill="#1d6fb8" opacity="0.45"/>
+  <path d="M0 470 L240 250 L480 420 L760 190 L1040 400 L1320 210 L1600 430 L1600 640 L0 640 Z" fill="#22364c" opacity="0.9"/>
+  <path d="M0 540 L360 340 L720 500 L1120 260 L1600 470 L1600 640 L0 640 Z" fill="#2e4159" opacity="0.6"/>
+  <text x="80" y="520" font-family="Segoe UI, Arial, sans-serif" font-size="66" font-weight="700" fill="#ffffff">ODAA Bus</text>
+  <text x="82" y="568" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#cbd5e1">Sample cover image placeholder - replace with a real photo in assets/images/companies/</text>
+</svg>

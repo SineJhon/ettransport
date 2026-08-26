@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ET Transport — Book comfortable intercity buses across Ethiopia. Search, compare, choose your seat and book your trip.">
+    <title>ET Transport | Ethiopian Intercity Bus Booking</title>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- Favicon (placed in assets/icons) -->
+    <link rel="icon" type="image/x-icon" href="assets/icons/favicon.svg">
+</head>
+<body>
+
+    <!-- ============================================ -->
+    <!-- Navigation Bar                               -->
+    <!-- ============================================ -->
+    <header class="site-header">
+        <nav class="navbar container">
+            <!-- Logo -->
+            <a href="index.html" class="logo" aria-label="ET Transport home">
+                <span class="logo-icon" aria-hidden="true">&#128652;</span>
+                <span class="logo-text">ET<span>Transport</span></span>
+            </a>
+
+            <!-- Navigation links -->
+            <ul class="nav-links" id="nav-links">
+                <li><a href="index.html" class="active">Home</a></li>
+                <li><a href="#search">Search</a></li>
+                <li><a href="companies.html">Companies</a></li>
+                <li><a href="dashboard.html">My Trips</a></li>
+                <li><a href="#about">About</a></li>
+            </ul>
+
+            <!-- Login button -->
+            <div class="nav-actions" data-nav-auth="1">
+            </div>
+
+            <!-- Mobile menu toggle -->
+            <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </button>
+        </nav>
+    </header>
+
+    <main>
+        <!-- ============================================ -->
+        <!-- Hero Section                                 -->
+        <!-- ============================================ -->
+        <section class="hero" id="about">
+            <div class="hero-overlay"></div>
+            <div class="container hero-content">
+                <h1>Travel Ethiopia the Easy Way</h1>
+                <p>
+                    Book comfortable intercity buses across Ethiopia in minutes.
+                    Search routes, compare companies, choose your seat and enjoy the ride.
+                </p>
+                <a href="#search" class="btn btn-primary">Plan Your Trip</a>
+            </div>
+
+            <!-- ============================================ -->
+            <!-- Search Form                                  -->
+            <!-- ============================================ -->
+            <div class="container search-wrap" id="search">
+                <form class="search-form" action="search.html" method="get">
+                    <div class="form-group">
+                        <label for="from">From</label>
+                        <input type="text" id="from" name="from" placeholder="e.g. Addis Ababa" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="to">To</label>
+                        <input type="text" id="to" name="to" placeholder="e.g. Bahir Dar" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="date">Travel Date</label>
+                        <input type="date" id="date" name="date" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="passengers">Passengers</label>
+                        <select id="passengers" name="passengers">
+                            <option value="1">1 Passenger</option>
+                            <option value="2">2 Passengers</option>
+                            <option value="3">3 Passengers</option>
+                            <option value="4">4 Passengers</option>
+                            <option value="5">5 Passengers</option>
+                            <option value="6">6 Passengers</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-search">Search Buses</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- ============================================ -->
+        <!-- How It Works / Features Section              -->
+        <!-- ============================================ -->
+        <section class="features" id="features">
+            <div class="container">
+                <h2 class="section-title">How It Works</h2>
+                <p class="section-subtitle">Booking your next trip is simple — just four easy steps.</p>
+
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <span class="feature-icon" aria-hidden="true">&#128269;</span>
+                        <h3>Search</h3>
+                        <p>Search thousands of routes and schedules across Ethiopia.</p>
+                    </div>
+
+                    <div class="feature-card">
+                        <span class="feature-icon" aria-hidden="true">&#128196;</span>
+                        <h3>Compare</h3>
+                        <p>Compare prices and departure times from different bus companies.</p>
+                    </div>
+
+                    <div class="feature-card">
+                        <span class="feature-icon" aria-hidden="true">&#128099;</span>
+                        <h3>Choose Your Seat</h3>
+                        <p>Pick the seat you want from an interactive seating map.</p>
+                    </div>
+
+                    <div class="feature-card">
+                        <span class="feature-icon" aria-hidden="true">&#9992;</span>
+                        <h3>Book Your Trip</h3>
+                        <p>Confirm your booking and get ready for a smooth journey.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- ============================================ -->
+ <!-- Bus Companies Directory -->
+        <!-- ============================================ -->
+                <!-- ============================================ -->
+ <!-- Your Favorite Companies -->
+        <!-- ============================================ -->
+        <section class="favorite-companies" id="favorite-companies">
+            <div class="container">
+                <h2 class="section-title">Your Favorite Companies</h2>
+                <p class="section-subtitle">Quickly revisit the companies you have saved.</p>
+                <div id="favorite-companies-grid" class="company-directory-grid"></div>
+            </div>
+        </section>
+        <div class="favorites-cta container" style="margin-bottom: var(--space-lg);">
+            <a href="companies.html" class="btn btn-primary btn-hero-cta">Explore All Bus Companies</a>
+        </div>
+
+        <section class="companies-directory" id="companies">
+            <div class="container">
+                <h2 class="section-title">Bus Companies</h2>
+                <p class="section-subtitle">Meet the operators behind the journeys — explore their routes, fleets and services.</p>
+                <div id="company-directory-grid" class="company-directory-grid"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ============================================ -->
+    <!-- Footer                                       -->
+    <!-- ============================================ -->
+    <footer class="site-footer">
+        <div class="container footer-grid">
+            <div class="footer-col">
+                <h4>ET Transport</h4>
+                <p>Your trusted partner for intercity bus travel in Ethiopia.</p>
+            </div>
+
+            <div class="footer-col">
+                <h4>Quick Links</h4>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="#search">Search</a></li>
+                    <li><a href="companies.html">Companies</a></li>
+                    <li><a href="#about">About</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <h4>Popular Routes</h4>
+                <ul>
+                    <li>Addis Ababa &rarr; Bahir Dar</li>
+                    <li>Addis Ababa &rarr; Hawassa</li>
+                    <li>Addis Ababa &rarr; Mekelle</li>
+                    <li>Addis Ababa &rarr; Dire Dawa</li>
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <h4>Contact</h4>
+                <ul>
+                    <li>Addis Ababa, Ethiopia</li>
+                    <li>info@ettransport.com</li>
+                    <li>+251 11 123 4567</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <div class="container">
+                <p>&copy; 2026 ET Transport. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/main.js"></script>
+        <script src="js/auth.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/company.js"></script>
+</body>
+</html>
+
