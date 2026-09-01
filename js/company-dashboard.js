@@ -2193,6 +2193,14 @@
         }
         var walkInModal = byId('walkin-booking-modal');
         if (walkInModal) {
+            /* Mount at <body> level like the bus/trip modals so the fixed overlay
+               lives in the root stacking context and always paints above the
+               sticky header / dashboard shell, regardless of how the modal is
+               nested in the static markup. */
+            if (walkInModal.parentNode !== document.body) {
+                document.body.appendChild(walkInModal);
+            }
+            walkInModal.style.zIndex = '102';
             walkInModal.addEventListener('click', function (ev) {
                 if (ev.target === walkInModal) { closeWalkInBookingForm(); }
             });
@@ -2218,6 +2226,11 @@
 
                 var manifestModal = byId('manifest-modal');
         if (manifestModal) {
+            /* Same root-stacking-context fix as the walk-in booking modal. */
+            if (manifestModal.parentNode !== document.body) {
+                document.body.appendChild(manifestModal);
+            }
+            manifestModal.style.zIndex = '102';
             manifestModal.addEventListener('click', function (ev) {
                 if (ev.target === manifestModal) { closeManifest(); }
             });
