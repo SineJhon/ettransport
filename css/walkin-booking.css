@@ -1,0 +1,363 @@
+/* ============================================================
+   Walk-in Booking Modal Styles
+============================================================ */
+.cd-walkin-booking-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+}
+
+.cd-walkin-booking-modal[hidden] { display: none; }
+
+.cd-walkin-booking-box {
+    background: #ffffff;
+    border-radius: 12px;
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    position: relative;
+}
+
+.cd-walkin-close-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: #f0f0f0;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease;
+    z-index: 10;
+    font-weight: 300;
+    line-height: 1;
+}
+
+.cd-walkin-close-btn:hover {
+    background: #e0e0e0;
+}
+
+.cd-walkin-booking-head {
+    padding: 2rem 1.5rem 1rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.cd-walkin-booking-head h3 {
+    font-size: 1.3rem;
+    color: #1f2937;
+    margin: 0;
+    padding-right: 2rem;
+}
+
+.cd-walkin-stepper {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.5rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    align-items: center;
+}
+
+.cd-walkin-step-pill {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #e5e7eb;
+    color: #6b7280;
+    border: none;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.cd-walkin-step-pill.active {
+    background: #1d6fb8;
+    color: #ffffff;
+}
+
+.cd-walkin-step-pill.done {
+    background: #10b981;
+    color: #ffffff;
+}
+
+.cd-walkin-step-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-align: center;
+    color: #6b7280;
+    line-height: 1.2;
+}
+
+.cd-walkin-booking-form {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+}
+
+.cd-walkin-booking-step {
+    display: none;
+}
+
+.cd-walkin-booking-step.active {
+    display: block;
+}
+
+.cd-walkin-booking-section {
+    margin-bottom: 1.5rem;
+}
+
+.cd-walkin-section-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 0.75rem;
+}
+
+.cd-walkin-day-picker {
+    margin-bottom: 1.5rem;
+}
+
+.cd-date-head {
+    margin-bottom: 0.75rem;
+}
+
+.cd-selected-date {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin: 0;
+}
+
+.cd-day-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 0.5rem;
+}
+
+.cd-day-list button {
+    padding: 0.6rem 0.5rem;
+    border: 1px solid #d1d9e6;
+    background: #ffffff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #374151;
+    transition: all 0.2s ease;
+}
+
+.cd-day-list button:hover {
+    border-color: #1d6fb8;
+    background: #f3f7fb;
+}
+
+.cd-day-list button.active {
+    background: #1d6fb8;
+    color: #ffffff;
+    border-color: #1d6fb8;
+}
+
+.cd-day-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+}
+
+.cd-day-btn div:first-child {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.cd-day-btn div:last-child {
+    font-size: 0.7rem;
+}
+
+.cd-walkin-booking-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 480px) {
+    .cd-walkin-booking-form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+.cd-walkin-booking-form-row > div {
+    display: flex;
+    flex-direction: column;
+}
+
+.cd-walkin-booking-form-row label,
+.cd-walkin-booking-form label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 0.4rem;
+}
+
+.cd-walkin-booking-form input,
+.cd-walkin-booking-form select {
+    padding: 0.6rem 0.75rem;
+    border: 1px solid #d1d9e6;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    color: #374151;
+    background: #ffffff;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cd-walkin-booking-form input:focus,
+.cd-walkin-booking-form select:focus {
+    outline: none;
+    border-color: #1d6fb8;
+    box-shadow: 0 0 0 3px rgba(29, 111, 184, 0.1);
+}
+
+.cd-walkin-booking-radio-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.cd-walkin-booking-radio {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 0.5rem 0;
+}
+
+.cd-walkin-booking-radio input {
+    margin-right: 0.75rem;
+    cursor: pointer;
+}
+
+.cd-walkin-booking-radio span {
+    font-size: 0.9rem;
+    color: #374151;
+}
+
+.cd-walkin-transfer-fields {
+    display: none;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.cd-walkin-transfer-fields.visible {
+    display: block;
+}
+
+.cd-walkin-booking-info {
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.cd-walkin-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 0.9rem;
+}
+
+.cd-walkin-info-row:last-child {
+    border-bottom: none;
+}
+
+.cd-walkin-info-label {
+    font-weight: 500;
+    color: #374151;
+}
+
+.cd-walkin-info-value {
+    color: #1d6fb8;
+    font-weight: 500;
+}
+
+.cd-walkin-booking-error {
+    background: #fee2e2;
+    border: 1px solid #fca5a5;
+    color: #991b1b;
+    padding: 0.75rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.cd-walkin-booking-error:empty {
+    display: none;
+}
+
+.cd-walkin-booking-form-actions {
+    display: flex;
+    gap: 0.75rem;
+    padding: 1.5rem;
+    border-top: 1px solid #e5e7eb;
+    background: #f9fafb;
+    justify-content: flex-end;
+}
+
+.cd-walkin-booking-form-actions .btn {
+    flex: 0 1 140px;
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+}
+
+.cd-walkin-booking-form-actions .btn-secondary {
+    background: #e5e7eb;
+    color: #374151;
+    border: 1px solid #d1d9e6;
+}
+
+.cd-walkin-booking-form-actions .btn-secondary:hover {
+    background: #d1d5db;
+}
+
+@media (max-width: 480px) {
+    .cd-walkin-booking-box {
+        border-radius: 8px;
+        max-height: 100vh;
+    }
+    .cd-walkin-booking-form-actions {
+        flex-direction: row-reverse;
+        justify-content: space-between;
+    }
+    .cd-walkin-booking-form-actions .btn {
+        flex: 1;
+        max-width: none;
+    }
+    .cd-walkin-stepper {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.3rem;
+    }
+    .cd-walkin-step-label {
+        font-size: 0.65rem;
+    }
+}

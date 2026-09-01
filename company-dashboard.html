@@ -6,6 +6,7 @@
     <meta name="description" content="Company operator dashboard for ET Transport">
     <title>Company Dashboard | ET Transport</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/walkin-booking.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
@@ -102,6 +103,39 @@
         .cd-booking-badge.failed { background: #b91c1c; }
         .cd-booking-badge.refunded { background: #6b7280; }
         .cd-booking-actions { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
+        .cd-bookings-tools { display: flex; justify-content: flex-end; margin-bottom: 0.75rem; }
+        .cd-walkin-booking-modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); display: flex; align-items: center; justify-content: center; z-index: 60; padding: 1rem; }
+        .cd-walkin-booking-modal[hidden] { display: none; }
+        .cd-walkin-booking-box { background: var(--color-white, #fff); border-radius: 12px; border: 1px solid #e5e7eb; width: 100%; max-width: 760px; max-height: 90vh; overflow: auto; padding: 1.1rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); }
+        .cd-walkin-booking-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+        .cd-walkin-booking-head h3 { margin: 0; font-size: 1.1rem; color: var(--color-dark); }
+        .cd-walkin-stepper { display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap; }
+        .cd-walkin-step-pill { display: inline-flex; align-items: center; justify-content: center; min-width: 2.1rem; height: 2.1rem; border-radius: 999px; background: #eef2f7; color: #475569; font-size: 0.72rem; font-weight: 700; }
+        .cd-walkin-step-pill.active { background: var(--color-primary, #16a34a); color: #fff; }
+        .cd-walkin-step-pill.done { background: #dcfce7; color: #166534; }
+        .cd-walkin-step-label { font-size: 0.72rem; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+        .cd-walkin-booking-form { display: grid; gap: 0.8rem; margin-top: 1rem; }
+        .cd-walkin-booking-form label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem; }
+        .cd-walkin-booking-form input, .cd-walkin-booking-form select { width: 100%; padding: 0.6rem 0.7rem; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 6px; }
+        .cd-walkin-booking-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        .cd-walkin-booking-form-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem; }
+        .cd-walkin-booking-step { display: none; }
+        .cd-walkin-booking-step.active { display: block; }
+        .cd-walkin-booking-radio-list { display: grid; gap: 0.65rem; }
+        .cd-walkin-booking-radio { display: flex; align-items: center; gap: 0.6rem; padding: 0.8rem 0.9rem; border: 1px solid #dbe3ec; border-radius: 10px; background: #f8fafc; }
+        .cd-walkin-booking-radio input { width: auto; }
+        .cd-walkin-date-row, .cd-walkin-trip-list { display: grid; gap: 0.7rem; }
+        .cd-walkin-trip-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.7rem; }
+        .cd-walkin-trip-card { padding: 0.8rem; border: 1px solid #dce6ef; border-radius: 10px; background: #f8fafc; cursor: pointer; }
+        .cd-walkin-trip-card.selected { border-color: var(--color-primary, #16a34a); background: #edfdf3; box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.08); }
+        .cd-walkin-trip-card strong { display: block; font-size: 0.95rem; }
+        .cd-walkin-trip-meta { display: block; font-size: 0.8rem; color: var(--color-muted); margin-top: 0.2rem; }
+        .cd-walkin-trip-price { display: block; font-weight: 700; color: var(--color-primary, #16a34a); margin-top: 0.35rem; }
+        .cd-walkin-booking-error { min-height: 1.1rem; font-size: 0.82rem; color: #b91c1c; }
+        .cd-walkin-booking-info { font-size: 0.82rem; color: var(--color-muted); }
+        .cd-walkin-payment-box { border: 1px solid #e5e7eb; border-radius: 10px; background: #f8fafc; padding: 0.8rem; display: grid; gap: 0.7rem; }
+        .cd-walkin-transfer-fields { display: none; gap: 0.7rem; }
+        .cd-walkin-transfer-fields.visible { display: grid; }
 
  /* ===== Manifest modal (scoped to .cd-*) ===== */
         .cd-manifest-modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); display: flex; align-items: center; justify-content: center; z-index: 60; padding: 1rem; }
@@ -428,10 +462,164 @@
                     <div class="cd-filter-actions"><button type="button" id="btn-clear-booking-filters" class="btn btn-secondary">Clear filters</button><button type="button" id="btn-refresh-bookings" class="btn btn-primary">Refresh bookings</button></div>
                 </div>
 
+                <div class="cd-bookings-tools">
+                    <button type="button" id="btn-add-walkin-booking" class="btn btn-primary">Add office booking</button>
+                </div>
+
                 <p id="booking-loading" class="cd-bookings-msg" hidden>Loading bookings&hellip;</p>
                 <div id="booking-error" class="cd-bookings-error auth-message" hidden></div>
                 <div id="booking-empty" class="cd-bookings-empty" hidden>No bookings on your trips yet. Bookings will appear here once passengers book your scheduled trips.</div>
                 <div id="booking-list" class="cd-booking-list" hidden></div>
+
+                <div id="walkin-booking-modal" class="cd-walkin-booking-modal" hidden>
+                    <div class="cd-walkin-booking-box" role="dialog" aria-modal="true" aria-labelledby="walkin-booking-title">
+                        <button type="button" id="walkin-booking-close" class="cd-walkin-close-btn" aria-label="Close office booking form">&times;</button>
+                        <div class="cd-walkin-booking-head">
+                            <h3 id="walkin-booking-title">New Office / Call-in Booking</h3>
+                        </div>
+                        <div class="cd-walkin-stepper" aria-label="Booking steps">
+                            <span class="cd-walkin-step-pill active">1</span>
+                            <span class="cd-walkin-step-label">Type</span>
+                            <span class="cd-walkin-step-pill">2</span>
+                            <span class="cd-walkin-step-label">Trip</span>
+                            <span class="cd-walkin-step-pill">3</span>
+                            <span class="cd-walkin-step-label">Seat</span>
+                            <span class="cd-walkin-step-pill">4</span>
+                            <span class="cd-walkin-step-label">Passenger</span>
+                            <span class="cd-walkin-step-pill">5</span>
+                            <span class="cd-walkin-step-label">Payment</span>
+                            <span class="cd-walkin-step-pill">6</span>
+                            <span class="cd-walkin-step-label">Confirm</span>
+                        </div>
+                        <form id="walkin-booking-form" class="cd-walkin-booking-form" novalidate>
+                            <div id="walkin-step-1" class="cd-walkin-booking-step active">
+                                <div class="cd-walkin-booking-radio-list">
+                                    <label class="cd-walkin-booking-radio"><input type="radio" name="walkin-booking-type" value="office"> <span>Office / Walk-in</span></label>
+                                    <label class="cd-walkin-booking-radio"><input type="radio" name="walkin-booking-type" value="call_in"> <span>Call-in</span></label>
+                                </div>
+                            </div>
+                            <div id="walkin-step-2" class="cd-walkin-booking-step">
+                                <div class="cd-walkin-booking-section">
+                                    <div class="cd-walkin-section-title">Travel Date</div>
+                                    <div class="cd-walkin-day-picker">
+                                        <div class="cd-date-head"><p id="walkin-booking-date-label" class="cd-selected-date">Select a date</p></div>
+                                        <div id="walkin-booking-day-list" class="cd-day-list" role="group" aria-label="Travel date"></div>
+                                    </div>
+                                </div>
+                                <div class="cd-walkin-booking-section">
+                                    <div class="cd-walkin-section-title">Available Trip</div>
+                                    <select id="walkin-trip" required>
+                                        <option value="">Select trip</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div id="walkin-step-3" class="cd-walkin-booking-step">
+                                <div class="card seat-selection">
+                                    <div class="selection-top">
+                                        <h2>Select Seat</h2>
+                                        <span id="walkin-selected-count" class="selected-count">Selected: 0 / 1</span>
+                                    </div>
+                                    <p id="walkin-selected-seats" class="selected-seats">Selected Seats: —</p>
+                                    <div class="bus-shell">
+                                        <div class="driver-area">DRIVER</div>
+                                        <div id="walkin-seat-map" class="seat-grid" role="group" aria-label="Bus seat map"></div>
+                                    </div>
+                                    <p id="walkin-limit-msg" class="limit-msg" hidden></p>
+                                    <ul class="seat-legend">
+                                        <li><span class="swatch available" aria-hidden="true"></span>Available</li>
+                                        <li><span class="swatch selected" aria-hidden="true"></span>Selected</li>
+                                        <li><span class="swatch occupied" aria-hidden="true"></span>Occupied</li>
+                                        <li><span class="swatch unavailable" aria-hidden="true"></span>Unavailable</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div id="walkin-step-4" class="cd-walkin-booking-step">
+                                <div class="cd-walkin-booking-section">
+                                    <div class="cd-walkin-section-title">Passenger Information</div>
+                                    <div class="cd-walkin-booking-form-row">
+                                        <div>
+                                            <label for="walkin-passenger-name">Full name *</label>
+                                            <input type="text" id="walkin-passenger-name" maxlength="120" placeholder="e.g. John Doe">
+                                        </div>
+                                        <div>
+                                            <label for="walkin-passenger-phone">Phone number *</label>
+                                            <input type="tel" id="walkin-passenger-phone" maxlength="30" placeholder="e.g. +251912345678">
+                                        </div>
+                                    </div>
+                                    <div class="cd-walkin-booking-form-row">
+                                        <div>
+                                            <label for="walkin-passenger-age">Age</label>
+                                            <input type="number" id="walkin-passenger-age" min="1" max="100" step="1" placeholder="Optional">
+                                        </div>
+                                        <div>
+                                            <label for="walkin-passenger-gender">Gender</label>
+                                            <select id="walkin-passenger-gender">
+                                                <option value="">Not specified</option>
+                                                <option value="male">Male</option>
+                                                <option value="female">Female</option>
+                                                <option value="other">Other</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="walkin-step-5" class="cd-walkin-booking-step">
+                                <div class="cd-walkin-booking-section">
+                                    <div class="cd-walkin-section-title">Payment Method</div>
+                                    <div class="cd-walkin-booking-radio-list">
+                                        <label class="cd-walkin-booking-radio"><input type="radio" name="walkin-payment-method" value="cash"> <span>Cash</span></label>
+                                        <label class="cd-walkin-booking-radio"><input type="radio" name="walkin-payment-method" value="transfer"> <span>Bank Transfer</span></label>
+                                    </div>
+                                    <div id="walkin-transfer-fields" class="cd-walkin-transfer-fields">
+                                        <div class="cd-walkin-booking-form-row">
+                                            <div>
+                                                <label for="walkin-transfer-transaction">Transaction number</label>
+                                                <input type="text" id="walkin-transfer-transaction" placeholder="e.g. T12345">
+                                            </div>
+                                            <div>
+                                                <label for="walkin-transfer-sender">Sender / account name</label>
+                                                <input type="text" id="walkin-transfer-sender" placeholder="Sender name">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="walkin-step-6" class="cd-walkin-booking-step">
+                                <div class="cd-walkin-booking-section">
+                                    <div class="cd-walkin-section-title">Review Booking</div>
+                                    <div class="cd-walkin-booking-info">
+                                        <div class="cd-walkin-info-row">
+                                            <span class="cd-walkin-info-label">Booking source:</span>
+                                            <span class="cd-walkin-info-value" id="walkin-confirm-source">—</span>
+                                        </div>
+                                        <div class="cd-walkin-info-row">
+                                            <span class="cd-walkin-info-label">Trip:</span>
+                                            <span class="cd-walkin-info-value" id="walkin-confirm-trip">—</span>
+                                        </div>
+                                        <div class="cd-walkin-info-row">
+                                            <span class="cd-walkin-info-label">Seat:</span>
+                                            <span class="cd-walkin-info-value" id="walkin-confirm-seat">—</span>
+                                        </div>
+                                        <div class="cd-walkin-info-row">
+                                            <span class="cd-walkin-info-label">Passenger:</span>
+                                            <span class="cd-walkin-info-value" id="walkin-confirm-passenger">—</span>
+                                        </div>
+                                        <div class="cd-walkin-info-row">
+                                            <span class="cd-walkin-info-label">Payment:</span>
+                                            <span class="cd-walkin-info-value" id="walkin-confirm-payment">—</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <p id="walkin-booking-error" class="cd-walkin-booking-error" role="alert"></p>
+                            <div class="cd-walkin-booking-form-actions">
+                                <button type="button" id="walkin-booking-back" class="btn btn-secondary">← Back</button>
+                                <button type="button" id="walkin-booking-next" class="btn btn-primary">Continue →</button>
+                                <button type="button" id="walkin-booking-confirm" class="btn btn-primary" hidden>✓ Confirm Booking</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
 
                 <div id="manifest-modal" class="cd-manifest-modal" hidden>
                     <div class="cd-manifest-box" role="dialog" aria-modal="true" aria-labelledby="manifest-title">

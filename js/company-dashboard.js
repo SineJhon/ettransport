@@ -871,7 +871,8 @@
                 '<span class="cd-booking-row-text">Booking: ' + bookingBadge(b.booking_status) +
                     ' &middot; Payment: ' + paymentBadge(b.payment_status) + '</span>' +
                 '<div class="cd-booking-actions">' +
-                    '<button type="button" class="btn btn-secondary btn-sm" data-manifest="' + b.id + '">View Manifest</button>' +
+                    '<button type="button" class="btn btn-secondary btn-sm" data-manifest="' + b.id + '">Manifest</button>' +
+                    (b.booking_status !== 'cancelled' ? '<button type="button" class="btn btn-danger btn-sm" data-cancel="' + b.id + '">Cancel</button>' : '') +
                 '</div>' +
             '</div>';
         }).join('');
@@ -893,6 +894,60 @@
                 openManifest(this.getAttribute('data-manifest'));
             });
         }
+        var cancelBtns = list.querySelectorAll('button[data-cancel]');
+        for (var j = 0; j < cancelBtns.length; j++) {
+            cancelBtns[j].addEventListener('click', function () {
+                var bookingId = this.getAttribute('data-cancel');
+                if (confirm('Are you sure you want to cancel this booking? This action cannot be undone.')) {
+                    cancelBooking(bookingId);
+                }
+            });
+        }
+    }
+
+    function cancelBooking(bookingId) {
+        fetch('api/company.php?action=booking_cancel', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ booking_id: bookingId })
+        })
+            .then(function (res) {
+                return res.json().catch(function () {
+                    return { success: false, message: 'Invalid server response.' };
+                }).then(function (json) {
+                    return { ok: res.ok, status: res.status, data: json };
+                });
+            })
+            .then(function (result) {
+                var data = result.data || {};
+                if (!result.ok || result.status !== 200 || !data.success) {
+                    var error = byId('booking-error');
+                    if (error) {
+                        error.hidden = false;
+                        error.className = 'cd-bookings-error auth-message error';
+                        error.textContent = data.message || 'Unable to cancel the booking.';
+                    }
+                    return;
+                }
+                loadBookings();
+                loadRevenueSummary();
+                var notice = data.message || 'Booking cancelled successfully.';
+                var info = byId('booking-error');
+                if (info) {
+                    info.hidden = false;
+                    info.className = 'cd-bookings-error auth-message success';
+                    info.textContent = notice;
+                }
+            })
+            .catch(function () {
+                var error = byId('booking-error');
+                if (error) {
+                    error.hidden = false;
+                    error.className = 'cd-bookings-error auth-message error';
+                    error.textContent = 'Network error while cancelling the booking.';
+                }
+            });
     }
 
     function loadBookings() {
@@ -927,6 +982,468 @@
             })
             .catch(function () {
                 showBookingError('Network error while loading your bookings.');
+            });
+    }
+
+    var walkInState = {
+        step: 1,
+        bookingType: '',
+        tripDate: '',
+        tripId: '',
+        trip: null,
+        paymentMethod: '',
+        selectedSeat: null,
+        transferRef: '',
+        transferSender: '',
+        trips: []
+    };
+
+    function walkInSeatLayout() {
+        return [
+            { type: 'standard', left: [1, 2], right: [4, 3] },
+            { type: 'standard', left: [5, 6], right: [8, 7] },
+            { type: 'standard', left: [9, 10], right: [12, 11] },
+            { type: 'standard', left: [13, 14], right: [16, 15] },
+            { type: 'standard', left: [17, 18], right: [20, 19] },
+            { type: 'standard', left: [21, 22], right: [24, 23] },
+            { type: 'standard', left: [25, 26], right: [28, 27] },
+            { type: 'door', left: [29, 30], right: [] },
+            { type: 'standard', left: [33, 34], right: [32, 31] },
+            { type: 'standard', left: [37, 38], right: [36, 35] },
+            { type: 'standard', left: [41, 42], right: [40, 39] },
+            { type: 'standard', left: [45, 46], right: [44, 43] },
+            { type: 'rear', seats: [49, 50, 51, 48, 47] }
+        ];
+    }
+
+    function walkInSeatButton(num, state) {
+        var label = state === 'occupied' ? 'Occupied' : state === 'unavailable' ? 'Unavailable' : 'Available';
+        return '<button type="button" class="seat ' + state + '" data-seat="' + num + '" aria-label="Seat ' + String(num).padStart(2, '0') + ', ' + label + '" title="Seat ' + String(num).padStart(2, '0') + ' (' + label + ')"' + (state !== 'available' ? ' disabled' : '') + '>' +
+            '<svg class="seat-svg" viewBox="0 0 40 52" aria-hidden="true"><g fill="currentColor"><rect x="8" y="5" width="24" height="30" rx="7"/><rect x="2.5" y="9" width="5" height="27" rx="2.5"/><rect x="32.5" y="9" width="5" height="27" rx="2.5"/><rect x="4" y="39" width="32" height="11" rx="5"/></g><g fill="rgba(255,255,255,0.22)"><rect x="10" y="7" width="20" height="3" rx="1.5"/></g></svg>' +
+            '<span class="seat-num">' + String(num).padStart(2, '0') + '</span>' +
+            '</button>';
+    }
+
+    function walkInSeatRowHtml(row) {
+        var html = '<div class="seat-row seat-row-' + row.type + '">';
+        if (row.type === 'rear') {
+            for (var i = 0; i < row.seats.length; i++) { html += walkInSeatButton(row.seats[i], 'available'); }
+        } else {
+            for (var l = 0; l < row.left.length; l++) { html += walkInSeatButton(row.left[l], 'available'); }
+            html += '<span class="seat-aisle" aria-hidden="true"></span>';
+            if (row.type === 'door') {
+                html += '<span class="bus-door" role="img" aria-label="Passenger entrance"></span>';
+            } else {
+                for (var r = 0; r < row.right.length; r++) { html += walkInSeatButton(row.right[r], 'available'); }
+            }
+        }
+        html += '</div>';
+        return html;
+    }
+
+    function walkInSeatState(num, occupiedSeats, unavailableSeats) {
+        if (unavailableSeats.indexOf(num) !== -1) { return 'unavailable'; }
+        if (occupiedSeats.indexOf(num) !== -1) { return 'occupied'; }
+        return 'available';
+    }
+
+    function renderWalkInSeatMap(occupiedSeats, seatCount) {
+        var seatMap = byId('walkin-seat-map');
+        if (!seatMap) { return; }
+
+        var layout = walkInSeatLayout();
+        var unavailableSeats = [];
+        for (var n = 1; n <= 51; n++) {
+            if (n > (seatCount || 51)) { unavailableSeats.push(n); }
+        }
+        var html = '';
+        for (var i = 0; i < layout.length; i++) {
+            var row = layout[i];
+            var rowHtml = '<div class="seat-row seat-row-' + row.type + '">';
+            if (row.type === 'rear') {
+                for (var a = 0; a < row.seats.length; a++) {
+                    var seatNumber = row.seats[a];
+                    rowHtml += walkInSeatButton(seatNumber, walkInSeatState(seatNumber, occupiedSeats, unavailableSeats));
+                }
+            } else {
+                for (var l = 0; l < row.left.length; l++) {
+                    var leftSeat = row.left[l];
+                    rowHtml += walkInSeatButton(leftSeat, walkInSeatState(leftSeat, occupiedSeats, unavailableSeats));
+                }
+                rowHtml += '<span class="seat-aisle" aria-hidden="true"></span>';
+                if (row.type === 'door') {
+                    rowHtml += '<span class="bus-door" role="img" aria-label="Passenger entrance"></span>';
+                } else {
+                    for (var r = 0; r < row.right.length; r++) {
+                        var rightSeat = row.right[r];
+                        rowHtml += walkInSeatButton(rightSeat, walkInSeatState(rightSeat, occupiedSeats, unavailableSeats));
+                    }
+                }
+            }
+            rowHtml += '</div>';
+            html += rowHtml;
+        }
+        seatMap.innerHTML = html;
+
+        var selectedSeat = walkInState.selectedSeat;
+        if (selectedSeat !== null && selectedSeat !== undefined) {
+            var selectedNode = seatMap.querySelector('[data-seat="' + selectedSeat + '"]');
+            if (selectedNode) { selectedNode.classList.add('selected'); }
+        }
+
+        seatMap.querySelectorAll('.seat').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var num = Number(this.getAttribute('data-seat'));
+                if (this.classList.contains('occupied') || this.classList.contains('unavailable')) { return; }
+                if (walkInState.selectedSeat === num) {
+                    walkInState.selectedSeat = null;
+                    this.classList.remove('selected');
+                } else {
+                    var allowed = this.classList.contains('available');
+                    if (!allowed) { return; }
+                    walkInState.selectedSeat = num;
+                    seatMap.querySelectorAll('.seat').forEach(function (seatBtn) {
+                        seatBtn.classList.toggle('selected', Number(seatBtn.getAttribute('data-seat')) === num);
+                    });
+                }
+                updateWalkInSeatSummary();
+            });
+        });
+    }
+
+    function updateWalkInSeatSummary() {
+        var selected = walkInState.selectedSeat !== null && walkInState.selectedSeat !== undefined ? [walkInState.selectedSeat] : [];
+        var label = byId('walkin-selected-count');
+        var summary = byId('walkin-selected-seats');
+        var status = byId('walkin-limit-msg');
+        if (label) { label.textContent = 'Selected: ' + selected.length + ' / 1'; }
+        if (summary) { summary.textContent = 'Selected Seats: ' + (selected.length ? selected.map(function (n) { return String(n).padStart(2, '0'); }).join(', ') : '—'); }
+        if (status) { status.hidden = true; }
+    }
+
+    function loadWalkInSeatAvailability() {
+        var selectedTrip = getSelectedTripFromWizard();
+        if (!selectedTrip) { return; }
+
+        fetch('api/booking.php?action=availability&trip_id=' + encodeURIComponent(String(selectedTrip.id)) + '&date=' + encodeURIComponent(String(selectedTrip.departure_date || walkInState.tripDate)), {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(function (res) {
+                return res.json().catch(function () {
+                    return { success: false, message: 'Invalid server response.' };
+                });
+            })
+            .then(function (data) {
+                if (!data || !data.success) { return; }
+                var occupied = Array.isArray(data.occupied) ? data.occupied.map(function (n) { return Number(n); }) : [];
+                var seatCount = Number(data.seat_count) || 51;
+                renderWalkInSeatMap(occupied, seatCount);
+                updateWalkInSeatSummary();
+            })
+            .catch(function () {
+                renderWalkInSeatMap([], 51);
+                updateWalkInSeatSummary();
+            });
+    }
+
+    function getSelectedTripFromWizard() {
+        if (walkInState.tripId && walkInState.trips.length) {
+            for (var i = 0; i < walkInState.trips.length; i++) {
+                if (String(walkInState.trips[i].id) === String(walkInState.tripId)) {
+                    return walkInState.trips[i];
+                }
+            }
+        }
+        return null;
+    }
+
+    function refreshWalkInTripOptions() {
+        var tripSelect = byId('walkin-trip');
+        if (!tripSelect) { return; }
+        var dateValue = walkInState.tripDate;
+        var filteredTrips = walkInState.trips.filter(function (trip) {
+            if (String(trip.status || '').toLowerCase() !== 'scheduled') { return false; }
+            if (dateValue && String(trip.departure_date) !== dateValue) { return false; }
+            return true;
+        });
+
+        tripSelect.innerHTML = '<option value="">Select trip</option>';
+        filteredTrips.forEach(function (trip) {
+            var opt = document.createElement('option');
+            opt.value = String(trip.id);
+            opt.textContent = trip.from_city + ' → ' + trip.to_city + ' (' + trip.departure_date + ' ' + trip.departure_time + ')';
+            tripSelect.appendChild(opt);
+        });
+        if (walkInState.tripId && filteredTrips.some(function (trip) { return String(trip.id) === String(walkInState.tripId); })) {
+            tripSelect.value = String(walkInState.tripId);
+        }
+    }
+
+    function renderWalkInDayPicker() {
+        var dayList = byId('walkin-booking-day-list');
+        if (!dayList || !walkInState.trips.length) { return; }
+
+        var dates = {};
+        walkInState.trips.forEach(function (trip) {
+            if (String(trip.status || '').toLowerCase() === 'scheduled') {
+                dates[trip.departure_date] = true;
+            }
+        });
+
+        var sortedDates = Object.keys(dates).sort();
+        dayList.innerHTML = sortedDates.map(function (date) {
+            var d = new Date(date);
+            var dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+            var dayNum = d.getDate();
+            var isActive = walkInState.tripDate === date ? 'active' : '';
+            return '<button type="button" class="cd-day-btn ' + isActive + '" data-date="' + date + '">' +
+                '<div>' + dayNum + '</div><div>' + dayName + '</div>' +
+                '</button>';
+        }).join('');
+
+        dayList.querySelectorAll('.cd-day-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                clearWalkInError();
+                var date = this.getAttribute('data-date');
+                walkInState.tripDate = date;
+                dayList.querySelectorAll('.cd-day-btn').forEach(function (b) { b.classList.remove('active'); });
+                this.classList.add('active');
+                updateWalkInDateLabel();
+                refreshWalkInTripOptions();
+            });
+        });
+    }
+
+    function updateWalkInDateLabel() {
+        var label = byId('walkin-booking-date-label');
+        if (label) {
+            if (walkInState.tripDate) {
+                var d = new Date(walkInState.tripDate);
+                label.textContent = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+            } else {
+                label.textContent = 'Select a date';
+            }
+        }
+    }
+
+    function populateWalkInBookingTrips() {
+        return fetch('api/company.php?action=trips', {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(function (res) {
+                return res.json().catch(function () {
+                    return { success: false, message: 'Invalid server response.' };
+                });
+            })
+            .then(function (data) {
+                if (!data || !data.success) { return false; }
+                walkInState.trips = data.trips || [];
+                refreshWalkInTripOptions();
+                return true;
+            })
+            .catch(function () {
+                return false;
+            });
+    }
+
+    function setWalkInStep(step) {
+        walkInState.step = step;
+        var stepNodes = document.querySelectorAll('.cd-walkin-booking-step');
+        for (var i = 0; i < stepNodes.length; i++) {
+            stepNodes[i].classList.toggle('active', String(i + 1) === String(step));
+        }
+        var pills = document.querySelectorAll('.cd-walkin-step-pill');
+        for (var j = 0; j < pills.length; j++) {
+            var labelValue = Number(j + 1);
+            pills[j].classList.toggle('active', labelValue === step);
+            pills[j].classList.toggle('done', labelValue < step);
+        }
+        var nextBtn = byId('walkin-booking-next');
+        var confirmBtn = byId('walkin-booking-confirm');
+        if (nextBtn) { nextBtn.hidden = step === 6; }
+        if (confirmBtn) { confirmBtn.hidden = step !== 6; }
+        var backBtn = byId('walkin-booking-back');
+        if (backBtn) { backBtn.disabled = step === 1; }
+        if (step === 6) { updateWalkInConfirmation(); }
+    }
+
+    function clearWalkInError() {
+        var error = byId('walkin-booking-error');
+        if (error) { error.textContent = ''; }
+    }
+
+    function showWalkInError(message) {
+        var error = byId('walkin-booking-error');
+        if (error) { error.textContent = message || 'Please complete the required fields.'; }
+    }
+
+    function updateWalkInConfirmation() {
+        var source = walkInState.bookingType === 'office' ? 'Office / Walk-in' : walkInState.bookingType === 'call_in' ? 'Call-in' : '—';
+        var trip = getSelectedTripFromWizard();
+        var passengerName = byId('walkin-passenger-name') ? byId('walkin-passenger-name').value.trim() : '';
+        var passengerPhone = byId('walkin-passenger-phone') ? byId('walkin-passenger-phone').value.trim() : '';
+        var paymentMethod = walkInState.paymentMethod === 'cash' ? 'Cash' : walkInState.paymentMethod === 'transfer' ? 'Bank Transfer' : '—';
+        var seatLabel = walkInState.selectedSeat !== null && walkInState.selectedSeat !== undefined ? String(walkInState.selectedSeat).padStart(2, '0') : '—';
+        var tripLabel = trip ? trip.from_city + ' → ' + trip.to_city + ' (' + trip.departure_date + ' ' + trip.departure_time + ')' : '—';
+        var summary = document.getElementById('walkin-confirm-source');
+        if (summary) { summary.textContent = source; }
+        summary = document.getElementById('walkin-confirm-trip');
+        if (summary) { summary.textContent = tripLabel; }
+        summary = document.getElementById('walkin-confirm-seat');
+        if (summary) { summary.textContent = seatLabel; }
+        summary = document.getElementById('walkin-confirm-passenger');
+        if (summary) { summary.textContent = passengerName || passengerPhone || '—'; }
+        summary = document.getElementById('walkin-confirm-payment');
+        if (summary) { summary.textContent = paymentMethod + (walkInState.paymentMethod === 'transfer' && walkInState.transferRef ? ' · ' + walkInState.transferRef : ''); }
+    }
+
+    function openWalkInBookingForm() {
+        var modal = byId('walkin-booking-modal');
+        if (!modal) { return; }
+        var form = byId('walkin-booking-form');
+        if (form) { form.reset(); }
+        walkInState = {
+            step: 1,
+            bookingType: '',
+            tripDate: '',
+            tripId: '',
+            trip: null,
+            paymentMethod: '',
+            selectedSeat: null,
+            transferRef: '',
+            transferSender: '',
+            trips: walkInState.trips || []
+        };
+        clearWalkInError();
+        setWalkInStep(1);
+        var typeInputs = document.querySelectorAll('input[name="walkin-booking-type"]');
+        for (var i = 0; i < typeInputs.length; i++) { typeInputs[i].checked = false; }
+        var payInputs = document.querySelectorAll('input[name="walkin-payment-method"]');
+        for (var p = 0; p < payInputs.length; p++) { payInputs[p].checked = false; }
+        var transferFields = byId('walkin-transfer-fields');
+        if (transferFields) { transferFields.classList.remove('visible'); }
+        walkInState.tripDate = '';
+        populateWalkInBookingTrips().then(function () {
+            renderWalkInDayPicker();
+            updateWalkInDateLabel();
+        });
+        modal.hidden = false;
+    }
+
+    function closeWalkInBookingForm() {
+        var modal = byId('walkin-booking-modal');
+        if (modal) { modal.hidden = true; }
+        clearWalkInError();
+        walkInState = {
+            step: 1,
+            bookingType: '',
+            tripDate: '',
+            tripId: '',
+            trip: null,
+            paymentMethod: '',
+            selectedSeat: null,
+            transferRef: '',
+            transferSender: '',
+            trips: walkInState.trips || []
+        };
+    }
+
+    function submitWalkInBookingForm() {
+        var form = byId('walkin-booking-form');
+        if (!form) { return; }
+
+        clearWalkInError();
+        var tripId = byId('walkin-trip') ? byId('walkin-trip').value : '';
+        var passengerName = byId('walkin-passenger-name') ? byId('walkin-passenger-name').value.trim() : '';
+        var passengerPhone = byId('walkin-passenger-phone') ? byId('walkin-passenger-phone').value.trim() : '';
+        var passengerAge = byId('walkin-passenger-age') ? byId('walkin-passenger-age').value : '';
+        var passengerGender = byId('walkin-passenger-gender') ? byId('walkin-passenger-gender').value : '';
+        var paymentInput = document.querySelector('input[name="walkin-payment-method"]:checked');
+        var paymentMethod = paymentInput ? paymentInput.value : '';
+        var transferTransaction = byId('walkin-transfer-transaction') ? byId('walkin-transfer-transaction').value.trim() : '';
+
+        if (!walkInState.bookingType) {
+            showWalkInError('Please choose a booking source before continuing.');
+            return;
+        }
+        if (!walkInState.tripDate || !tripId) {
+            showWalkInError('Please select a valid travel date and trip.');
+            return;
+        }
+        if (walkInState.selectedSeat === null || walkInState.selectedSeat === undefined) {
+            showWalkInError('Please choose a seat before continuing.');
+            return;
+        }
+        if (!passengerName || passengerName.length < 2) {
+            showWalkInError('Passenger name is required.');
+            return;
+        }
+        if (!passengerPhone || passengerPhone.length < 7) {
+            showWalkInError('Passenger phone number is required.');
+            return;
+        }
+        if (!paymentMethod) {
+            showWalkInError('Please choose a payment method.');
+            return;
+        }
+        if (paymentMethod === 'transfer' && !transferTransaction) {
+            showWalkInError('A transfer transaction number is required for bank transfer payments.');
+            return;
+        }
+
+        var payload = {
+            trip_id: tripId,
+            passenger_name: passengerName,
+            passenger_phone: passengerPhone,
+            passenger_age: passengerAge,
+            passenger_gender: passengerGender,
+            seat_number: String(walkInState.selectedSeat),
+            payment_method: paymentMethod,
+            payment_reference: paymentMethod === 'transfer' ? transferTransaction : ''
+        };
+
+        var submitBtn = byId('walkin-booking-confirm');
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Booking...'; }
+
+        fetch('api/company.php?action=booking_create', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+            .then(function (res) {
+                return res.json().catch(function () {
+                    return { success: false, message: 'Invalid server response.' };
+                }).then(function (json) {
+                    return { ok: res.ok, status: res.status, data: json };
+                });
+            })
+            .then(function (result) {
+                var data = result.data || {};
+                if (!result.ok || result.status !== 201 || !data.success) {
+                    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Confirm Booking'; }
+                    showWalkInError(data.message || 'Unable to create the walk-in booking.');
+                    return;
+                }
+                closeWalkInBookingForm();
+                loadBookings();
+                loadRevenueSummary();
+                loadPayments();
+                var notice = data.message || 'Office booking created.';
+                var info = byId('booking-error');
+                if (info) {
+                    info.hidden = false;
+                    info.className = 'cd-bookings-error auth-message success';
+                    info.textContent = notice;
+                }
+            })
+            .catch(function () {
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Confirm Booking'; }
+                showWalkInError('Network error while creating the walk-in booking.');
             });
     }
 
@@ -1540,6 +2057,146 @@
 
         var bookingRefresh = byId('btn-refresh-bookings');
         if (bookingRefresh) { bookingRefresh.addEventListener('click', loadBookings); }
+
+        var walkInBtn = byId('btn-add-walkin-booking');
+        if (walkInBtn) { walkInBtn.addEventListener('click', openWalkInBookingForm); }
+        var walkInClose = byId('walkin-booking-close');
+        if (walkInClose) { walkInClose.addEventListener('click', closeWalkInBookingForm); }
+        var walkInCancel = byId('walkin-booking-cancel');
+        if (walkInCancel) { walkInCancel.addEventListener('click', closeWalkInBookingForm); }
+        var walkInBack = byId('walkin-booking-back');
+        if (walkInBack) {
+            walkInBack.addEventListener('click', function () {
+                if (walkInState.step > 1) {
+                    setWalkInStep(walkInState.step - 1);
+                }
+            });
+        }
+        var walkInNext = byId('walkin-booking-next');
+        if (walkInNext) {
+            walkInNext.addEventListener('click', function () {
+                clearWalkInError();
+                var typeInputs = document.querySelectorAll('input[name="walkin-booking-type"]:checked');
+                var bookingType = typeInputs.length ? typeInputs[0].value : '';
+                if (walkInState.step === 1) {
+                    if (!bookingType) {
+                        showWalkInError('Please choose whether this was an office or call-in booking.');
+                        return;
+                    }
+                    walkInState.bookingType = bookingType;
+                    setWalkInStep(2);
+                    return;
+                }
+                if (walkInState.step === 2) {
+                    var tripInput = byId('walkin-trip');
+                    if (!walkInState.tripDate) {
+                        showWalkInError('Travel date is required.');
+                        return;
+                    }
+                    if (!tripInput || !tripInput.value) {
+                        showWalkInError('Please pick a valid trip for this date.');
+                        return;
+                    }
+                    walkInState.tripId = tripInput.value;
+                    walkInState.trip = getSelectedTripFromWizard();
+                    setWalkInStep(3);
+                    loadWalkInSeatAvailability();
+                    return;
+                }
+                if (walkInState.step === 3) {
+                    if (walkInState.selectedSeat === null || walkInState.selectedSeat === undefined) {
+                        showWalkInError('Please pick a seat for the passenger.');
+                        return;
+                    }
+                    setWalkInStep(4);
+                    return;
+                }
+                if (walkInState.step === 4) {
+                    var passengerName = byId('walkin-passenger-name') ? byId('walkin-passenger-name').value.trim() : '';
+                    var passengerPhone = byId('walkin-passenger-phone') ? byId('walkin-passenger-phone').value.trim() : '';
+                    if (!passengerName || passengerName.length < 2) {
+                        showWalkInError('Passenger name is required.');
+                        return;
+                    }
+                    if (!passengerPhone || passengerPhone.length < 7) {
+                        showWalkInError('Passenger phone number is required.');
+                        return;
+                    }
+                    setWalkInStep(5);
+                    return;
+                }
+                if (walkInState.step === 5) {
+                    var paymentSelection = document.querySelector('input[name="walkin-payment-method"]:checked');
+                    if (!paymentSelection) {
+                        showWalkInError('Please choose a payment method.');
+                        return;
+                    }
+                    walkInState.paymentMethod = paymentSelection.value;
+                    if (walkInState.paymentMethod === 'transfer') {
+                        var transferTransaction = byId('walkin-transfer-transaction') ? byId('walkin-transfer-transaction').value.trim() : '';
+                        if (!transferTransaction) {
+                            showWalkInError('Transaction number is required for bank transfer.');
+                            return;
+                        }
+                        walkInState.transferRef = transferTransaction;
+                    } else {
+                        walkInState.transferRef = '';
+                        walkInState.transferSender = '';
+                    }
+                    setWalkInStep(6);
+                    updateWalkInConfirmation();
+                    return;
+                }
+            });
+        }
+        var walkInConfirm = byId('walkin-booking-confirm');
+        if (walkInConfirm) { walkInConfirm.addEventListener('click', submitWalkInBookingForm); }
+        var walkInDate = byId('walkin-booking-date');
+        if (walkInDate) {
+            walkInDate.addEventListener('change', function () {
+                clearWalkInError();
+                walkInState.tripDate = walkInDate.value;
+                refreshWalkInTripOptions();
+            });
+        }
+        var walkInTripSelect = byId('walkin-trip');
+        if (walkInTripSelect) {
+            walkInTripSelect.addEventListener('change', function () {
+                clearWalkInError();
+                walkInState.tripId = walkInTripSelect.value;
+                walkInState.trip = getSelectedTripFromWizard();
+                if (walkInState.trip) { loadWalkInSeatAvailability(); }
+            });
+        }
+        var walkInTypeInputs = document.querySelectorAll('input[name="walkin-booking-type"]');
+        for (var f = 0; f < walkInTypeInputs.length; f++) {
+            walkInTypeInputs[f].addEventListener('change', function () {
+                clearWalkInError();
+            });
+        }
+        var walkInPaymentInputs = document.querySelectorAll('input[name="walkin-payment-method"]');
+        for (var g = 0; g < walkInPaymentInputs.length; g++) {
+            walkInPaymentInputs[g].addEventListener('change', function () {
+                var transferFields = byId('walkin-transfer-fields');
+                if (transferFields) {
+                    transferFields.classList.toggle('visible', this.value === 'transfer');
+                }
+                clearWalkInError();
+            });
+        }
+        var walkInForm = byId('walkin-booking-form');
+        if (walkInForm) {
+            walkInForm.addEventListener('submit', function (ev) {
+                ev.preventDefault();
+                submitWalkInBookingForm();
+            });
+        }
+        var walkInModal = byId('walkin-booking-modal');
+        if (walkInModal) {
+            walkInModal.addEventListener('click', function (ev) {
+                if (ev.target === walkInModal) { closeWalkInBookingForm(); }
+            });
+        }
 
         var bookingFromFilter = byId('booking-from-filter');
         if (bookingFromFilter) { bookingFromFilter.addEventListener('change', applyBookingFilters); }

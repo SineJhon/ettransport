@@ -1686,6 +1686,247 @@ function owned_trip_or_error(PDO $pdo, int $companyId, int $tripId): void
 }
 
 /** GET /api/company.php?action=bookings — this company's own trip bookings. */
+function normalize_company_manual_payment_method(?string $value): ?string
+{
+    $m = strtolower(preg_replace('/[\s\-_]+/', '', (string) $value));
+
+    if ($m === 'cash' || $m === 'cashpayment' || $m === 'cashpay') {
+        return 'cash';
+    }
+    if ($m === 'transfer' || $m === 'banktransfer' || $m === 'banktransferpayment' || $m === 'bank' || $m === 'bankdeposit') {
+        return 'transfer';
+    }
+
+    return null;
+}
+
+function generate_company_booking_reference(PDO $pdo): string
+{
+    $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    $max = strlen($chars) - 1;
+    $check = $pdo->prepare('SELECT id FROM bookings WHERE booking_reference = :ref LIMIT 1');
+
+    for ($attempt = 0; $attempt < 25; $attempt++) {
+        $rand = '';
+        for ($i = 0; $i < 6; $i++) {
+            $rand .= $chars[random_int(0, $max)];
+        }
+
+        $ref = 'ET-' . date('Ymd') . '-' . $rand;
+        $check->execute([':ref' => $ref]);
+        if (!$check->fetch()) {
+            return $ref;
+        }
+    }
+
+    auth_response(500, ['success' => false, 'message' => 'Unable to allocate a booking reference. Please retry.']);
+}
+
+function ensure_booking_passenger_user(PDO $pdo, string $name, string $phone): int
+{
+    $phone = preg_replace('/\s+/', '', trim($phone));
+    if ($phone === '' || strlen($phone) < 7) {
+        auth_response(422, ['success' => false, 'message' => 'A valid passenger phone number is required.']);
+    }
+
+    $stmt = $pdo->prepare('SELECT id, role FROM users WHERE phone = :phone LIMIT 1');
+    $stmt->execute([':phone' => $phone]);
+    $row = $stmt->fetch();
+    if ($row !== false) {
+        if (($row['role'] ?? '') !== 'passenger') {
+            auth_response(409, ['success' => false, 'message' => 'This phone number is already linked to an account that cannot receive a walk-in booking.']);
+        }
+        return (int) $row['id'];
+    }
+
+    $safeName = preg_replace('/[^A-Za-z0-9 ]+/', '', trim($name));
+    $safeName = trim($safeName);
+    $base = $safeName !== '' ? strtolower($safeName) : 'walkin';
+    $base = preg_replace('/\s+/', '-', $base);
+    $base = preg_replace('/-+/', '-', $base);
+    $email = 'walkin-' . ($base !== '' ? $base : 'guest') . '-' . bin2hex(random_bytes(4)) . '@ettransport.local';
+    $passwordHash = password_hash('WalkIn@' . bin2hex(random_bytes(4)), PASSWORD_DEFAULT);
+
+    $ins = $pdo->prepare('
+        INSERT INTO users (name, email, phone, password_hash, role, status)
+        VALUES (:name, :email, :phone, :password_hash, :role, :status)
+    ');
+    $ins->execute([
+        ':name' => trim($name),
+        ':email' => $email,
+        ':phone' => $phone,
+        ':password_hash' => $passwordHash,
+        ':role' => 'passenger',
+        ':status' => 'active',
+    ]);
+
+    return (int) $pdo->lastInsertId();
+}
+
+/** POST /api/company.php?action=booking_create — company admin books for a passenger in person/phone. */
+function handle_company_booking_create(PDO $pdo): void
+{
+    require_company_post();
+    $user = requireRole('company');
+    $company = require_company_scope($pdo, (int) $user['id']);
+    $companyId = (int) $company['id'];
+
+    $input = company_input();
+    $tripId = positive_int_or_error($input['trip_id'] ?? null, 'A valid trip is required.');
+    $paymentMethod = normalize_company_manual_payment_method($input['payment_method'] ?? '');
+    $seatNumber = positive_int_or_error($input['seat_number'] ?? null, 'A valid seat number is required.');
+    $passengerName = trim((string) ($input['passenger_name'] ?? ''));
+    $passengerPhone = trim((string) ($input['passenger_phone'] ?? ''));
+    $passengerAge = isset($input['passenger_age']) && trim((string) $input['passenger_age']) !== '' ? (int) trim((string) $input['passenger_age']) : null;
+    $passengerGender = strtolower(trim((string) ($input['passenger_gender'] ?? '')));
+    $paymentReference = trim((string) ($input['payment_reference'] ?? ''));
+
+    if ($passengerName === '' || mb_strlen($passengerName) < 2) {
+        auth_response(422, ['success' => false, 'message' => 'Passenger name is required.']);
+    }
+    if ($passengerPhone === '' || strlen($passengerPhone) < 7) {
+        auth_response(422, ['success' => false, 'message' => 'Passenger phone number is required.']);
+    }
+    if ($paymentMethod === null) {
+        auth_response(422, ['success' => false, 'message' => 'Select cash or transfer as the payment method.']);
+    }
+    if ($paymentMethod === 'transfer' && $paymentReference === '') {
+        auth_response(422, ['success' => false, 'message' => 'A transfer transaction number is required when bank transfer is selected.']);
+    }
+    if ($passengerAge !== null && ($passengerAge < 1 || $passengerAge > 100)) {
+        auth_response(422, ['success' => false, 'message' => 'Passenger age must be between 1 and 100.']);
+    }
+    if ($passengerGender !== '' && !in_array($passengerGender, ['male', 'female', 'other'], true)) {
+        auth_response(422, ['success' => false, 'message' => 'Passenger gender is invalid.']);
+    }
+
+    $tripStmt = $pdo->prepare('
+        SELECT t.id, t.company_id, t.departure_date, t.departure_time, t.status, t.price,
+               b.seat_count, b.name AS bus_name, r.from_city, r.to_city, c.name AS company_name
+        FROM trips t
+        JOIN buses b ON b.id = t.bus_id
+        JOIN routes r ON r.id = t.route_id
+        JOIN companies c ON c.id = t.company_id
+        WHERE t.id = :trip_id AND t.company_id = :company_id
+        LIMIT 1
+    ');
+    $tripStmt->execute([':trip_id' => $tripId, ':company_id' => $companyId]);
+    $trip = $tripStmt->fetch();
+
+    if ($trip === false) {
+        auth_response(404, ['success' => false, 'message' => 'Trip not found.']);
+    }
+    if ($trip['status'] !== 'scheduled') {
+        auth_response(409, ['success' => false, 'message' => 'This trip is no longer available for a walk-in booking.']);
+    }
+    if ($seatNumber > (int) $trip['seat_count']) {
+        auth_response(422, ['success' => false, 'message' => 'Seat number is outside the available bus capacity.']);
+    }
+
+    $occupiedStmt = $pdo->prepare('
+        SELECT bp.seat_number
+        FROM booking_passengers bp
+        JOIN bookings bk ON bk.id = bp.booking_id
+        WHERE bk.trip_id = :trip_id
+          AND bk.booking_status <> :cancelled
+    ');
+    $occupiedStmt->execute([':trip_id' => $tripId, ':cancelled' => 'cancelled']);
+    $occupied = [];
+    foreach ($occupiedStmt->fetchAll() as $row) {
+        $occupied[(int) $row['seat_number']] = true;
+    }
+    if (isset($occupied[$seatNumber])) {
+        auth_response(409, ['success' => false, 'message' => 'Seat ' . str_pad((string) $seatNumber, 2, '0', STR_PAD_LEFT) . ' is already booked for this trip.']);
+    }
+
+    $passengerUserId = ensure_booking_passenger_user($pdo, $passengerName, $passengerPhone);
+
+    $pdo->beginTransaction();
+    try {
+        $ref = generate_company_booking_reference($pdo);
+        $total = round((float) $trip['price'], 2);
+
+        $bookingStmt = $pdo->prepare('
+            INSERT INTO bookings (passenger_id, trip_id, booking_reference, total_amount, payment_method, payment_status, booking_status)
+            VALUES (:passenger_id, :trip_id, :reference, :total_amount, :payment_method, :payment_status, :booking_status)
+        ');
+        $bookingStmt->execute([
+            ':passenger_id' => $passengerUserId,
+            ':trip_id' => $tripId,
+            ':reference' => $ref,
+            ':total_amount' => $total,
+            ':payment_method' => $paymentMethod,
+            ':payment_status' => 'paid',
+            ':booking_status' => 'confirmed',
+        ]);
+        $bookingId = (int) $pdo->lastInsertId();
+
+        $passengerStmt = $pdo->prepare('
+            INSERT INTO booking_passengers (booking_id, name, age, gender, phone, seat_number)
+            VALUES (:booking_id, :name, :age, :gender, :phone, :seat_number)
+        ');
+        $passengerStmt->execute([
+            ':booking_id' => $bookingId,
+            ':name' => $passengerName,
+            ':age' => $passengerAge,
+            ':gender' => $passengerGender !== '' ? $passengerGender : null,
+            ':phone' => $passengerPhone,
+            ':seat_number' => (string) $seatNumber,
+        ]);
+
+        $txRef = $paymentReference !== '' ? $paymentReference : 'OFFICE-' . date('Ymd') . '-' . bin2hex(random_bytes(4));
+        $paymentStmt = $pdo->prepare('
+            INSERT INTO payments (booking_id, amount, method, transaction_reference, status)
+            VALUES (:booking_id, :amount, :method, :transaction_reference, :status)
+        ');
+        $paymentStmt->execute([
+            ':booking_id' => $bookingId,
+            ':amount' => $total,
+            ':method' => $paymentMethod,
+            ':transaction_reference' => $txRef,
+            ':status' => 'paid',
+        ]);
+
+        $pdo->commit();
+
+        try {
+            createNotification(
+                $pdo,
+                $passengerUserId,
+                'booking',
+                'Ticket booked by office',
+                'Your ticket for ' . $trip['from_city'] . ' → ' . $trip['to_city'] . ' has been booked and confirmed. Seat ' . $seatNumber . ' is reserved under booking ' . $ref . '.',
+                'walkin-booking:' . $ref
+            );
+        } catch (Throwable $e) {
+            // Best-effort only; never fail the booking.
+        }
+
+        auth_response(201, [
+            'success' => true,
+            'message' => 'Walk-in ticket booked successfully.',
+            'booking' => [
+                'id' => $bookingId,
+                'booking_reference' => $ref,
+                'trip_id' => $tripId,
+                'seat_number' => $seatNumber,
+                'payment_method' => $paymentMethod,
+                'payment_status' => 'paid',
+                'booking_status' => 'confirmed',
+            ],
+        ]);
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        auth_response(500, [
+            'success' => false,
+            'message' => 'Walk-in booking could not be created. Please try again.',
+        ]);
+    }
+}
+
 function handle_bookings(PDO $pdo): void
 {
     if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
@@ -1710,6 +1951,70 @@ function handle_bookings(PDO $pdo): void
         'company_id' => $companyId,
         'bookings' => fetch_company_bookings($pdo, $companyId, $tripId),
     ]);
+}
+
+/** POST /api/company.php?action=booking_cancel — company admin cancels a booking and frees the seat. */
+function handle_booking_cancel(PDO $pdo): void
+{
+    require_company_post();
+    $user = requireRole('company');
+    $company = require_company_scope($pdo, (int) $user['id']);
+    $companyId = (int) $company['id'];
+
+    $input = company_input();
+    $bookingId = positive_int_or_error($input['booking_id'] ?? null, 'A valid booking is required.');
+    $reason = trim((string) ($input['reason'] ?? 'No reason provided'));
+
+    $bookingStmt = $pdo->prepare('
+        SELECT bk.id, bk.trip_id, bk.booking_status, t.company_id
+        FROM bookings bk
+        JOIN trips t ON t.id = bk.trip_id
+        WHERE bk.id = :booking_id
+        LIMIT 1
+    ');
+    $bookingStmt->execute([':booking_id' => $bookingId]);
+    $booking = $bookingStmt->fetch();
+
+    if ($booking === false) {
+        auth_response(404, ['success' => false, 'message' => 'Booking not found.']);
+    }
+    if ((int) $booking['company_id'] !== $companyId) {
+        auth_response(403, ['success' => false, 'message' => 'You do not have permission to cancel this booking.']);
+    }
+    if ($booking['booking_status'] === 'cancelled') {
+        auth_response(409, ['success' => false, 'message' => 'This booking has already been cancelled.']);
+    }
+
+    $pdo->beginTransaction();
+    try {
+        $cancelStmt = $pdo->prepare('
+            UPDATE bookings
+            SET booking_status = :cancelled, payment_status = :refunded
+            WHERE id = :booking_id
+        ');
+        $cancelStmt->execute([
+            ':cancelled' => 'cancelled',
+            ':refunded' => 'refunded',
+            ':booking_id' => $bookingId,
+        ]);
+
+        $pdo->commit();
+
+        auth_response(200, [
+            'success' => true,
+            'message' => 'Booking cancelled successfully. Seat has been freed.',
+            'booking_id' => $bookingId,
+        ]);
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        auth_response(500, [
+            'success' => false,
+            'message' => 'Unable to cancel the booking. Please try again.',
+        ]);
+    }
 }
 
 /** Shape one passenger-manifest traveler row (booking_passengers fields only). */
@@ -2445,7 +2750,10 @@ try {
     if ($action === 'bookings') {
         handle_bookings($pdo);
     }
-        if ($action === 'manifest') {
+    if ($action === 'booking_create') {
+        handle_company_booking_create($pdo);
+    }
+    if ($action === 'manifest') {
         handle_manifest($pdo);
     }
     if ($action === 'revenue') {
@@ -2463,7 +2771,7 @@ try {
 
     auth_response(400, [
         'success' => false,
-        'message' => 'Unsupported action. Use action=list, action=get, action=overview, action=buses, action=bus_create, action=bus_update, action=trips, action=trip_create, action=trip_update, action=trip_status, action=bookings, action=manifest, action=revenue, action=payments, action=profile or action=profile_update.',
+        'message' => 'Unsupported action. Use action=list, action=get, action=overview, action=buses, action=bus_create, action=bus_update, action=trips, action=trip_create, action=trip_update, action=trip_status, action=bookings, action=booking_create, action=booking_cancel, action=manifest, action=revenue, action=payments, action=profile or action=profile_update.',
     ]);
 } catch (Throwable $e) {
     auth_response(500, [
