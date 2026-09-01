@@ -1320,6 +1320,8 @@
         };
         clearWalkInError();
         setWalkInStep(1);
+        var submitBtn = byId('walkin-booking-confirm');
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '✓ Confirm Booking'; }
         var typeInputs = document.querySelectorAll('input[name="walkin-booking-type"]');
         for (var i = 0; i < typeInputs.length; i++) { typeInputs[i].checked = false; }
         var payInputs = document.querySelectorAll('input[name="walkin-payment-method"]');

@@ -330,6 +330,10 @@
     font-size: 0.9rem;
 }
 
+.cd-walkin-booking-form-actions .btn[hidden] {
+    display: none;
+}
+
 .cd-walkin-booking-form-actions .btn-secondary {
     background: #e5e7eb;
     color: #374151;
