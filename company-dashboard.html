@@ -142,6 +142,11 @@
         .cd-walkin-payment-box { border: 1px solid #e5e7eb; border-radius: 10px; background: #f8fafc; padding: 0.8rem; display: grid; gap: 0.7rem; }
         .cd-walkin-transfer-fields { display: none; gap: 0.7rem; }
         .cd-walkin-transfer-fields.visible { display: grid; }
+        .cd-walkin-phone-field { display: flex; align-items: stretch; }
+        .cd-walkin-phone-field .phone-prefix { display: inline-flex; align-items: center; padding: 0 0.65rem; background: #eef2f7; border: 1px solid #cbd5e1; border-right: none; border-radius: 6px 0 0 6px; font-weight: 700; color: #374151; font-size: 0.9rem; white-space: nowrap; }
+        .cd-walkin-phone-field input { width: auto; flex:  1 1 auto; min-width:  0; border-top-left-radius:  0; border-bottom-left-radius: 0; }
+        .cd-walkin-gender-list { display: flex; flex-direction: column; gap:  0.4rem; }
+        .cd-walkin-gender-list .cd-walkin-booking-radio { padding:  0.55rem 0.75rem; }
 
  /* ===== Manifest modal (scoped to .cd-*) ===== */
         .cd-manifest-modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); display: flex; align-items: center; justify-content: center; z-index: 60; padding: 1rem; }
@@ -542,26 +547,27 @@
                                     <div class="cd-walkin-booking-form-row">
                                         <div>
                                             <label for="walkin-passenger-name">Full name *</label>
-                                            <input type="text" id="walkin-passenger-name" maxlength="120" placeholder="e.g. John Doe">
+                                            <input type="text" id="walkin-passenger-name" maxlength="120" required placeholder="e.g. John Doe">
                                         </div>
                                         <div>
                                             <label for="walkin-passenger-phone">Phone number *</label>
-                                            <input type="tel" id="walkin-passenger-phone" maxlength="30" placeholder="e.g. +251912345678">
+                                            <div class="cd-walkin-phone-field phone-field">
+                                                <span class="phone-prefix" aria-hidden="true">+251</span>
+                                                <input type="tel" id="walkin-passenger-phone" maxlength="9" required placeholder="7XXXXXXXX / 9XXXXXXXX" inputmode="numeric" autocomplete="tel-national">
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="cd-walkin-booking-form-row">
                                         <div>
-                                            <label for="walkin-passenger-age">Age</label>
-                                            <input type="number" id="walkin-passenger-age" min="1" max="100" step="1" placeholder="Optional">
+                                            <label for="walkin-passenger-age">Age *</label>
+                                            <input type="number" id="walkin-passenger-age" min="1" max="200" step="1" required placeholder="e.g. 25" inputmode="numeric">
                                         </div>
                                         <div>
-                                            <label for="walkin-passenger-gender">Gender</label>
-                                            <select id="walkin-passenger-gender">
-                                                <option value="">Not specified</option>
-                                                <option value="male">Male</option>
-                                                <option value="female">Female</option>
-                                                <option value="other">Other</option>
-                                            </select>
+                                            <label>Gender *</label>
+                                            <div class="cd-walkin-gender-list">
+                                                <label class="cd-walkin-booking-radio"><input type="radio" name="walkin-passenger-gender" value="male" required> <span>Male</span></label>
+                                                <label class="cd-walkin-booking-radio"><input type="radio" name="walkin-passenger-gender" value="female" required> <span>Female</span></label>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -776,6 +782,6 @@
 
     <script src="js/main.js"></script>
     <script src="js/auth.js"></script>
-    <script src="js/company-dashboard.js?v=20260826-walkin-modal-fix"></script>
+    <script src="js/company-dashboard.js?v=20260901-passenger-fields"></script>
 </body>
 </html>

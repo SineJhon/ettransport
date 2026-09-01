@@ -1281,11 +1281,51 @@
         if (error) { error.textContent = message || 'Please complete the required fields.'; }
     }
 
+    function validateWalkInPassenger() {
+        var name = byId('walkin-passenger-name') ? byId('walkin-passenger-name').value.trim() : '';
+        var phoneInput = byId('walkin-passenger-phone');
+        var phoneDigits = phoneInput ? phoneInput.value.replace(/\D/g, '') : '';
+        if (phoneDigits.length === 10 && phoneDigits.charAt(0) === '0') {
+            phoneDigits = phoneDigits.slice(1);
+        }
+        var ageRaw = byId('walkin-passenger-age') ? byId('walkin-passenger-age').value.trim() : '';
+        var genderInput = document.querySelector('input[name="walkin-passenger-gender"]:checked');
+
+        if (!name || name.length < 2) {
+            showWalkInError('Passenger full name is required.');
+            return null;
+        }
+        if (!/^[79][0-9]{8}$/.test(phoneDigits)) {
+            showWalkInError('Enter a valid Ethiopian phone number: +251 followed by 9 digits starting with 7 or 9.');
+            return null;
+        }
+        if (phoneInput) { phoneInput.value = phoneDigits; }
+
+        var age = parseInt(ageRaw, 10);
+        if (!ageRaw || !/^\d+$/.test(ageRaw) || age < 1 || age > 200) {
+            showWalkInError('Passenger age is required and must be between 1 and 200.');
+            return null;
+        }
+        if (!genderInput) {
+            showWalkInError('Please select the passenger gender (Male or Female.).');
+            return null;
+        }
+        return {
+            name: name,
+            phone: '+251' + phoneDigits,
+            age: String(age),
+            gender: genderInput.value
+        };
+    }
+
     function updateWalkInConfirmation() {
         var source = walkInState.bookingType === 'office' ? 'Office / Walk-in' : walkInState.bookingType === 'call_in' ? 'Call-in' : '—';
         var trip = getSelectedTripFromWizard();
         var passengerName = byId('walkin-passenger-name') ? byId('walkin-passenger-name').value.trim() : '';
-        var passengerPhone = byId('walkin-passenger-phone') ? byId('walkin-passenger-phone').value.trim() : '';
+        var passengerPhoneRaw = byId('walkin-passenger-phone') ? byId('walkin-passenger-phone').value.trim() : '';
+        var passengerDigits = passengerPhoneRaw.replace(/\D/g, '');
+        if (passengerDigits.length === 10 && passengerDigits.charAt(0) === '0') { passengerDigits = passengerDigits.slice(1); }
+        var passengerPhone = passengerDigits ? ('+251' + passengerDigits) : '';
         var paymentMethod = walkInState.paymentMethod === 'cash' ? 'Cash' : walkInState.paymentMethod === 'transfer' ? 'Bank Transfer' : '—';
         var seatLabel = walkInState.selectedSeat !== null && walkInState.selectedSeat !== undefined ? String(walkInState.selectedSeat).padStart(2, '0') : '—';
         var tripLabel = trip ? trip.from_city + ' → ' + trip.to_city + ' (' + trip.departure_date + ' ' + trip.departure_time + ')' : '—';
@@ -1296,7 +1336,11 @@
         summary = document.getElementById('walkin-confirm-seat');
         if (summary) { summary.textContent = seatLabel; }
         summary = document.getElementById('walkin-confirm-passenger');
-        if (summary) { summary.textContent = passengerName || passengerPhone || '—'; }
+        if (summary) {
+            var passengerLabel = passengerName ? passengerName : '';
+            if (passengerPhone) { passengerLabel = passengerLabel ? passengerLabel + ' · ' + passengerPhone : passengerPhone; }
+            summary.textContent = passengerLabel || '—';
+        }
         summary = document.getElementById('walkin-confirm-payment');
         if (summary) { summary.textContent = paymentMethod + (walkInState.paymentMethod === 'transfer' && walkInState.transferRef ? ' · ' + walkInState.transferRef : ''); }
     }
@@ -1360,10 +1404,10 @@
 
         clearWalkInError();
         var tripId = byId('walkin-trip') ? byId('walkin-trip').value : '';
-        var passengerName = byId('walkin-passenger-name') ? byId('walkin-passenger-name').value.trim() : '';
-        var passengerPhone = byId('walkin-passenger-phone') ? byId('walkin-passenger-phone').value.trim() : '';
-        var passengerAge = byId('walkin-passenger-age') ? byId('walkin-passenger-age').value : '';
-        var passengerGender = byId('walkin-passenger-gender') ? byId('walkin-passenger-gender').value : '';
+        var passengerName = '';
+        var passengerPhone = '';
+        var passengerAge = '';
+        var passengerGender = '';
         var paymentInput = document.querySelector('input[name="walkin-payment-method"]:checked');
         var paymentMethod = paymentInput ? paymentInput.value : '';
         var transferTransaction = byId('walkin-transfer-transaction') ? byId('walkin-transfer-transaction').value.trim() : '';
@@ -1380,14 +1424,12 @@
             showWalkInError('Please choose a seat before continuing.');
             return;
         }
-        if (!passengerName || passengerName.length < 2) {
-            showWalkInError('Passenger name is required.');
-            return;
-        }
-        if (!passengerPhone || passengerPhone.length < 7) {
-            showWalkInError('Passenger phone number is required.');
-            return;
-        }
+        var passengerData = validateWalkInPassenger();
+        if (!passengerData) { return; }
+        passengerName = passengerData.name;
+        passengerPhone = passengerData.phone;
+        passengerAge = passengerData.age;
+        passengerGender = passengerData.gender;
         if (!paymentMethod) {
             showWalkInError('Please choose a payment method.');
             return;
@@ -2114,16 +2156,7 @@
                     return;
                 }
                 if (walkInState.step === 4) {
-                    var passengerName = byId('walkin-passenger-name') ? byId('walkin-passenger-name').value.trim() : '';
-                    var passengerPhone = byId('walkin-passenger-phone') ? byId('walkin-passenger-phone').value.trim() : '';
-                    if (!passengerName || passengerName.length < 2) {
-                        showWalkInError('Passenger name is required.');
-                        return;
-                    }
-                    if (!passengerPhone || passengerPhone.length < 7) {
-                        showWalkInError('Passenger phone number is required.');
-                        return;
-                    }
+                    if (!validateWalkInPassenger()) { return; }
                     setWalkInStep(5);
                     return;
                 }
@@ -2185,6 +2218,20 @@
                 }
                 clearWalkInError();
             });
+        }
+        var walkInPhoneInput = byId('walkin-passenger-phone');
+        if (walkInPhoneInput) {
+            walkInPhoneInput.addEventListener('input', function () {
+                var digits = this.value.replace(/\D/g, '');
+                if (digits.length === 10 && digits.charAt(0) === '0') { digits = digits.slice(1); }
+                if (digits.length > 9) { digits = digits.slice(0, 9); }
+                this.value = digits;
+                clearWalkInError();
+            });
+        }
+        var walkInGenderInputs = document.querySelectorAll('input[name="walkin-passenger-gender"]');
+        for (var h =  0; h < walkInGenderInputs.length; h++) {
+            walkInGenderInputs[h].addEventListener('change', clearWalkInError);
         }
         var walkInForm = byId('walkin-booking-form');
         if (walkInForm) {
