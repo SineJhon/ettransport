@@ -766,6 +766,7 @@
     var currentBookings = [];
     var bookingTripOptions = null;
     var selectedBookingDate = '';
+    var selectedBookingStatus = 'all';
 
     function bookingDateISO(date) {
         return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
@@ -808,8 +809,16 @@
         var to = byId('booking-to-filter');
         var fromValue = from ? from.value : '';
         var toValue = to ? to.value : '';
+        var statusVal = selectedBookingStatus || 'all';
         var filtered = currentBookings.filter(function (booking) {
-            return (!selectedBookingDate || String(booking.trip_departure_date) === selectedBookingDate) &&
+            var bookingStatus = String(booking.booking_status || '');
+            var statusOk = statusVal === 'all'
+                ? true
+                : statusVal === 'active'
+                    ? bookingStatus !== 'cancelled'
+                    : bookingStatus === statusVal;
+            return statusOk &&
+                (!selectedBookingDate || String(booking.trip_departure_date) === selectedBookingDate) &&
                 (!fromValue || String(booking.route_from) === fromValue) &&
                 (!toValue || String(booking.route_to) === toValue);
         });
@@ -854,7 +863,15 @@
 
         if (!bookings || !bookings.length) {
             if (list) { list.hidden = true; }
-            if (empty) { empty.hidden = false; }
+            var emptyMsg = 'No bookings on your trips yet. Bookings will appear here once passengers book your scheduled trips.';
+            if (selectedBookingStatus === 'cancelled') {
+                emptyMsg = 'No cancelled bookings match the current filters.';
+            } else if (selectedBookingStatus === 'active') {
+                emptyMsg = 'No active bookings match the current filters.';
+            } else if (selectedBookingDate || (byId('booking-from-filter') ? byId('booking-from-filter').value : '') || (byId('booking-to-filter') ? byId('booking-to-filter').value : '')) {
+                emptyMsg = 'No bookings match the current filters.';
+            }
+            if (empty) { empty.textContent = emptyMsg; empty.hidden = false; }
             return;
         }
 
@@ -2409,12 +2426,37 @@
         if (bookingFromFilter) { bookingFromFilter.addEventListener('change', applyBookingFilters); }
         var bookingToFilter = byId('booking-to-filter');
         if (bookingToFilter) { bookingToFilter.addEventListener('change', applyBookingFilters); }
+
+        /* Wire the booking status filter buttons (All bookings / Active / Cancelled). */
+        var bookingStatusFilterButtons = document.querySelectorAll('.cd-booking-status-filter[data-booking-status]');
+        for (var bsf = 0; bsf < bookingStatusFilterButtons.length; bsf++) {
+            (function (btn) {
+                btn.addEventListener('click', function () {
+                    selectedBookingStatus = btn.getAttribute('data-booking-status') || 'all';
+                    var buttons = document.querySelectorAll('.cd-booking-status-filter[data-booking-status]');
+                    for (var b = 0; b < buttons.length; b++) {
+                        var active = buttons[b] === btn;
+                        buttons[b].classList.toggle('is-active', active);
+                        buttons[b].setAttribute('aria-pressed', active ? 'true' : 'false');
+                    }
+                    applyBookingFilters();
+                });
+            })(bookingStatusFilterButtons[bsf]);
+        }
+
         var clearBookingFilters = byId('btn-clear-booking-filters');
         if (clearBookingFilters) {
             clearBookingFilters.addEventListener('click', function () {
                 selectedBookingDate = '';
+                selectedBookingStatus = 'all';
                 if (bookingFromFilter) { bookingFromFilter.value = ''; }
                 if (bookingToFilter) { bookingToFilter.value = ''; }
+                var statusButtons = document.querySelectorAll('.cd-booking-status-filter[data-booking-status]');
+                for (var b = 0; b < statusButtons.length; b++) {
+                    var active = statusButtons[b].getAttribute('data-booking-status') === 'all';
+                    statusButtons[b].classList.toggle('is-active', active);
+                    statusButtons[b].setAttribute('aria-pressed', active ? 'true' : 'false');
+                }
                 renderBookingDayPicker();
                 applyBookingFilters();
             });

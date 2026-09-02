@@ -104,6 +104,7 @@
         .cd-booking-badge.refunded { background: #6b7280; }
         .cd-booking-actions { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
         .cd-bookings-tools { display: flex; justify-content: flex-end; margin-bottom: 0.75rem; }
+        .cd-booking-toolbar { display: flex; gap: .45rem; padding: .75rem 0 1rem; margin-bottom: .25rem; overflow-x: auto; border-bottom: 1px solid #e5eee9; }.cd-booking-status-filter { flex: 0 0 auto; padding: .52rem .78rem; color: #5c736a; background: #f2f7f4; border: 1px solid #dceae2; border-radius: 8px; cursor: pointer; font: 800 .74rem/1 'DM Sans', sans-serif; }.cd-booking-status-filter:hover { color: #245944; background: #e7f4ec; }.cd-booking-status-filter.is-active { color: #fff; background: #187653; border-color: #187653; box-shadow: 0 4px 10px rgba(24,118,83,.17); }
         .cd-walkin-booking-modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); display: flex; align-items: center; justify-content: center; z-index: 102; padding: 1rem; }
         .cd-walkin-booking-modal[hidden] { display: none; }
         .cd-walkin-booking-box { background: var(--color-white, #fff); border-radius: 12px; border: 1px solid #e5e7eb; width: 100%; max-width: 760px; max-height: 90vh; overflow: auto; padding: 1.1rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); }
@@ -467,6 +468,12 @@
                 <div class="cd-bookings-head">
                     <h2>Bookings / Passengers</h2>
                     <button type="button" id="btn-add-walkin-booking" class="btn btn-primary">Office/Call-in Booking</button>
+                </div>
+
+                <div class="cd-booking-toolbar" role="group" aria-label="Filter bookings by status">
+                    <button type="button" class="cd-booking-status-filter is-active" data-booking-status="all" aria-pressed="true">All bookings</button>
+                    <button type="button" class="cd-booking-status-filter" data-booking-status="active" aria-pressed="false">Active</button>
+                    <button type="button" class="cd-booking-status-filter" data-booking-status="cancelled" aria-pressed="false">Cancelled</button>
                 </div>
 
                 <div class="cd-passenger-filter" aria-label="Filter passenger bookings">
