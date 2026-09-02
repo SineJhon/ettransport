@@ -423,27 +423,61 @@
 
 /* ---------- Print: only the walk-in ticket ---------- */
 @media print {
+    /* Keep everything hidden except the ticket popup. */
     body.printing-walkin-ticket * { visibility: hidden; }
     body.printing-walkin-ticket #walkin-ticket-modal,
     body.printing-walkin-ticket #walkin-ticket-modal * { visibility: visible; }
+
+    /* Lift the popup to the top of the printed page. */
     body.printing-walkin-ticket #walkin-ticket-modal {
         position: absolute;
         left: 0;
+        right: 0;
         top: 0;
         display: block;
         padding: 0;
         background: #fff;
         box-shadow: none;
+        overflow: visible;
     }
+
+    /* The on-screen scroll box (max-height: 92vh; overflow-y: auto) must be
+       fully neutralized in print, otherwise the ticket is clipped by the
+       scroll container and the bottom (QR / footer area) never prints. */
+    body.printing-walkin-ticket #walkin-ticket-modal .cd-walkin-ticket-box {
+        max-width: none;
+        width: auto;
+        max-height: none;
+        height: auto;
+        overflow: visible;
+        padding: 0;
+        margin: 0;
+        border: none;
+        border-radius: 0;
+        background: #fff;
+        box-shadow: none;
+    }
+
+    /* Popup furniture that must not appear on the printed ticket. */
     body.printing-walkin-ticket #walkin-ticket-modal .cd-walkin-ticket-head,
     body.printing-walkin-ticket #walkin-ticket-modal .ticket-actions,
     body.printing-walkin-ticket #walkin-ticket-modal .cd-walkin-close-btn,
     body.printing-walkin-ticket #walkin-ticket-loading,
     body.printing-walkin-ticket #walkin-ticket-error { display: none; }
+
+    /* The shared style.css print rule makes #ticket absolutely positioned,
+       which combined with the clipped box above cuts it. Keep the ticket in
+       normal flow here so the full ticket prints on a single page. */
     body.printing-walkin-ticket #walkin-ticket-modal .ticket {
+        position: static;
+        top: auto;
+        left: auto;
         max-width: 100%;
         box-shadow: none;
         border: 1px solid #111827;
+        break-inside: avoid;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
     body.printing-walkin-ticket #walkin-ticket-modal .ticket-footer { border: none; }
 }
