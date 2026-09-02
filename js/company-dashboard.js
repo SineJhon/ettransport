@@ -170,7 +170,7 @@
                   '<section id="cd-overview" class="cd-pane" role="tabpanel"><div id="cd-overview-slot"></div><div class="cd-quick-actions"><button type="button" class="cd-quick-action" data-cd-go="fleet" data-cd-action="btn-add-bus"><b class="cd-quick-icon">+</b><span>Add a bus<small>Expand your active fleet</small></span></button><button type="button" class="cd-quick-action" data-cd-go="trips" data-cd-action="btn-add-trip"><b class="cd-quick-icon">↗</b><span>Schedule a trip<small>Open a new departure</small></span></button><button type="button" class="cd-quick-action" data-cd-go="profile" data-cd-action="btn-edit-profile"><b class="cd-quick-icon">✦</b><span>Update public profile<small>Keep passenger details current</small></span></button></div></section>' +
                   '<section id="cd-fleet" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Fleet register</h2><p>Add, edit and update the operating status of every vehicle.</p></div></div></section>' +
                   '<section id="cd-trips" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Trips</h2><p>Publish, update and manage each scheduled departure.</p></div></div></section>' +
-                  '<section id="cd-passengers" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Passengers &amp; bookings</h2><p>Review bookings and open passenger manifests for each departure.</p></div></div></section>' +
+                  '<section id="cd-passengers" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Passengers &amp; bookings</h2><p>Review bookings and view each passenger\'s digital ticket.</p></div></div></section>' +
                   '<section id="cd-revenue" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Revenue &amp; payments</h2><p>Review paid, pending and refunded passenger payments.</p></div></div></section>' +
                   '<section id="cd-profile" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Your passenger-facing profile</h2><p>This is the information passengers use to decide who they travel with.</p></div><a id="cd-passenger-preview" class="cd-passenger-preview" href="company.html" target="_blank" rel="noopener">View passenger page ↗</a></div></section>' +
                 '</div></div></div>';
@@ -871,7 +871,7 @@
                 '<span class="cd-booking-row-text">Booking: ' + bookingBadge(b.booking_status) +
                     ' &middot; Payment: ' + paymentBadge(b.payment_status) + '</span>' +
                 '<div class="cd-booking-actions">' +
-                    '<button type="button" class="btn btn-secondary btn-sm" data-manifest="' + b.id + '">Manifest</button>' +
+                    '<button type="button" class="btn btn-secondary btn-sm" data-ticket="' + escHtml(b.booking_reference) + '">View Ticket</button>' +
                     (b.booking_status !== 'cancelled' ? '<button type="button" class="btn btn-danger btn-sm" data-cancel="' + b.id + '">Cancel</button>' : '') +
                 '</div>' +
             '</div>';
@@ -888,10 +888,10 @@
     function wireBookingEvents() {
         var list = byId('booking-list');
         if (!list) { return; }
-        var btns = list.querySelectorAll('button[data-manifest]');
-        for (var i = 0; i < btns.length; i++) {
-            btns[i].addEventListener('click', function () {
-                openManifest(this.getAttribute('data-manifest'));
+        var ticketBtns = list.querySelectorAll('button[data-ticket]');
+        for (var i = 0; i < ticketBtns.length; i++) {
+            ticketBtns[i].addEventListener('click', function () {
+                loadWalkInTicket(this.getAttribute('data-ticket'));
             });
         }
         var cancelBtns = list.querySelectorAll('button[data-cancel]');
@@ -1500,10 +1500,12 @@
     }
 
     /* ============================================================
-       Walk-in ticket popup — the digital ticket is loaded from the
-       SAME backend payload the passenger confirmation page uses
-       (api/booking.php?action=get) and rendered in-page, so the
-       office sees the identical ticket + Download / Print option.
+       Booking ticket popup — loaded from the SAME backend payload
+       the passenger confirmation page uses (api/booking.php?action=get)
+       and rendered in-page, so the office sees the identical ticket +
+       Download / Print option. Used by the "View Ticket" action on each
+       booking card AND by walk-in confirmations — a company session may
+       open any booking on its own trips.
        ============================================================ */
 
     function formatTicketDate(iso) {
@@ -1671,107 +1673,6 @@
             .catch(function () { /* non-fatal: filter stays on "All trips" */ });
     }
 
-    function showManifestError(message) {
-        var loading = byId('manifest-loading'); if (loading) { loading.hidden = true; }
-        var content = byId('manifest-content'); if (content) { content.hidden = true; }
-        var error = byId('manifest-error');
-        if (error) {
-            error.hidden = false;
-            error.textContent = message || 'Unable to load the manifest. Please try again later.';
-        }
-    }
-
-    function openManifest(id) {
-        var modal = byId('manifest-modal');
-        if (!modal) { return; }
-        modal.hidden = false;
-        var content = byId('manifest-content'); if (content) { content.hidden = true; }
-        var error = byId('manifest-error'); if (error) { error.hidden = true; }
-        var loading = byId('manifest-loading'); if (loading) { loading.hidden = false; }
-
-        fetch('api/company.php?action=manifest&booking_id=' + encodeURIComponent(String(id)), {
-            method: 'GET',
-            credentials: 'same-origin',
-            headers: { 'Accept': 'application/json' }
-        })
-            .then(function (res) {
-                return res.json().catch(function () {
-                    return { success: false, message: 'Invalid server response.' };
-                }).then(function (json) {
-                    return { ok: res.ok, status: res.status, data: json };
-                });
-            })
-            .then(function (result) {
-                var data = result.data || {};
-                if (!result.ok || result.status !== 200 || !data.success) {
-                    showManifestError(data.message || 'Unable to load the manifest.');
-                    return;
-                }
-                renderManifest(data);
-            })
-            .catch(function () {
-                showManifestError('Network error while loading the manifest.');
-            });
-    }
-
-    function manifestField(label, value) {
-        return '<div><span class="cd-manifest-label">' + label + '</span><span class="cd-manifest-value">' + value + '</span></div>';
-    }
-
-    function renderManifest(resp) {
-        var loading = byId('manifest-loading'); if (loading) { loading.hidden = true; }
-        var error = byId('manifest-error'); if (error) { error.hidden = true; }
-        var content = byId('manifest-content');
-        if (!content) { return; }
-
-        var b = resp.booking || {};
-        var trip = b.trip || {};
-        var passengers = resp.passengers || [];
-
-        var rows = passengers.map(function (p) {
-            var meta = [];
-            if (p.age != null) { meta.push('Age ' + p.age); }
-            if (p.gender) { meta.push(escHtml(p.gender)); }
-            if (p.phone) { meta.push(escHtml(p.phone)); }
-            return '<div class="cd-manifest-row">' +
-                '<span class="cd-manifest-seat">Seat ' + escHtml(p.seat_number) + '</span>' +
-                '<strong>' + escHtml(p.name) + '</strong>' +
-                (meta.length ? ' <span class="cd-bookings-msg">(' + meta.join(', ') + ')</span>' : '') +
-            '</div>';
-        }).join('');
-
-        content.innerHTML =
-            '<h4 class="cd-manifest-section-title">Booking</h4>' +
-            '<div class="cd-manifest-summary">' +
-                manifestField('Booking Reference', escHtml(b.booking_reference)) +
-                manifestField('Booking Status', bookingBadge(b.booking_status)) +
-                manifestField('Payment Status', paymentBadge(b.payment_status)) +
-                manifestField('Total Amount', 'ETB ' + formatMoney(b.total_amount)) +
-                manifestField('Booked On', escHtml(b.created_at)) +
-            '</div>' +
-            '<h4 class="cd-manifest-section-title">Trip</h4>' +
-            '<div class="cd-manifest-summary">' +
-                manifestField('Route', escHtml(trip.from_city) + ' &#8594; ' + escHtml(trip.to_city)) +
-                manifestField('Departure', escHtml(trip.departure_date) + ' ' + escHtml(trip.departure_time)) +
-                manifestField('Arrival', trip.arrival_time ? escHtml(trip.arrival_time) : '\u2014') +
-                manifestField('Bus', escHtml(trip.bus_name || '') + ' (' + escHtml(trip.bus_registration || '\u2014') + ')') +
-                manifestField('Bus Type', escHtml(trip.bus_type || '\u2014')) +
-            '</div>' +
-            '<h4 class="cd-manifest-section-title">Passengers (' + passengers.length + ')</h4>' +
-            '<div class="cd-manifest-rows">' +
-                (passengers.length ? rows : '<p class="cd-manifest-empty">No passenger records for this booking.</p>') +
-            '</div>';
-
-        content.hidden = false;
-    }
-
-    function closeManifest() {
-        var modal = byId('manifest-modal');
-        if (modal) { modal.hidden = true; }
-        var content = byId('manifest-content'); if (content) { content.hidden = true; }
-        var error = byId('manifest-error'); if (error) { error.hidden = true; }
-        var loading = byId('manifest-loading'); if (loading) { loading.hidden = true; }
-    }
 
  /* Revenue / Payments (read-only reporting UI). */
     var currentPayments = [];
@@ -2427,27 +2328,10 @@
             });
         }
 
-        var manifestClose = byId('manifest-close');
-        if (manifestClose) { manifestClose.addEventListener('click', closeManifest); }
-
-                var manifestModal = byId('manifest-modal');
-        if (manifestModal) {
-            /* Same root-stacking-context fix as the walk-in booking modal. */
-            if (manifestModal.parentNode !== document.body) {
-                document.body.appendChild(manifestModal);
-            }
-            manifestModal.style.zIndex = '102';
-            manifestModal.addEventListener('click', function (ev) {
-                if (ev.target === manifestModal) { closeManifest(); }
-            });
-        }
-
         document.addEventListener('keydown', function (ev) {
             if (ev.key === 'Escape' || ev.key === 'Esc' || ev.key === 27) {
                 var wtkModal = byId('walkin-ticket-modal');
                 if (wtkModal && !wtkModal.hidden) { closeWalkInTicket(); }
-                var m = byId('manifest-modal');
-                if (m && !m.hidden) { closeManifest(); }
                 var busModal = byId('bus-form-modal');
                 if (busModal && !busModal.hidden) { hideBusForm(); }
                 var tripModal = byId('trip-form-modal');

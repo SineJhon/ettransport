@@ -77,7 +77,7 @@
         .cd-trip-form-error { min-height: 1.1rem; font-size: 0.82rem; color: #b91c1c; }
         .cd-trip-form-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
         @media (max-width: 768px) { .cd-trip-list { grid-template-columns: 1fr; } .cd-trip-form-row { grid-template-columns: 1fr; } }
- /* ===== Company bookings / passenger manifests (additive, scoped to .cd-*) ===== */
+ /* ===== Company bookings / passenger tickets (additive, scoped to .cd-*) ===== */
         .cd-bookings { margin-top: var(--space-md); }
         .cd-bookings-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
         .cd-bookings-head h2 { font-size: 1.2rem; color: var(--color-dark); margin: 0; }
@@ -147,22 +147,6 @@
         .cd-walkin-phone-field input { width: auto; flex:  1 1 auto; min-width:  0; border-top-left-radius:  0; border-bottom-left-radius: 0; }
         .cd-walkin-gender-list { display: flex; flex-direction: column; gap:  0.4rem; }
         .cd-walkin-gender-list .cd-walkin-booking-radio { padding:  0.55rem 0.75rem; }
-
- /* ===== Manifest modal (scoped to .cd-*) ===== */
-        .cd-manifest-modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); display: flex; align-items: center; justify-content: center; z-index: 60; padding: 1rem; }
-        .cd-manifest-modal[hidden] { display: none; }
-        .cd-manifest-section-title { margin: 1rem 0 0.4rem; font-size: 0.8rem; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.05em; }
-        .cd-manifest-rows { margin-top: 0.35rem; }
-        .cd-manifest-empty { padding: 0.5rem; border: 1px dashed #e5e7eb; border-radius: 8px; color: var(--color-muted); }
-        .cd-manifest-box { background: var(--color-white, #fff); border-radius: 12px; border: 1px solid #e5e7eb; width: 100%; max-width: 520px; max-height: 90vh; overflow: auto; padding: 1.1rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); }
-        .cd-manifest-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-        .cd-manifest-head h3 { font-size: 1.1rem; color: var(--color-dark); margin: 0; }
-        .cd-manifest-summary { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); margin-top: var(--space-sm); }
-        .cd-manifest-meta { font-size: 0.85rem; color: var(--color-muted); display: flex; gap: 0.5rem; }
-        .cd-manifest-label { color: var(--color-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; display: block; }
-        .cd-manifest-value { font-weight: 700; color: var(--color-dark); display: block; }
-        .cd-manifest-row { padding: 0.5rem; border: 1px solid #e5e7eb; border-radius: 8px; margin-top: 0.3rem; }
-                .cd-manifest-seat { display: inline-block; font-weight: 700; color: var(--color-primary, #16a34a); margin-right: 0.4rem; }
 
  /* ===== Revenue / Payments (read-only, scoped to .cd-*) ===== */
         .cd-revenue-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: var(--space-md); }
@@ -630,28 +614,19 @@
                     </div>
                 </div>
 
-                <div id="manifest-modal" class="cd-manifest-modal" hidden>
-                    <div class="cd-manifest-box" role="dialog" aria-modal="true" aria-labelledby="manifest-title">
-                        <div class="cd-manifest-head">
-                            <h3 id="manifest-title">Passenger Manifest</h3>
-                            <button type="button" id="manifest-close" class="btn" aria-label="Close manifest">&times;</button>
-                        </div>
-                        <p id="manifest-loading" class="cd-bookings-msg" hidden>Loading manifest&hellip;</p>
-                        <div id="manifest-error" class="cd-bookings-error auth-message" hidden></div>
-                        <div id="manifest-content" hidden></div>
-                    </div>
-                </div>
-
                 <!-- ============================================================
-                     Ticket popup — reuses the EXACT passenger digital ticket
-                     (same markup + ids as confirmation.html) and renders it
-                     in-page from the same api/booking.php?action=get payload.
+                     Ticket popup — shared viewer for ANY booking on this
+                     company's trips (the "View Ticket" action on each booking
+                     card, plus walk-in confirmations). Reuses the EXACT
+                     passenger digital ticket markup + ids from confirmation.html
+                     and renders in-page from the same api/booking.php?action=get
+                     payload.
                      ============================================================ -->
                 <div id="walkin-ticket-modal" class="cd-walkin-ticket-modal" hidden role="dialog" aria-modal="true" aria-labelledby="walkin-ticket-title">
                     <div class="cd-walkin-ticket-box">
                         <button type="button" id="walkin-ticket-close" class="cd-walkin-close-btn" aria-label="Close ticket">&times;</button>
                         <div class="cd-walkin-ticket-head">
-                            <h3 id="walkin-ticket-title">Booking Confirmed &mdash; Ticket</h3>
+                            <h3 id="walkin-ticket-title">Booking Ticket</h3>
                         </div>
 
                         <p id="walkin-ticket-loading" class="cd-bookings-msg">Loading ticket&hellip;</p>
