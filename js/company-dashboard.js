@@ -587,6 +587,11 @@
                     '<button type="button" class="btn btn-secondary btn-sm" data-trip-edit="' + t.id + '">Edit</button>' +
                     '<button type="button" class="btn btn-danger btn-sm" data-trip-cancel="' + t.id + '">Cancel Trip</button>' +
                 '</div>';
+            } else if (t.status === 'cancelled') {
+                /* Cancelled trips can be permanently deleted from the record. */
+                actions = '<div class="cd-trip-actions">' +
+                    '<button type="button" class="btn btn-danger btn-sm" data-trip-delete="' + t.id + '">Delete</button>' +
+                '</div>';
             }
             var affectedNote = '';
             var affectedCount = parseInt(t.affected_bookings, 10) || 0;
@@ -628,7 +633,13 @@
         var cancels = list.querySelectorAll('button[data-trip-cancel]');
         for (var j = 0; j < cancels.length; j++) {
             cancels[j].addEventListener('click', function () {
-                cancelTrip(this.getAttribute('data-trip-cancel'));
+                openTripCancelModal(this.getAttribute('data-trip-cancel'));
+            });
+        }
+        var deletes = list.querySelectorAll('button[data-trip-delete]');
+        for (var k = 0; k < deletes.length; k++) {
+            deletes[k].addEventListener('click', function () {
+                openTripDeleteModal(this.getAttribute('data-trip-delete'));
             });
         }
     }
@@ -778,7 +789,176 @@
             });
     }
 
+    /* Trip-cancel confirmation modal state. Opening it fetches the trip's
+       active bookings (action=bookings&trip_id=...) and lists exactly which
+       bookings would be cancelled before the operator commits. The actual
+       cancellation still goes through cancelTrip() -> trip_status, which the
+       server keeps atomic with the booking cancellations. */
+    var pendingTripCancelId = null;
+
+    /* Trip-delete confirmation modal state. Used only for cancelled trips:
+       deleting removes the trip row along with its cancelled booking records,
+       so the operator confirms explicitly before the permanent call goes to
+       deleteTrip() -> trip_delete. */
+    var pendingTripDeleteId = null;
+
+    function tripById(id) {
+        if (!Array.isArray(currentTrips)) { return null; }
+        for (var i = 0; i < currentTrips.length; i++) {
+            if (String(currentTrips[i].id) === String(id)) { return currentTrips[i]; }
+        }
+        return null;
+    }
+
+    function closeTripCancelModal() {
+        pendingTripCancelId = null;
+        var modal = byId('trip-cancel-modal');
+        if (modal) { modal.hidden = true; }
+        var msg = byId('trip-cancel-msg');
+        if (msg) { msg.hidden = true; msg.textContent = ''; msg.className = 'cd-trip-cancel-msg'; }
+        var confirmBtn = byId('trip-cancel-confirm-btn');
+        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Cancel Trip'; }
+    }
+
+    function renderTripCancelBookings(bookings) {
+        var list = byId('trip-cancel-list');
+        var empty = byId('trip-cancel-empty');
+        var note = byId('trip-cancel-note');
+        var confirmBtn = byId('trip-cancel-confirm-btn');
+        var loading = byId('trip-cancel-loading');
+        if (loading) { loading.hidden = true; }
+        if (!list) { return; }
+
+        var active = (Array.isArray(bookings) ? bookings : []).filter(function (b) {
+            var st = String(b.booking_status || '').toLowerCase();
+            return st === 'pending' || st === 'confirmed';
+        });
+
+        list.innerHTML = '';
+        if (empty) { empty.hidden = true; }
+        if (note) { note.hidden = true; }
+
+        if (active.length === 0) {
+            list.hidden = true;
+            if (empty) {
+                empty.textContent = 'There are no active bookings on this trip \u2014 only the trip itself will be cancelled.';
+                empty.hidden = false;
+            }
+            if (confirmBtn) { confirmBtn.textContent = 'Cancel Trip'; }
+            return;
+        }
+
+        var refundCount = 0;
+        list.innerHTML = active.map(function (b) {
+            var paid = String(b.payment_status || '').toLowerCase() === 'paid';
+            if (paid) { refundCount++; }
+            var flag = paid ? '<span class="cd-trip-cancel-flag">refund</span>' : '';
+            return '<div class="cd-trip-cancel-row">' +
+                '<div><b>' + escHtml(b.booking_reference || '') + flag + '</b>' +
+                '<span class="cd-trip-cancel-sub">' + b.passenger_count + ' passenger' + (b.passenger_count === 1 ? '' : 's') +
+                    ' &middot; ' + escHtml(String(b.payment_status || '').toUpperCase()) + '</span></div>' +
+                '<span class="cd-trip-cancel-amount">ETB ' + formatMoney(b.total_amount) + '</span>' +
+            '</div>';
+        }).join('');
+        list.hidden = false;
+
+        if (note) {
+            note.textContent = refundCount > 0
+                ? refundCount + ' paid booking(s) need a refund \u2014 it is NOT processed automatically.'
+                : 'No paid bookings are affected \u2014 no refund required.';
+            note.hidden = false;
+        }
+        if (confirmBtn) {
+            confirmBtn.textContent = 'Cancel Trip & ' + active.length + ' Booking' + (active.length === 1 ? '' : 's');
+        }
+    }
+
+    function openTripCancelModal(id) {
+        var modal = byId('trip-cancel-modal');
+        var trip = tripById(id);
+        if (!modal || !trip) { return; }
+
+        pendingTripCancelId = String(id);
+
+        var routeEl = byId('trip-cancel-route');
+        if (routeEl) { routeEl.textContent = (trip.from_city || '\u2014') + ' \u2192 ' + (trip.to_city || '\u2014'); }
+        var depEl = byId('trip-cancel-departure');
+        if (depEl) { depEl.textContent = (trip.departure_date || '\u2014') + (trip.departure_time ? ' \u00B7 ' + trip.departure_time : ''); }
+        var busEl = byId('trip-cancel-bus');
+        if (busEl) { busEl.textContent = trip.bus_name || trip.bus_registration || '\u2014'; }
+        var statusEl = byId('trip-cancel-status');
+        if (statusEl) { statusEl.textContent = 'Scheduled'; }
+
+        var loading = byId('trip-cancel-loading');
+        if (loading) { loading.hidden = false; }
+        var list = byId('trip-cancel-list');
+        if (list) { list.innerHTML = ''; list.hidden = true; }
+        var empty = byId('trip-cancel-empty');
+        if (empty) { empty.hidden = true; }
+        var note = byId('trip-cancel-note');
+        if (note) { note.hidden = true; }
+        var msg = byId('trip-cancel-msg');
+        if (msg) { msg.hidden = true; msg.textContent = ''; msg.className = 'cd-trip-cancel-msg'; }
+        var confirmBtn = byId('trip-cancel-confirm-btn');
+        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Cancel Trip'; }
+
+        modal.hidden = false;
+
+        fetch('api/company.php?action=bookings&trip_id=' + encodeURIComponent(id), {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(function (res) {
+                return res.json().catch(function () {
+                    return { success: false, message: 'Invalid server response.' };
+                }).then(function (json) {
+                    return { ok: res.ok, status: res.status, data: json };
+                });
+            })
+            .then(function (result) {
+                if (String(pendingTripCancelId) !== String(id)) { return; }
+                if (loading) { loading.hidden = true; }
+                var data = result.data || {};
+                if (!result.ok || result.status !== 200 || !data.success) {
+                    var errMsg = byId('trip-cancel-msg');
+                    if (errMsg) {
+                        errMsg.textContent = data.message || 'Unable to load the bookings for this trip. Close this dialog and try again.';
+                        errMsg.className = 'cd-trip-cancel-msg cd-trip-cancel-msg-error';
+                        errMsg.hidden = false;
+                    }
+                    var errConfirm = byId('trip-cancel-confirm-btn');
+                    if (errConfirm) { errConfirm.disabled = true; }
+                    return;
+                }
+                renderTripCancelBookings(data.bookings || []);
+            })
+            .catch(function () {
+                if (String(pendingTripCancelId) !== String(id)) { return; }
+                if (loading) { loading.hidden = true; }
+                var errMsg = byId('trip-cancel-msg');
+                if (errMsg) {
+                    errMsg.textContent = 'Network error while loading bookings. Close this dialog and try again.';
+                    errMsg.className = 'cd-trip-cancel-msg cd-trip-cancel-msg-error';
+                    errMsg.hidden = false;
+                }
+                var errConfirm = byId('trip-cancel-confirm-btn');
+                if (errConfirm) { errConfirm.disabled = true; }
+            });
+    }
+
+    function confirmTripCancel() {
+        if (!pendingTripCancelId) { return; }
+        cancelTrip(pendingTripCancelId);
+    }
+
     function cancelTrip(id) {
+        var modal = byId('trip-cancel-modal');
+        var msg = byId('trip-cancel-msg');
+        var confirmBtn = byId('trip-cancel-confirm-btn');
+        if (msg) { msg.hidden = true; msg.textContent = ''; }
+        if (confirmBtn) { confirmBtn.disabled = true; }
+
         fetch('api/company.php?action=trip_status', {
             method: 'POST',
             credentials: 'same-origin',
@@ -795,9 +975,17 @@
             .then(function (result) {
                 var data = result.data || {};
                 if (!result.ok || result.status !== 200 || !data.success) {
+                    if (modal && !modal.hidden && msg) {
+                        msg.textContent = data.message || 'Unable to cancel the trip.';
+                        msg.className = 'cd-trip-cancel-msg cd-trip-cancel-msg-error';
+                        msg.hidden = false;
+                        if (confirmBtn) { confirmBtn.disabled = false; }
+                        return;
+                    }
                     showTripError(data.message || 'Unable to cancel the trip.');
                     return;
                 }
+                if (modal && !modal.hidden) { modal.hidden = true; }
                 var affected = data.affected || {};
                 var count = parseInt(affected.count, 10) || 0;
                 if (count > 0) {
@@ -817,7 +1005,102 @@
                 loadTrips();
             })
             .catch(function () {
+                if (modal && !modal.hidden && msg) {
+                    msg.textContent = 'Network error while cancelling the trip.';
+                    msg.className = 'cd-trip-cancel-msg cd-trip-cancel-msg-error';
+                    msg.hidden = false;
+                    if (confirmBtn) { confirmBtn.disabled = false; }
+                    return;
+                }
                 showTripError('Network error while cancelling the trip.');
+            });
+    }
+
+    function closeTripDeleteModal() {
+        pendingTripDeleteId = null;
+        var modal = byId('trip-delete-modal');
+        if (modal) { modal.hidden = true; }
+        var msg = byId('trip-delete-msg');
+        if (msg) { msg.hidden = true; msg.textContent = ''; }
+        var confirmBtn = byId('trip-delete-confirm-btn');
+        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Delete Trip'; }
+    }
+
+    function openTripDeleteModal(id) {
+        var modal = byId('trip-delete-modal');
+        var trip = tripById(id);
+        if (!modal || !trip) { return; }
+
+        pendingTripDeleteId = String(id);
+
+        var routeEl = byId('trip-delete-route');
+        if (routeEl) { routeEl.textContent = (trip.from_city || '\u2014') + ' \u2192 ' + (trip.to_city || '\u2014'); }
+        var depEl = byId('trip-delete-departure');
+        if (depEl) { depEl.textContent = (trip.departure_date || '\u2014') + (trip.departure_time ? ' \u00B7 ' + trip.departure_time : ''); }
+        var bookingEl = byId('trip-delete-bookings');
+        if (bookingEl) {
+            var affected = parseInt(trip.affected_bookings, 10) || 0;
+            bookingEl.textContent = affected + ' cancelled booking' + (affected === 1 ? '' : 's');
+        }
+
+        var msg = byId('trip-delete-msg');
+        if (msg) { msg.hidden = true; msg.textContent = ''; }
+        var confirmBtn = byId('trip-delete-confirm-btn');
+        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Delete Trip'; }
+
+        modal.hidden = false;
+    }
+
+    function confirmTripDelete() {
+        if (!pendingTripDeleteId) { return; }
+        deleteTrip(pendingTripDeleteId);
+    }
+
+    function deleteTrip(id) {
+        var modal = byId('trip-delete-modal');
+        var msg = byId('trip-delete-msg');
+        var confirmBtn = byId('trip-delete-confirm-btn');
+        if (msg) { msg.hidden = true; msg.textContent = ''; }
+        if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Deleting\u2026'; }
+
+        fetch('api/company.php?action=trip_delete', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ trip_id: id })
+        })
+            .then(function (res) {
+                return res.json().catch(function () {
+                    return { success: false, message: 'Invalid server response.' };
+                }).then(function (json) {
+                    return { ok: res.ok, status: res.status, data: json };
+                });
+            })
+            .then(function (result) {
+                var data = result.data || {};
+                if (!result.ok || result.status !== 200 || !data.success) {
+                    if (modal && !modal.hidden && msg) {
+                        msg.textContent = data.message || 'Unable to delete the trip.';
+                        msg.hidden = false;
+                        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Delete Trip'; }
+                        return;
+                    }
+                    showTripError(data.message || 'Unable to delete the trip.');
+                    return;
+                }
+                if (modal && !modal.hidden) { modal.hidden = true; }
+                pendingTripDeleteId = null;
+                showTripNotice(data.message || 'Trip deleted.');
+                loadTrips();
+            })
+            .catch(function () {
+                if (modal && !modal.hidden && msg) {
+                    msg.textContent = 'Network error while deleting the trip.';
+                    msg.hidden = false;
+                    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Delete Trip'; }
+                    return;
+                }
+                showTripError('Network error while deleting the trip.');
             });
     }
 
@@ -2595,6 +2878,42 @@
         var cancelConfirm = byId('cancel-confirm-btn');
         if (cancelConfirm) { cancelConfirm.addEventListener('click', submitCancelBooking); }
 
+        /* ----- Trip-cancel confirmation modal wiring ----- */
+        var tripCancelModal = byId('trip-cancel-modal');
+        if (tripCancelModal) {
+            if (tripCancelModal.parentNode !== document.body) {
+                document.body.appendChild(tripCancelModal);
+            }
+            tripCancelModal.style.zIndex = '103';
+            tripCancelModal.addEventListener('click', function (ev) {
+                if (ev.target === tripCancelModal) { closeTripCancelModal(); }
+            });
+        }
+        var tripCancelClose = byId('trip-cancel-close');
+        if (tripCancelClose) { tripCancelClose.addEventListener('click', closeTripCancelModal); }
+        var tripCancelKeep = byId('trip-cancel-keep-btn');
+        if (tripCancelKeep) { tripCancelKeep.addEventListener('click', closeTripCancelModal); }
+        var tripCancelConfirm = byId('trip-cancel-confirm-btn');
+        if (tripCancelConfirm) { tripCancelConfirm.addEventListener('click', confirmTripCancel); }
+
+        /* ----- Trip-delete confirmation modal wiring ----- */
+        var tripDeleteModal = byId('trip-delete-modal');
+        if (tripDeleteModal) {
+            if (tripDeleteModal.parentNode !== document.body) {
+                document.body.appendChild(tripDeleteModal);
+            }
+            tripDeleteModal.style.zIndex = '104';
+            tripDeleteModal.addEventListener('click', function (ev) {
+                if (ev.target === tripDeleteModal) { closeTripDeleteModal(); }
+            });
+        }
+        var tripDeleteClose = byId('trip-delete-close');
+        if (tripDeleteClose) { tripDeleteClose.addEventListener('click', closeTripDeleteModal); }
+        var tripDeleteKeep = byId('trip-delete-keep-btn');
+        if (tripDeleteKeep) { tripDeleteKeep.addEventListener('click', closeTripDeleteModal); }
+        var tripDeleteConfirm = byId('trip-delete-confirm-btn');
+        if (tripDeleteConfirm) { tripDeleteConfirm.addEventListener('click', confirmTripDelete); }
+
         document.addEventListener('keydown', function (ev) {
             if (ev.key === 'Escape' || ev.key === 'Esc' || ev.key === 27) {
                 var wtkModal = byId('walkin-ticket-modal');
@@ -2605,6 +2924,10 @@
                 if (busModal && !busModal.hidden) { hideBusForm(); }
                 var tripModal = byId('trip-form-modal');
                 if (tripModal && !tripModal.hidden) { hideTripForm(); }
+                var tcModal = byId('trip-cancel-modal');
+                if (tcModal && !tcModal.hidden) { closeTripCancelModal(); }
+                var tdModal = byId('trip-delete-modal');
+                if (tdModal && !tdModal.hidden) { closeTripDeleteModal(); }
             }
         });
 

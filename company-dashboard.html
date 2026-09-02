@@ -174,6 +174,29 @@
         .cd-cancel-msg { min-height: 1.1rem; margin: 0.6rem 0 0; font-size: 0.83rem; color: #16a34a; font-weight: 600; }
         .cd-cancel-msg-error { color: #b91c1c; }
         .cd-cancel-actions { display: flex; justify-content: flex-end; gap: 0.55rem; margin-top: 1rem; }
+
+ /* ===== Trip-cancel confirmation modal (scoped to .cd-*) ===== */
+        .cd-trip-cancel-modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); display: flex; align-items: center; justify-content: center; z-index: 103; padding: 1rem; }
+        .cd-trip-cancel-modal[hidden] { display: none; }
+        .cd-trip-cancel-box { background: var(--color-white, #fff); border-radius: 12px; border: 1px solid #e5e7eb; width: 100%; max-width: 560px; max-height: 90vh; overflow: auto; padding: 1.1rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); }
+        .cd-trip-cancel-list { display: grid; gap: 0.55rem; margin: 0.9rem 0 0; }
+        .cd-trip-cancel-row { display: flex; align-items: center; justify-content: space-between; gap: 0.9rem; padding: 0.65rem 0.75rem; border: 1px solid #e5e7eb; border-radius: 9px; background: #fff; }
+        .cd-trip-cancel-row b { display: block; font-size: 0.85rem; color: var(--color-dark); }
+        .cd-trip-cancel-sub { display: block; font-size: 0.78rem; color: var(--color-muted); margin-top: 0.15rem; }
+        .cd-trip-cancel-amount { font-weight: 700; color: var(--color-dark); font-size: 0.88rem; white-space: nowrap; }
+        .cd-trip-cancel-flag { display: inline-block; margin-left: 0.45rem; padding: 0.08rem 0.45rem; border-radius: 20px; font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; background: #fee2e2; color: #b91c1c; vertical-align: 2px; }
+        .cd-trip-cancel-empty { margin: 0.9rem 0 0; padding: 0.85rem; border: 1px dashed #e5e7eb; border-radius: 10px; color: var(--color-muted); font-size: 0.85rem; text-align: center; }
+        .cd-trip-cancel-note { margin: 0.7rem 0 0; font-size: 0.8rem; font-weight: 700; color: #7c3aed; }
+        .cd-trip-cancel-msg { min-height: 1.1rem; margin: 0.6rem 0 0; font-size: 0.83rem; color: #16a34a; font-weight: 600; }
+        .cd-trip-cancel-msg-error { color: #b91c1c; }
+        .cd-trip-cancel-actions { display: flex; justify-content: flex-end; gap: 0.55rem; margin-top: 1rem; }
+
+ /* ===== Trip-delete confirmation modal (scoped to .cd-*) ===== */
+        .cd-trip-delete-modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); display: flex; align-items: center; justify-content: center; z-index: 104; padding: 1rem; }
+        .cd-trip-delete-modal[hidden] { display: none; }
+        .cd-trip-delete-box { background: var(--color-white, #fff); border-radius: 12px; border: 1px solid #e5e7eb; width: 100%; max-width: 440px; max-height: 90vh; overflow: auto; padding: 1.1rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); }
+        .cd-trip-delete-msg { min-height: 1.1rem; margin: 0.6rem 0 0; font-size: 0.83rem; color: #b91c1c; font-weight: 600; }
+        .cd-trip-delete-actions { display: flex; justify-content: flex-end; gap: 0.55rem; margin-top: 1rem; }
         @media (max-width: 480px) { .cd-cancel-refund-list { grid-template-columns: 1fr; } .cd-cancel-summary { grid-template-columns: 1fr; } }
 
  /* ===== Revenue / Payments (read-only, scoped to .cd-*) ===== */
@@ -768,6 +791,73 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- ============================================================
+                     Trip-cancel confirmation modal — opened by the "Cancel Trip"
+                     action on a scheduled trip. Fetches the trip's bookings
+                     (action=bookings&trip_id=...) and lists exactly which active
+                     bookings would be cancelled before the operator commits.
+                     Confirm posts { trip_id, status: 'cancelled' } to
+                     api/company.php?action=trip_status.
+                     ============================================================ -->
+                <div id="trip-cancel-modal" class="cd-trip-cancel-modal" hidden>
+                    <div class="cd-trip-cancel-box" role="dialog" aria-modal="true" aria-labelledby="trip-cancel-title">
+                        <div class="cd-cancel-head">
+                            <h3 id="trip-cancel-title">Cancel Trip?</h3>
+                            <button type="button" id="trip-cancel-close" class="cd-cancel-close" aria-label="Close trip cancellation dialog">&times;</button>
+                        </div>
+                        <p class="cd-cancel-intro">Cancelling this trip will also cancel every active booking on it. Review the list below before confirming.</p>
+
+                        <div class="cd-cancel-summary">
+                            <div class="cd-cancel-field"><span class="k">Route</span><span class="v" id="trip-cancel-route"></span></div>
+                            <div class="cd-cancel-field"><span class="k">Departure</span><span class="v" id="trip-cancel-departure"></span></div>
+                            <div class="cd-cancel-field"><span class="k">Bus</span><span class="v" id="trip-cancel-bus"></span></div>
+                            <div class="cd-cancel-field"><span class="k">Status</span><span class="v" id="trip-cancel-status"></span></div>
+                        </div>
+
+                        <p id="trip-cancel-loading" class="cd-fleet-msg" hidden>Checking active bookings&hellip;</p>
+                        <div id="trip-cancel-empty" class="cd-trip-cancel-empty" hidden></div>
+                        <div id="trip-cancel-list" class="cd-trip-cancel-list" hidden></div>
+                        <p id="trip-cancel-note" class="cd-trip-cancel-note" hidden></p>
+                        <p id="trip-cancel-msg" class="cd-trip-cancel-msg" role="alert" hidden></p>
+
+                        <div class="cd-trip-cancel-actions">
+                            <button type="button" id="trip-cancel-keep-btn" class="btn btn-secondary">Keep Trip</button>
+                            <button type="button" id="trip-cancel-confirm-btn" class="btn btn-danger">Cancel Trip</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================================================
+                     Trip-delete confirmation modal — opened by the "Delete"
+                     action on a cancelled trip. Deletion is permanent: the trip
+                     row and its cancelled booking records are removed (cascade
+                     passengers / payments), so the operator confirms explicitly.
+                     Confirm posts { trip_id } to
+                     api/company.php?action=trip_delete.
+                     ============================================================ -->
+                <div id="trip-delete-modal" class="cd-trip-delete-modal" hidden>
+                    <div class="cd-trip-delete-box" role="dialog" aria-modal="true" aria-labelledby="trip-delete-title">
+                        <div class="cd-cancel-head">
+                            <h3 id="trip-delete-title">Delete cancelled trip?</h3>
+                            <button type="button" id="trip-delete-close" class="cd-cancel-close" aria-label="Close trip deletion dialog">&times;</button>
+                        </div>
+                        <p class="cd-cancel-intro">This permanently removes this cancelled trip and its record of cancelled bookings. This action cannot be undone.</p>
+
+                        <div class="cd-cancel-summary">
+                            <div class="cd-cancel-field"><span class="k">Route</span><span class="v" id="trip-delete-route"></span></div>
+                            <div class="cd-cancel-field"><span class="k">Departure</span><span class="v" id="trip-delete-departure"></span></div>
+                            <div class="cd-cancel-field"><span class="k">Cancelled bookings</span><span class="v" id="trip-delete-bookings"></span></div>
+                        </div>
+
+                        <p id="trip-delete-msg" class="cd-trip-delete-msg" role="alert" hidden></p>
+
+                        <div class="cd-trip-delete-actions">
+                            <button type="button" id="trip-delete-keep-btn" class="btn btn-secondary">Keep Trip</button>
+                            <button type="button" id="trip-delete-confirm-btn" class="btn btn-danger">Delete Trip</button>
+                        </div>
+                    </div>
+                </div>
             </section>
 
         <section id="company-revenue" class="cd-revenue" hidden>
@@ -910,6 +1000,6 @@
 
     <script src="js/main.js"></script>
     <script src="js/auth.js"></script>
-    <script src="js/company-dashboard.js?v=20260902-payment-status-buttons"></script>
+    <script src="js/company-dashboard.js?v=20260902-trip-delete"></script>
 </body>
 </html>

@@ -25,6 +25,8 @@ declare(strict_types=1);
  *                                                     (authenticated company role only)
   *   POST api/company.php?action=trip_status         -> { success, trip }  (scheduled -> cancelled)
  *                                                     (authenticated company role only)
+ *   POST api/company.php?action=trip_delete         -> { success, message }  (cancelled only)
+ *                                                     (authenticated company role only)
  *   GET  api/company.php?action=revenue             -> { success, company_id, revenue }
  *                                                     (read-only revenue summary, company role only)
  *   GET  api/company.php?action=payments            -> { success, company_id, payments }
@@ -1573,6 +1575,102 @@ function handle_trip_status(PDO $pdo): void
         throw $e;
     }
 }
+
+/**
+ * POST /api/company.php?action=trip_delete — permanently remove a cancelled trip.
+ *
+ * Only a trip already in the `cancelled` state may be deleted, and only by the
+ * company that owns it. The deletion is atomic: booking records on the trip are
+ * removed first (their booking_passengers / payments cascade, and reviews that
+ * referenced the bookings fall back to booking_id = NULL), then the trip row
+ * itself. Departed / completed / scheduled trips are never touched here.
+ */
+function handle_trip_delete(PDO $pdo): void
+{
+    require_company_post();
+    $user = requireRole('company');
+    $company = require_company_scope($pdo, (int) $user['id']);
+    $companyId = (int) $company['id'];
+
+    $input = company_input();
+
+    $tripId = positive_int_or_error($input['trip_id'] ?? null, 'A valid trip id is required.');
+
+    try {
+        $pdo->beginTransaction();
+
+        /* Lock the owned trip first so the deletion is atomic and can never
+           race the lifecycle workers or another operator action on the row. */
+        $tripStmt = $pdo->prepare('
+            SELECT id, company_id, status
+            FROM trips
+            WHERE id = :trip_id
+            FOR UPDATE');
+        $tripStmt->execute([':trip_id' => $tripId]);
+        $trip = $tripStmt->fetch();
+
+        /* Ownership failure and missing trip both answer 404 so a foreign trip
+           id is never disclosed. */
+        if ($trip === false || (int) $trip['company_id'] !== $companyId) {
+            $pdo->rollBack();
+            auth_response(404, [
+                'success' => false,
+                'message' => 'Trip not found.',
+            ]);
+        }
+
+        /* Only cancelled trips may be deleted. Everything else is owned by the
+           lifecycle (scheduled / departed / completed). */
+        if ($trip['status'] !== 'cancelled') {
+            $pdo->rollBack();
+            auth_response(409, [
+                'success' => false,
+                'message' => 'Only cancelled trips can be deleted.',
+            ]);
+        }
+
+        /* Delete the booking records first (bookings.trip_id is RESTRICT so the
+           trip row cannot go before them). booking_passengers and payments
+           cascade; reviews.bookings fall back to booking_id = NULL. */
+        $delBook = $pdo->prepare('
+            DELETE FROM bookings
+            WHERE trip_id = :trip_id');
+        $delBook->execute([':trip_id' => $tripId]);
+        $deletedBookings = $delBook->rowCount();
+
+        $delTrip = $pdo->prepare('
+            DELETE FROM trips
+            WHERE id = :trip_id
+              AND company_id = :company_id
+              AND status = :status');
+        $delTrip->execute([
+            ':trip_id' => $tripId,
+            ':company_id' => $companyId,
+            ':status' => 'cancelled',
+        ]);
+
+        if ($delTrip->rowCount() === 0) {
+            $pdo->rollBack();
+            auth_response(409, [
+                'success' => false,
+                'message' => 'This trip cannot be deleted in its current state.',
+            ]);
+        }
+
+        $pdo->commit();
+
+        auth_response(200, [
+            'success' => true,
+            'message' => 'Trip deleted.',
+            'deleted_bookings' => $deletedBookings,
+        ]);
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
+}
 /* ============================================================
  Company bookings / passenger manifests
    ------------------------------------------------------------
@@ -2803,6 +2901,9 @@ try {
     if ($action === 'trip_status') {
         handle_trip_status($pdo);
     }
+    if ($action === 'trip_delete') {
+        handle_trip_delete($pdo);
+    }
     if ($action === 'bookings') {
         handle_bookings($pdo);
     }
@@ -2830,7 +2931,7 @@ try {
 
     auth_response(400, [
         'success' => false,
-        'message' => 'Unsupported action. Use action=list, action=get, action=overview, action=buses, action=bus_create, action=bus_update, action=trips, action=trip_create, action=trip_update, action=trip_status, action=bookings, action=booking_create, action=booking_cancel, action=manifest, action=revenue, action=payments, action=profile or action=profile_update.',
+        'message' => 'Unsupported action. Use action=list, action=get, action=overview, action=buses, action=bus_create, action=bus_update, action=trips, action=trip_create, action=trip_update, action=trip_status, action=trip_delete, action=bookings, action=booking_create, action=booking_cancel, action=manifest, action=revenue, action=payments, action=profile or action=profile_update.',
     ]);
 } catch (Throwable $e) {
     auth_response(500, [
