@@ -427,6 +427,14 @@
                     <button type="button" class="cd-trip-filter" data-trip-filter="cancelled" aria-pressed="false">Cancelled</button>
                 </div>
 
+                <div class="cd-passenger-filter" aria-label="Filter trips by departure date">
+                    <div class="cd-day-picker">
+                        <div class="cd-date-head"><strong>Departure date</strong><p id="trip-date-label" class="cd-selected-date">All departure dates</p></div>
+                        <div id="trip-day-list" class="cd-day-list" role="group" aria-label="Departure date"></div>
+                    </div>
+                    <div class="cd-filter-actions"><button type="button" id="btn-clear-trip-filters" class="btn btn-secondary">Clear filters</button><button type="button" id="btn-refresh-trips" class="btn btn-primary">Refresh trips</button></div>
+                </div>
+
                 <p id="trip-loading" class="cd-trips-msg" hidden>Loading your trips&hellip;</p>
                 <div id="trip-error" class="cd-trips-error auth-message" hidden></div>
                 <div id="trip-notice" class="cd-trips-msg" hidden></div>
@@ -901,6 +909,6 @@
 
     <script src="js/main.js"></script>
     <script src="js/auth.js"></script>
-    <script src="js/company-dashboard.js?v=20260901-passenger-fields"></script>
+    <script src="js/company-dashboard.js?v=20260902-trip-date-filters"></script>
 </body>
 </html>

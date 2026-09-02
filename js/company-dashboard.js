@@ -473,11 +473,51 @@
     var currentTrips = [];
     var currentRoutes = [];
     var selectedTripStatus = 'all';
+    var selectedTripDate = '';
 
     function applyTripFilter() {
+        updateTripDateLabel();
         renderTrips(currentTrips.filter(function (trip) {
-            return selectedTripStatus === 'all' || trip.status === selectedTripStatus;
+            var statusOk = selectedTripStatus === 'all' || trip.status === selectedTripStatus;
+            var dateOk = !selectedTripDate || String(trip.departure_date) === selectedTripDate;
+            return statusOk && dateOk;
         }));
+    }
+
+    function tripDateISO(date) {
+        return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+    }
+
+    function updateTripDateLabel() {
+        var label = byId('trip-date-label');
+        if (!label) { return; }
+        label.textContent = selectedTripDate
+            ? new Date(selectedTripDate + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+            : 'All departure dates';
+    }
+
+    function renderTripDayPicker() {
+        var list = byId('trip-day-list');
+        if (!list) { return; }
+        var today = new Date();
+        today.setHours(0, 0, 0, 0);
+        var html = '';
+        for (var i = 0; i < 14; i++) {
+            var day = new Date(today);
+            day.setDate(today.getDate() + i);
+            var iso = tripDateISO(day);
+            html += '<button type="button" class="cd-day-button" data-trip-date="' + iso + '" aria-pressed="' + String(iso === selectedTripDate) + '"><span>' + day.toLocaleDateString(undefined, { weekday: 'short' }).toUpperCase() + '</span><b>' + day.getDate() + '</b></button>';
+        }
+        list.innerHTML = html;
+        var buttons = list.querySelectorAll('[data-trip-date]');
+        for (var j = 0; j < buttons.length; j++) {
+            buttons[j].addEventListener('click', function () {
+                var date = this.getAttribute('data-trip-date');
+                selectedTripDate = selectedTripDate === date ? '' : date;
+                renderTripDayPicker();
+                applyTripFilter();
+            });
+        }
     }
 
     function hideTripForm() {
@@ -524,7 +564,15 @@
 
         if (!trips || !trips.length) {
             if (list) { list.innerHTML = ''; list.hidden = true; }
-            if (empty) { empty.hidden = false; }
+            var emptyMsg = 'You have no trips yet. Create your first trip to get started.';
+            if (selectedTripStatus === 'cancelled') {
+                emptyMsg = 'No cancelled trips match the current filters.';
+            } else if (selectedTripStatus === 'scheduled') {
+                emptyMsg = 'No scheduled trips match the current filters.';
+            } else if (selectedTripDate) {
+                emptyMsg = 'No trips depart on the selected date.';
+            }
+            if (empty) { empty.textContent = emptyMsg; empty.hidden = false; }
             return;
         }
 
@@ -615,7 +663,7 @@
                 }
                 currentTrips = data.trips || [];
                 currentRoutes = data.routes || [];
-                renderTrips(currentTrips);
+                applyTripFilter();
             })
             .catch(function () {
                 if (rid !== tripsRequestId) { return; }
@@ -2266,6 +2314,28 @@
                     applyTripFilter();
                 });
             })(tripFilterButtons[fi]);
+        }
+
+        /* Render the trips departure-date day strip. */
+        renderTripDayPicker();
+
+        var tripRefresh = byId('btn-refresh-trips');
+        if (tripRefresh) { tripRefresh.addEventListener('click', loadTrips); }
+
+        var clearTripFilters = byId('btn-clear-trip-filters');
+        if (clearTripFilters) {
+            clearTripFilters.addEventListener('click', function () {
+                selectedTripDate = '';
+                selectedTripStatus = 'all';
+                var statusButtons = document.querySelectorAll('.cd-trip-filter[data-trip-filter]');
+                for (var tb = 0; tb < statusButtons.length; tb++) {
+                    var active = statusButtons[tb].getAttribute('data-trip-filter') === 'all';
+                    statusButtons[tb].classList.toggle('is-active', active);
+                    statusButtons[tb].setAttribute('aria-pressed', active ? 'true' : 'false');
+                }
+                renderTripDayPicker();
+                applyTripFilter();
+            });
         }
 
 
