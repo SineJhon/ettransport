@@ -443,7 +443,7 @@
 
     /* The on-screen scroll box (max-height: 92vh; overflow-y: auto) must be
        fully neutralized in print, otherwise the ticket is clipped by the
-       scroll container and the bottom (QR / footer area) never prints. */
+       scroll container and the bottom of the ticket never prints. */
     body.printing-walkin-ticket #walkin-ticket-modal .cd-walkin-ticket-box {
         max-width: none;
         width: auto;
@@ -479,5 +479,4 @@
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
-    body.printing-walkin-ticket #walkin-ticket-modal .ticket-footer { border: none; }
 }

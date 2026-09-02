@@ -1525,47 +1525,6 @@
         return 'ETB ' + Number(n).toLocaleString();
     }
 
-    /* Demo QR — same deterministic pattern as the confirmation page. */
-    function drawWalkInQR(canvas, seed) {
-        if (!canvas || !canvas.getContext) { return; }
-        var ctx = canvas.getContext('2d');
-        var size = 25;
-        var px = canvas.width / size;
-        function hash(s) {
-            var h = 5381;
-            for (var i = 0; i < s.length; i++) { h = ((h << 5) + h + s.charCodeAt(i)) | 0; }
-            return h >>> 0;
-        }
-        var rndState = hash(seed || 'ET');
-        function rnd() {
-            rndState = (rndState * 1664525 + 1013904223) >>> 0;
-            return rndState / 4294967296;
-        }
-        function inFinder(x, y) {
-            return (x < 8 && y < 8) || (x >= size - 8 && y < 8) || (x < 8 && y >= size - 8);
-        }
-        function drawFinder(ox, oy) {
-            ctx.fillStyle = '#111827';
-            ctx.fillRect(ox * px, oy * px, 7 * px, 7 * px);
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect((ox + 1) * px, (oy + 1) * px, 5 * px, 5 * px);
-            ctx.fillStyle = '#111827';
-            ctx.fillRect((ox + 2) * px, (oy + 2) * px, 3 * px, 3 * px);
-        }
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#111827';
-        for (var y = 0; y < size; y++) {
-            for (var x = 0; x < size; x++) {
-                if (inFinder(x, y)) { continue; }
-                if (rnd() < 0.5) { ctx.fillRect(x * px, y * px, px, px); }
-            }
-        }
-        drawFinder(0, 0);
-        drawFinder(size - 7, 0);
-        drawFinder(0, size - 7);
-    }
-
     function loadWalkInTicket(bookingRef) {
         var modal = byId('walkin-ticket-modal');
         if (!modal || !bookingRef) { return; }
@@ -1650,8 +1609,6 @@
         byId('t-seats').textContent = seats.join(', ');
         byId('t-type').textContent = trip.type;
         byId('t-total').textContent = formatTicketPrice(total);
-
-        drawWalkInQR(byId('qr-canvas'), bookingRef);
 
         var loading = byId('walkin-ticket-loading'); if (loading) { loading.hidden = true; }
         var error = byId('walkin-ticket-error'); if (error) { error.hidden = true; }

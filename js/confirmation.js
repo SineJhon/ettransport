@@ -283,55 +283,6 @@ var appEl = document.getElementById('confirmation-app');
             addNotification('&#128179;', 'Payment Successful', 'Payment of ' + formatPrice(total) + ' was successfully processed for booking ' + bookingRef + '.');
             try { window.sessionStorage.setItem('etTransportLastBooking', bookingRef); } catch (e) { /* prototype only */ }
         }
-/* ------------------------------------------------------------
-           QR-style verification area
-        ------------------------------------------------------------ */
-        function drawQR(canvas, seed) {
-            var ctx = canvas.getContext('2d');
-            var size = 25;
-            var px = canvas.width / size;
-
-            function hash(s) {
-                var h = 5381;
-                for (var i = 0; i < s.length; i++) { h = ((h << 5) + h + s.charCodeAt(i)) | 0; }
-                return h >>> 0;
-            }
-            var rndState = hash(seed || 'ET');
-            function rnd() {
-                rndState = (rndState * 1664525 + 1013904223) >>> 0;
-                return rndState / 4294967296;
-            }
-            function inFinder(x, y) {
-                return (x < 8 && y < 8) || (x >= size - 8 && y < 8) || (x < 8 && y >= size - 8);
-            }
-
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#111827';
-
-            for (var y = 0; y < size; y++) {
-                for (var x = 0; x < size; x++) {
-                    if (inFinder(x, y)) { continue; }
-                    if (rnd() < 0.5) { ctx.fillRect(x * px, y * px, px, px); }
-                }
-            }
-
-            function drawFinder(ox, oy) {
-                ctx.fillRect(ox * px, oy * px, 7 * px, 7 * px);
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect((ox + 1) * px, (oy + 1) * px, 5 * px, 5 * px);
-                ctx.fillStyle = '#111827';
-                ctx.fillRect((ox + 2) * px, (oy + 2) * px, 3 * px, 3 * px);
-            }
-            drawFinder(0, 0);
-            drawFinder(size - 7, 0);
-            drawFinder(0, size - 7);
-        }
-
-        var qrCanvas = document.getElementById('qr-canvas');
-        if (qrCanvas && qrCanvas.getContext) {
-            drawQR(qrCanvas, bookingRef);
-        }
 
         /* ---------- Download / Print ticket ---------- */
         var printBtn = document.getElementById('print-btn');

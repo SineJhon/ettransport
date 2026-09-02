@@ -1886,46 +1886,6 @@ ul {
     font-size: 1.15rem;
 }
 
-/* ---------- QR verification area ---------- */
-.ticket-footer {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.25rem;
-    border-top: 2px dashed #e5e7eb;
-    padding: 1.25rem;
-}
-
-.ticket-qr {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.4rem;
-}
-
-#qr-canvas {
-    width: 120px;
-    height: 120px;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 6px;
-    background-color: #ffffff;
-}
-
-.qr-label {
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: var(--color-muted);
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-}
-
-.qr-disclaimer {
-    font-size: 0.75rem;
-    color: var(--color-muted);
-    text-align: center;
-}
-
 /* ---------- Ticket actions & next steps ---------- */
 .ticket-actions {
     display: flex;
@@ -2010,9 +1970,6 @@ ul {
         border: 1px solid #111827;
     }
 
-    .ticket-footer {
-        border: none;
-    }
 }
 
 
@@ -4038,7 +3995,6 @@ body.modal-open { overflow: hidden; }
         box-shadow: none;
         border: 1px solid #111827;
     }
-    body.printing-ticket #ticket-modal .ticket-footer { border: none; }
 }
 
 /* ---------- Dashboard responsive ---------- */
