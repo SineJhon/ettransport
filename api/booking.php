@@ -985,7 +985,7 @@ function handle_get(): void
         auth_response(405, ['success' => false, 'message' => 'Method not allowed.']);
     }
 
-    $user = require_active_passenger();
+    $user = requireLogin();
 
     $ref = trim((string) ($_GET['ref'] ?? ''));
     $id = (int) ($_GET['id'] ?? 0);
@@ -997,8 +997,27 @@ function handle_get(): void
     try {
         $pdo = db();
 
-        $sql = booking_base_sql() . ' WHERE b.passenger_id = :uid';
-        $params = [':uid' => (int) $user['id']];
+        /* Passenger owners see their own bookings. Companies may open the
+           passenger confirmation page for bookings made on their own trips
+           (office / call-in bookings), so ownership is derived server-side. */
+        $sql = '';
+        $params = [];
+
+        if (($user['role'] ?? '') === 'company') {
+            $companyStmt = $pdo->prepare('SELECT id FROM companies WHERE user_id = :uid LIMIT 1');
+            $companyStmt->execute([':uid' => (int) $user['id']]);
+            $companyId = (int) $companyStmt->fetchColumn();
+            if ($companyId <= 0) {
+                auth_response(403, ['success' => false, 'message' => 'No company is linked to this account.']);
+            }
+
+            $sql = booking_base_sql() . ' WHERE t.company_id = :cid';
+            $params[':cid'] = $companyId;
+        } else {
+            $user = require_active_passenger();
+            $sql = booking_base_sql() . ' WHERE b.passenger_id = :uid';
+            $params[':uid'] = (int) $user['id'];
+        }
 
         if ($id > 0) {
             $sql .= ' AND b.id = :id LIMIT 1';

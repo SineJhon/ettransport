@@ -1473,6 +1473,11 @@
                     showWalkInError(data.message || 'Unable to create the walk-in booking.');
                     return;
                 }
+                var bookingRef = data.booking ? data.booking.booking_reference : '';
+                if (!bookingRef) {
+                    showWalkInError('The booking was created but no reference was returned.');
+                    return;
+                }
                 closeWalkInBookingForm();
                 loadBookings();
                 loadRevenueSummary();
@@ -1484,11 +1489,178 @@
                     info.className = 'cd-bookings-error auth-message success';
                     info.textContent = notice;
                 }
+                /* Show the digital ticket in-page — same backend payload and the
+                   same ticket design the passenger confirmation page uses. */
+                loadWalkInTicket(bookingRef);
             })
             .catch(function () {
                 if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Confirm Booking'; }
                 showWalkInError('Network error while creating the walk-in booking.');
             });
+    }
+
+    /* ============================================================
+       Walk-in ticket popup — the digital ticket is loaded from the
+       SAME backend payload the passenger confirmation page uses
+       (api/booking.php?action=get) and rendered in-page, so the
+       office sees the identical ticket + Download / Print option.
+       ============================================================ */
+
+    function formatTicketDate(iso) {
+        if (!iso) { return ''; }
+        var d = new Date(String(iso) + 'T00:00:00');
+        if (isNaN(d.getTime())) { return String(iso); }
+        return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    function formatTicketDuration(minutes) {
+        var m = Number(minutes);
+        if (isNaN(m) || m <= 0) { return ''; }
+        var h = Math.floor(m / 60);
+        var mm = m % 60;
+        return h + 'h ' + ('0' + mm).slice(-2) + 'm';
+    }
+
+    function formatTicketPrice(n) {
+        return 'ETB ' + Number(n).toLocaleString();
+    }
+
+    /* Demo QR — same deterministic pattern as the confirmation page. */
+    function drawWalkInQR(canvas, seed) {
+        if (!canvas || !canvas.getContext) { return; }
+        var ctx = canvas.getContext('2d');
+        var size = 25;
+        var px = canvas.width / size;
+        function hash(s) {
+            var h = 5381;
+            for (var i = 0; i < s.length; i++) { h = ((h << 5) + h + s.charCodeAt(i)) | 0; }
+            return h >>> 0;
+        }
+        var rndState = hash(seed || 'ET');
+        function rnd() {
+            rndState = (rndState * 1664525 + 1013904223) >>> 0;
+            return rndState / 4294967296;
+        }
+        function inFinder(x, y) {
+            return (x < 8 && y < 8) || (x >= size - 8 && y < 8) || (x < 8 && y >= size - 8);
+        }
+        function drawFinder(ox, oy) {
+            ctx.fillStyle = '#111827';
+            ctx.fillRect(ox * px, oy * px, 7 * px, 7 * px);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect((ox + 1) * px, (oy + 1) * px, 5 * px, 5 * px);
+            ctx.fillStyle = '#111827';
+            ctx.fillRect((ox + 2) * px, (oy + 2) * px, 3 * px, 3 * px);
+        }
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#111827';
+        for (var y = 0; y < size; y++) {
+            for (var x = 0; x < size; x++) {
+                if (inFinder(x, y)) { continue; }
+                if (rnd() < 0.5) { ctx.fillRect(x * px, y * px, px, px); }
+            }
+        }
+        drawFinder(0, 0);
+        drawFinder(size - 7, 0);
+        drawFinder(0, size - 7);
+    }
+
+    function loadWalkInTicket(bookingRef) {
+        var modal = byId('walkin-ticket-modal');
+        if (!modal || !bookingRef) { return; }
+        var loading = byId('walkin-ticket-loading');
+        var error = byId('walkin-ticket-error');
+        var body = byId('walkin-ticket-body');
+        if (loading) { loading.hidden = false; }
+        if (error) { error.hidden = true; }
+        if (body) { body.hidden = true; }
+        modal.hidden = false;
+
+        fetch('api/booking.php?action=get&ref=' + encodeURIComponent(bookingRef), {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(function (res) {
+                return res.json().catch(function () {
+                    return { success: false, message: 'Invalid server response.' };
+                }).then(function (json) {
+                    return { ok: res.ok, status: res.status, data: json };
+                });
+            })
+            .then(function (result) {
+                var data = result.data || {};
+                if (!result.ok || result.status !== 200 || !data.success || !data.booking) {
+                    showWalkInTicketError(data.message || 'Unable to load the ticket.');
+                    return;
+                }
+                renderWalkInTicket(data.booking);
+            })
+            .catch(function () {
+                showWalkInTicketError('Network error while loading the ticket.');
+            });
+    }
+
+    function showWalkInTicketError(message) {
+        var loading = byId('walkin-ticket-loading'); if (loading) { loading.hidden = true; }
+        var error = byId('walkin-ticket-error');
+        if (error) {
+            error.hidden = false;
+            error.textContent = message || 'Unable to load the ticket.';
+        }
+        var body = byId('walkin-ticket-body'); if (body) { body.hidden = true; }
+    }
+
+    /* Renders the exact same ticket fields the passenger confirmation page
+       renders (mirrors js/confirmation.js applyBookingFromApi + renderTicket). */
+    function renderWalkInTicket(b) {
+        var bookingRef = b.reference || '';
+        var passengers = Array.isArray(b.passengers) ? b.passengers : [];
+        var passengerNames = [];
+        for (var p = 0; p < passengers.length; p++) {
+            passengerNames.push(passengers[p].name || ('Passenger ' + (p + 1)));
+        }
+        var seats = Array.isArray(b.seats) ? b.seats.slice() : [];
+        var date = b.date || '';
+        var total = Number(b.total) || 0;
+        var trip = {
+            from: b.from || '',
+            to: b.to || '',
+            depart: b.depart || '',
+            arrive: b.arrive || '',
+            minutes: Number(b.minutes) || 0,
+            company: b.company || '',
+            type: b.tripType || 'Standard',
+            busType: b.busType || ''
+        };
+
+        byId('ticket-ref').textContent = bookingRef;
+        byId('t-ref').textContent = bookingRef;
+        byId('t-departure-city').textContent = trip.from;
+        byId('t-depart-time').textContent = trip.depart;
+        byId('t-arrival-city').textContent = trip.to;
+        byId('t-arrival-time').textContent = trip.arrive;
+        byId('t-duration').textContent = formatTicketDuration(trip.minutes);
+        byId('t-passengers').textContent = passengerNames.join(', ') || 'Passenger';
+        byId('t-company').textContent = trip.company;
+        byId('t-date').textContent = formatTicketDate(date);
+        byId('t-depart').textContent = trip.depart;
+        byId('t-arrive').textContent = trip.arrive;
+        byId('t-seats').textContent = seats.join(', ');
+        byId('t-type').textContent = trip.type;
+        byId('t-total').textContent = formatTicketPrice(total);
+
+        drawWalkInQR(byId('qr-canvas'), bookingRef);
+
+        var loading = byId('walkin-ticket-loading'); if (loading) { loading.hidden = true; }
+        var error = byId('walkin-ticket-error'); if (error) { error.hidden = true; }
+        var body = byId('walkin-ticket-body'); if (body) { body.hidden = false; }
+    }
+
+    function closeWalkInTicket() {
+        var modal = byId('walkin-ticket-modal');
+        if (modal) { modal.hidden = true; }
     }
 
     /* Populate the trip filter with ONLY the authenticated company's own trips.
@@ -2255,6 +2427,34 @@
             });
         }
 
+        /* ----- Walk-in ticket popup wiring ----- */
+        var walkinTicketModal = byId('walkin-ticket-modal');
+        if (walkinTicketModal) {
+            /* Mount at <body> level like the other modals on this page so the
+               fixed overlay always paints above the dashboard shell. */
+            if (walkinTicketModal.parentNode !== document.body) {
+                document.body.appendChild(walkinTicketModal);
+            }
+            walkinTicketModal.style.zIndex = '103';
+            walkinTicketModal.addEventListener('click', function (ev) {
+                if (ev.target === walkinTicketModal) { closeWalkInTicket(); }
+            });
+        }
+        var walkinTicketClose = byId('walkin-ticket-close');
+        if (walkinTicketClose) { walkinTicketClose.addEventListener('click', closeWalkInTicket); }
+        var walkinTicketDone = byId('walkin-ticket-done');
+        if (walkinTicketDone) { walkinTicketDone.addEventListener('click', closeWalkInTicket); }
+        var walkinTicketPrint = byId('walkin-ticket-print');
+        if (walkinTicketPrint) {
+            walkinTicketPrint.addEventListener('click', function () {
+                document.body.classList.add('printing-walkin-ticket');
+                window.print();
+            });
+        }
+        window.addEventListener('afterprint', function () {
+            document.body.classList.remove('printing-walkin-ticket');
+        });
+
         var bookingFromFilter = byId('booking-from-filter');
         if (bookingFromFilter) { bookingFromFilter.addEventListener('change', applyBookingFilters); }
         var bookingToFilter = byId('booking-to-filter');
@@ -2287,6 +2487,8 @@
 
         document.addEventListener('keydown', function (ev) {
             if (ev.key === 'Escape' || ev.key === 'Esc' || ev.key === 27) {
+                var wtkModal = byId('walkin-ticket-modal');
+                if (wtkModal && !wtkModal.hidden) { closeWalkInTicket(); }
                 var m = byId('manifest-modal');
                 if (m && !m.hidden) { closeManifest(); }
                 var busModal = byId('bus-form-modal');

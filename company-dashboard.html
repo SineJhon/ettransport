@@ -641,6 +641,74 @@
                         <div id="manifest-content" hidden></div>
                     </div>
                 </div>
+
+                <!-- ============================================================
+                     Ticket popup — reuses the EXACT passenger digital ticket
+                     (same markup + ids as confirmation.html) and renders it
+                     in-page from the same api/booking.php?action=get payload.
+                     ============================================================ -->
+                <div id="walkin-ticket-modal" class="cd-walkin-ticket-modal" hidden role="dialog" aria-modal="true" aria-labelledby="walkin-ticket-title">
+                    <div class="cd-walkin-ticket-box">
+                        <button type="button" id="walkin-ticket-close" class="cd-walkin-close-btn" aria-label="Close ticket">&times;</button>
+                        <div class="cd-walkin-ticket-head">
+                            <h3 id="walkin-ticket-title">Booking Confirmed &mdash; Ticket</h3>
+                        </div>
+
+                        <p id="walkin-ticket-loading" class="cd-bookings-msg">Loading ticket&hellip;</p>
+                        <div id="walkin-ticket-error" class="cd-bookings-error auth-message" hidden></div>
+
+                        <div id="walkin-ticket-body" hidden>
+                            <div class="ticket" id="ticket">
+                                <div class="ticket-head">
+                                    <span class="ticket-brand">ET Transport &mdash; Digital Ticket</span>
+                                    <span class="ticket-ref" id="ticket-ref"></span>
+                                </div>
+
+                                <div class="ticket-body">
+                                    <div class="ticket-route">
+                                        <div class="ticket-city-block">
+                                            <span class="t-city" id="t-departure-city"></span>
+                                            <span class="t-time" id="t-depart-time"></span>
+                                        </div>
+                                        <div class="ticket-journey">
+                                            <span class="journey-arrow" aria-hidden="true">&rarr;</span>
+                                            <span class="t-duration" id="t-duration"></span>
+                                        </div>
+                                        <div class="ticket-city-block right">
+                                            <span class="t-city" id="t-arrival-city"></span>
+                                            <span class="t-time" id="t-arrival-time"></span>
+                                        </div>
+                                    </div>
+
+                                    <dl class="ticket-grid">
+                                        <div class="t-cell"><dt>Passenger</dt><dd id="t-passengers"></dd></div>
+                                        <div class="t-cell"><dt>Bus company</dt><dd id="t-company"></dd></div>
+                                        <div class="t-cell"><dt>Date</dt><dd id="t-date"></dd></div>
+                                        <div class="t-cell"><dt>Departure</dt><dd id="t-depart"></dd></div>
+                                        <div class="t-cell"><dt>Arrival</dt><dd id="t-arrive"></dd></div>
+                                        <div class="t-cell"><dt>Seat(s)</dt><dd id="t-seats"></dd></div>
+                                        <div class="t-cell"><dt>Bus type</dt><dd id="t-type"></dd></div>
+                                        <div class="t-cell"><dt>Booking number</dt><dd id="t-ref"></dd></div>
+                                        <div class="t-cell total-cell"><dt>Total paid</dt><dd id="t-total"></dd></div>
+                                    </dl>
+                                </div>
+
+                                <div class="ticket-footer">
+                                    <div class="ticket-qr">
+                                        <canvas id="qr-canvas" width="120" height="120" role="img" aria-label="QR code for ticket verification"></canvas>
+                                        <span class="qr-label">Scan to verify ticket</span>
+                                    </div>
+                                    <p class="qr-disclaimer">Demo QR &mdash; not connected to a real verification backend.</p>
+                                </div>
+                            </div>
+
+                            <div class="ticket-actions">
+                                <button id="walkin-ticket-print" class="btn btn-primary" type="button">Download / Print Ticket</button>
+                                <button id="walkin-ticket-done" class="btn btn-secondary" type="button">Done</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </section>
 
         <section id="company-revenue" class="cd-revenue" hidden>
