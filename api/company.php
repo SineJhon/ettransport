@@ -1963,10 +1963,28 @@ function handle_booking_cancel(PDO $pdo): void
 
     $input = company_input();
     $bookingId = positive_int_or_error($input['booking_id'] ?? null, 'A valid booking is required.');
-    $reason = trim((string) ($input['reason'] ?? 'No reason provided'));
+
+    /* Refund choice: none / full / half. Any other value is rejected so the
+       payment_state stays conservative — a malformed request must never
+       silently refund (or silently keep) money. */
+    $refundType = strtolower(trim((string) ($input['refund_type'] ?? 'none')));
+    if (!in_array($refundType, ['none', 'full', 'half'], true)) {
+        auth_response(422, [
+            'success' => false,
+            'message' => 'Refund must be one of: none, full, half.',
+        ]);
+    }
+
+    $reason = trim((string) ($input['reason'] ?? ''));
+    if (mb_strlen($reason) > 500) {
+        auth_response(422, [
+            'success' => false,
+            'message' => 'Cancellation reason must be at most 500 characters.',
+        ]);
+    }
 
     $bookingStmt = $pdo->prepare('
-        SELECT bk.id, bk.trip_id, bk.booking_status, t.company_id
+        SELECT bk.id, bk.trip_id, bk.booking_status, bk.payment_status, bk.total_amount, t.company_id
         FROM bookings bk
         JOIN trips t ON t.id = bk.trip_id
         WHERE bk.id = :booking_id
@@ -1985,25 +2003,58 @@ function handle_booking_cancel(PDO $pdo): void
         auth_response(409, ['success' => false, 'message' => 'This booking has already been cancelled.']);
     }
 
+    $totalAmount = round((float) $booking['total_amount'], 2);
+    $refundedAmount = null;
+    if ($refundType === 'full') {
+        $refundedAmount = $totalAmount;
+    } elseif ($refundType === 'half') {
+        $refundedAmount = round($totalAmount / 2, 2);
+    }
+
+    /* When a refund is issued (full or half) the payment becomes 'refunded'.
+       When no refund is chosen the booking is cancelled without touching the
+       original payment_status — the operator deliberately kept the money, so
+       it must keep showing as paid/pending/failed instead of silently
+       flipping to 'refunded'. */
+    $newPaymentStatus = $refundType === 'none' ? $booking['payment_status'] : 'refunded';
+    $reasonOrNull = $reason === '' ? null : $reason;
+
     $pdo->beginTransaction();
     try {
         $cancelStmt = $pdo->prepare('
             UPDATE bookings
-            SET booking_status = :cancelled, payment_status = :refunded
+            SET booking_status = :cancelled,
+                payment_status = :payment_status,
+                cancellation_reason = :reason,
+                refund_type = :refund_type,
+                refunded_amount = :refunded_amount
             WHERE id = :booking_id
         ');
         $cancelStmt->execute([
             ':cancelled' => 'cancelled',
-            ':refunded' => 'refunded',
+            ':payment_status' => $newPaymentStatus,
+            ':reason' => $reasonOrNull,
+            ':refund_type' => $refundType,
+            ':refunded_amount' => $refundedAmount,
             ':booking_id' => $bookingId,
         ]);
 
         $pdo->commit();
 
+        if ($refundType === 'full') {
+            $notice = 'Booking cancelled successfully. Full refund of ETB ' . number_format($refundedAmount, 2) . ' recorded. Seat has been freed.';
+        } elseif ($refundType === 'half') {
+            $notice = 'Booking cancelled successfully. Half refund of ETB ' . number_format($refundedAmount, 2) . ' recorded. Seat has been freed.';
+        } else {
+            $notice = 'Booking cancelled successfully. No refund was issued. Seat has been freed.';
+        }
+
         auth_response(200, [
             'success' => true,
-            'message' => 'Booking cancelled successfully. Seat has been freed.',
+            'message' => $notice,
             'booking_id' => $bookingId,
+            'refund_type' => $refundType,
+            'refunded_amount' => $refundedAmount,
         ]);
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) {
@@ -2752,6 +2803,9 @@ try {
     }
     if ($action === 'booking_create') {
         handle_company_booking_create($pdo);
+    }
+    if ($action === 'booking_cancel') {
+        handle_booking_cancel($pdo);
     }
     if ($action === 'manifest') {
         handle_manifest($pdo);

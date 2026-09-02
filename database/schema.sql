@@ -188,6 +188,13 @@ CREATE TABLE IF NOT EXISTS bookings (
   payment_method VARCHAR(30) NOT NULL DEFAULT 'cash',
   payment_status ENUM('pending', 'paid', 'failed', 'refunded') NOT NULL DEFAULT 'pending',
   booking_status ENUM('pending', 'confirmed', 'cancelled', 'completed') NOT NULL DEFAULT 'pending',
+  -- Operator cancellation record: who cancelled (via api/company.php
+  -- action=booking_cancel), the given reason, whether a refund was issued
+  -- ('none' / 'full' / 'half') and the exact refunded amount. Kept on the
+  -- booking so the revenue / manifest views can reflect it without a new table.
+  cancellation_reason VARCHAR(500) DEFAULT NULL,
+  refund_type ENUM('none', 'full', 'half') NOT NULL DEFAULT 'none',
+  refunded_amount DECIMAL(10, 2) DEFAULT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),

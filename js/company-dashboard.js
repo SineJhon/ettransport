@@ -897,20 +897,84 @@
         var cancelBtns = list.querySelectorAll('button[data-cancel]');
         for (var j = 0; j < cancelBtns.length; j++) {
             cancelBtns[j].addEventListener('click', function () {
-                var bookingId = this.getAttribute('data-cancel');
-                if (confirm('Are you sure you want to cancel this booking? This action cannot be undone.')) {
-                    cancelBooking(bookingId);
-                }
+                openCancelBookingModal(this.getAttribute('data-cancel'));
             });
         }
     }
 
-    function cancelBooking(bookingId) {
+    /* Cancel-booking modal state. The modal collects (1) whether/what to
+       refund (none / full / half) and (2) the cancellation reason, then
+       cancelBooking() posts refund_type + reason to the API. */
+    var cancelBookingId = null;
+
+    function openCancelBookingModal(bookingId) {
+        var modal = byId('cancel-booking-modal');
+        if (!modal || !bookingId) { return; }
+
+        var booking = null;
+        for (var i = 0; i < currentBookings.length; i++) {
+            if (String(currentBookings[i].id) === String(bookingId)) { booking = currentBookings[i]; break; }
+        }
+        if (!booking) { return; }
+
+        cancelBookingId = bookingId;
+        byId('cancel-ref').textContent = booking.booking_reference || '';
+        byId('cancel-route').textContent = (booking.route_from || '') + ' \u2192 ' + (booking.route_to || '');
+        byId('cancel-date').textContent = (booking.trip_departure_date || '') + ' ' + (booking.trip_departure_time || '');
+        byId('cancel-passengers').textContent = booking.passenger_count + ' passenger' + (booking.passenger_count === 1 ? '' : 's');
+        byId('cancel-amount').textContent = 'ETB ' + formatMoney(booking.total_amount);
+        byId('cancel-payment-status').textContent = booking.payment_status || '';
+
+        var radios = document.querySelectorAll('input[name="cancel-refund-type"]');
+        for (var r = 0; r < radios.length; r++) {
+            radios[r].checked = radios[r].value === 'none';
+        }
+        var reason = byId('cancel-reason');
+        if (reason) { reason.value = ''; }
+
+        var msg = byId('cancel-modal-msg');
+        if (msg) { msg.hidden = true; msg.textContent = ''; msg.className = 'cd-cancel-msg'; }
+        var confirmBtn = byId('cancel-confirm-btn');
+        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Confirm Cancellation'; }
+        var keepBtn = byId('cancel-keep-btn');
+        if (keepBtn) { keepBtn.disabled = false; }
+
+        modal.hidden = false;
+        if (reason) { reason.focus(); }
+    }
+
+    function closeCancelBookingModal() {
+        var modal = byId('cancel-booking-modal');
+        if (modal) { modal.hidden = true; }
+        cancelBookingId = null;
+    }
+
+    function submitCancelBooking() {
+        if (!cancelBookingId) { closeCancelBookingModal(); return; }
+        var refundType = 'none';
+        var radios = document.querySelectorAll('input[name="cancel-refund-type"]');
+        for (var r = 0; r < radios.length; r++) {
+            if (radios[r].checked) { refundType = radios[r].value; break; }
+        }
+        var reasonEl = byId('cancel-reason');
+        var reason = reasonEl ? reasonEl.value.trim() : '';
+
+        var msg = byId('cancel-modal-msg');
+        if (msg) { msg.hidden = true; msg.textContent = ''; msg.className = 'cd-cancel-msg'; }
+        var confirmBtn = byId('cancel-confirm-btn');
+        if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Cancelling...'; }
+        var keepBtn = byId('cancel-keep-btn');
+        if (keepBtn) { keepBtn.disabled = true; }
+
+        cancelBooking(cancelBookingId, refundType, reason);
+    }
+
+    function cancelBooking(bookingId, refundType, reason) {
         fetch('api/company.php?action=booking_cancel', {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-            body: JSON.stringify({ booking_id: bookingId })
+            body: JSON.stringify({ booking_id: bookingId, refund_type: refundType, reason: reason })
         })
             .then(function (res) {
                 return res.json().catch(function () {
@@ -922,14 +986,19 @@
             .then(function (result) {
                 var data = result.data || {};
                 if (!result.ok || result.status !== 200 || !data.success) {
-                    var error = byId('booking-error');
-                    if (error) {
-                        error.hidden = false;
-                        error.className = 'cd-bookings-error auth-message error';
-                        error.textContent = data.message || 'Unable to cancel the booking.';
+                    var errMsg = byId('cancel-modal-msg');
+                    if (errMsg) {
+                        errMsg.hidden = false;
+                        errMsg.className = 'cd-cancel-msg cd-cancel-msg-error';
+                        errMsg.textContent = data.message || 'Unable to cancel the booking.';
                     }
+                    var confirmBtn = byId('cancel-confirm-btn');
+                    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Confirm Cancellation'; }
+                    var keepBtn = byId('cancel-keep-btn');
+                    if (keepBtn) { keepBtn.disabled = false; }
                     return;
                 }
+                closeCancelBookingModal();
                 loadBookings();
                 loadRevenueSummary();
                 var notice = data.message || 'Booking cancelled successfully.';
@@ -941,12 +1010,16 @@
                 }
             })
             .catch(function () {
-                var error = byId('booking-error');
-                if (error) {
-                    error.hidden = false;
-                    error.className = 'cd-bookings-error auth-message error';
-                    error.textContent = 'Network error while cancelling the booking.';
+                var errMsg = byId('cancel-modal-msg');
+                if (errMsg) {
+                    errMsg.hidden = false;
+                    errMsg.className = 'cd-cancel-msg cd-cancel-msg-error';
+                    errMsg.textContent = 'Network error while cancelling the booking.';
                 }
+                var confirmBtn = byId('cancel-confirm-btn');
+                if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Confirm Cancellation'; }
+                var keepBtn = byId('cancel-keep-btn');
+                if (keepBtn) { keepBtn.disabled = false; }
             });
     }
 
@@ -2328,10 +2401,30 @@
             });
         }
 
+        /* ----- Cancel-booking modal wiring ----- */
+        var cancelModal = byId('cancel-booking-modal');
+        if (cancelModal) {
+            if (cancelModal.parentNode !== document.body) {
+                document.body.appendChild(cancelModal);
+            }
+            cancelModal.style.zIndex = '102';
+            cancelModal.addEventListener('click', function (ev) {
+                if (ev.target === cancelModal) { closeCancelBookingModal(); }
+            });
+        }
+        var cancelClose = byId('cancel-modal-close');
+        if (cancelClose) { cancelClose.addEventListener('click', closeCancelBookingModal); }
+        var cancelKeep = byId('cancel-keep-btn');
+        if (cancelKeep) { cancelKeep.addEventListener('click', closeCancelBookingModal); }
+        var cancelConfirm = byId('cancel-confirm-btn');
+        if (cancelConfirm) { cancelConfirm.addEventListener('click', submitCancelBooking); }
+
         document.addEventListener('keydown', function (ev) {
             if (ev.key === 'Escape' || ev.key === 'Esc' || ev.key === 27) {
                 var wtkModal = byId('walkin-ticket-modal');
                 if (wtkModal && !wtkModal.hidden) { closeWalkInTicket(); }
+                var cbModal = byId('cancel-booking-modal');
+                if (cbModal && !cbModal.hidden) { closeCancelBookingModal(); }
                 var busModal = byId('bus-form-modal');
                 if (busModal && !busModal.hidden) { hideBusForm(); }
                 var tripModal = byId('trip-form-modal');
