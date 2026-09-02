@@ -190,6 +190,10 @@
         .cd-revenue-filters select, .cd-revenue-filters input { padding: 0.4rem 0.6rem; font-size: 0.85rem; border: 1px solid #cbd5e1; border-radius: 6px; }
         .cd-revenue-empty { padding: 1rem; border: 1px dashed #e5e7eb; border-radius: 8px; color: var(--color-muted); text-align: center; }
         .cd-payment-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-sm); }
+        /* The grid containers above override the UA [hidden] rule, so a zero-result
+           filter would otherwise leave stale items visible under the empty state.
+           Re-apply hidden so hide/show toggling in company-dashboard.js always wins. */
+        .cd-bus-list[hidden], .cd-trip-list[hidden], .cd-booking-list[hidden], .cd-payment-list[hidden] { display: none; }
         .cd-payment-card { padding: 1rem; border: 1px solid #e5e7eb; border-radius: 10px; display: flex; flex-direction: column; gap: 0.15rem; }
         .cd-payment-ref { font-weight: 700; color: var(--color-dark); }
         .cd-payment-route { font-size: 0.9rem; color: var(--color-dark); margin: 0.15rem 0; }

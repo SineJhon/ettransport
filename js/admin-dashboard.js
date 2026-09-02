@@ -79,7 +79,10 @@
     }
 
     /* ---------- Overview ---------- */
+    var adOverviewRequestId = 0;   // discards responses from superseded overview requests
+
     function loadOverview() {
+        var rid = ++adOverviewRequestId;
         show(byId('section-overview'));
         hide(byId('ad-error'));
 
@@ -90,6 +93,7 @@
         })
             .then(parseJson)
             .then(function (result) {
+                if (rid !== adOverviewRequestId) { return; }
                 var data = result.data || {};
                 if (!result.ok || result.status !== 200 || !data.success) {
                     setError(byId('ad-error'), data.message || 'Unable to load the platform overview.');
@@ -117,6 +121,7 @@
                 });
             })
             .catch(function () {
+                if (rid !== adOverviewRequestId) { return; }
                 setError(byId('ad-error'), 'Network error while loading the platform overview.');
             });
     }
@@ -188,7 +193,10 @@
         }
     }
 
+    var adCompaniesRequestId = 0;   // discards responses from superseded company list requests
+
     function loadCompanies() {
+        var rid = ++adCompaniesRequestId;
         show(byId('ad-list-loading'));
         hide(byId('ad-list-error'));
         hide(byId('ad-list-empty'));
@@ -200,6 +208,7 @@
         })
             .then(parseJson)
             .then(function (result) {
+                if (rid !== adCompaniesRequestId) { return; }
                 var data = result.data || {};
                 if (!result.ok || result.status !== 200 || !data.success) {
                     hide(byId('ad-list-loading'));
@@ -209,6 +218,7 @@
                 renderCompanies(data.companies || []);
             })
             .catch(function () {
+                if (rid !== adCompaniesRequestId) { return; }
                 hide(byId('ad-list-loading'));
                 setError(byId('ad-list-error'), 'Network error while loading companies.');
             });
@@ -480,7 +490,10 @@ function renderDetail(c) {
         return p.length ? '&' + p.join('&') : '';
     }
 
+    var adTripsRequestId = 0;   // discards responses from superseded trip requests
+
     function loadTrips() {
+        var rid = ++adTripsRequestId;
         show(byId('ad-trips-loading'));
         hide(byId('ad-trips-error'));
         hide(byId('ad-trips-empty'));
@@ -490,6 +503,7 @@ function renderDetail(c) {
             headers: { 'Accept': 'application/json' }
         }).then(parseJson).then(function (result) {
             hide(byId('ad-trips-loading'));
+            if (rid !== adTripsRequestId) { return; }
             var data = result.data || {};
             if (!result.ok || result.status !== 200 || !data.success) {
                 setError(byId('ad-trips-error'), data.message || 'Unable to load trips.');
@@ -497,6 +511,7 @@ function renderDetail(c) {
             }
             renderTrips(data.trips || []);
         }).catch(function () {
+            if (rid !== adTripsRequestId) { return; }
             hide(byId('ad-trips-loading'));
             setError(byId('ad-trips-error'), 'Network error while loading trips.');
         });
@@ -544,7 +559,10 @@ function renderDetail(c) {
         return p.length ? '&' + p.join('&') : '';
     }
 
+    var adBookingsRequestId = 0;   // discards responses from superseded booking requests
+
     function loadBookings() {
+        var rid = ++adBookingsRequestId;
         show(byId('ad-bookings-loading'));
         hide(byId('ad-bookings-error'));
         hide(byId('ad-bookings-empty'));
@@ -554,6 +572,7 @@ function renderDetail(c) {
             headers: { 'Accept': 'application/json' }
         }).then(parseJson).then(function (result) {
             hide(byId('ad-bookings-loading'));
+            if (rid !== adBookingsRequestId) { return; }
             var data = result.data || {};
             if (!result.ok || result.status !== 200 || !data.success) {
                 setError(byId('ad-bookings-error'), data.message || 'Unable to load bookings.');
@@ -561,6 +580,7 @@ function renderDetail(c) {
             }
             renderBookings(data.bookings || []);
         }).catch(function () {
+            if (rid !== adBookingsRequestId) { return; }
             hide(byId('ad-bookings-loading'));
             setError(byId('ad-bookings-error'), 'Network error while loading bookings.');
         });

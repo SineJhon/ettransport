@@ -97,7 +97,10 @@
         if (data.stats) { renderStats(data.stats); }
     }
 
+    var overviewRequestId = 0;   // discards responses from superseded overview requests
+
     function loadOverview() {
+        var rid = ++overviewRequestId;
         showLoadingState();
 
         fetch('api/company.php?action=overview', {
@@ -113,6 +116,7 @@
                 });
             })
             .then(function (result) {
+                if (rid !== overviewRequestId) { return; }
                 var loading = byId('company-loading');
                 if (loading) { loading.hidden = true; }
 
@@ -124,6 +128,7 @@
                 renderOverview(data);
             })
             .catch(function () {
+                if (rid !== overviewRequestId) { return; }
                 setError('Network error while loading your company overview.');
             });
     }
@@ -260,7 +265,7 @@
 
     function showBusError(message) {
         setBusIdle();
-        var list = byId('bus-list'); if (list) { list.hidden = true; }
+        var list = byId('bus-list'); if (list) { list.innerHTML = ''; list.hidden = true; }
         var empty = byId('bus-empty'); if (empty) { empty.hidden = true; }
         var error = byId('bus-error');
         if (error) {
@@ -277,7 +282,7 @@
         var empty = byId('bus-empty');
 
         if (!buses || !buses.length) {
-            if (list) { list.hidden = true; }
+            if (list) { list.innerHTML = ''; list.hidden = true; }
             if (empty) { empty.hidden = false; }
             return;
         }
@@ -323,10 +328,13 @@
         }
     }
 
+    var fleetRequestId = 0;   // discards responses from superseded fleet requests
+
     function loadFleet() {
+        var rid = ++fleetRequestId;
         var fleet = byId('company-fleet'); if (fleet) { fleet.hidden = false; }
         var error = byId('bus-error'); if (error) { error.hidden = true; }
-        var list = byId('bus-list'); if (list) { list.hidden = true; }
+        var list = byId('bus-list'); if (list) { list.innerHTML = ''; list.hidden = true; }
         var loading = byId('bus-loading'); if (loading) { loading.hidden = false; }
 
         fetch('api/company.php?action=buses', {
@@ -342,6 +350,7 @@
                 });
             })
             .then(function (result) {
+                if (rid !== fleetRequestId) { return; }
                 var data = result.data || {};
                 if (!result.ok || result.status !== 200 || !data.success) {
                     showBusError(data.message || 'Unable to load your fleet.');
@@ -351,6 +360,7 @@
                 renderFleet(currentFleet);
             })
             .catch(function () {
+                if (rid !== fleetRequestId) { return; }
                 showBusError('Network error while loading your fleet.');
             });
     }
@@ -480,7 +490,7 @@
     function showTripError(message) {
         var loading = byId('trip-loading');
         if (loading) { loading.hidden = true; }
-        var list = byId('trip-list'); if (list) { list.hidden = true; }
+        var list = byId('trip-list'); if (list) { list.innerHTML = ''; list.hidden = true; }
         var empty = byId('trip-empty'); if (empty) { empty.hidden = true; }
         var error = byId('trip-error');
         if (error) {
@@ -513,7 +523,7 @@
         var empty = byId('trip-empty');
 
         if (!trips || !trips.length) {
-            if (list) { list.hidden = true; }
+            if (list) { list.innerHTML = ''; list.hidden = true; }
             if (empty) { empty.hidden = false; }
             return;
         }
@@ -575,10 +585,13 @@
         }
     }
 
+    var tripsRequestId = 0;   // discards responses from superseded trip requests
+
     function loadTrips() {
+        var rid = ++tripsRequestId;
         var sec = byId('company-trips'); if (sec) { sec.hidden = false; }
         var error = byId('trip-error'); if (error) { error.hidden = true; }
-        var list = byId('trip-list'); if (list) { list.hidden = true; }
+        var list = byId('trip-list'); if (list) { list.innerHTML = ''; list.hidden = true; }
         var loading = byId('trip-loading'); if (loading) { loading.hidden = false; }
 
         fetch('api/company.php?action=trips', {
@@ -594,6 +607,7 @@
                 });
             })
             .then(function (result) {
+                if (rid !== tripsRequestId) { return; }
                 var data = result.data || {};
                 if (!result.ok || result.status !== 200 || !data.success) {
                     showTripError(data.message || 'Unable to load your trips.');
@@ -604,6 +618,7 @@
                 renderTrips(currentTrips);
             })
             .catch(function () {
+                if (rid !== tripsRequestId) { return; }
                 showTripError('Network error while loading your trips.');
             });
     }
@@ -846,7 +861,7 @@
 
     function showBookingError(message) {
         var loading = byId('booking-loading'); if (loading) { loading.hidden = true; }
-        var list = byId('booking-list'); if (list) { list.hidden = true; }
+        var list = byId('booking-list'); if (list) { list.innerHTML = ''; list.hidden = true; }
         var empty = byId('booking-empty'); if (empty) { empty.hidden = true; }
         var error = byId('booking-error');
         if (error) {
@@ -862,7 +877,7 @@
         var empty = byId('booking-empty');
 
         if (!bookings || !bookings.length) {
-            if (list) { list.hidden = true; }
+            if (list) { list.innerHTML = ''; list.hidden = true; }
             var emptyMsg = 'No bookings on your trips yet. Bookings will appear here once passengers book your scheduled trips.';
             if (selectedBookingStatus === 'cancelled') {
                 emptyMsg = 'No cancelled bookings match the current filters.';
@@ -1059,10 +1074,13 @@
             });
     }
 
+    var bookingsRequestId = 0;   // discards responses from superseded booking requests
+
     function loadBookings() {
+        var rid = ++bookingsRequestId;
         var sec = byId('company-bookings'); if (sec) { sec.hidden = false; }
         var error = byId('booking-error'); if (error) { error.hidden = true; }
-        var list = byId('booking-list'); if (list) { list.hidden = true; }
+        var list = byId('booking-list'); if (list) { list.innerHTML = ''; list.hidden = true; }
         var empty = byId('booking-empty'); if (empty) { empty.hidden = true; }
         var loading = byId('booking-loading'); if (loading) { loading.hidden = false; }
 
@@ -1081,6 +1099,7 @@
                 });
             })
             .then(function (result) {
+                if (rid !== bookingsRequestId) { return; }
                 var data = result.data || {};
                 if (!result.ok || result.status !== 200 || !data.success) {
                     showBookingError(data.message || 'Unable to load your bookings.');
@@ -1090,6 +1109,7 @@
                 applyBookingFilters();
             })
             .catch(function () {
+                if (rid !== bookingsRequestId) { return; }
                 showBookingError('Network error while loading your bookings.');
             });
     }
@@ -1795,7 +1815,7 @@
     function showRevenueError(message) {
         var loading = byId('revenue-loading'); if (loading) { loading.hidden = true; }
         var empty = byId('payment-empty'); if (empty) { empty.hidden = true; }
-        var list = byId('payment-list'); if (list) { list.hidden = true; }
+        var list = byId('payment-list'); if (list) { list.innerHTML = ''; list.hidden = true; }
         var error = byId('revenue-error');
         if (error) {
             error.hidden = false;
@@ -1827,7 +1847,7 @@
         var empty = byId('payment-empty');
 
         if (!payments || !payments.length) {
-            if (list) { list.hidden = true; }
+            if (list) { list.innerHTML = ''; list.hidden = true; }
             if (empty) { empty.hidden = false; }
             return;
         }
@@ -1894,7 +1914,10 @@
         return url;
     }
 
+    var revenueRequestId = 0;   // discards responses from superseded revenue requests
+
     function loadRevenueSummary() {
+        var rid = ++revenueRequestId;
         fetch('api/company.php?action=revenue', {
             method: 'GET',
             credentials: 'same-origin',
@@ -1908,6 +1931,7 @@
                 });
             })
             .then(function (result) {
+                if (rid !== revenueRequestId) { return; }
                 var data = result.data || {};
                 if (!result.ok || result.status !== 200 || !data.success) {
                     showRevenueError(data.message || 'Unable to load your revenue summary.');
@@ -1916,13 +1940,18 @@
                 renderRevenueSummary(data.revenue);
             })
             .catch(function () {
+                if (rid !== revenueRequestId) { return; }
                 showRevenueError('Network error while loading your revenue.');
             });
     }
 
+    var paymentsRequestId = 0;   // discards responses from superseded payment requests
+
     function loadPayments() {
+        var rid = ++paymentsRequestId;
         var sec = byId('company-revenue'); if (sec) { sec.hidden = false; }
         var error = byId('revenue-error'); if (error) { error.hidden = true; }
+        var list = byId('payment-list'); if (list) { list.innerHTML = ''; list.hidden = true; }
         var empty = byId('payment-empty'); if (empty) { empty.hidden = true; }
         var loading = byId('payment-loading'); if (loading) { loading.hidden = false; }
 
@@ -1939,6 +1968,7 @@
                 });
             })
             .then(function (result) {
+                if (rid !== paymentsRequestId) { return; }
                 var data = result.data || {};
                 if (!result.ok || result.status !== 200 || !data.success) {
                     showRevenueError(data.message || 'Unable to load your payments.');
@@ -1949,6 +1979,7 @@
                 applyRevenueFilters();
             })
             .catch(function () {
+                if (rid !== paymentsRequestId) { return; }
                 showRevenueError('Network error while loading your payments.');
             });
     }
