@@ -871,7 +871,7 @@
                 '<span class="cd-booking-row-text">Booking: ' + bookingBadge(b.booking_status) +
                     ' &middot; Payment: ' + paymentBadge(b.payment_status) + '</span>' +
                 '<div class="cd-booking-actions">' +
-                    '<button type="button" class="btn btn-secondary btn-sm" data-ticket="' + escHtml(b.booking_reference) + '">View Ticket</button>' +
+                    (b.booking_status !== 'cancelled' ? '<button type="button" class="btn btn-secondary btn-sm" data-ticket="' + escHtml(b.booking_reference) + '">View Ticket</button>' : '') +
                     (b.booking_status !== 'cancelled' ? '<button type="button" class="btn btn-danger btn-sm" data-cancel="' + b.id + '">Cancel</button>' : '') +
                 '</div>' +
             '</div>';
@@ -930,7 +930,7 @@
             radios[r].checked = radios[r].value === 'none';
         }
         var reason = byId('cancel-reason');
-        if (reason) { reason.value = ''; }
+        if (reason) { reason.value = ''; reason.removeAttribute('aria-invalid'); }
 
         var msg = byId('cancel-modal-msg');
         if (msg) { msg.hidden = true; msg.textContent = ''; msg.className = 'cd-cancel-msg'; }
@@ -958,6 +958,25 @@
         }
         var reasonEl = byId('cancel-reason');
         var reason = reasonEl ? reasonEl.value.trim() : '';
+
+        if (!reason) {
+            var msg = byId('cancel-modal-msg');
+            if (msg) {
+                msg.hidden = false;
+                msg.className = 'cd-cancel-msg cd-cancel-msg-error';
+                msg.textContent = 'Please provide a reason for the cancellation.';
+            }
+            if (reasonEl) {
+                reasonEl.setAttribute('aria-invalid', 'true');
+                reasonEl.focus();
+            }
+            var confirmBtn = byId('cancel-confirm-btn');
+            if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Confirm Cancellation'; }
+            var keepBtn = byId('cancel-keep-btn');
+            if (keepBtn) { keepBtn.disabled = false; }
+            return;
+        }
+        if (reasonEl) { reasonEl.removeAttribute('aria-invalid'); }
 
         var msg = byId('cancel-modal-msg');
         if (msg) { msg.hidden = true; msg.textContent = ''; msg.className = 'cd-cancel-msg'; }

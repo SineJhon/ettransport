@@ -169,6 +169,7 @@
         .cd-cancel-radio:has(input:checked) { border-color: #18b85c; background: #f0faf4; font-weight: 700; color: #14532d; }
         .cd-cancel-reason { width: 100%; padding: 0.6rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; font: inherit; font-size: 0.9rem; color: #1f2937; resize: vertical; min-height: 74px; box-sizing: border-box; }
         .cd-cancel-reason:focus { outline: none; border-color: #18b85c; box-shadow: 0 0 0 3px rgba(24, 184, 92, 0.12); }
+        .cd-cancel-reason[aria-invalid="true"] { border-color: #b91c1c; box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.12); }
         .cd-cancel-msg { min-height: 1.1rem; margin: 0.6rem 0 0; font-size: 0.83rem; color: #16a34a; font-weight: 600; }
         .cd-cancel-msg-error { color: #b91c1c; }
         .cd-cancel-actions { display: flex; justify-content: flex-end; gap: 0.55rem; margin-top: 1rem; }
@@ -737,8 +738,8 @@
                         </div>
 
                         <div class="cd-cancel-group">
-                            <label class="cd-cancel-label" for="cancel-reason">Reason for cancellation</label>
-                            <textarea id="cancel-reason" class="cd-cancel-reason" rows="3" maxlength="500" placeholder="e.g. Passenger requested, coach breakdown, route change..."></textarea>
+                            <label class="cd-cancel-label" for="cancel-reason">Reason for cancellation *</label>
+                            <textarea id="cancel-reason" class="cd-cancel-reason" rows="3" maxlength="500" required placeholder="e.g. Passenger requested, coach breakdown, route change..."></textarea>
                         </div>
 
                         <p id="cancel-modal-msg" class="cd-cancel-msg" role="alert" hidden></p>

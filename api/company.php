@@ -1976,6 +1976,12 @@ function handle_booking_cancel(PDO $pdo): void
     }
 
     $reason = trim((string) ($input['reason'] ?? ''));
+    if ($reason === '') {
+        auth_response(422, [
+            'success' => false,
+            'message' => 'A cancellation reason is required.',
+        ]);
+    }
     if (mb_strlen($reason) > 500) {
         auth_response(422, [
             'success' => false,
@@ -2017,7 +2023,6 @@ function handle_booking_cancel(PDO $pdo): void
        it must keep showing as paid/pending/failed instead of silently
        flipping to 'refunded'. */
     $newPaymentStatus = $refundType === 'none' ? $booking['payment_status'] : 'refunded';
-    $reasonOrNull = $reason === '' ? null : $reason;
 
     $pdo->beginTransaction();
     try {
@@ -2033,7 +2038,7 @@ function handle_booking_cancel(PDO $pdo): void
         $cancelStmt->execute([
             ':cancelled' => 'cancelled',
             ':payment_status' => $newPaymentStatus,
-            ':reason' => $reasonOrNull,
+            ':reason' => $reason,
             ':refund_type' => $refundType,
             ':refunded_amount' => $refundedAmount,
             ':booking_id' => $bookingId,
