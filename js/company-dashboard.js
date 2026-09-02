@@ -1854,6 +1854,7 @@
  /* Revenue / Payments (read-only reporting UI). */
     var currentPayments = [];
     var selectedRevenueDate = '';
+    var selectedPaymentStatus = 'all';
 
     function paymentStatusBadge(status) {
         var val = String(status || '').toLowerCase();
@@ -1896,7 +1897,19 @@
 
         if (!payments || !payments.length) {
             if (list) { list.innerHTML = ''; list.hidden = true; }
-            if (empty) { empty.hidden = false; }
+            if (empty) {
+                var emptyMsg = 'No payments found for your trips yet. Payments will appear here once passengers pay for seats on your scheduled trips.';
+                if (selectedPaymentStatus !== 'all') {
+                    if (selectedPaymentStatus === 'paid') { emptyMsg = 'No paid payments match the current filters.'; }
+                    else if (selectedPaymentStatus === 'pending') { emptyMsg = 'No pending payments match the current filters.'; }
+                    else if (selectedPaymentStatus === 'failed') { emptyMsg = 'No failed payments match the current filters.'; }
+                    else if (selectedPaymentStatus === 'refunded') { emptyMsg = 'No refunded payments match the current filters.'; }
+                } else if (selectedRevenueDate) {
+                    emptyMsg = 'No payments match the current filters.';
+                }
+                empty.textContent = emptyMsg;
+                empty.hidden = false;
+            }
             return;
         }
 
@@ -1937,12 +1950,13 @@
     }
 
     function applyRevenueFilters() {
-        var from = byId('revenue-from-filter'); var to = byId('revenue-to-filter'); var status = byId('revenue-status-filter');
-        var fromValue = from ? from.value : ''; var toValue = to ? to.value : ''; var statusValue = status ? status.value : '';
+        var from = byId('revenue-from-filter'); var to = byId('revenue-to-filter');
+        var fromValue = from ? from.value : ''; var toValue = to ? to.value : '';
         var label = byId('revenue-date-label');
         if (label) { label.textContent = selectedRevenueDate ? new Date(selectedRevenueDate + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : 'All upcoming departure dates'; }
         renderPayments(currentPayments.filter(function (payment) {
-            return (!selectedRevenueDate || String(payment.departure_date) === selectedRevenueDate) && (!fromValue || String(payment.route_from) === fromValue) && (!toValue || String(payment.route_to) === toValue) && (!statusValue || String(payment.status) === statusValue);
+            var statusOk = selectedPaymentStatus === 'all' || String(payment.status) === selectedPaymentStatus;
+            return (!selectedRevenueDate || String(payment.departure_date) === selectedRevenueDate) && (!fromValue || String(payment.route_from) === fromValue) && (!toValue || String(payment.route_to) === toValue) && statusOk;
         }));
     }
 
@@ -2597,19 +2611,44 @@
         var revRefresh = byId('btn-refresh-revenue');
         if (revRefresh) { revRefresh.addEventListener('click', refreshRevenue); }
 
-        var revStatusFilter = byId('revenue-status-filter');
-        if (revStatusFilter) { revStatusFilter.addEventListener('change', applyRevenueFilters); }
+        var revSearch = byId('btn-search-revenue');
+        if (revSearch) { revSearch.addEventListener('click', refreshRevenue); }
+
         var revFromFilter = byId('revenue-from-filter');
         if (revFromFilter) { revFromFilter.addEventListener('change', applyRevenueFilters); }
         var revToFilter = byId('revenue-to-filter');
         if (revToFilter) { revToFilter.addEventListener('change', applyRevenueFilters); }
+
+        /* Wire the payment status filter buttons (All payments / Paid / Pending / Failed / Refunded). */
+        var revStatusButtons = document.querySelectorAll('.cd-payment-filter[data-payment-status]');
+        for (var rsf = 0; rsf < revStatusButtons.length; rsf++) {
+            (function (btn) {
+                btn.addEventListener('click', function () {
+                    selectedPaymentStatus = btn.getAttribute('data-payment-status') || 'all';
+                    var buttons = document.querySelectorAll('.cd-payment-filter[data-payment-status]');
+                    for (var b = 0; b < buttons.length; b++) {
+                        var active = buttons[b] === btn;
+                        buttons[b].classList.toggle('is-active', active);
+                        buttons[b].setAttribute('aria-pressed', active ? 'true' : 'false');
+                    }
+                    applyRevenueFilters();
+                });
+            })(revStatusButtons[rsf]);
+        }
+
         var clearRevenueFilters = byId('btn-clear-revenue-filters');
         if (clearRevenueFilters) {
             clearRevenueFilters.addEventListener('click', function () {
                 selectedRevenueDate = '';
-                if (revStatusFilter) { revStatusFilter.value = ''; }
+                selectedPaymentStatus = 'all';
                 if (revFromFilter) { revFromFilter.value = ''; }
                 if (revToFilter) { revToFilter.value = ''; }
+                var statusButtons = document.querySelectorAll('.cd-payment-filter[data-payment-status]');
+                for (var b = 0; b < statusButtons.length; b++) {
+                    var active = statusButtons[b].getAttribute('data-payment-status') === 'all';
+                    statusButtons[b].classList.toggle('is-active', active);
+                    statusButtons[b].setAttribute('aria-pressed', active ? 'true' : 'false');
+                }
                 renderRevenueDayPicker();
                 applyRevenueFilters();
             });
