@@ -390,7 +390,11 @@
             passengers: passengers,
             date: date,
             seats: seats.slice(),
-            passengerDetails: details
+            passengerDetails: details,
+            refundAccount: {
+                name: (document.getElementById('refund-account-name') || {}).value ? document.getElementById('refund-account-name').value.trim() : '',
+                number: (document.getElementById('refund-account-number') || {}).value ? document.getElementById('refund-account-number').value.trim() : ''
+            }
         };
 
         payMsg.hidden = true;

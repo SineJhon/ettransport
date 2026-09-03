@@ -1709,6 +1709,8 @@ function company_booking_payload(array $row): array
         'route_to' => $row['route_to'],
         'bus_name' => $row['bus_name'],
         'bus_registration' => $row['bus_registration'],
+        'refund_account_name' => $row['refund_account_name'],
+        'refund_account_number' => $row['refund_account_number'],
     ];
 }
 
@@ -1727,6 +1729,8 @@ function fetch_company_bookings(PDO $pdo, int $companyId, ?int $tripId): array
             b.booking_status,
             b.payment_status,
             b.total_amount,
+            b.refund_account_name,
+            b.refund_account_number,
             b.created_at,
             t.departure_date AS trip_departure_date,
             t.departure_time AS trip_departure_time,
@@ -1878,6 +1882,15 @@ function handle_company_booking_create(PDO $pdo): void
     $passengerAge = isset($input['passenger_age']) && trim((string) $input['passenger_age']) !== '' ? (int) trim((string) $input['passenger_age']) : null;
     $passengerGender = strtolower(trim((string) ($input['passenger_gender'] ?? '')));
     $paymentReference = trim((string) ($input['payment_reference'] ?? ''));
+    $refundAccountName = trim((string) ($input['refund_account_name'] ?? ''));
+    $refundAccountNumber = trim((string) ($input['refund_account_number'] ?? ''));
+
+    if ($refundAccountName !== '' && mb_strlen($refundAccountName) > 120) {
+        auth_response(422, ['success' => false, 'message' => 'Refund account name must be at most 120 characters.']);
+    }
+    if ($refundAccountNumber !== '' && mb_strlen($refundAccountNumber) > 50) {
+        auth_response(422, ['success' => false, 'message' => 'Refund account number must be at most 50 characters.']);
+    }
 
     if ($passengerName === '' || mb_strlen($passengerName) < 2) {
         auth_response(422, ['success' => false, 'message' => 'Passenger name is required.']);
@@ -1945,8 +1958,8 @@ function handle_company_booking_create(PDO $pdo): void
         $total = round((float) $trip['price'], 2);
 
         $bookingStmt = $pdo->prepare('
-            INSERT INTO bookings (passenger_id, trip_id, booking_reference, total_amount, payment_method, payment_status, booking_status)
-            VALUES (:passenger_id, :trip_id, :reference, :total_amount, :payment_method, :payment_status, :booking_status)
+            INSERT INTO bookings (passenger_id, trip_id, booking_reference, total_amount, payment_method, payment_status, booking_status, refund_account_name, refund_account_number)
+            VALUES (:passenger_id, :trip_id, :reference, :total_amount, :payment_method, :payment_status, :booking_status, :refund_account_name, :refund_account_number)
         ');
         $bookingStmt->execute([
             ':passenger_id' => $passengerUserId,
@@ -1956,6 +1969,8 @@ function handle_company_booking_create(PDO $pdo): void
             ':payment_method' => $paymentMethod,
             ':payment_status' => 'paid',
             ':booking_status' => 'confirmed',
+            ':refund_account_name' => $refundAccountName !== '' ? $refundAccountName : null,
+            ':refund_account_number' => $refundAccountNumber !== '' ? $refundAccountNumber : null,
         ]);
         $bookingId = (int) $pdo->lastInsertId();
 
@@ -2088,9 +2103,24 @@ function handle_booking_cancel(PDO $pdo): void
     }
 
     $bookingStmt = $pdo->prepare('
-        SELECT bk.id, bk.trip_id, bk.booking_status, bk.payment_status, bk.total_amount, t.company_id
+        SELECT
+            bk.id,
+            bk.trip_id,
+            bk.passenger_id,
+            bk.booking_reference,
+            bk.booking_status,
+            bk.payment_status,
+            bk.total_amount,
+            bk.refund_account_name,
+            bk.refund_account_number,
+            t.company_id,
+            t.departure_date,
+            t.departure_time,
+            r.from_city,
+            r.to_city
         FROM bookings bk
         JOIN trips t ON t.id = bk.trip_id
+        JOIN routes r ON r.id = t.route_id
         WHERE bk.id = :booking_id
         LIMIT 1
     ');
@@ -2142,6 +2172,22 @@ function handle_booking_cancel(PDO $pdo): void
             ':booking_id' => $bookingId,
         ]);
 
+        /* Real refund logic — a full or half refund must move the booking's
+           paid payment row(s) to 'refunded' INSIDE the same transaction, so
+           every revenue surface (overview revenue card, Revenue / Payments tab,
+           payments list) stops counting the refunded money as income and shows
+           it as a refunded payment. 'none' leaves the original payment status
+           untouched because the company deliberately kept the money. */
+        if ($refundType !== 'none') {
+            $updPay = $pdo->prepare("
+                UPDATE payments
+                SET status = 'refunded'
+                WHERE booking_id = :booking_id
+                  AND status = 'paid'
+            ");
+            $updPay->execute([':booking_id' => $bookingId]);
+        }
+
         $pdo->commit();
 
         if ($refundType === 'full') {
@@ -2152,12 +2198,40 @@ function handle_booking_cancel(PDO $pdo): void
             $notice = 'Booking cancelled successfully. No refund was issued. Seat has been freed.';
         }
 
+        /* Best-effort in-app notification for the passenger, strictly after
+           the commit, so a refund that was refused earlier is never silently
+           re-notified. Same dedup-token pattern as the trip-cancel path; no
+           email / SMS / Telegram is ever sent. */
+        try {
+            $refundNote = $refundType === 'full'
+                ? 'A full refund of ETB ' . number_format($refundedAmount, 2) . ' has been issued.'
+                : ($refundType === 'half'
+                    ? 'A half refund of ETB ' . number_format($refundedAmount, 2) . ' has been issued.'
+                    : 'No refund was issued.');
+            createNotification(
+                $pdo,
+                (int) $booking['passenger_id'],
+                'booking',
+                'Booking Cancelled',
+                'Your booking ' . $booking['booking_reference'] . ' (' . $booking['from_city'] . ' → '
+                    . $booking['to_city'] . ') departing ' . $booking['departure_date'] . ' has been cancelled. '
+                    . $refundNote,
+                'booking-cancelled:' . $booking['booking_reference']
+            );
+        } catch (Throwable $e) {
+            /* A notification failure never changes the cancellation result. */
+        }
+
         auth_response(200, [
             'success' => true,
             'message' => $notice,
             'booking_id' => $bookingId,
             'refund_type' => $refundType,
             'refunded_amount' => $refundedAmount,
+            'refund_account' => [
+                'name' => $booking['refund_account_name'],
+                'number' => $booking['refund_account_number'],
+            ],
         ]);
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) {
@@ -2220,7 +2294,9 @@ function handle_manifest(PDO $pdo): void
             r.to_city,
             bu.name AS bus_name,
             bu.registration_number AS bus_registration,
-            bu.bus_type
+            bu.bus_type,
+            b.refund_account_name,
+            b.refund_account_number
         FROM bookings b
         JOIN trips t ON t.id = b.trip_id
         JOIN routes r ON r.id = t.route_id
@@ -2261,6 +2337,8 @@ function handle_manifest(PDO $pdo): void
             'booking_status' => $row['booking_status'],
             'payment_status' => $row['payment_status'],
             'total_amount' => (float) $row['total_amount'],
+            'refund_account_name' => $row['refund_account_name'],
+            'refund_account_number' => $row['refund_account_number'],
             'created_at' => $row['created_at'],
             'trip' => [
                 'id' => (int) $row['trip_id'],

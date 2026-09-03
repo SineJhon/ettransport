@@ -132,6 +132,18 @@
     margin-bottom: 0.75rem;
 }
 
+/* --- Refund account (booking-time refund destination) --- */
+.cd-walkin-booking-section-sub {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px dashed #d1d9e6;
+}
+.cd-walkin-refund-hint {
+    margin: -0.35rem 0 0.75rem;
+    color: #6b7c76;
+    font-size: 0.82rem;
+}
+
 .cd-walkin-day-picker {
     margin-bottom: 1.5rem;
 }

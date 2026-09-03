@@ -6,7 +6,7 @@
     <meta name="description" content="Company operator dashboard for ET Transport">
     <title>Company Dashboard | ET Transport</title>
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/walkin-booking.css">
+    <link rel="stylesheet" href="css/walkin-booking.css?v=20260903-refund-account">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
@@ -155,12 +155,14 @@
         .cd-cancel-box { background: var(--color-white, #fff); border-radius: 12px; border: 1px solid #e5e7eb; width: 100%; max-width: 480px; max-height: 90vh; overflow: auto; padding: 1.1rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); }
         .cd-cancel-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
         .cd-cancel-head h3 { margin: 0; font-size: 1.15rem; color: var(--color-dark); }
+        .cd-cancel-queue-progress { margin-left: auto; padding: 0.2rem 0.55rem; border-radius: 20px; background: #7c3aed; color: #fff; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.03em; }
         .cd-cancel-close { border: 0; background: transparent; font-size: 1.4rem; line-height: 1; color: var(--color-muted); cursor: pointer; padding: 0.25rem; }
         .cd-cancel-close:hover { color: var(--color-dark); }
         .cd-cancel-intro { margin: 0.6rem 0 0; color: var(--color-muted); font-size: 0.88rem; }
         .cd-cancel-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem 1rem; margin: 0.9rem 0; padding: 0.85rem; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 10px; }
         .cd-cancel-field .k { display: block; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-muted); }
         .cd-cancel-field .v { display: block; font-weight: 700; color: var(--color-dark); font-size: 0.92rem; margin-top: 0.15rem; word-break: break-word; }
+        .cd-cancel-field-wide { grid-column: 1 / -1; }
         .cd-cancel-group { margin: 0.85rem 0 0; }
         .cd-cancel-label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--color-dark); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.4rem; }
         .cd-cancel-refund-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
@@ -623,6 +625,20 @@
                                             </div>
                                         </div>
                                     </div>
+                                    <div class="cd-walkin-booking-section-sub" id="walkin-refund-account">
+                                        <div class="cd-walkin-section-title">Refund Account</div>
+                                        <p class="cd-walkin-refund-hint">If this booking is cancelled and a refund is issued, the money will be sent to the account below.</p>
+                                        <div class="cd-walkin-booking-form-row">
+                                            <div>
+                                                <label for="walkin-refund-account-name">Account Name</label>
+                                                <input type="text" id="walkin-refund-account-name" maxlength="120" placeholder="e.g. John Doe">
+                                            </div>
+                                            <div>
+                                                <label for="walkin-refund-account-number">Account Number</label>
+                                                <input type="text" id="walkin-refund-account-number" maxlength="50" placeholder="e.g. 1000134567890">
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div id="walkin-step-5" class="cd-walkin-booking-step">
@@ -669,6 +685,10 @@
                                         <div class="cd-walkin-info-row">
                                             <span class="cd-walkin-info-label">Payment:</span>
                                             <span class="cd-walkin-info-value" id="walkin-confirm-payment">—</span>
+                                        </div>
+                                        <div class="cd-walkin-info-row">
+                                            <span class="cd-walkin-info-label">Refund account:</span>
+                                            <span class="cd-walkin-info-value" id="walkin-confirm-refund">—</span>
                                         </div>
                                     </div>
                                 </div>
@@ -757,9 +777,10 @@
                     <div class="cd-cancel-box" role="dialog" aria-modal="true" aria-labelledby="cancel-modal-title">
                         <div class="cd-cancel-head">
                             <h3 id="cancel-modal-title">Cancel Booking</h3>
+                            <span id="cancel-queue-progress" class="cd-cancel-queue-progress" hidden></span>
                             <button type="button" id="cancel-modal-close" class="cd-cancel-close" aria-label="Close cancellation dialog">&times;</button>
                         </div>
-                        <p class="cd-cancel-intro">Cancel this booking and free its seat(s). Choose the refund policy for this cancellation.</p>
+                        <p id="cancel-intro" class="cd-cancel-intro">Cancel this booking and free its seat(s). Choose the refund policy for this cancellation.</p>
 
                         <div class="cd-cancel-summary">
                             <div class="cd-cancel-field"><span class="k">Booking</span><span class="v" id="cancel-ref"></span></div>
@@ -768,6 +789,7 @@
                             <div class="cd-cancel-field"><span class="k">Passengers</span><span class="v" id="cancel-passengers"></span></div>
                             <div class="cd-cancel-field"><span class="k">Paid Amount</span><span class="v" id="cancel-amount"></span></div>
                             <div class="cd-cancel-field"><span class="k">Payment</span><span class="v" id="cancel-payment-status"></span></div>
+                            <div class="cd-cancel-field cd-cancel-field-wide"><span class="k">Refund account</span><span class="v" id="cancel-refund-account">—</span></div>
                         </div>
 
                         <div class="cd-cancel-group">
@@ -806,7 +828,7 @@
                             <h3 id="trip-cancel-title">Cancel Trip?</h3>
                             <button type="button" id="trip-cancel-close" class="cd-cancel-close" aria-label="Close trip cancellation dialog">&times;</button>
                         </div>
-                        <p class="cd-cancel-intro">Cancelling this trip will also cancel every active booking on it. Review the list below before confirming.</p>
+                        <p class="cd-cancel-intro">Cancelling this trip will also cancel every active booking on it. After you confirm, each booking gets its own refund &amp; reason dialog before the trip is cancelled.</p>
 
                         <div class="cd-cancel-summary">
                             <div class="cd-cancel-field"><span class="k">Route</span><span class="v" id="trip-cancel-route"></span></div>
@@ -1000,6 +1022,6 @@
 
     <script src="js/main.js"></script>
     <script src="js/auth.js"></script>
-    <script src="js/company-dashboard.js?v=20260902-trip-delete"></script>
+    <script src="js/company-dashboard.js?v=20260903-refund-account"></script>
 </body>
 </html>

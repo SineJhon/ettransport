@@ -792,9 +792,27 @@
     /* Trip-cancel confirmation modal state. Opening it fetches the trip's
        active bookings (action=bookings&trip_id=...) and lists exactly which
        bookings would be cancelled before the operator commits. The actual
-       cancellation still goes through cancelTrip() -> trip_status, which the
-       server keeps atomic with the booking cancellations. */
+       cancellation runs through the booking-cancel popup FIRST (one refund +
+       reason dialog per active booking, consecutively), and only after every
+       booking is processed does cancelTrip() -> trip_status mark the trip
+       cancelled. */
     var pendingTripCancelId = null;
+
+    /* The active (pending/confirmed) bookings on the trip being cancelled,
+       captured when the confirmation modal renders. */
+    var tripCancelActiveBookings = [];
+
+    /* True only after the trip-cancel modal's booking list finished loading
+       successfully. Prevents the operator from confirming while the list is
+       still in flight (which would otherwise skip the per-booking refund popups
+       and let the server cancel the bookings without refunds). */
+    var tripCancelBookingsReady = false;
+
+    /* Booking-by-booking refund/reason queue for a trip cancellation.
+       { tripId, queue, index, total }. While this is set, the booking-cancel
+       modal is in "trip-cancel mode": closing it aborts the whole flow and the
+       trip stays scheduled. */
+    var tripCancelState = null;
 
     /* Trip-delete confirmation modal state. Used only for cancelled trips:
        deleting removes the trip row along with its cancelled booking records,
@@ -812,6 +830,9 @@
 
     function closeTripCancelModal() {
         pendingTripCancelId = null;
+        tripCancelState = null;
+        tripCancelActiveBookings = [];
+        tripCancelBookingsReady = false;
         var modal = byId('trip-cancel-modal');
         if (modal) { modal.hidden = true; }
         var msg = byId('trip-cancel-msg');
@@ -833,6 +854,8 @@
             var st = String(b.booking_status || '').toLowerCase();
             return st === 'pending' || st === 'confirmed';
         });
+        tripCancelActiveBookings = active;
+        tripCancelBookingsReady = true;
 
         list.innerHTML = '';
         if (empty) { empty.hidden = true; }
@@ -844,7 +867,7 @@
                 empty.textContent = 'There are no active bookings on this trip \u2014 only the trip itself will be cancelled.';
                 empty.hidden = false;
             }
-            if (confirmBtn) { confirmBtn.textContent = 'Cancel Trip'; }
+            if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Cancel Trip'; }
             return;
         }
 
@@ -864,11 +887,12 @@
 
         if (note) {
             note.textContent = refundCount > 0
-                ? refundCount + ' paid booking(s) need a refund \u2014 it is NOT processed automatically.'
+                ? refundCount + ' paid booking(s) can be refunded \u2014 each booking gets its own refund & reason dialog.'
                 : 'No paid bookings are affected \u2014 no refund required.';
             note.hidden = false;
         }
         if (confirmBtn) {
+            confirmBtn.disabled = false;
             confirmBtn.textContent = 'Cancel Trip & ' + active.length + ' Booking' + (active.length === 1 ? '' : 's');
         }
     }
@@ -879,6 +903,7 @@
         if (!modal || !trip) { return; }
 
         pendingTripCancelId = String(id);
+        tripCancelBookingsReady = false;
 
         var routeEl = byId('trip-cancel-route');
         if (routeEl) { routeEl.textContent = (trip.from_city || '\u2014') + ' \u2192 ' + (trip.to_city || '\u2014'); }
@@ -900,7 +925,7 @@
         var msg = byId('trip-cancel-msg');
         if (msg) { msg.hidden = true; msg.textContent = ''; msg.className = 'cd-trip-cancel-msg'; }
         var confirmBtn = byId('trip-cancel-confirm-btn');
-        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Cancel Trip'; }
+        if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Checking bookings\u2026'; }
 
         modal.hidden = false;
 
@@ -928,7 +953,7 @@
                         errMsg.hidden = false;
                     }
                     var errConfirm = byId('trip-cancel-confirm-btn');
-                    if (errConfirm) { errConfirm.disabled = true; }
+                    if (errConfirm) { errConfirm.disabled = true; errConfirm.textContent = 'Cancellation unavailable'; }
                     return;
                 }
                 renderTripCancelBookings(data.bookings || []);
@@ -943,16 +968,79 @@
                     errMsg.hidden = false;
                 }
                 var errConfirm = byId('trip-cancel-confirm-btn');
-                if (errConfirm) { errConfirm.disabled = true; }
+                if (errConfirm) { errConfirm.disabled = true; errConfirm.textContent = 'Cancellation unavailable'; }
             });
     }
 
     function confirmTripCancel() {
         if (!pendingTripCancelId) { return; }
-        cancelTrip(pendingTripCancelId);
+        /* Never confirm before the booking list has loaded — otherwise the
+           per-booking refund popups would be skipped and the server would cancel
+           the bookings (without refunds) inside trip_status. */
+        if (!tripCancelBookingsReady) { return; }
+        var id = pendingTripCancelId;
+        var active = (Array.isArray(tripCancelActiveBookings) ? tripCancelActiveBookings : []).slice();
+        closeTripCancelModal();
+
+        if (active.length === 0) {
+            /* No active bookings — cancel the trip directly. */
+            cancelTrip(id, 0);
+            return;
+        }
+
+        /* Start the per-booking refund + reason queue. Each active booking gets
+           its own booking-cancel popup; only after every booking is processed
+           is the trip itself cancelled. */
+        tripCancelState = {
+            tripId: String(id),
+            queue: active,
+            index: 0,
+            total: active.length
+        };
+        startTripCancelNextBooking();
     }
 
-    function cancelTrip(id) {
+    /* Open the booking-cancel popup for the next booking in the trip-cancel
+       queue, or cancel the trip once every booking has been processed. */
+    function startTripCancelNextBooking() {
+        if (!tripCancelState) { return; }
+        if (tripCancelState.index >= tripCancelState.queue.length) {
+            var tripId = tripCancelState.tripId;
+            var total = tripCancelState.total;
+            tripCancelState = null;
+            hideCancelBookingModal();
+            cancelTrip(tripId, total);
+            return;
+        }
+        var booking = tripCancelState.queue[tripCancelState.index];
+        setCancelBookingIntro(true);
+        openCancelBookingModal(String(booking.id), booking);
+    }
+
+    /* Swap the booking-cancel modal's intro copy between standalone mode and
+       trip-cancel queue mode. */
+    function setCancelBookingIntro(fromTripCancel) {
+        var intro = byId('cancel-intro');
+        if (fromTripCancel && tripCancelState) {
+            if (intro) {
+                intro.textContent = 'Cancelling this booking is part of the trip cancellation \u2014 choose its refund policy and reason before the trip itself is cancelled.';
+            }
+        } else if (intro) {
+            intro.textContent = 'Cancel this booking and free its seat(s). Choose the refund policy for this cancellation.';
+        }
+        var progress = byId('cancel-queue-progress');
+        if (progress) {
+            if (fromTripCancel && tripCancelState) {
+                progress.textContent = 'Trip cancel \u00B7 Booking ' + (tripCancelState.index + 1) + ' / ' + tripCancelState.total;
+                progress.hidden = false;
+            } else {
+                progress.hidden = true;
+                progress.textContent = '';
+            }
+        }
+    }
+
+    function cancelTrip(id, bookingCount) {
         var modal = byId('trip-cancel-modal');
         var msg = byId('trip-cancel-msg');
         var confirmBtn = byId('trip-cancel-confirm-btn');
@@ -986,23 +1074,43 @@
                     return;
                 }
                 if (modal && !modal.hidden) { modal.hidden = true; }
+                pendingTripCancelId = null;
+
+                /* The server also reports any bookings it had to cancel inside
+                   trip_status (possible only when the per-booking queue was
+                   skipped or a new booking slipped in mid-cancellation). */
                 var affected = data.affected || {};
                 var count = parseInt(affected.count, 10) || 0;
+                var notes = [];
+                var bookingN = parseInt(bookingCount, 10) || 0;
+                if (bookingN > 0) {
+                    notes.push(bookingN + ' booking' + (bookingN === 1 ? '' : 's') + ' cancelled with their own refund decisions');
+                }
                 if (count > 0) {
                     var refunds = 0;
                     if (Array.isArray(affected.bookings)) {
-                        for (var k = 0; k < affected.bookings.length; k++) {
-                            if (affected.bookings[k] && affected.bookings[k].refund_required) { refunds++; }
+                        for (var n = 0; n < affected.bookings.length; n++) {
+                            if (affected.bookings[n] && affected.bookings[n].refund_required) { refunds++; }
                         }
                     }
-                    var note = 'Trip cancelled. ' + count + ' booking(s) were affected';
+                    notes.push(count + ' booking(s) affected by the cancellation');
                     if (refunds > 0) {
-                        note += ' (' + refunds + ' paid — refund required, not yet processed)';
+                        notes.push(refunds + ' paid \u2014 refund required, not yet processed');
                     }
-                    note += '.';
-                    showTripNotice(note);
                 }
+                var doneNote = 'Trip cancelled.';
+                if (notes.length) { doneNote += ' ' + notes.join(' '); }
+                doneNote += '.';
+                showTripNotice(doneNote);
+
+                /* Real refunds were recorded on the way through the booking
+                   popups, so every revenue surface must refresh: the overview
+                   stat card, the Revenue / Payments tab and the booking list. */
                 loadTrips();
+                loadBookings();
+                loadRevenueSummary();
+                loadPayments();
+                loadOverview();
             })
             .catch(function () {
                 if (modal && !modal.hidden && msg) {
@@ -1270,23 +1378,39 @@
        cancelBooking() posts refund_type + reason to the API. */
     var cancelBookingId = null;
 
-    function openCancelBookingModal(bookingId) {
+    function openCancelBookingModal(bookingId, bookingOverride) {
         var modal = byId('cancel-booking-modal');
         if (!modal || !bookingId) { return; }
 
         var booking = null;
-        for (var i = 0; i < currentBookings.length; i++) {
-            if (String(currentBookings[i].id) === String(bookingId)) { booking = currentBookings[i]; break; }
+        if (bookingOverride) {
+            booking = bookingOverride;
+        } else {
+            for (var i = 0; i < currentBookings.length; i++) {
+                if (String(currentBookings[i].id) === String(bookingId)) { booking = currentBookings[i]; break; }
+            }
         }
         if (!booking) { return; }
 
-        cancelBookingId = bookingId;
+        cancelBookingId = String(bookingId);
         byId('cancel-ref').textContent = booking.booking_reference || '';
         byId('cancel-route').textContent = (booking.route_from || '') + ' \u2192 ' + (booking.route_to || '');
         byId('cancel-date').textContent = (booking.trip_departure_date || '') + ' ' + (booking.trip_departure_time || '');
         byId('cancel-passengers').textContent = booking.passenger_count + ' passenger' + (booking.passenger_count === 1 ? '' : 's');
         byId('cancel-amount').textContent = 'ETB ' + formatMoney(booking.total_amount);
         byId('cancel-payment-status').textContent = booking.payment_status || '';
+
+        /* Refund destination account stored on the booking — shown so the
+           operator's refund command targets the exact account the money goes to. */
+        var refundName = booking.refund_account_name || booking.refundAccountName || '';
+        var refundNumber = booking.refund_account_number || booking.refundAccountNumber || '';
+        var refundAccountEl = byId('cancel-refund-account');
+        if (refundAccountEl) {
+            if (refundName && refundNumber) { refundAccountEl.textContent = refundName + ' \u00B7 ' + refundNumber; }
+            else if (refundNumber) { refundAccountEl.textContent = refundNumber; }
+            else if (refundName) { refundAccountEl.textContent = refundName; }
+            else { refundAccountEl.textContent = '\u2014'; }
+        }
 
         var radios = document.querySelectorAll('input[name="cancel-refund-type"]');
         for (var r = 0; r < radios.length; r++) {
@@ -1306,10 +1430,32 @@
         if (reason) { reason.focus(); }
     }
 
-    function closeCancelBookingModal() {
+    function hideCancelBookingModal() {
         var modal = byId('cancel-booking-modal');
         if (modal) { modal.hidden = true; }
         cancelBookingId = null;
+        resetCancelBookingModal();
+    }
+
+    /* Reset the booking-cancel form to its standalone, pristine state. */
+    function resetCancelBookingModal() {
+        setCancelBookingIntro(false);
+        var msg = byId('cancel-modal-msg');
+        if (msg) { msg.hidden = true; msg.textContent = ''; msg.className = 'cd-cancel-msg'; }
+        var confirmBtn = byId('cancel-confirm-btn');
+        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Confirm Cancellation'; }
+        var keepBtn = byId('cancel-keep-btn');
+        if (keepBtn) { keepBtn.disabled = false; }
+    }
+
+    function closeCancelBookingModal() {
+        /* If the operator closes this popup in the middle of a trip-cancel
+           queue, abort the whole flow — the trip stays scheduled and only the
+           bookings already cancelled (with their refunds) remain cancelled. */
+        if (tripCancelState) {
+            tripCancelState = null;
+        }
+        hideCancelBookingModal();
     }
 
     function submitCancelBooking() {
@@ -1378,6 +1524,16 @@
                     if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Confirm Cancellation'; }
                     var keepBtn = byId('cancel-keep-btn');
                     if (keepBtn) { keepBtn.disabled = false; }
+                    return;
+                }
+                if (tripCancelState) {
+                    /* In trip-cancel queue mode, this booking is done — advance
+                       to the next popup, or cancel the trip after the last one.
+                       Revenue / trips / bookings reload once, after the trip
+                       itself is cancelled. */
+                    tripCancelState.index += 1;
+                    hideCancelBookingModal();
+                    startTripCancelNextBooking();
                     return;
                 }
                 closeCancelBookingModal();
@@ -1803,6 +1959,15 @@
         }
         summary = document.getElementById('walkin-confirm-payment');
         if (summary) { summary.textContent = paymentMethod + (walkInState.paymentMethod === 'transfer' && walkInState.transferRef ? ' · ' + walkInState.transferRef : ''); }
+        summary = document.getElementById('walkin-confirm-refund');
+        if (summary) {
+            var rName = byId('walkin-refund-account-name') ? byId('walkin-refund-account-name').value.trim() : '';
+            var rNumber = byId('walkin-refund-account-number') ? byId('walkin-refund-account-number').value.trim() : '';
+            if (rName && rNumber) { summary.textContent = rName + ' · ' + rNumber; }
+            else if (rNumber) { summary.textContent = rNumber; }
+            else if (rName) { summary.textContent = rName; }
+            else { summary.textContent = '—'; }
+        }
     }
 
     function openWalkInBookingForm() {
@@ -1832,6 +1997,8 @@
         for (var p = 0; p < payInputs.length; p++) { payInputs[p].checked = false; }
         var transferFields = byId('walkin-transfer-fields');
         if (transferFields) { transferFields.classList.remove('visible'); }
+        var rName = byId('walkin-refund-account-name'); if (rName) { rName.value = ''; }
+        var rNumber = byId('walkin-refund-account-number'); if (rNumber) { rNumber.value = ''; }
         walkInState.tripDate = '';
         populateWalkInBookingTrips().then(function () {
             renderWalkInDayPicker();
@@ -1907,7 +2074,9 @@
             passenger_gender: passengerGender,
             seat_number: String(walkInState.selectedSeat),
             payment_method: paymentMethod,
-            payment_reference: paymentMethod === 'transfer' ? transferTransaction : ''
+            payment_reference: paymentMethod === 'transfer' ? transferTransaction : '',
+            refund_account_name: byId('walkin-refund-account-name') ? byId('walkin-refund-account-name').value.trim() : '',
+            refund_account_number: byId('walkin-refund-account-number') ? byId('walkin-refund-account-number').value.trim() : ''
         };
 
         var submitBtn = byId('walkin-booking-confirm');

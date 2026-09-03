@@ -1364,6 +1364,16 @@ ul {
     margin-bottom: var(--space-md);
 }
 
+/* ---------- Refund account (booking destination for cancellations) ---------- */
+.refund-account-card {
+    margin-top: var(--space-md);
+}
+.refund-account-hint {
+    color: var(--color-muted);
+    font-size: 0.88rem;
+    margin: 0.2rem 0 var(--space-md);
+}
+
 .passenger-head {
     display: flex;
     align-items: center;

@@ -305,7 +305,9 @@
                 passengers: (state.passengerDetails || []).map(function (p) {
                     return { name: p.name, age: p.age, gender: p.gender, phone: p.phone || '' };
                 }),
-                payment_method: methodCode
+                payment_method: methodCode,
+                refund_account_name: (state.refundAccount && state.refundAccount.name) || '',
+                refund_account_number: (state.refundAccount && state.refundAccount.number) || ''
             }).then(function (resp) {
                 if (!resp.data || !resp.data.success) {
                     throw new Error((resp.data && resp.data.message) || 'Booking could not be completed.');

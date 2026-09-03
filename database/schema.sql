@@ -195,6 +195,11 @@ CREATE TABLE IF NOT EXISTS bookings (
   cancellation_reason VARCHAR(500) DEFAULT NULL,
   refund_type ENUM('none', 'full', 'half') NOT NULL DEFAULT 'none',
   refunded_amount DECIMAL(10, 2) DEFAULT NULL,
+  -- Refund destination account supplied at booking time (office/walk-in or
+  -- passenger web booking). Shown in the company cancellation dialog so a
+  -- refund command references the exact account the money goes to.
+  refund_account_name VARCHAR(120) DEFAULT NULL,
+  refund_account_number VARCHAR(50) DEFAULT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
