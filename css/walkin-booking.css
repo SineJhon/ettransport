@@ -222,6 +222,13 @@
     flex-direction: column;
 }
 
+/* The row children get display:flex above, which would otherwise override the
+   hidden attribute — keep the walk-in "Other bank" field truly hidden until
+   the operator picks "Other" from the dropdown. */
+.cd-walkin-booking-form-row > div[hidden] {
+    display: none;
+}
+
 .cd-walkin-booking-form-row label,
 .cd-walkin-booking-form label {
     font-size: 0.85rem;
