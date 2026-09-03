@@ -72,7 +72,7 @@ function require_active_passenger(): array
 }
 
 /** Public review shape used by the existing company-profile UI. */
-function review_payload(array $row): array
+function review_payload(array $row, ?int $viewerId = null): array
 {
     return [
         'id' => (int) $row['id'],
@@ -83,6 +83,10 @@ function review_payload(array $row): array
         // A review is verified because it is linked to a real eligible
         // booking owned by the passenger (booking_id is not null).
         'verified' => ($row['booking_id'] ?? null) !== null,
+        'likes' => (int) ($row['likes'] ?? 0),
+        'liked' => $viewerId !== null && (int) ($row['liked_by_viewer'] ?? 0) === 1,
+        'reply' => isset($row['reply']) && $row['reply'] !== null && $row['reply'] !== '' ? $row['reply'] : null,
+        'reply_at' => $row['reply_at'] ?? null,
     ];
 }
 
@@ -154,6 +158,9 @@ function handle_list(): void
     $aggStmt->execute([':cid' => $companyId]);
     $agg = $aggStmt->fetch();
 
+    $viewer = getCurrentUser();
+    $viewerId = ($viewer !== null && ($viewer['status'] ?? '') === 'active') ? (int) $viewer['id'] : null;
+
     /* Newest reviews first. */
     $listStmt = $pdo->prepare('
         SELECT
@@ -162,16 +169,20 @@ function handle_list(): void
             r.comment,
             r.created_at,
             r.booking_id,
-            u.name AS passenger_name
+            r.likes,
+            r.reply,
+            r.reply_at,
+            u.name AS passenger_name,
+            (SELECT 1 FROM review_likes rl WHERE rl.review_id = r.id AND rl.user_id = :viewer) AS liked_by_viewer
         FROM reviews r
         JOIN users u ON u.id = r.passenger_id
         WHERE r.company_id = :cid
         ORDER BY r.created_at DESC, r.id DESC');
-    $listStmt->execute([':cid' => $companyId]);
+    $listStmt->execute([':viewer' => $viewerId ?? 0, ':cid' => $companyId]);
 
     $reviews = [];
     foreach ($listStmt->fetchAll() as $row) {
-        $reviews[] = review_payload($row);
+        $reviews[] = review_payload($row, $viewerId);
     }
 
     auth_response(200, [
@@ -285,7 +296,7 @@ function handle_create(): void
         }
 
         $loadStmt = $pdo->prepare('
-            SELECT r.id, r.rating, r.comment, r.created_at, r.booking_id, u.name AS passenger_name
+            SELECT r.id, r.rating, r.comment, r.created_at, r.booking_id, u.name AS passenger_name, r.likes, r.reply, r.reply_at, 0 AS liked_by_viewer
             FROM reviews r
             JOIN users u ON u.id = r.passenger_id
             WHERE r.id = :id
@@ -306,6 +317,139 @@ function handle_create(): void
     }
 }
 
+/** The company profile linked to an operator account (ownership for replies). */
+function review_company_by_user(PDO $pdo, int $userId): ?array
+{
+    $stmt = $pdo->prepare('
+        SELECT id, name, slug, logo, status
+        FROM companies
+        WHERE user_id = :user_id
+        LIMIT 1');
+    $stmt->execute([':user_id' => $userId]);
+    $row = $stmt->fetch();
+    return $row !== false ? $row : null;
+}
+
+/** Toggle the current user's like on a review (any signed-in active user). */
+function handle_like(): void
+{
+    require_review_post();
+    $user = requireLogin();
+    if (($user['status'] ?? '') !== 'active') {
+        auth_response(403, ['success' => false, 'message' => 'Your account is not active.']);
+    }
+
+    $input = review_input();
+    $reviewId = (int) ($input['review_id'] ?? 0);
+
+    if ($reviewId <= 0) {
+        auth_response(422, ['success' => false, 'message' => 'A review id is required.']);
+    }
+
+    $pdo = db();
+    $checkStmt = $pdo->prepare('SELECT id FROM reviews WHERE id = :id LIMIT 1');
+    $checkStmt->execute([':id' => $reviewId]);
+    if ($checkStmt->fetch() === false) {
+        auth_response(404, ['success' => false, 'message' => 'Review not found.']);
+    }
+
+    $userId = (int) $user['id'];
+    $likeStmt = $pdo->prepare('SELECT id FROM review_likes WHERE review_id = :rid AND user_id = :uid LIMIT 1');
+    $likeStmt->execute([':rid' => $reviewId, ':uid' => $userId]);
+    $existing = $likeStmt->fetch();
+
+    if ($existing) {
+        $pdo->prepare('DELETE FROM review_likes WHERE id = :id')->execute([':id' => (int) $existing['id']]);
+        $liked = false;
+    } else {
+        $pdo->prepare('INSERT INTO review_likes (review_id, user_id) VALUES (:rid, :uid)')->execute([':rid' => $reviewId, ':uid' => $userId]);
+        $liked = true;
+    }
+
+    /* Rebuild the denormalized counter from the real likes rows. */
+    $pdo->prepare('UPDATE reviews SET likes = (SELECT COUNT(*) FROM review_likes WHERE review_id = :rid) WHERE id = :rid2')
+        ->execute([':rid' => $reviewId, ':rid2' => $reviewId]);
+
+    $countStmt = $pdo->prepare('SELECT likes FROM reviews WHERE id = :id LIMIT 1');
+    $countStmt->execute([':id' => $reviewId]);
+    $row = $countStmt->fetch();
+
+    auth_response(200, [
+        'success' => true,
+        'message' => $liked ? 'Review liked.' : 'Review unliked.',
+        'liked' => $liked,
+        'likes' => (int) ($row['likes'] ?? 0),
+    ]);
+}
+
+/**
+ * A company replies to a review left for its own company. The review row's
+ * company_id (from MySQL, never the browser) must match the session
+ * company's id. Sending an empty reply removes the reply.
+ */
+function handle_reply(): void
+{
+    require_review_post();
+    $user = requireRole('company');
+    if (($user['status'] ?? '') !== 'active') {
+        auth_response(403, ['success' => false, 'message' => 'Your account is not active.']);
+    }
+
+    $input = review_input();
+    $reviewId = (int) ($input['review_id'] ?? 0);
+    $reply = trim((string) ($input['reply'] ?? ''));
+    $reply = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/u', '', $reply) ?? '';
+
+    if ($reviewId <= 0) {
+        auth_response(422, ['success' => false, 'message' => 'A review id is required.']);
+    }
+    if (mb_strlen($reply) > 1000) {
+        auth_response(422, ['success' => false, 'message' => 'Reply must be at most 1000 characters.']);
+    }
+
+    $pdo = db();
+    $company = review_company_by_user($pdo, (int) $user['id']);
+    if ($company === null) {
+        auth_response(404, ['success' => false, 'message' => 'No linked company profile was found for this account.']);
+    }
+
+    $selStmt = $pdo->prepare('
+        SELECT r.id, r.company_id, r.passenger_id, u.name AS passenger_name
+        FROM reviews r
+        JOIN users u ON u.id = r.passenger_id
+        WHERE r.id = :id
+        LIMIT 1');
+    $selStmt->execute([':id' => $reviewId]);
+    $review = $selStmt->fetch();
+    if ($review === false) {
+        auth_response(404, ['success' => false, 'message' => 'Review not found.']);
+    }
+    if ((int) $review['company_id'] !== (int) $company['id']) {
+        auth_response(403, ['success' => false, 'message' => 'You can only reply to reviews for your own company.']);
+    }
+
+    if ($reply === '') {
+        $pdo->prepare('UPDATE reviews SET reply = NULL, reply_at = NULL WHERE id = :id')->execute([':id' => $reviewId]);
+    } else {
+        $pdo->prepare('UPDATE reviews SET reply = :reply, reply_at = NOW() WHERE id = :id')->execute([':reply' => $reply, ':id' => $reviewId]);
+    }
+
+    $loadStmt = $pdo->prepare('
+        SELECT r.id,r.rating,r.comment,r.created_at,r.booking_id,u.name AS passenger_name,r.likes,r.reply,r.reply_at,0 AS liked_by_viewer
+        FROM reviews r
+        JOIN users u ON u.id = r.passenger_id
+        WHERE r.id = :id
+        LIMIT 1');
+    $loadStmt->execute([':id' => $reviewId]);
+    $row = $loadStmt->fetch();
+
+    auth_response(200, [
+        'success' => true,
+        'message' => 'Review replied.',
+        'review' => $row !== false ? review_payload($row) : null,
+    ]);
+}
+
 $action = review_action();
 
 if ($action === 'list') {
@@ -314,9 +458,15 @@ if ($action === 'list') {
 if ($action === 'create') {
     handle_create();
 }
+if ($action === 'like') {
+    handle_like();
+}
+if ($action === 'reply') {
+    handle_reply();
+}
 
 auth_response(400, [
     'success' => false,
-    'message' => 'Unsupported action. Use action=list or action=create.',
+    'message' => 'Unsupported action. Use action=list, action=create, action=like or action=reply.',
 ]);
 

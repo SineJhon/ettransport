@@ -3180,12 +3180,13 @@
     }
 
     /* ===== Reviews (passenger feedback) =====
-       Read-only view of the real passenger reviews for this company,
-       sourced from the existing public api/review.php?action=list endpoint
-       the passenger company page uses. Reply/moderation arrive in a later phase. */
+       Real passenger reviews for this company (from api/review.php). The
+       operator can filter by star rating, like reviews, and reply to them.
+       Replies appear on the passenger-facing company page. */
     var currentCompanyId = null;
-
     var reviewsRequestId = 0;
+    var currentReviews = [];
+    var reviewFilter = null;
 
     function reviewStarsHtml(rating) {
         var filled = Math.round(Number(rating) || 0);
@@ -3205,6 +3206,61 @@
         } catch (e) { return String(value).slice(0, 10); }
     }
 
+    function renderReviewFilterBar() {
+        var bar = byId('review-filterbar');
+        if (!bar) { return; }
+        if (!currentReviews.length) { bar.hidden = true; bar.innerHTML = ''; return; }
+        var options = [[null, 'All'], [5, '5\u2605'], [4, '4\u2605'], [3, '3\u2605'], [2, '2\u2605'], [1, '1\u2605']];
+        var html = '';
+        for (var i = 0; i < options.length; i++) {
+            var val = options[i][0]; var label = options[i][1];
+            var active = val === reviewFilter;
+            html += '<button type="button" class="cd-review-filter' + (active ? ' is-active' : '') + '" data-review-filter="' + (val === null ? '' : val) + '" aria-pressed="' + (active ? 'true' : 'false') + '">' + label;
+            if (val !== null) {
+                var count = 0;
+                for (var k = 0; k < currentReviews.length; k++) { if (currentReviews[k].rating === val) { count++; } }
+                html += ' <span class="cd-review-filter-count">' + count + '</span>';
+            }
+            html += '</button>';
+        }
+        bar.innerHTML = html;
+        bar.hidden = false;
+    }
+
+    function reviewLikeButtonHtml(r) {
+        var liked = !!r.liked;
+        return '<button type="button" class="cd-review-like' + (liked ? ' is-liked' : '') + '" data-review-id="' + r.id + '" aria-pressed="' + (liked ? 'true' : 'false') + '" aria-label="' + (liked ? 'Unlike this review' : 'Like this review') + '">' +
+            (liked ? '\u2665' : '\u2661') + ' <span class="cd-review-like-count">' + (Number(r.likes) || 0) + '</span>' +
+        '</button>';
+    }
+
+    function reviewReplyBlockHtml(r) {
+        if (!r.reply) { return ''; }
+        return '<div class="cd-review-reply" data-review-id="' + r.id + '">' +
+            '<span class="cd-review-reply-label">Company reply</span>' +
+            '<p>' + escHtml(r.reply) + '</p>' +
+            '<span class="cd-review-reply-meta">' + (formatReviewDate(r.reply_at) || '') + ' · <button type="button" class="cd-review-reply-edit" data-review-id="' + r.id + '">Edit reply</button></span>' +
+        '</div>';
+    }
+
+    function reviewCardHtml(r) {        var editing = Number(reviewEditingReplyId) === Number(r.id);        return '<article class="cd-review-card' + (editing ? ' is-editing' : '') + '" data-review-id="' + r.id + '">' +            '<div class="cd-review-card-head">' +                '<strong>' + escHtml(r.name || 'Verified passenger') + '</strong>' +                (r.verified ? '<span class="cd-review-badge">Verified Passenger</span>' : '') +                '<span class="cd-review-when">' + (formatReviewDate(r.created_at) || '') + '</span>' +            '</div>' +            '<p class="cd-review-stars-row" role="img" aria-label="Rated ' + r.rating + ' out of 5 stars">' + reviewStarsHtml(r.ating) + '</p>' +            (r.comment ? '<p class="cd-review-text">' + escHtml(r.comment) + '</p>' : '<p class="cd-review-text cd-review-no-comment">No written comment.</p>') +            '<div class="cd-review-actions">' + reviewLikeButtonHtml(r) +                (!editing ? '<button type="button" class="cd-review-reply-btn" data-review-id="' + r.id + '">' + (r.reply ? 'Edit reply' : 'Reply') + '</button>' : '') +            '</div>' +            (editing ? reviewReplyEditorHtml(r) : reviewReplyBlockHtml(r)) +        '</article>';    }    function reviewReplyEditorHtml(r) {        return '<div class="cd-review-reply-editor">' +            '<textarea class="cd-review-reply-input" maxlength="1000" placeholder="Write a reply to this passenger...">' + escHtml(r.reply || '') + '</textarea>' +            '<div class="cd-review-reply-editor-actions">' +                '<button type="button" class="btn btn-sm btn-secondary cd-review-reply-cancel" data-review-id="' + r.id + '">Cancel</button>' +                '<button type="button" class="btn btn-sm btn-primary cd-review-reply-save" data-review-id="' + r.id + '">' + (r.reply ? 'Save reply' : 'Post reply') + '</button>' +            '</div>' +        '</div>';    }
+    function renderReviewCards() {
+        var list = byId('review-list');
+        var empty = byId('review-empty');
+        var filtered = (reviewFilter === null) ? currentReviews : currentReviews.filter(function (x) { return x.rating === reviewFilter; });
+        if (filtered.length) {
+            var html = filtered.map(reviewCardHtml).join('');
+            if (list) { list.innerHTML = html; list.hidden = false; }
+            if (empty) { empty.hidden = true; }
+        } else {
+            if (list) { list.innerHTML = ''; list.hidden = true; }
+            if (empty) {
+                empty.hidden = false;
+                empty.textContent = reviewFilter === null ? 'No reviews yet.' : 'No reviews match this rating yet.';
+            }
+        }
+    }
+
     function renderReviews(data) {
         var sec = byId('company-reviews'); if (sec) { sec.hidden = false; }
         var loading = byId('review-loading'); if (loading) { loading.hidden = true; }
@@ -3220,30 +3276,9 @@
                 '<span class="cd-review-count">' + (data.reviewCount ? Number(data.reviewCount).toLocaleString() + ' review' + (Number(data.reviewCount) === 1 ? '' : 's') : '0 reviews') + '</span>';
         }
 
-        var revs = data.reviews || [];
-        var list = byId('review-list');
-        var empty = byId('review-empty');
-        if (revs.length) {
-            var html = revs.map(function (r) {
-                return '<article class="cd-review-card">' +
-                    '<div class="cd-review-card-head">' +
-                        '<strong>' + escHtml(r.name || 'Verified passenger') + '</strong>' +
-                        (r.verified ? '<span class="cd-review-badge">Verified Passenger</span>' : '') +
-                        '<span class="cd-review-when">' + (formatReviewDate(r.created_at) || '') + '</span>' +
-                    '</div>' +
-                    '<p class="cd-review-stars-row" role="img" aria-label="Rated ' + r.rating + ' out of 5 stars">' + reviewStarsHtml(r.ating) + '</p>' +
-                    (r.comment ? '<p class="cd-review-text">' + escHtml(r.comment) + '</p>' : '<p class="cd-review-text cd-review-no-comment">No written comment.</p>') +
-                '</article>';
-            }).join('');
-            if (list) { list.innerHTML = html; list.hidden = false; }
-            if (empty) { empty.hidden = true; }
-        } else {
-            if (list) { list.innerHTML = ''; list.hidden = true; }
-            if (empty) { empty.hidden = true; }
-
-
-
-            }
+        currentReviews = data.reviews || [];
+        renderReviewFilterBar();
+        renderReviewCards();
     }
 
     function showReviewsError(message) {
@@ -3291,6 +3326,83 @@
                 if (rid !== reviewsRequestId) { return; }
                 showReviewsError('Network error while loading your reviews.');
             });
+    }
+var reviewEditingReplyId = null;
+
+    function currentReviewById(id) {
+        for (var i = 0; i < currentReviews.length; i++) {
+            if (currentReviews[i].id === Number(id)) { return currentReviews[i]; }
+        }
+        return null;
+    }
+
+    function showReviewActionMessage(message) {
+        var error = byId('review-error');
+        if (!error || !message) { return; }
+        error.textContent = message;
+        error.hidden = false;
+        setTimeout(function () { if (error.textContent === message) { error.hidden = true; } }, 4000);
+    }
+
+    function toggleReviewLike(id) {
+        if (!id) { return; }
+        var url = 'api/review.php?action=like';
+        fetch(url, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'Accept': 'application/json' },
+            body: 'review_id=' + encodeURIComponent(id)
+        })
+            .then(function (res) { return res.json().catch(function () { return { success: false, message: 'Invalid server response.' }; }); })
+            .then(function (json) {
+                if (!json || json.success !== true) {
+                    showReviewActionMessage((json && json.message) || 'Unable to update the like.');
+                    return;
+                }
+                var review = currentReviewById(id);
+                if (review) {
+                    review.likes = json.likes; review.liked = !!json.liked;
+                }
+                renderReviewCards();
+            })
+            .catch(function () { showReviewActionMessage('Network error while updating the like.'); });
+    }
+
+    function beginReviewReply(id) {
+        reviewEditingReplyId = Number(id) || null;
+        renderReviewCards();
+    }
+
+    function cancelReviewReply() {
+        reviewEditingReplyId = null;
+        renderReviewCards();
+    }
+
+    function submitReviewReply(id, reply) {
+        if (!id) { return; }
+        var url = 'api/review.php?action=reply';
+        fetch(url, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'Accept': 'application/json' },
+            body: 'review_id=' + encodeURIComponent(id) + '&reply=' + encodeURIComponent(reply)
+        })
+            .then(function (res) { return res.json().catch(function () { return { success: false, message: 'Invalid server response.' }; }); })
+            .then(function (json) {
+                if (!json || json.success !== true) {
+                    showReviewActionMessage((json && json.message) || 'Unable to save the reply.');
+                    return;
+                }
+                var review = currentReviewById(id);
+                if (review && json.review) {
+                    review.reply = json.review.reply || null;
+                    review.reply_at = json.review.reply_at || null;
+                }
+                reviewEditingReplyId = null;
+                renderReviewCards();
+                showReviewActionMessage('Review reply saved. It now appears on your passenger-facing profile.');
+            })
+            .catch(function () { showReviewActionMessage('Network error while saving the reply.'); });
     }
 
     function renderProfile(company) {
@@ -3447,6 +3559,38 @@
 
         var refreshReviews = byId('btn-refresh-reviews');
         if (refreshReviews) { refreshReviews.addEventListener('click', loadReviews); }
+
+        var reviewFilterBar = byId('review-filterbar');
+        if (reviewFilterBar) {
+            reviewFilterBar.addEventListener('click', function (ev) {
+                var btn = ev.target.closest ? ev.target.closest('.cd-review-filter') : null;
+                if (!btn) { return; }
+                var raw = btn.getAttribute('data-review-filter');
+                reviewFilter = raw === '' ? null : Number(raw);
+                renderReviewFilterBar();
+                renderReviewCards();
+            });
+        }
+
+        var reviewListEl = byId('review-list');
+        if (reviewListEl) {
+            reviewListEl.addEventListener('click', function (ev) {
+                var target = ev.target.closest ? ev.target.closest('.cd-review-like, .cd-review-reply-btn, .cd-review-reply-edit, .cd-review-reply-save, .cd-review-reply-cancel') : null;
+                if (!target) { return; }
+                var id = target.getAttribute('data-review-id');
+                if (!id) { return; }
+                if (target.classList.contains('cd-review-like')) { toggleReviewLike(id); return; }
+                if (target.classList.contains('cd-review-reply-btn') || target.classList.contains('cd-review-reply-edit')) { beginReviewReply(id); return; }
+                if (target.classList.contains('cd-review-reply-cancel')) { cancelReviewReply(); return; }
+                if (target.classList.contains('cd-review-reply-save')) {
+                    var card = target.closest ? target.closest('.cd-review-card') : null;
+                    var input = card ? card.querySelector('.cd-review-reply-input') : null;
+                    var text = input ? input.value.trim() : '';
+                    if (!text) { showReviewActionMessage('Write a reply message first.'); return; }
+                    submitReviewReply(id, text);
+                }
+            });
+        }
 
         var addBtn = byId('btn-add-bus');
         if (addBtn) { addBtn.addEventListener('click', openAddForm); }

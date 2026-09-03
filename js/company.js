@@ -837,16 +837,7 @@
                 for (var r = 0; r < c.reviews.length; r++) {
                     if (r >= c.reviews.length) { break; }
                     var rev = c.reviews[r];
-                    html += '<article class="review-card">' +
-                        '<p class="review-stars-row" role="img" aria-label="Rated ' + rev.rating + ' out of 5 stars">' +
-                            buildStars(rev.rating) + '</p>' +
-                        '<p class="review-text">' + escapeReviewText(rev.text) + '</p>' +
-                        '<footer class="reviewer">' +
-                            '<strong>' + escapeReviewText(rev.name) + '</strong>' +
-                            (rev.verified ? '<span class="review-badge">Verified Passenger</span>' : '') +
-                            '<span class="review-when">' + escapeReviewText(rev.when) + '</span>' +
-                        '</footer>' +
-                    '</article>';
+                    html += '<article class="review-card">' +                        '<p class="review-stars-row" role="img" aria-label="Rated ' + rev.rating + ' out of 5 stars">' +                            buildStars(rev.rating) + '</p>' +                        '<p class="review-text">' + escapeReviewText(rev.text) + '</p>' +                        (rev.reply ? '<div class="review-reply">' +                            '<span class="review-reply-label">Response from ' + esc(c.name) + '</span>' +                            '<p>' + escapeReviewText(rev.reply) + '</p>' +                            '<span class="review-reply-when">' + (rev.reply_at ? 'Replied ' + formatDate(String(rev.reply_at).slice(0, 10)) : '') + '</span>' +                        '</div>' : '') +                        '<footer class="reviewer">' +                            '<strong>' + escapeReviewText(rev.name) + '</strong>' +                            (rev.verified ? '<span class="review-badge">Verified Passenger</span>' : '') +                            (rev.likes ? '<span class="review-likes">\u2665 ' + rev.likes + '</span>' : '') +                            '<span class="review-when">' + escapeReviewText(rev.when) + '</span>' +                        '</footer>' +                    '</article>';
                 }
             }
             grid.innerHTML = html;
@@ -1170,12 +1161,7 @@
         var when = rv && rv.created_at ? String(rv.created_at).slice(0, 10) : '';
         if (when) { when = formatDate(when); }
         return {
-            name: (rv && rv.name) || 'Verified passenger',
-            rating: Number(rv && rv.rating) || 5,
-            when: when,
-            verified: !!(rv && rv.verified),
-            text: (rv && rv.comment) || ''
-        };
+            name: (rv && rv.name) || 'Verified passenger',            rating: Number(rv && rv.rating) ||  5,            when: when,            verified: !!(rv && rv.verified),            text: (rv && rv.comment) || '',            reply: (rv && rv.reply) || null,            reply_at: (rv && rv.reply_at) || null,            likes: Number(rv && rv.likes) ||  0        };
     }
 
     /* Loads { reviews, rating, count } from the real review API for a company.

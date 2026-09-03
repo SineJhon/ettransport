@@ -2692,7 +2692,7 @@ input:focus-visible {
     font-size: 0.8rem;
     color: var(--color-muted);
 }
-
+.review-reply {    margin-top: 0.75rem;    padding: 0.7rem 0.9rem;    background: #f4faf6;    border-left: 3px solid #6cb48c;    border-radius: 8px;}.review-reply-label {    display: block;    font-size: 0.7rem;    font-weight: 800;    color: #2e6e59;    text-transform: uppercase;    letter-spacing: 0.05em;    margin-bottom:  0.3rem;}.review-reply p {    margin: 0;    font-size: 0.9rem;    line-height: 1.55;    color: var(--color-text);}.review-reply-when {    display: block;    margin-top:  0.35rem;    font-size:  0.8rem;    color: var(--color-muted);}.review-likes {    color: #b91c1c;    font-size: 0.8rem;    font-weight: 700;}
 /* ---------- 9. Company Information ---------- */
 .info-grid {
     display: grid;

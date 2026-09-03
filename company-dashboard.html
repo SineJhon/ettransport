@@ -267,15 +267,15 @@
         .cd-review-card { padding: 1rem; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; display: flex; flex-direction: column; gap: 0.55rem; }
         .cd-review-card-head { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
         .cd-review-card-head strong { color: var(--color-dark); font-size: 0.92rem; }
-        .cd-review-badge { padding: 0.15rem 0.5rem; border-radius: 16px; font-size:  ​​0.72rem; font-weight:  ​​700; color: #15803d; background: #dcfce7; }
+        .cd-review-badge { padding: 0.15rem 0.5rem; border-radius: 16px; font-size:  0.72rem; font-weight:  700; color: #15803d; background: #dcfce7; }
         .cd-review-when { margin-left: auto; font-size: 0.8rem; color: var(--color-muted); }
-        .cd-review-stars-row { margin: 0; color: #f59e0b; letter-spacing:  ​​2px; font-size: 1rem; }
+        .cd-review-stars-row { margin: 0; color: #f59e0b; letter-spacing:  2px; font-size: 1rem; }
         .cd-review-text { margin: 0; font-size: 0.9rem; line-height: 1.6; color: var(--color-text); }
         .cd-review-no-comment { color: var(--color-muted); font-style: oblique; }
         .cd-review-empty { padding: 1rem; border: 1px dashed #e5e7eb; border-radius: 8px; color: var(--color-muted); text-align: center; }
         .cd-reviews-head .btn { flex: 0 0 auto; }
 
-        /* ===== Company profile (additive, scoped to .cd-*) ===== */
+        .cd-review-filterbar { display: flex; flex-wrap: wrap; gap: 0.45rem; padding: 0.6rem 0; }        .cd-review-filterbar[hidden] { display: none; }        .cd-review-filter { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.45rem 0.8rem; color: #587068; background: #fff; border:  1px solid #e5e7eb; border-radius: 10px; cursor: pointer; font:  800 0.78rem/1 'DM Sans', sans-serif; }        .cd-review-filter:hover { border-color: #6cb48c; }        .cd-review-filter.is-active { color: #fff; background: #187653; border-color: #187653; }        .cd-review-filter-count { display: inline-grid; place-items: center; min-width: 1.1rem; height:  1.1rem; padding: 0.15rem; border-radius: 50%; background: rgba(0, 0, 0, .1); font-size:  0.7rem; }        .cd-review-actions { display: flex; align-items: center; gap: 0.5rem; margin-top:  0.25rem; }        .cd-review-like { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.65rem; color: #6b7c76; background: #f3f7f5; border:  1px solid #e3ece7; border-radius: 50px; cursor: pointer; font-size:  0.82rem; font-weight:  700; }        .cd-review-like:hover { color: #b91c1c; border-color: #eec5c5; }        .cd-review-like.is-liked { color: #b91c1c; background: #fdeeee; border-color: #f3c2c2; }        .cd-review-reply-btn { margin-left: auto; padding: 0.3rem 0.65rem; color: #176447; background: #eff8f3; border:  1px solid #cce5d7; border-radius: 50px; cursor: pointer; font-size:  0.8rem; font-weight:  700; }        .cd-review-reply-btn:hover { background: #e2f3e9; }        .cd-review-reply { margin-top: 0.6rem; padding: 0.7rem 1rem; background: #f4faf6; border-left:  3px solid #6cb48c; border-radius: 8px; }        .cd-review-reply-label { display: block; font-size: 0.68rem; font-weight:  800; color: #2e6e59; text-transform: uppercase; letter-spacing:  0.05em; margin-bottom:  0.3rem; }        .cd-review-reply p { margin: 0; font-size: 0.88rem; line-height: 1.55; color: var(--color-text); }        .cd-review-reply-meta { display: block; margin-top: 0.35rem; font-size: 0.78rem; color: var(--color-muted); }        .cd-review-reply-meta button { padding: 0; color: #176447; background: transparent; border: 0; cursor: pointer; font-size: inherit; font-weight:  700; text-decoration: underline; }        .cd-review-reply-editor { margin-top: 0.6rem; padding: 0.7rem 1rem; background: #f4faf6; border:  1px solid #d7e8de; border-radius: 9px; }        .cd-review-reply-input { width: 100%; min-height: 4.5rem; padding: 0.55rem; border:  1px solid #cbd5e1; border-radius: 8px; font:  inherit; font-size: 0.88rem; resize: vertical; box-sizing: border-box; }        .cd-review-reply-editor-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.6rem; }        /* ===== Company profile (additive, scoped to .cd-*) ===== */
         .cd-profile { margin-top: var(--space-md); }
         .cd-profile-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
         .cd-profile-head h2 { font-size: 1.2rem; color: var(--color-dark); margin: 0; }
@@ -1173,6 +1173,7 @@
             <div id="review-error" class="cd-reviews-error auth-message" hidden></div>
             <div id="review-empty" class="cd-reviews-empty" hidden></div>
             <div id="review-summary" class="cd-reviews-summary" hidden></div>
+            <div id="review-filterbar" class="cd-review-filterbar" role="group" aria-label="Filter reviews by rating" hidden></div>
             <div id="review-list" class="cd-review-list" hidden></div>
         </section>
 
@@ -1252,6 +1253,6 @@
 
     <script src="js/main.js"></script>
     <script src="js/auth.js"></script>
-    <script src="js/company-dashboard.js?v=20260903-reviews-no-preview-link"></script>
+    <script src="js/company-dashboard.js?v=20260903-reviews-likes-replies"></script>
 </body>
 </html>

@@ -295,6 +295,9 @@ CREATE TABLE IF NOT EXISTS reviews (
   status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  likes INT UNSIGNED NOT NULL DEFAULT 0,
+  reply TEXT DEFAULT NULL,
+  reply_at TIMESTAMP NULL DEFAULT NULL,
   PRIMARY KEY (id),
   KEY idx_reviews_passenger (passenger_id),
   KEY idx_reviews_company (company_id),
@@ -315,6 +318,30 @@ CREATE TABLE IF NOT EXISTS reviews (
   CONSTRAINT chk_reviews_rating CHECK (rating BETWEEN 1 AND 5)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+
+-- ------------------------------------------------------------
+-- review_likes — which user liked which review (one row per user,
+-- so likes are per-account and never inflatable by refreshing). The
+-- reviews.likes counter is denormalized data kept in sync by the API.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS review_likes (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  review_id BIGINT UNSIGNED NOT NULL,
+  user_id BIGINT UNSIGNED NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_review_likes_review_user (review_id, user_id),
+  KEY idx_review_likes_review (review_id),
+  KEY idx_review_likes_user (user_id),
+  CONSTRAINT fk_review_likes_review
+    FOREIGN KEY (review_id) REFERENCES reviews(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
+  CONSTRAINT fk_review_likes_user
+    FOREIGN KEY (user_id) REFERENCES users(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 -- ------------------------------------------------------------
 -- notifications â€” per-user in-app notifications.
 -- type examples: booking, payment, review, promotion, system
