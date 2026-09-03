@@ -5,9 +5,10 @@ platform. It is built for XAMPP and works on ordinary PHP/MySQL hosting.
 
 | File | Purpose |
 | --- | --- |
-| `schema.sql` | Creates the `ethio_transport` database and all tables |
-| `migrate_route_stations.php` | One-time idempotent migration adding pickup/drop-off stations to `routes` |
+| `schema.sql` | **Single source of truth** — creates the `ethio_transport` database and every table (incl. routes stations, reviews likes/reply, `review_likes`) |
 | `seed_admin.php` | Creates one development `admin` account (idempotent) |
+| `seed_transport.php` | Seeds company profiles, buses, routes and scheduled trips (idempotent) |
+| `seed_review.php` | Seeds one real verified review with a company reply (idempotent) |
 | `README.md` | This guide |
 
 ---
@@ -32,6 +33,8 @@ Open the XAMPP Control Panel and make sure these are running:
 
 `schema.sql` contains `CREATE DATABASE IF NOT EXISTS ethio_transport` and
 `USE ethio_transport`, so it creates the database and every table in one step.
+No separate migration scripts are needed — keep `schema.sql` up to date and it
+is the single source of truth for the whole database.
 
 ### Option B — Command line
 
@@ -47,7 +50,7 @@ following tables:
 
 ```
 users, companies, buses, routes, trips, bookings,
-booking_passengers, payments, reviews, notifications
+booking_passengers, payments, reviews, review_likes, notifications
 ```
 
 ---
