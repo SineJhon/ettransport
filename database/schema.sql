@@ -197,9 +197,11 @@ CREATE TABLE IF NOT EXISTS bookings (
   refunded_amount DECIMAL(10, 2) DEFAULT NULL,
   -- Refund destination account supplied at booking time (office/walk-in or
   -- passenger web booking). Shown in the company cancellation dialog so a
-  -- refund command references the exact account the money goes to.
+  -- refund command references the exact account the money goes to. The bank
+  -- is one of the known options, or the free-text name when "Other" is chosen.
   refund_account_name VARCHAR(120) DEFAULT NULL,
   refund_account_number VARCHAR(50) DEFAULT NULL,
+  refund_bank VARCHAR(50) DEFAULT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),

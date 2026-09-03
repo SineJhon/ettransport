@@ -1711,6 +1711,7 @@ function company_booking_payload(array $row): array
         'bus_registration' => $row['bus_registration'],
         'refund_account_name' => $row['refund_account_name'],
         'refund_account_number' => $row['refund_account_number'],
+        'refund_bank' => $row['refund_bank'],
     ];
 }
 
@@ -1731,6 +1732,7 @@ function fetch_company_bookings(PDO $pdo, int $companyId, ?int $tripId): array
             b.total_amount,
             b.refund_account_name,
             b.refund_account_number,
+            b.refund_bank,
             b.created_at,
             t.departure_date AS trip_departure_date,
             t.departure_time AS trip_departure_time,
@@ -1884,12 +1886,16 @@ function handle_company_booking_create(PDO $pdo): void
     $paymentReference = trim((string) ($input['payment_reference'] ?? ''));
     $refundAccountName = trim((string) ($input['refund_account_name'] ?? ''));
     $refundAccountNumber = trim((string) ($input['refund_account_number'] ?? ''));
+    $refundBank = trim((string) ($input['refund_bank'] ?? ''));
 
     if ($refundAccountName !== '' && mb_strlen($refundAccountName) > 120) {
         auth_response(422, ['success' => false, 'message' => 'Refund account name must be at most 120 characters.']);
     }
     if ($refundAccountNumber !== '' && mb_strlen($refundAccountNumber) > 50) {
         auth_response(422, ['success' => false, 'message' => 'Refund account number must be at most 50 characters.']);
+    }
+    if ($refundBank !== '' && mb_strlen($refundBank) > 50) {
+        auth_response(422, ['success' => false, 'message' => 'Refund bank must be at most 50 characters.']);
     }
 
     if ($passengerName === '' || mb_strlen($passengerName) < 2) {
@@ -1958,8 +1964,8 @@ function handle_company_booking_create(PDO $pdo): void
         $total = round((float) $trip['price'], 2);
 
         $bookingStmt = $pdo->prepare('
-            INSERT INTO bookings (passenger_id, trip_id, booking_reference, total_amount, payment_method, payment_status, booking_status, refund_account_name, refund_account_number)
-            VALUES (:passenger_id, :trip_id, :reference, :total_amount, :payment_method, :payment_status, :booking_status, :refund_account_name, :refund_account_number)
+            INSERT INTO bookings (passenger_id, trip_id, booking_reference, total_amount, payment_method, payment_status, booking_status, refund_account_name, refund_account_number, refund_bank)
+            VALUES (:passenger_id, :trip_id, :reference, :total_amount, :payment_method, :payment_status, :booking_status, :refund_account_name, :refund_account_number, :refund_bank)
         ');
         $bookingStmt->execute([
             ':passenger_id' => $passengerUserId,
@@ -1971,6 +1977,7 @@ function handle_company_booking_create(PDO $pdo): void
             ':booking_status' => 'confirmed',
             ':refund_account_name' => $refundAccountName !== '' ? $refundAccountName : null,
             ':refund_account_number' => $refundAccountNumber !== '' ? $refundAccountNumber : null,
+            ':refund_bank' => $refundBank !== '' ? $refundBank : null,
         ]);
         $bookingId = (int) $pdo->lastInsertId();
 
@@ -2113,6 +2120,7 @@ function handle_booking_cancel(PDO $pdo): void
             bk.total_amount,
             bk.refund_account_name,
             bk.refund_account_number,
+            bk.refund_bank,
             t.company_id,
             t.departure_date,
             t.departure_time,
@@ -2231,6 +2239,7 @@ function handle_booking_cancel(PDO $pdo): void
             'refund_account' => [
                 'name' => $booking['refund_account_name'],
                 'number' => $booking['refund_account_number'],
+                'bank' => $booking['refund_bank'],
             ],
         ]);
     } catch (Throwable $e) {
@@ -2296,7 +2305,8 @@ function handle_manifest(PDO $pdo): void
             bu.registration_number AS bus_registration,
             bu.bus_type,
             b.refund_account_name,
-            b.refund_account_number
+            b.refund_account_number,
+            b.refund_bank
         FROM bookings b
         JOIN trips t ON t.id = b.trip_id
         JOIN routes r ON r.id = t.route_id
@@ -2339,6 +2349,7 @@ function handle_manifest(PDO $pdo): void
             'total_amount' => (float) $row['total_amount'],
             'refund_account_name' => $row['refund_account_name'],
             'refund_account_number' => $row['refund_account_number'],
+            'refund_bank' => $row['refund_bank'],
             'created_at' => $row['created_at'],
             'trip' => [
                 'id' => (int) $row['trip_id'],

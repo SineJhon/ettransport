@@ -82,6 +82,22 @@
                         <input type="text" id="refund-account-name" class="field-input" maxlength="120" placeholder="e.g. Amanuel Tesfaye" autocomplete="off">
                     </div>
                     <div class="field-group">
+                        <label for="refund-account-type">Type of Bank</label>
+                        <select id="refund-account-type" class="field-input">
+                            <option value="">Select bank…</option>
+                            <option value="CBE">CBE</option>
+                            <option value="CBE Birr">CBE Birr</option>
+                            <option value="TeleBirr">TeleBirr</option>
+                            <option value="Bank Of Abisiniya">Bank Of Abisiniya</option>
+                            <option value="Dashen Bank">Dashen Bank</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="field-group" id="refund-account-other-wrap" hidden>
+                        <label for="refund-account-other">Other Bank Name</label>
+                        <input type="text" id="refund-account-other" class="field-input" maxlength="50" placeholder="e.g. Awash Bank" autocomplete="off">
+                    </div>
+                    <div class="field-group">
                         <label for="refund-account-number">Account Number</label>
                         <input type="text" id="refund-account-number" class="field-input" maxlength="50" placeholder="e.g. 1000134567890" autocomplete="off">
                     </div>
@@ -154,6 +170,6 @@
         <script src="js/auth.js"></script>
     <script src="js/notifications.js"></script>
     <script src="js/data.js"></script>
-    <script src="js/passenger.js?v=20260903-refund-account"></script>
+    <script src="js/passenger.js?v=20260903-refund-bank"></script>
 </body>
 </html>

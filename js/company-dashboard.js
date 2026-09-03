@@ -1402,14 +1402,16 @@
 
         /* Refund destination account stored on the booking — shown so the
            operator's refund command targets the exact account the money goes to. */
-        var refundName = booking.refund_account_name || booking.refundAccountName || '';
-        var refundNumber = booking.refund_account_number || booking.refundAccountNumber || '';
+        var refundName = booking.refund_account_name || (booking.refundAccount && booking.refundAccount.name) || '';
+        var refundNumber = booking.refund_account_number || (booking.refundAccount && booking.refundAccount.number) || '';
+        var refundBank = booking.refund_bank || (booking.refundAccount && booking.refundAccount.bank) || '';
         var refundAccountEl = byId('cancel-refund-account');
         if (refundAccountEl) {
-            if (refundName && refundNumber) { refundAccountEl.textContent = refundName + ' \u00B7 ' + refundNumber; }
-            else if (refundNumber) { refundAccountEl.textContent = refundNumber; }
-            else if (refundName) { refundAccountEl.textContent = refundName; }
-            else { refundAccountEl.textContent = '\u2014'; }
+            var parts = [];
+            if (refundName) { parts.push(refundName); }
+            if (refundBank) { parts.push(refundBank); }
+            if (refundNumber) { parts.push(refundNumber); }
+            refundAccountEl.textContent = parts.length ? parts.join(' \u00B7 ') : '\u2014';
         }
 
         var radios = document.querySelectorAll('input[name="cancel-refund-type"]');
@@ -1963,10 +1965,18 @@
         if (summary) {
             var rName = byId('walkin-refund-account-name') ? byId('walkin-refund-account-name').value.trim() : '';
             var rNumber = byId('walkin-refund-account-number') ? byId('walkin-refund-account-number').value.trim() : '';
-            if (rName && rNumber) { summary.textContent = rName + ' · ' + rNumber; }
-            else if (rNumber) { summary.textContent = rNumber; }
-            else if (rName) { summary.textContent = rName; }
-            else { summary.textContent = '—'; }
+            var rBank = '';
+            var rType = byId('walkin-refund-account-type');
+            if (rType && rType.value) {
+                rBank = rType.value === 'Other'
+                    ? (byId('walkin-refund-account-other') ? byId('walkin-refund-account-other').value.trim() : '')
+                    : rType.value;
+            }
+            var parts = [];
+            if (rName) { parts.push(rName); }
+            if (rBank) { parts.push(rBank); }
+            if (rNumber) { parts.push(rNumber); }
+            summary.textContent = parts.length ? parts.join(' · ') : '—';
         }
     }
 
@@ -1999,6 +2009,9 @@
         if (transferFields) { transferFields.classList.remove('visible'); }
         var rName = byId('walkin-refund-account-name'); if (rName) { rName.value = ''; }
         var rNumber = byId('walkin-refund-account-number'); if (rNumber) { rNumber.value = ''; }
+        var rType = byId('walkin-refund-account-type'); if (rType) { rType.value = ''; }
+        var rOtherWrap = byId('walkin-refund-account-other-wrap'); if (rOtherWrap) { rOtherWrap.hidden = true; }
+        var rOther = byId('walkin-refund-account-other'); if (rOther) { rOther.value = ''; }
         walkInState.tripDate = '';
         populateWalkInBookingTrips().then(function () {
             renderWalkInDayPicker();
@@ -2076,7 +2089,15 @@
             payment_method: paymentMethod,
             payment_reference: paymentMethod === 'transfer' ? transferTransaction : '',
             refund_account_name: byId('walkin-refund-account-name') ? byId('walkin-refund-account-name').value.trim() : '',
-            refund_account_number: byId('walkin-refund-account-number') ? byId('walkin-refund-account-number').value.trim() : ''
+            refund_account_number: byId('walkin-refund-account-number') ? byId('walkin-refund-account-number').value.trim() : '',
+            refund_bank: (function () {
+                var sel = byId('walkin-refund-account-type');
+                if (!sel || !sel.value) { return ''; }
+                if (sel.value === 'Other') {
+                    return byId('walkin-refund-account-other') ? byId('walkin-refund-account-other').value.trim() : '';
+                }
+                return sel.value;
+            })()
         };
 
         var submitBtn = byId('walkin-booking-confirm');
@@ -2932,6 +2953,19 @@
                 if (digits.length === 10 && digits.charAt(0) === '0') { digits = digits.slice(1); }
                 if (digits.length > 9) { digits = digits.slice(0, 9); }
                 this.value = digits;
+                clearWalkInError();
+            });
+        }
+        /* Refund account "Other bank" toggle in the walk-in wizard. */
+        var walkInRefundType = byId('walkin-refund-account-type');
+        var walkInRefundOtherWrap = byId('walkin-refund-account-other-wrap');
+        if (walkInRefundType && walkInRefundOtherWrap) {
+            walkInRefundType.addEventListener('change', function () {
+                walkInRefundOtherWrap.hidden = this.value !== 'Other';
+                if (this.value !== 'Other') {
+                    var otherInput = byId('walkin-refund-account-other');
+                    if (otherInput) { otherInput.value = ''; }
+                }
                 clearWalkInError();
             });
         }

@@ -638,6 +638,24 @@
                                                 <input type="text" id="walkin-refund-account-number" maxlength="50" placeholder="e.g. 1000134567890">
                                             </div>
                                         </div>
+                                        <div class="cd-walkin-booking-form-row">
+                                            <div>
+                                                <label for="walkin-refund-account-type">Type of Bank</label>
+                                                <select id="walkin-refund-account-type">
+                                                    <option value="">Select bank…</option>
+                                                    <option value="CBE">CBE</option>
+                                                    <option value="CBE Birr">CBE Birr</option>
+                                                    <option value="TeleBirr">TeleBirr</option>
+                                                    <option value="Bank Of Abisiniya">Bank Of Abisiniya</option>
+                                                    <option value="Dashen Bank">Dashen Bank</option>
+                                                    <option value="Other">Other</option>
+                                                </select>
+                                            </div>
+                                            <div id="walkin-refund-account-other-wrap" hidden>
+                                                <label for="walkin-refund-account-other">Other Bank Name</label>
+                                                <input type="text" id="walkin-refund-account-other" maxlength="50" placeholder="e.g. Awash Bank">
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1022,6 +1040,6 @@
 
     <script src="js/main.js"></script>
     <script src="js/auth.js"></script>
-    <script src="js/company-dashboard.js?v=20260903-refund-account"></script>
+    <script src="js/company-dashboard.js?v=20260903-refund-bank"></script>
 </body>
 </html>

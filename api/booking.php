@@ -250,6 +250,7 @@ function booking_base_sql(): string
             b.booking_status,
             b.refund_account_name,
             b.refund_account_number,
+            b.refund_bank,
             b.created_at,
             t.departure_date,
             t.departure_time,
@@ -360,6 +361,7 @@ function booking_payload(PDO $pdo, array $row): array
         'refundAccount' => [
             'name' => $row['refund_account_name'],
             'number' => $row['refund_account_number'],
+            'bank' => $row['refund_bank'],
         ],
         'created_at' => $row['created_at'],
         'payment' => $payment !== null ? [
@@ -565,14 +567,19 @@ function handle_create(): void
     }
 
     /* Refund destination account — collected once per booking on the passenger
-       info page. Optional, but validated for length so bad data never persists. */
+       info page. Optional, but validated for length so bad data never persists.
+       refund_bank is one of the known options or the free-text "Other" name. */
     $refundAccountName = booking_text($input['refund_account_name'] ?? '');
     $refundAccountNumber = booking_text($input['refund_account_number'] ?? '');
+    $refundBank = booking_text($input['refund_bank'] ?? '');
     if (mb_strlen($refundAccountName) > 120) {
         auth_response(422, ['success' => false, 'message' => 'Refund account name must be at most 120 characters.']);
     }
     if (mb_strlen($refundAccountNumber) > 50) {
         auth_response(422, ['success' => false, 'message' => 'Refund account number must be at most 50 characters.']);
+    }
+    if (mb_strlen($refundBank) > 50) {
+        auth_response(422, ['success' => false, 'message' => 'Refund bank must be at most 50 characters.']);
     }
 
     $pdo = db();
@@ -652,8 +659,8 @@ function handle_create(): void
         $reference = generate_booking_reference($pdo);
 
         $insertBooking = $pdo->prepare('
-            INSERT INTO bookings (passenger_id, trip_id, booking_reference, total_amount, payment_method, payment_status, booking_status, refund_account_name, refund_account_number)
-            VALUES (:uid, :trip, :ref, :total, :method, \'pending\', \'pending\', :refund_account_name, :refund_account_number)');
+            INSERT INTO bookings (passenger_id, trip_id, booking_reference, total_amount, payment_method, payment_status, booking_status, refund_account_name, refund_account_number, refund_bank)
+            VALUES (:uid, :trip, :ref, :total, :method, \'pending\', \'pending\', :refund_account_name, :refund_account_number, :refund_bank)');
         $insertBooking->execute([
             ':uid'                 => (int) $user['id'],
             ':trip'                => $tripId,
@@ -662,6 +669,7 @@ function handle_create(): void
             ':method'              => $method,
             ':refund_account_name' => $refundAccountName !== '' ? $refundAccountName : null,
             ':refund_account_number' => $refundAccountNumber !== '' ? $refundAccountNumber : null,
+            ':refund_bank'         => $refundBank !== '' ? $refundBank : null,
         ]);
         $bookingId = (int) $pdo->lastInsertId();
 

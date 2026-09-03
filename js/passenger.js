@@ -359,6 +359,21 @@
         }
     });
 
+    /* -------- Refund account bank toggle (show "Other" text when selected) -------- */
+    var refundBankTypeEl = document.getElementById('refund-account-type');
+    var refundBankOtherWrap = document.getElementById('refund-account-other-wrap');
+    if (refundBankTypeEl && refundBankOtherWrap) {
+        refundBankTypeEl.addEventListener('change', function () {
+            if (refundBankTypeEl.value === 'Other') {
+                refundBankOtherWrap.hidden = false;
+            } else {
+                refundBankOtherWrap.hidden = true;
+                var otherInput = document.getElementById('refund-account-other');
+                if (otherInput) { otherInput.value = ''; }
+            }
+        });
+    }
+
  /* ---------- Continue to Payment ---------- */
     payBtn.addEventListener('click', function () {
         // Re-validate everything one last time before leaving the page
@@ -385,6 +400,14 @@
         }
 
         // Save the temporary booking state for the payment + confirmation steps
+        var refundBankSel = document.getElementById('refund-account-type');
+        var refundBankOther = document.getElementById('refund-account-other');
+        var refundBankValue = '';
+        if (refundBankSel && refundBankSel.value) {
+            refundBankValue = refundBankSel.value === 'Other' && refundBankOther && refundBankOther.value.trim()
+                ? refundBankOther.value.trim()
+                : refundBankSel.value;
+        }
         var bookingState = {
             tripId: tripId,
             passengers: passengers,
@@ -393,7 +416,8 @@
             passengerDetails: details,
             refundAccount: {
                 name: (document.getElementById('refund-account-name') || {}).value ? document.getElementById('refund-account-name').value.trim() : '',
-                number: (document.getElementById('refund-account-number') || {}).value ? document.getElementById('refund-account-number').value.trim() : ''
+                number: (document.getElementById('refund-account-number') || {}).value ? document.getElementById('refund-account-number').value.trim() : '',
+                bank: refundBankValue
             }
         };
 

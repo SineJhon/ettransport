@@ -307,7 +307,8 @@
                 }),
                 payment_method: methodCode,
                 refund_account_name: (state.refundAccount && state.refundAccount.name) || '',
-                refund_account_number: (state.refundAccount && state.refundAccount.number) || ''
+                refund_account_number: (state.refundAccount && state.refundAccount.number) || '',
+                refund_bank: (state.refundAccount && state.refundAccount.bank) || ''
             }).then(function (resp) {
                 if (!resp.data || !resp.data.success) {
                     throw new Error((resp.data && resp.data.message) || 'Booking could not be completed.');
