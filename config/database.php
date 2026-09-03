@@ -43,5 +43,10 @@ function db(): PDO
         throw new RuntimeException('Database connection failed. Check config/database.php or ET_DB_* environment variables.');
     }
 
+    /* Fresh databases automatically get the development demo data on first
+       connection (see config/demo-seed.php). Never touches non-empty DBs. */
+    require_once __DIR__ . '/demo-seed.php';
+    et_maybe_seed_demo();
+
     return $pdo;
 }

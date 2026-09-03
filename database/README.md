@@ -6,10 +6,12 @@ platform. It is built for XAMPP and works on ordinary PHP/MySQL hosting.
 | File | Purpose |
 | --- | --- |
 | `schema.sql` | **Single source of truth** — creates the `ethio_transport` database and every table (incl. routes stations, reviews likes/reply, `review_likes`) |
-| `seed_admin.php` | Creates one development `admin` account (idempotent) |
-| `seed_transport.php` | Seeds company profiles, buses, routes and scheduled trips (idempotent) |
-| `seed_review.php` | Seeds one real verified review with a company reply (idempotent) |
 | `README.md` | This guide |
+
+> The previous `seed_*.php` scripts were removed. Demo data (admin + company
+> accounts, buses, routes, trips, one verified review) is now **auto-created
+> automatically the first time the app connects to a fresh database** — see
+> `config/demo-seed.php`.
 
 ---
 
@@ -55,45 +57,36 @@ booking_passengers, payments, reviews, review_likes, notifications
 
 ---
 
-## 3. Seed the admin account
+## 3. Demo data (automatic)
 
-From the project root, run:
+No seed commands are needed. The first time the app talks to a **fresh,
+empty database** (schema-only import on any new device) it automatically
+creates the development demo data via `config/demo-seed.php`:
 
-```powershell
-C:\xampp\php\php.exe database\seed_admin.php
-```
+- the platform `admin` account
+- demo company accounts (each `owner.<slug>@ettransport.local` with a company profile, buses, routes and a **rolling 14-day trip schedule**)
+- one real verified review (passenger **Hanna Alem**) with a company reply
 
-Run **without options**, the script uses **development-only** credentials and
-prints them to the console:
+This bootstrap runs **only on a fresh database** (an empty `companies` table).
+If the database already has companies — real or demo — it never runs, deletes
+nothing, and never overlays anything. Set `ET_DEMO_SEED=0` to disable the
+automatic bootstrap entirely.
 
-- email: `admin@ettransport.local`
-- password: `Admin@EtTransport123`
+> The demo credentials are **DEVELOPMENT ONLY** and shared publicly:
+>
+> | Role | Email | Password |
+> | --- | --- | --- |
+> | Admin | `admin@ettransport.local` | `Admin@EtTransport123` |
+> | Company | `owner.selambus@ettransport.local` (and every other owner.*) | `SeedPass123!` |
+>
+> Change these for anything other than local testing.
 
-> ⚠️ **DEVELOPMENT ONLY.** Change these for anything other than local testing.
-
-To create a custom admin, pass explicit credentials:
-
-```powershell
-C:\xampp\php\php.exe database\seed_admin.php --name="Platform Admin" --email="admin@example.com" --phone="+251900000001" --password="AStrongPass123!"
-```
-
-You can also use environment variables instead:
-
-```powershell
-$env:ET_ADMIN_EMAIL = "admin@example.com"
-$env:ET_ADMIN_PASSWORD = "AStrongPass123!"
-C:\xampp\php\php.exe database\seed_admin.php
-```
-
-The script is **idempotent** — if an admin already exists for the email it
-simply exits with a message. It uses `password_hash()` and never stores a
-plaintext password.
-
-> **Production note**: the dev defaults above must always be replaced
-> in a real deployment. Never put these credentials on a production server, and
-> remember the entire `database/` folder is already blocked from HTTP access by
-> `.htaccess` (`RewriteRule ^(database)(/|$) - [F,L]`), so the seed scripts can
-> never be triggered from a browser. See `PRODUCTION_DEPLOYMENT.md`.
+> **Production note**: the dev defaults above must always be replaced in a real
+> deployment. Never keep these demo credentials on a production server. The
+> entire `database/` folder is already blocked from HTTP access by `.htaccess`
+> (`RewriteRule ^(database)(/|$) - [F,L]`). For a real deployment, also set
+> `ET_DEMO_SEED=0` so a fresh database never automatically creates demo
+> accounts. See `PRODUCTION_DEPLOYMENT.md`.
 
 ---
 

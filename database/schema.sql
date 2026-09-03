@@ -17,7 +17,8 @@
 -- PHP password_hash() in users.password_hash.
 --
 -- Recommended setup order (see database/README.md):
---   1) create this database, 2) import this file, 3) run seed_admin.php
+--   1) create this database, 2) import this file. On first use the app
+--      automatically creates the development demo data (config/demo-seed.php).
 -- ============================================================
 
 CREATE DATABASE IF NOT EXISTS ethio_transport
@@ -320,7 +321,7 @@ CREATE TABLE IF NOT EXISTS reviews (
 
 
 -- ------------------------------------------------------------
--- review_likes — which user liked which review (one row per user,
+-- review_likes â€” which user liked which review (one row per user,
 -- so likes are per-account and never inflatable by refreshing). The
 -- reviews.likes counter is denormalized data kept in sync by the API.
 -- ------------------------------------------------------------
@@ -366,8 +367,7 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 -- ============================================================
 -- Bootstrap admin
--- Do NOT insert a password hash here. Run the seed script instead:
---   php database/seed_admin.php
--- (or with explicit credentials, see database/README.md)
+-- Do NOT insert a password hash here. On a fresh database the app
+-- auto-creates the demo admin (config/demo-seed.php). See database/README.md.
 -- ============================================================
 
