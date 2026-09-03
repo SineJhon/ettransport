@@ -615,12 +615,20 @@
     }
 
     /* ---------- Popular routes ---------- */
+    function routePriceLabel(price) {
+        if (price === null || price === undefined) { return 'Check availability'; }
+        return 'From ' + formatPrice(Number(price) || 0);
+    }
+
     function renderRoutes(c) {
         var el = document.getElementById('route-grid');
         if (!el) { return; }
         var html = '';
         for (var i = 0; i < c.popularRoutes.length; i++) {
             var r = c.popularRoutes[i];
+            var durationLabel = (r.minutes === null || r.minutes === undefined || r.minutes <= 0)
+                ? 'Duration \u2014'
+                : formatDuration(r.minutes);
             html += '<article class="route-card">' +
                 '<div class="route-nodes">' +
                     '<span class="route-city route-from">' + r.from + '</span>' +
@@ -628,8 +636,8 @@
                     '<span class="route-city route-to">' + r.to + '</span>' +
                 '</div>' +
                 '<div class="route-meta">' +
-                    '<span class="route-price">From ' + formatPrice(r.price) + '</span>' +
-                    '<span class="route-duration">' + formatDuration(r.minutes) + '</span>' +
+                    '<span class="route-price">' + routePriceLabel(r.price) + '</span>' +
+                    '<span class="route-duration">' + durationLabel + '</span>' +
                 '</div>' +
                 '<a class="btn btn-route" href="' + searchLink(r.from, r.to, c.slug) + '">View Trips</a>' +
             '</article>';
@@ -1060,8 +1068,9 @@
             popularRoutes.push({
                 from: pr.from_city,
                 to: pr.to_city,
-                price: Number(pr.price) || 0,
-                minutes: Number(pr.duration) || 0
+                price: pr.price === null || pr.price === undefined ? null : Number(pr.price),
+                minutes: pr.duration === null || pr.duration === undefined ? null : Number(pr.duration),
+                status: pr.status || 'active'
             });
         }
 

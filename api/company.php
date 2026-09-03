@@ -36,7 +36,7 @@ declare(strict_types=1);
  *   POST api/company.php?action=profile_update      -> { success, message, company }
  *                                                     (authenticated company role only; updates own profile)
  *   GET  api/company.php?action=routes               -> { success, company_id, routes }
- *                                                     (authenticated company role only; shared platform route catalog)
+ *                                                     (authenticated company role only; this company's own routes)
  *   POST api/company.php?action=route_create         -> { success, route }
  *                                                     (authenticated company role only)
  *   POST api/company.php?action=route_update         -> { success, route }
@@ -140,6 +140,7 @@ function route_payload(array $row): array
 {
     return [
         'id' => (int) $row['id'],
+        'company_id' => isset($row['company_id']) && $row['company_id'] !== null ? (int) $row['company_id'] : null,
         'from_city' => $row['from_city'],
         'to_city' => $row['to_city'],
         'duration' => $row['duration'] !== null ? (int) $row['duration'] : null,
@@ -524,39 +525,49 @@ function fetch_company_destinations(PDO $pdo): array
 }
 
 /**
- * Popular routes (min fare per route) for each company from the schedule.
+ * Popular routes for one company's public profile.
  *
- * @return array<int, array<int, array>>
+ * Routes are company-scoped reference data. Every route the company owns is a
+ * candidate (active routes first, then inactive). "Popular" simply means the
+ * route has scheduled upcoming departures; the min present fare is shown when
+ * trips exist, otherwise the price is omitted (the frontend shows a neutral
+ * "Check availability" label). This means the dashboard Routes section and the
+ * public profile's Popular Routes are always the same per-company data.
+ *
+ * @return array<int, array>
  */
-function fetch_popular_routes(PDO $pdo): array
+function fetch_popular_routes(PDO $pdo, int $companyId): array
 {
-    $stmt = $pdo->query('
+    $stmt = $pdo->prepare('
         SELECT
-            t.company_id,
             r.id AS route_id,
             r.from_city,
             r.to_city,
             r.duration,
-            MIN(t.price) AS price
-        FROM trips t
-        JOIN routes r ON r.id = t.route_id
-        WHERE t.status = \'scheduled\'
-          AND t.departure_date >= CURDATE()
-        GROUP BY t.company_id, r.id, r.from_city, r.to_city, r.duration
-        ORDER BY MIN(t.price) ASC
+            r.status,
+            MIN(
+                CASE WHEN t.status = \'scheduled\' AND t.departure_date >= CURDATE()
+                     THEN t.price END
+            ) AS price
+        FROM routes r
+        LEFT JOIN trips t ON t.route_id = r.id
+        WHERE r.company_id = :company_id
+        GROUP BY r.id, r.from_city, r.to_city, r.duration, r.status
+        ORDER BY
+            CASE WHEN r.status = \'active\' THEN 0 ELSE 1 END,
+            r.from_city ASC,
+            r.to_city ASC
     ');
+    $stmt->execute([':company_id' => $companyId]);
 
     $out = [];
     foreach ($stmt->fetchAll() as $row) {
-        $companyId = (int) $row['company_id'];
-        if (!isset($out[$companyId])) {
-            $out[$companyId] = [];
-        }
-        $out[$companyId][] = [
+        $out[] = [
             'from_city' => $row['from_city'],
             'to_city' => $row['to_city'],
-            'duration' => (int) $row['duration'],
-            'price' => (float) $row['price'],
+            'duration' => $row['duration'] !== null ? (int) $row['duration'] : null,
+            'status' => $row['status'],
+            'price' => $row['price'] !== null ? (float) $row['price'] : null,
         ];
     }
 
@@ -877,17 +888,21 @@ function positive_int_or_error(mixed $raw, string $message): int
 }
 
 /**
- * An active global route, or a 422 response. Routes are platform reference
- * data and are never treated as company-owned.
+ * An active route owned by the given company, or a 422 response. Routes are
+ * company-scoped reference data, so the lookup carries both the route id and
+ * the resolved company id — a browser can never pick another company's route.
  *
  * @return array{id:int, duration:?int}
  */
-function trip_route_or_error(PDO $pdo, mixed $raw): array
+function trip_route_or_error(PDO $pdo, mixed $raw, int $companyId): array
 {
     $id = positive_int_or_error($raw, 'A valid route is required.');
 
-    $stmt = $pdo->prepare('SELECT id, duration FROM routes WHERE id = :id AND status = :status LIMIT 1');
-    $stmt->execute([':id' => $id, ':status' => 'active']);
+    $stmt = $pdo->prepare('
+        SELECT id, duration FROM routes
+        WHERE id = :id AND company_id = :company_id AND status = :status
+        LIMIT 1');
+    $stmt->execute([':id' => $id, ':company_id' => $companyId, ':status' => 'active']);
     $row = $stmt->fetch();
 
     if ($row === false) {
@@ -1130,17 +1145,17 @@ function fetch_managed_trip_row(PDO $pdo, int $tripId, int $companyId): ?array
     $row = $stmt->fetch();
     return $row !== false ? trip_payload($row) : null;
 }/**
- * Active global platform routes (never company-owned) for the create-trip form.
+ * Active routes owned by the given company, for the create-trip form.
  */
-function fetch_global_active_routes(PDO $pdo): array
+function fetch_company_active_routes(PDO $pdo, int $companyId): array
 {
     $stmt = $pdo->prepare('
-        SELECT id, from_city, to_city, duration, status
+        SELECT id, from_city, to_city, duration, status, company_id
         FROM routes
-        WHERE status = :status
+        WHERE company_id = :company_id AND status = :status
         ORDER BY from_city ASC, to_city ASC
     ');
-    $stmt->execute([':status' => 'active']);
+    $stmt->execute([':company_id' => $companyId, ':status' => 'active']);
 
     $out = [];
     foreach ($stmt->fetchAll() as $row) {
@@ -1198,12 +1213,13 @@ function handle_trips(PDO $pdo): void
 {
     $user = requireRole('company');
     $company = require_company_scope($pdo, (int) $user['id']);
+    $companyId = (int) $company['id'];
 
     auth_response(200, [
         'success' => true,
-        'company_id' => (int) $company['id'],
-        'trips' => fetch_managed_trips($pdo, (int) $company['id']),
-        'routes' => fetch_global_active_routes($pdo),
+        'company_id' => $companyId,
+        'trips' => fetch_managed_trips($pdo, $companyId),
+        'routes' => fetch_company_active_routes($pdo, $companyId),
     ]);
 }/**
  * POST /api/company.php?action=trip_create — schedule a new trip for this
@@ -1228,7 +1244,7 @@ function handle_trip_create(PDO $pdo): void
         ]);
     }
 
-    $route = trip_route_or_error($pdo, $input['route_id'] ?? null);
+    $route = trip_route_or_error($pdo, $input['route_id'] ?? null, $companyId);
     $bus = company_bus_or_error($pdo, $input['bus_id'] ?? null, $companyId);
     $departureDate = trip_date_or_error($input['departure_date'] ?? null);
     $departureTime = trip_time_or_error($input['departure_time'] ?? null);
@@ -1336,7 +1352,7 @@ function handle_trip_update(PDO $pdo): void
         ]);
     }
 
-    $route = $hasRoute ? trip_route_or_error($pdo, $input['route_id']) : null;
+    $route = $hasRoute ? trip_route_or_error($pdo, $input['route_id'], $companyId) : null;
     $bus = $hasBus ? company_bus_or_error($pdo, $input['bus_id'], $companyId) : null;
     $departureDate = $hasDate ? trip_date_or_error($input['departure_date']) : null;
     $departureTime = $hasTime ? trip_time_or_error($input['departure_time']) : null;
@@ -1718,37 +1734,45 @@ function handle_trip_delete(PDO $pdo): void
 /* ============================================================
  Route catalog management
    ------------------------------------------------------------
-   Routes are the platform's shared reference data (a city pair
-   + optional duration) that trips reference through route_id.
-   They are NEVER company-owned: every approved company operates
-   against the same catalog. These endpoints let an authenticated
-   company operator add new city pairs, edit them and toggle their
-   active status. Deactivation is allowed even when trips already
-   use the route — existing trips keep their route; the route is
-   simply not offered for NEW trip creations (fetch_global_active_routes
-   only returns status = 'active').
+   Routes are company-owned reference data (a city pair such as
+   "Addis Ababa → Bahir Dar" plus an optional duration). Every
+   approved company maintains its OWN route book: the dashboard
+   Routes section lists exactly the routes the company has created,
+   and the company's public profile "Popular Routes" section is fed
+   from the same per-company rows. Ownership is enforced server-side
+   from the authenticated session — a browser-supplied company_id is
+   never trusted.
+
+   Each creation/update/deactivation is scoped to the resolved
+   company; trips may only reference routes the company itself owns.
+   Deactivation (status = 'inactive') is allowed even when trips
+   already use the route — existing trips keep the route, but it is
+   no longer offered for NEW trip creations or shown on the public
+   profile.
    ============================================================ */
 
 /**
- * Shared SELECT for route rows. Sorting is the natural catalog order
- * (from city, then to city) so the dashboard list reads consistently.
+ * Shared SELECT for route rows (company-owned). Sorting is the natural
+ * from-city / to-city order so the dashboard list reads consistently.
  */
 function managed_route_select_sql(): string
 {
     return '
-        SELECT id, from_city, to_city, duration, status, created_at, updated_at
+        SELECT id, company_id, from_city, to_city, duration, status, created_at, updated_at
         FROM routes
+        WHERE company_id = :company_id
         ORDER BY from_city ASC, to_city ASC
     ';
 }
 
 /**
- * Load every route in the shared platform catalog (active and inactive).
- * Operators manage routes from this screen.
+ * Load every route owned by the given company (active and inactive).
+ * Operators manage their own routes from the dashboard Routes screen.
  */
-function fetch_managed_routes(PDO $pdo): array
+function fetch_managed_routes(PDO $pdo, int $companyId): array
 {
-    $stmt = $pdo->query(managed_route_select_sql());
+    $stmt = $pdo->prepare(managed_route_select_sql());
+    $stmt->execute([':company_id' => $companyId]);
 
     $out = [];
     foreach ($stmt->fetchAll() as $row) {
@@ -1759,19 +1783,19 @@ function fetch_managed_routes(PDO $pdo): array
 }
 
 /**
- * A single route row from the shared catalog, or a generic 404. Routes are
- * not company-owned, so there is no company_id scope to enforce here — the
- * row either exists in the catalog or it does not.
+ * A single route row owned by the given company, or a generic null when the
+ * route does not exist or belongs to another company. Foreign ids are kept
+ * private (same 404 the update endpoint uses).
  */
-function fetch_managed_route_row(PDO $pdo, int $routeId): ?array
+function fetch_managed_route_row(PDO $pdo, int $routeId, int $companyId): ?array
 {
     $stmt = $pdo->prepare('
-        SELECT id, from_city, to_city, duration, status, created_at, updated_at
+        SELECT id, company_id, from_city, to_city, duration, status, created_at, updated_at
         FROM routes
-        WHERE id = :id
+        WHERE id = :id AND company_id = :company_id
         LIMIT 1
     ');
-    $stmt->execute([':id' => $routeId]);
+    $stmt->execute([':id' => $routeId, ':company_id' => $companyId]);
     $row = $stmt->fetch();
 
     return $row !== false ? route_payload($row) : null;
@@ -1828,15 +1852,15 @@ function route_duration_or_error(mixed $raw): ?int
 }
 
 /**
- * The route being edited exists in the shared catalog, or a generic 404.
- * Deleted/nonexistent route ids answer the same as "not found".
+ * The route being edited exists and is owned by the given company, or a
+ * generic 404. Foreign / other-company / nonexistent ids all answer the same.
  */
-function existing_route_or_error(PDO $pdo, mixed $raw): int
+function existing_route_or_error(PDO $pdo, mixed $raw, int $companyId): int
 {
     $routeId = positive_int_or_error($raw, 'A valid route id is required.');
 
-    $stmt = $pdo->prepare('SELECT id FROM routes WHERE id = :id LIMIT 1');
-    $stmt->execute([':id' => $routeId]);
+    $stmt = $pdo->prepare('SELECT id FROM routes WHERE id = :id AND company_id = :company_id LIMIT 1');
+    $stmt->execute([':id' => $routeId, ':company_id' => $companyId]);
 
     if ($stmt->fetch() === false) {
         auth_response(404, [
@@ -1849,21 +1873,20 @@ function existing_route_or_error(PDO $pdo, mixed $raw): int
 }
 
 /**
- * True when a route between the same two cities already exists (case-
- * insensitive). Routes are a shared catalog, so the check is intentionally
- * not company-scoped. The DB unique key can be bypassed on deployments where
- * stale routes rows carry a NULL company_id (MySQL lets multiple NULLs through
- * a multi-column unique index), so the app-level check is the real guard and
- * the PDO 23000 catch is only a fallback.
+ * True when the given company already owns a route between the same two
+ * cities (case-insensitive). Routes are company-scoped, so the check (and
+ * the DB unique key uq_routes_company_from_to) is per-company. The app-level
+ * check is the real guard; the PDO 23000 catch is only a fallback.
  */
-function route_exists_between(PDO $pdo, string $fromCity, string $toCity, ?int $excludeRouteId = null): bool
+function route_exists_between(PDO $pdo, int $companyId, string $fromCity, string $toCity, ?int $excludeRouteId = null): bool
 {
     $sql = '
         SELECT id FROM routes
-        WHERE LOWER(from_city) = LOWER(:from_city)
+        WHERE company_id = :company_id
+          AND LOWER(from_city) = LOWER(:from_city)
           AND LOWER(to_city) = LOWER(:to_city)
     ';
-    $params = [':from_city' => $fromCity, ':to_city' => $toCity];
+    $params = [':company_id' => $companyId, ':from_city' => $fromCity, ':to_city' => $toCity];
 
     if ($excludeRouteId !== null) {
         $sql .= ' AND id <> :route_id';
@@ -1878,25 +1901,27 @@ function route_exists_between(PDO $pdo, string $fromCity, string $toCity, ?int $
     return $stmt->fetch() !== false;
 }
 
-/** GET /api/company.php?action=routes — the shared platform route catalog. */
+/** GET /api/company.php?action=routes — this company's own route book. */
 function handle_routes(PDO $pdo): void
 {
     $user = requireRole('company');
     $company = require_company_scope($pdo, (int) $user['id']);
+    $companyId = (int) $company['id'];
 
     auth_response(200, [
         'success' => true,
-        'company_id' => (int) $company['id'],
-        'routes' => fetch_managed_routes($pdo),
+        'company_id' => $companyId,
+        'routes' => fetch_managed_routes($pdo, $companyId),
     ]);
 }
 
-/** POST /api/company.php?action=route_create — add a city pair to the catalog. */
+/** POST /api/company.php?action=route_create — add a route to this company. */
 function handle_route_create(PDO $pdo): void
 {
     require_company_post();
     $user = requireRole('company');
     $company = require_company_scope($pdo, (int) $user['id']);
+    $companyId = (int) $company['id'];
 
     $input = company_input();
 
@@ -1917,19 +1942,20 @@ function handle_route_create(PDO $pdo): void
             'message' => 'Invalid route status. Use active or inactive.',
         ]);
     }
-    if (route_exists_between($pdo, $fromCity, $toCity)) {
+    if (route_exists_between($pdo, $companyId, $fromCity, $toCity)) {
         auth_response(409, [
             'success' => false,
-            'message' => 'A route between these cities already exists.',
+            'message' => 'You already have a route between these cities.',
         ]);
     }
 
     try {
         $ins = $pdo->prepare('
-            INSERT INTO routes (from_city, to_city, duration, status)
-            VALUES (:from_city, :to_city, :duration, :status)
+            INSERT INTO routes (company_id, from_city, to_city, duration, status)
+            VALUES (:company_id, :from_city, :to_city, :duration, :status)
         ');
         $ins->execute([
+            ':company_id' => $companyId,
             ':from_city' => $fromCity,
             ':to_city' => $toCity,
             ':duration' => $duration,
@@ -1940,7 +1966,7 @@ function handle_route_create(PDO $pdo): void
         if ((int) $e->getCode() === 23000) {
             auth_response(409, [
                 'success' => false,
-                'message' => 'A route between these cities already exists.',
+                'message' => 'You already have a route between these cities.',
             ]);
         }
         throw $e;
@@ -1949,24 +1975,25 @@ function handle_route_create(PDO $pdo): void
     auth_response(201, [
         'success' => true,
         'message' => 'Route added.',
-        'route' => fetch_managed_route_row($pdo, $newId),
+        'route' => fetch_managed_route_row($pdo, $newId, $companyId),
     ]);
 }
 
 /**
- * POST /api/company.php?action=route_update — edit the shared catalog route
- * and/or toggle its active status. Route ids are global (not company-owned),
- * so the write is a plain id-scoped UPDATE.
+ * POST /api/company.php?action=route_update — edit one of this company's own
+ * routes and/or toggle its active status. The write carries the company scope
+ * inside the same statement, so another company's route can never be touched.
  */
 function handle_route_update(PDO $pdo): void
 {
     require_company_post();
     $user = requireRole('company');
     $company = require_company_scope($pdo, (int) $user['id']);
+    $companyId = (int) $company['id'];
 
     $input = company_input();
 
-    $routeId = existing_route_or_error($pdo, $input['route_id'] ?? null);
+    $routeId = existing_route_or_error($pdo, $input['route_id'] ?? null, $companyId);
 
     $hasFrom = has_key($input, 'from_city') && trim((string) $input['from_city']) !== '';
     $hasTo = has_key($input, 'to_city') && trim((string) $input['to_city']) !== '';
@@ -2002,8 +2029,8 @@ function handle_route_update(PDO $pdo): void
 
     /* If either city changes, reject a pair that collides with another route. */
     if ($hasFrom || $hasTo) {
-        $current = $pdo->prepare('SELECT from_city, to_city FROM routes WHERE id = :id LIMIT 1');
-        $current->execute([':id' => $routeId]);
+        $current = $pdo->prepare('SELECT from_city, to_city FROM routes WHERE id = :id AND company_id = :company_id LIMIT 1');
+        $current->execute([':id' => $routeId, ':company_id' => $companyId]);
         $currentRow = $current->fetch();
 
         $checkFrom = $hasFrom ? $fromCity : ($currentRow['from_city'] ?? '');
@@ -2011,29 +2038,29 @@ function handle_route_update(PDO $pdo): void
 
         if (
             $checkFrom !== '' && $checkTo !== ''
-            && route_exists_between($pdo, $checkFrom, $checkTo, $routeId)
+            && route_exists_between($pdo, $companyId, $checkFrom, $checkTo, $routeId)
         ) {
             auth_response(409, [
                 'success' => false,
-                'message' => 'A route between these cities already exists.',
+                'message' => 'You already have a route between these cities.',
             ]);
         }
     }
 
     $sets = [];
-    $params = [':route_id' => $routeId];
+    $params = [':route_id' => $routeId, ':company_id' => $companyId];
     if ($hasFrom) { $sets[] = 'from_city = :from_city'; $params[':from_city'] = $fromCity; }
     if ($hasTo) { $sets[] = 'to_city = :to_city'; $params[':to_city'] = $toCity; }
     if ($hasDuration) { $sets[] = 'duration = :duration'; $params[':duration'] = $duration; }
     if ($hasStatus) { $sets[] = 'status = :status'; $params[':status'] = $status; }
 
     try {
-        $sql = 'UPDATE routes SET ' . implode(', ', $sets) . ' WHERE id = :route_id';
+        $sql = 'UPDATE routes SET ' . implode(', ', $sets) . ' WHERE id = :route_id AND company_id = :company_id';
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
 
         /* A route that exists but matches no rows after this update is a
-           genuine catalog error (not a filtering concern), so surface it. */
+           genuine ownership/catalog error, so surface it. */
         if ($stmt->rowCount() === 0) {
             auth_response(404, [
                 'success' => false,
@@ -2044,13 +2071,13 @@ function handle_route_update(PDO $pdo): void
         auth_response(200, [
             'success' => true,
             'message' => 'Route updated.',
-            'route' => fetch_managed_route_row($pdo, $routeId),
+            'route' => fetch_managed_route_row($pdo, $routeId, $companyId),
         ]);
     } catch (PDOException $e) {
         if ((int) $e->getCode() === 23000) {
             auth_response(409, [
                 'success' => false,
-                'message' => 'A route between these cities already exists.',
+                'message' => 'You already have a route between these cities.',
             ]);
         }
         throw $e;
@@ -3319,14 +3346,13 @@ try {
             $destMap[$d['company_id']][] = $d['to_city'];
         }
 
-        $popularRoutes = fetch_popular_routes($pdo);
         $companyId = (int) $row['id'];
 
         $company = company_payload($row, $destMap[$companyId] ?? []);
         $company['fleet'] = fetch_fleet($pdo, $companyId);
         $company['reviews'] = fetch_reviews($pdo, $companyId);
         $company['trips'] = fetch_company_trips($pdo, $companyId);
-        $company['popular_routes'] = $popularRoutes[$companyId] ?? [];
+        $company['popular_routes'] = fetch_popular_routes($pdo, $companyId);
 
         auth_response(200, ['success' => true, 'company' => $company]);
     }

@@ -118,10 +118,11 @@ CREATE TABLE IF NOT EXISTS buses (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
--- routes — a pair of cities. duration is stored in minutes.
+-- routes — a city-pair each company owns. duration is in minutes.
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS routes (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  company_id BIGINT UNSIGNED NOT NULL,
   from_city VARCHAR(120) NOT NULL,
   to_city VARCHAR(120) NOT NULL,
   duration INT UNSIGNED DEFAULT NULL,
@@ -129,8 +130,13 @@ CREATE TABLE IF NOT EXISTS routes (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  UNIQUE KEY uq_routes_from_to (from_city, to_city),
+  UNIQUE KEY uq_routes_company_from_to (company_id, from_city, to_city),
   KEY idx_routes_status (status),
+  KEY idx_routes_company (company_id),
+  CONSTRAINT fk_routes_company
+    FOREIGN KEY (company_id) REFERENCES companies(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
   CONSTRAINT chk_routes_different_cities CHECK (from_city <> to_city)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

@@ -91,8 +91,8 @@ try {
     $insComp  = $pdo->prepare('INSERT INTO companies (user_id, name, slug, description, logo, cover_image, phone, email, address, status) VALUES (:user_id, :name, :slug, :description, :logo, :cover_image, :phone, :email, :address, :status)');
     $insBus   = $pdo->prepare('INSERT INTO buses (company_id, name, model, bus_type, seat_count, registration_number, status) VALUES (:company_id, :name, :model, :bus_type, :seat_count, :registration_number, :status)');
     $selBusReg = $pdo->prepare('SELECT id FROM buses WHERE company_id = :company_id AND registration_number = :registration_number LIMIT 1');
-    $selRoute = $pdo->prepare('SELECT id FROM routes WHERE LOWER(from_city) = LOWER(:from_city) AND LOWER(to_city) = LOWER(:to_city) LIMIT 1');
-    $insRoute = $pdo->prepare('INSERT INTO routes (from_city, to_city, duration, status) VALUES (:from_city, :to_city, :duration, :status)');
+    $selRoute = $pdo->prepare('SELECT id FROM routes WHERE company_id = :company_id AND LOWER(from_city) = LOWER(:from_city) AND LOWER(to_city) = LOWER(:to_city) LIMIT 1');
+    $insRoute = $pdo->prepare('INSERT INTO routes (company_id, from_city, to_city, duration, status) VALUES (:company_id, :from_city, :to_city, :duration, :status)');
     $selBus   = $pdo->prepare('SELECT id FROM buses WHERE company_id = :company_id AND bus_type = :bus_type ORDER BY id LIMIT 1');
     $selTrip  = $pdo->prepare('SELECT id FROM trips WHERE company_id = :company_id AND route_id = :route_id AND departure_date = :departure_date AND departure_time = :departure_time LIMIT 1');
     $insTrip  = $pdo->prepare('INSERT INTO trips (company_id, bus_id, route_id, departure_date, departure_time, arrival_time, price, status) VALUES (:company_id, :bus_id, :route_id, :departure_date, :departure_time, :arrival_time, :price, :status)');
@@ -140,14 +140,45 @@ try {
         fwrite(STDOUT, "  company created : {$spec[1]} ({$slug})\n");
     }
 
-    /* ---------- 2. routes ---------- */
-    foreach ($routes as [$fromCity, $toCity, $duration]) {
-        $selRoute->execute([':from_city' => $fromCity, ':to_city' => $toCity]);
-        if ($selRoute->fetch()) {
+    /* ---------- 2. routes ----------
+       Routes are company-scoped. Each company gets its OWN route book from the
+       trip patterns it operates. The shared $routes list is only used as the
+       duration lookup table (from|to -> minutes). */
+    $durationByKey = [];
+    foreach ($routes as $routeSpec) {
+        $durationByKey[strtolower($routeSpec[0]) . '|' . strtolower($routeSpec[1])] = (int) $routeSpec[2];
+    }
+
+    foreach ($tripPatterns as $companySlug => $slots) {
+        $selComp->execute([':slug' => $companySlug]);
+        $company = $selComp->fetch();
+        if (!$company || !is_array($slots)) {
             continue;
         }
-        $insRoute->execute([':from_city' => $fromCity, ':to_city' => $toCity, ':duration' => $duration, ':status' => 'active']);
-        $stats['routes']++;
+        $companyId = (int) $company['id'];
+
+        foreach ($slots as $slot) {
+            $fromCity = $slot[0];
+            $toCity = $slot[1];
+            $durationMinutes = $durationByKey[strtolower($fromCity) . '|' . strtolower($toCity)] ?? 0;
+
+            $selRoute->execute([
+                ':company_id' => $companyId,
+                ':from_city' => $fromCity,
+                ':to_city' => $toCity,
+            ]);
+            if ($selRoute->fetch()) {
+                continue;
+            }
+            $insRoute->execute([
+                ':company_id' => $companyId,
+                ':from_city' => $fromCity,
+                ':to_city' => $toCity,
+                ':duration' => $durationMinutes,
+                ':status' => 'active',
+            ]);
+            $stats['routes']++;
+        }
     }
 
     /* ---------- 3. buses ---------- */
@@ -192,10 +223,6 @@ try {
        repeated run produces the exact same schedule. The uniqueness guard
        below (company + route + departure date + departure time) makes the
        whole section idempotent. */
-    $durationByKey = [];
-    foreach ($routes as $routeSpec) {
-        $durationByKey[strtolower($routeSpec[0]) . '|' . strtolower($routeSpec[1])] = (int) $routeSpec[2];
-    }
 
     $tripDays = 14;
     $tripsSkipped = 0;
@@ -215,7 +242,11 @@ try {
             $busType = $slot[3];
             $priceList = $slot[4];
 
-            $selRoute->execute([':from_city' => $fromCity, ':to_city' => $toCity]);
+            $selRoute->execute([
+                ':company_id' => $companyId,
+                ':from_city' => $fromCity,
+                ':to_city' => $toCity,
+            ]);
             $route = $selRoute->fetch();
             if (!$route) {
                 fwrite(STDOUT, "  trip route missing : {$fromCity} -> {$toCity}\n");
