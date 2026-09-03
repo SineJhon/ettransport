@@ -150,13 +150,14 @@
         var nodes = {
             identity: byId('auth-identity'), loading: byId('company-loading'), error: byId('company-error'),
             banner: byId('company-banner'), stats: byId('company-stats'), fleet: byId('company-fleet'),
-            trips: byId('company-trips'), bookings: byId('company-bookings'), revenue: byId('company-revenue'), profile: byId('company-profile')
+            trips: byId('company-trips'), bookings: byId('company-bookings'), revenue: byId('company-revenue'), profile: byId('company-profile'), routes: byId('company-routes')
         };
         var icon = {
             overview: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
             fleet: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 16h18"/><path d="M5 16V9h10l4 4v3"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>',
             passengers: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20c.8-3.5 2.8-5.5 6-5.5s5.2 2 6 5.5"/><path d="M16 5.5a3 3 0 0 1 0 5"/><path d="M18 14.5c1.6.8 2.6 2.6 3 5"/></svg>',
             revenue: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5"/><path d="M4 19h16"/><path d="m7 15 4-4 3 2 4-6"/></svg>',
+            route: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M6 17 17 7"/><circle cx="6" cy="17" r="1"/><circle cx="18" cy="7" r="1"/><path d="M8 19h8"/><path d="m12 15 2-2-2-2"/></svg>',
             profile: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.4-4 4-6 8-6s6.6 2 8 6"/></svg>'
         };
         main.className = 'container cd-page';
@@ -170,13 +171,15 @@
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-trips" data-cd-view="trips">' + icon.fleet + '<span>Trips</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-passengers" data-cd-view="passengers">' + icon.passengers + '<span>Passengers</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-revenue" data-cd-view="revenue">' + icon.revenue + '<span>Revenue</span></button>' +
+                  '<button type="button" role="tab" aria-selected="false" aria-controls="cd-routes" data-cd-view="routes">' + icon.route + '<span>Routes</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-profile" data-cd-view="profile">' + icon.profile + '<span>Public profile</span></button>' +
                 '</nav></aside><div class="cd-content">' +
-                  '<section id="cd-overview" class="cd-pane" role="tabpanel"><div id="cd-overview-slot"></div><div class="cd-quick-actions"><button type="button" class="cd-quick-action" data-cd-go="fleet" data-cd-action="btn-add-bus"><b class="cd-quick-icon">+</b><span>Add a bus<small>Expand your active fleet</small></span></button><button type="button" class="cd-quick-action" data-cd-go="trips" data-cd-action="btn-add-trip"><b class="cd-quick-icon">↗</b><span>Schedule a trip<small>Open a new departure</small></span></button><button type="button" class="cd-quick-action" data-cd-go="profile" data-cd-action="btn-edit-profile"><b class="cd-quick-icon">✦</b><span>Update public profile<small>Keep passenger details current</small></span></button></div></section>' +
+                  '<section id="cd-overview" class="cd-pane" role="tabpanel"><div id="cd-overview-slot"></div><div class="cd-quick-actions"><button type="button" class="cd-quick-action" data-cd-go="fleet" data-cd-action="btn-add-bus"><b class="cd-quick-icon">+</b><span>Add a bus<small>Expand your active fleet</small></span></button><button type="button" class="cd-quick-action" data-cd-go="trips" data-cd-action="btn-add-trip"><b class="cd-quick-icon">↗</b><span>Schedule a trip<small>Open a new departure</small></span></button><button type="button" class="cd-quick-action" data-cd-go="routes" data-cd-action="btn-add-route"><b class="cd-quick-icon">⇄</b><span>Manage routes<small>Add and update city pairs</small></span></button><button type="button" class="cd-quick-action" data-cd-go="profile" data-cd-action="btn-edit-profile"><b class="cd-quick-icon">✦</b><span>Update public profile<small>Keep passenger details current</small></span></button></div></section>' +
                   '<section id="cd-fleet" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Fleet register</h2><p>Add, edit and update the operating status of every vehicle.</p></div></div></section>' +
                   '<section id="cd-trips" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Trips</h2><p>Publish, update and manage each scheduled departure.</p></div></div></section>' +
                   '<section id="cd-passengers" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Passengers &amp; bookings</h2><p>Review bookings and view each passenger\'s digital ticket.</p></div></div></section>' +
                   '<section id="cd-revenue" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Revenue &amp; payments</h2><p>Review paid, pending and refunded passenger payments.</p></div></div></section>' +
+                  '<section id="cd-routes" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Routes</h2></div></div></section>' +
                   '<section id="cd-profile" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Your passenger-facing profile</h2><p>This is the information passengers use to decide who they travel with.</p></div><a id="cd-passenger-preview" class="cd-passenger-preview" href="company.html" target="_blank" rel="noopener">View passenger page ↗</a></div></section>' +
                 '</div></div></div>';
 
@@ -186,6 +189,7 @@
         if (nodes.trips) { byId('cd-trips').appendChild(nodes.trips); }
         if (nodes.bookings) { byId('cd-passengers').appendChild(nodes.bookings); }
         if (nodes.revenue) { byId('cd-revenue').appendChild(nodes.revenue); }
+        if (nodes.routes) { byId('cd-routes').appendChild(nodes.routes); }
         if (nodes.profile) { byId('cd-profile').appendChild(nodes.profile); }
 
         function selectView(view) {
@@ -200,7 +204,7 @@
         var quickActions = document.querySelectorAll('[data-cd-go]');
         for (var q = 0; q < quickActions.length; q++) { quickActions[q].addEventListener('click', function () { selectView(this.getAttribute('data-cd-go')); var target = byId(this.getAttribute('data-cd-action')); if (target) { target.click(); } }); }
         var requested = window.location.hash.replace('#', '');
-        if (requested === 'fleet' || requested === 'trips' || requested === 'passengers' || requested === 'revenue' || requested === 'profile') { selectView(requested); }
+        if (requested === 'fleet' || requested === 'trips' || requested === 'passengers' || requested === 'revenue' || requested === 'routes' || requested === 'profile') { selectView(requested); }
 
         var busForm = byId('bus-form');
         if (busForm) {
@@ -226,6 +230,19 @@
             document.body.appendChild(tripModal);
             byId('trip-modal-close').addEventListener('click', hideTripForm);
             tripModal.addEventListener('click', function (ev) { if (ev.target === tripModal) { hideTripForm(); } });
+        }
+
+        var routeForm = byId('route-form');
+        if (routeForm) {
+            var routeModal = document.createElement('div');
+            routeModal.id = 'route-form-modal';
+            routeModal.className = 'cd-trip-modal cd-workspace';   /* Reuse the trip modal design. */
+            routeModal.hidden = true;
+            routeModal.innerHTML = '<div class="cd-trip-modal-box" role="dialog" aria-modal="true" aria-labelledby="route-form-title"><div class="cd-trip-modal-head"><div><strong id="route-modal-heading">Route details</strong><p>Add or edit a city pair in the shared route catalog.</p></div><button type="button" id="route-modal-close" class="cd-trip-modal-close" aria-label="Close route form">×</button></div></div>';
+            routeModal.firstChild.appendChild(routeForm);
+            document.body.appendChild(routeModal);
+            byId('route-modal-close').addEventListener('click', hideRouteForm);
+            routeModal.addEventListener('click', function (ev) { if (ev.target === routeModal) { hideRouteForm(); } });
         }
 
         function syncCompanyMini() {
@@ -466,6 +483,237 @@
             })
             .catch(function () {
                 showBusError('Network error while changing the bus status.');
+            });
+    }
+
+ /* ===== Route management ===== */
+    var currentRoutesCatalog = [];   // route rows loaded from the shared catalog
+
+    function routeDurationLabel(minutes) {
+        if (minutes === null || minutes === undefined || minutes === '') { return 'Travel time —'; }
+        var m = parseInt(minutes, 10);
+        if (isNaN(m) || m <= 0) { return 'Travel time —'; }
+        var h = Math.floor(m / 60);
+        var r = m % 60;
+        var parts = [];
+        if (h) { parts.push(h + ' h'); }
+        if (r) { parts.push(r + ' min'); }
+        if (!parts.length) { parts.push(m + ' min'); }
+        return 'Travel time ' + parts.join(' ');
+    }
+
+    function renderRoutes(routes) {
+        var list = byId('route-list');
+        var empty = byId('route-empty');
+        if (list) { list.innerHTML = ''; list.hidden = true; }
+        if (empty) { empty.hidden = true; }
+
+        var loading = byId('route-loading');
+        if (loading) { loading.hidden = true; }
+        var error = byId('route-error');
+        if (error) { error.hidden = true; }
+
+        if (!routes || !routes.length) {
+            if (empty) { empty.hidden = false; }
+            return;
+        }
+
+        var html = routes.map(function (r) {
+            var badge = r.status === 'inactive' ? 'inactive' : '';
+            var dur = routeDurationLabel(r.duration);
+            return '<div class="cd-route-card" data-route-id="' + r.id + '">' +
+                '<span class="cd-route-name">' + escHtml(r.from_city) + ' → ' + escHtml(r.to_city) + '</span>' +
+                '<span class="cd-route-badge ' + badge + '">' + escHtml(r.status) + '</span>' +
+                '<span class="cd-route-duration">' + dur + '</span>' +
+                '<div class="cd-route-actions">' +
+                    '<button type="button" class="btn btn-secondary btn-sm" data-route-edit="' + r.id + '">Edit</button>' +
+                    '<select data-route-status="' + r.id + '" aria-label="Change route status">' +
+                        '<option value="active"' + (r.status === 'active' ? ' selected' : '') + '>Active</option>' +
+                        '<option value="inactive"' + (r.status === 'inactive' ? ' selected' : '') + '>Inactive</option>' +
+                    '</select>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+
+        list.innerHTML = html;
+        list.hidden = false;
+        wireRouteEvents();
+    }
+
+    function wireRouteEvents() {
+        var list = byId('route-list');
+        if (!list) { return; }
+        var edits = list.querySelectorAll('button[data-route-edit]');
+        for (var i = 0; i < edits.length; i++) {
+            edits[i].addEventListener('click', function () {
+                openEditRouteForm(this.getAttribute('data-route-edit'));
+            });
+        }
+        var selects = list.querySelectorAll('select[data-route-status]');
+        for (var j = 0; j < selects.length; j++) {
+            selects[j].addEventListener('change', function () {
+                changeRouteStatus(this.getAttribute('data-route-status'), this.value);
+            });
+        }
+    }
+
+ function setRouteIdle() {
+        var loading = byId('route-loading');
+        if (loading) { loading.hidden = true; }
+    }
+
+    function showRouteError(message) {
+        setRouteIdle();
+        var list = byId('route-list'); if (list) { list.innerHTML = ''; list.hidden = true; }
+        var empty = byId('route-empty'); if (empty) { empty.hidden = true; }
+        var error = byId('route-error');
+        if (error) {
+            error.hidden = false;
+            error.className = 'cd-routes-error auth-message error';
+            error.textContent = message || 'Unable to load the route catalog. Please try again later.';
+        }
+    }
+
+    var routesRequestId = 0;   // discards responses from superseded route requests
+
+    function loadRoutes() {
+        var rid = ++routesRequestId;
+        var sec = byId('company-routes'); if (sec) { sec.hidden = false; }
+        var error = byId('route-error'); if (error) { error.hidden = true; }
+        var list = byId('route-list'); if (list) { list.innerHTML = ''; list.hidden = true; }
+        var empty = byId('route-empty'); if (empty) { empty.hidden = true; }
+        var loading = byId('route-loading'); if (loading) { loading.hidden = false; }
+
+        fetch('api/company.php?action=routes', {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(function (res) {
+                return res.json().catch(function () {
+                    return { success: false, message: 'Invalid server response.' };
+                }).then(function (json) {
+                    return { ok: res.ok, status: res.status, data: json };
+                });
+            })
+            .then(function (result) {
+                if (rid !== routesRequestId) { return; }
+                var data = result.data || {};
+                if (!result.ok || result.status !== 200 || !data.success) {
+                    showRouteError(data.message || 'Unable to load the route catalog.');
+                    return;
+                }
+                currentRoutesCatalog = data.routes || [];
+                renderRoutes(currentRoutesCatalog);
+            })
+            .catch(function () {
+                if (rid !== routesRequestId) { return; }
+                showRouteError('Network error while loading the route catalog.');
+            });
+    }
+
+    function openAddRouteForm() {
+        byId('route-id').value = '';
+        byId('route-from').value = '';
+        byId('route-to').value = '';
+        byId('route-duration').value = '';
+        byId('route-status').value = 'active';
+        byId('route-form-title').textContent = 'Add Route';
+        byId('route-form-submit').textContent = 'Save Route';
+        var err = byId('route-form-error'); if (err) { err.textContent = ''; }
+        byId('route-form').hidden = false;
+        byId('route-form-modal').hidden = false;
+        byId('route-from').focus();
+    }
+
+    function openEditRouteForm(id) {
+        var route = null;
+        for (var i = 0; i < currentRoutesCatalog.length; i++) {
+            if (String(currentRoutesCatalog[i].id) === String(id)) { route = currentRoutesCatalog[i]; break; }
+        }
+        if (!route) { return; }
+        byId('route-id').value = route.id;
+        byId('route-from').value = route.from_city || '';
+        byId('route-to').value = route.to_city || '';
+        byId('route-duration').value = route.duration === null || route.duration === undefined ? '' : route.duration;
+        byId('route-status').value = route.status || 'active';
+        byId('route-form-title').textContent = 'Edit Route';
+        byId('route-form-submit').textContent = 'Update Route';
+        var err = byId('route-form-error'); if (err) { err.textContent = ''; }
+        byId('route-form').hidden = false;
+        byId('route-form-modal').hidden = false;
+        byId('route-from').focus();
+    }
+
+    function hideRouteForm() {
+        var f = byId('route-form');
+        if (f) { f.hidden = true; }
+        var modal = byId('route-form-modal');
+        if (modal) { modal.hidden = true; }
+    }
+
+ function submitRouteForm() {
+        var errEl = byId('route-form-error');
+        var id = byId('route-id').value;
+        var payload = {
+            from_city: byId('route-from').value.trim(),
+            to_city: byId('route-to').value.trim(),
+            duration: byId('route-duration').value.trim(),
+            status: byId('route-status').value
+        };
+        if (id) { payload.route_id = id; }
+        var action = id ? 'route_update' : 'route_create';
+
+        fetch('api/company.php?action=' + action, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+            .then(function (res) {
+                return res.json().catch(function () {
+                    return { success: false, message: 'Invalid server response.' };
+                }).then(function (json) {
+                    return { ok: res.ok, status: res.status, data: json };
+                });
+            })
+            .then(function (result) {
+                var data = result.data || {};
+                if (!result.ok || !data.success) {
+                    if (errEl) { errEl.textContent = data.message || 'Unable to save the route.'; }
+                    return;
+                }
+                hideRouteForm();
+                loadRoutes();
+                /* New trips should immediately see the updated route catalog. */
+                loadTrips();
+            })
+            .catch(function () {
+                if (errEl) { errEl.textContent = 'Network error while saving the route.'; }
+            });
+    }
+
+    function changeRouteStatus(routeId, status) {
+        fetch('api/company.php?action=route_update', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ route_id: routeId, status: status })
+        })
+            .then(function (res) {
+                return res.json().catch(function () {
+                    return { success: false, message: 'Invalid server response.' };
+                }).then(function (json) {
+                    return { ok: res.ok, status: res.status, data: json };
+                });
+            })
+            .then(function (result) {
+                if (result.ok && result.status === 200) { loadRoutes(); return; }
+                var data = result.data || {};
+                showRouteError(data.message || 'Unable to change the route status.');
+            })
+            .catch(function () {
+                showRouteError('Network error while changing the route status.');
             });
     }
 
@@ -2878,6 +3126,7 @@
         initWorkspaceNavigation();
         loadOverview();
         loadFleet();
+        loadRoutes();
         loadTrips();
         loadBookingTripOptions();
         loadBookings();
@@ -2897,6 +3146,20 @@
             form.addEventListener('submit', function (ev) {
                 ev.preventDefault();
                 submitBusForm();
+            });
+        }
+
+        var addRouteBtn = byId('btn-add-route');
+        if (addRouteBtn) { addRouteBtn.addEventListener('click', openAddRouteForm); }
+
+        var routeCancel = byId('route-form-cancel');
+        if (routeCancel) { routeCancel.addEventListener('click', hideRouteForm); }
+
+        var routeFormEl = byId('route-form');
+        if (routeFormEl) {
+            routeFormEl.addEventListener('submit', function (ev) {
+                ev.preventDefault();
+                submitRouteForm();
             });
         }
 

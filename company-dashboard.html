@@ -76,6 +76,30 @@
         .cd-trip-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
         .cd-trip-form-error { min-height: 1.1rem; font-size: 0.82rem; color: #b91c1c; }
         .cd-trip-form-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
+
+ /* ===== Route catalog (additive, scoped to .cd-*) ===== */
+        .cd-routes { margin-top: var(--space-md); }
+        .cd-routes-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+        .cd-routes-head h2 { font-size: 1.2rem; color: var(--color-dark); margin: 0; }
+        .cd-routes-msg { color: var(--color-muted); font-size: 0.9rem; }
+        .cd-routes-empty { padding: 1rem; border: 1px dashed #e5e7eb; border-radius: 8px; color: var(--color-muted); text-align: center; }
+        .cd-routes-error { margin-top: 0.5rem; }
+        .cd-route-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-sm); margin-top: var(--space-sm); }
+        .cd-route-card { padding: 1rem; border: 1px solid #e5e7eb; border-radius: 10px; }
+        .cd-route-name { font-weight: 700; color: var(--color-dark); display: block; }
+        .cd-route-duration { display: inline-block; font-size: 0.85rem; color: var(--color-muted); margin-top: 0.2rem; }
+        .cd-route-badge { display: inline-block; padding: 0.2rem 0.55rem; border-radius: 20px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--color-white); background: #16a34a; margin-top: 0.4rem; }
+        .cd-route-badge.inactive { background: #6b7280; }
+        .cd-route-actions { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
+        .cd-route-actions select { padding: 0.4rem 0.5rem; font-size: 0.85rem; }
+        .cd-route-form { margin-top: var(--space-md); padding: 1rem; border: 1px solid #e5e7eb; border-radius: 10px; }
+        .cd-route-form h3 { margin: 0 0 0.75rem; font-size: 1.05rem; }
+        .cd-route-form label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem; }
+        .cd-route-form input, .cd-route-form select { width: 100%; padding: 0.6rem 0.7rem; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 6px; }
+        .cd-route-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
+        .cd-route-form-error { min-height: 1.1rem; font-size: 0.82rem; color: #b91c1c; }
+        .cd-route-form-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
+        @media (max-width: 768px) { .cd-route-list { grid-template-columns: 1fr; } .cd-route-form-row { grid-template-columns: 1fr; } }
         @media (max-width: 768px) { .cd-trip-list { grid-template-columns: 1fr; } .cd-trip-form-row { grid-template-columns: 1fr; } }
  /* ===== Company bookings / passenger tickets (additive, scoped to .cd-*) ===== */
         .cd-bookings { margin-top: var(--space-md); }
@@ -223,7 +247,7 @@
         /* The grid containers above override the UA [hidden] rule, so a zero-result
            filter would otherwise leave stale items visible under the empty state.
            Re-apply hidden so hide/show toggling in company-dashboard.js always wins. */
-        .cd-bus-list[hidden], .cd-trip-list[hidden], .cd-booking-list[hidden], .cd-payment-list[hidden] { display: none; }
+        .cd-bus-list[hidden], .cd-trip-list[hidden], .cd-booking-list[hidden], .cd-payment-list[hidden], .cd-route-list[hidden] { display: none; }
         .cd-payment-card { padding: 1rem; border: 1px solid #e5e7eb; border-radius: 10px; display: flex; flex-direction: column; gap: 0.15rem; }
         .cd-payment-ref { font-weight: 700; color: var(--color-dark); }
         .cd-payment-route { font-size: 0.9rem; color: var(--color-dark); margin: 0.15rem 0; }
@@ -303,22 +327,22 @@
         .cd-pane .cd-stat:nth-child(2)::before { background: #e3a73a; }.cd-pane .cd-stat:nth-child(3)::before { background: #3a82c5; }.cd-pane .cd-stat:nth-child(4)::before { background: #9b6dcc; }.cd-pane .cd-stat:nth-child(5)::before { background: #df785f; }
         .cd-pane .cd-stat-value, .cd-pane .cd-rev-value { font: 700 1.45rem/1.1 Georgia, 'Times New Roman', serif; color: #183d35; }
         .cd-pane .cd-stat-label, .cd-pane .cd-rev-label { margin-top: .36rem; font-size: .65rem; color: #6a7d75; }
-        .cd-quick-actions { display: grid; grid-template-columns: repeat(3,1fr); gap: .75rem; margin-top: 1.2rem; }
+        .cd-quick-actions { display: grid; grid-template-columns: repeat(4,1fr); gap: .75rem; margin-top: 1.2rem; }
         .cd-quick-action { display: flex; align-items: center; gap: .75rem; padding: .9rem; color: #1b473e; background: #f7faf8; border: 1px solid #e1ebe5; border-radius: 12px; cursor: pointer; text-align: left; }
         .cd-quick-action:hover { background: #eef8f2; border-color: #b8dbca; }.cd-quick-action span { display: block; font-weight: 700; }.cd-quick-action small { display: block; margin-top: .18rem; color: #70817a; }
         .cd-quick-icon { display: grid; place-items: center; width: 2.2rem; height: 2.2rem; border-radius: 9px; background: #d9f1e3; color: #177550; font-size: 1.05rem; }
-        .cd-pane .cd-fleet, .cd-pane .cd-trips, .cd-pane .cd-bookings, .cd-pane .cd-profile { margin-top: 0; }.cd-pane .cd-trips, .cd-pane .cd-bookings { padding-top: 1.5rem; margin-top: 1.5rem; border-top: 1px solid #e7eeea; }
+        .cd-pane .cd-fleet, .cd-pane .cd-trips, .cd-pane .cd-bookings, .cd-pane .cd-profile, .cd-pane .cd-routes { margin-top: 0; }.cd-pane .cd-trips, .cd-pane .cd-bookings { padding-top: 1.5rem; margin-top: 1.5rem; border-top: 1px solid #e7eeea; }
         .cd-pane .cd-fleet-head h2, .cd-pane .cd-trips-head h2, .cd-pane .cd-bookings-head h2, .cd-pane .cd-revenue-head h2, .cd-pane .cd-profile-head h2 { color: #173b34; font: 700 1.2rem/1.1 Georgia, 'Times New Roman', serif; }
-        .cd-pane .cd-bus-card, .cd-pane .cd-trip-card, .cd-pane .cd-booking-card, .cd-pane .cd-payment-card { border-color: #e1eae5; border-radius: 12px; box-shadow: none; transition: transform .18s ease, box-shadow .18s ease; }
-        .cd-pane .cd-bus-card:hover, .cd-pane .cd-trip-card:hover, .cd-pane .cd-booking-card:hover, .cd-pane .cd-payment-card:hover { transform: translateY(-2px); box-shadow: 0 9px 20px rgba(19,63,51,.08); }
+        .cd-pane .cd-bus-card, .cd-pane .cd-trip-card, .cd-pane .cd-booking-card, .cd-pane .cd-payment-card, .cd-pane .cd-route-card { border-color: #e1eae5; border-radius: 12px; box-shadow: none; transition: transform .18s ease, box-shadow .18s ease; }
+        .cd-pane .cd-bus-card:hover, .cd-pane .cd-trip-card:hover, .cd-pane .cd-booking-card:hover, .cd-pane .cd-payment-card:hover, .cd-pane .cd-route-card:hover { transform: translateY(-2px); box-shadow: 0 9px 20px rgba(19,63,51,.08); }
         .cd-pane .btn-primary { background: #177550; border-color: #177550; }.cd-pane .btn-primary:hover { background: #105c3e; border-color: #105c3e; }
         .cd-pane input, .cd-pane select, .cd-pane textarea { border-color: #ccdcd3; border-radius: 8px; }.cd-pane input:focus, .cd-pane select:focus, .cd-pane textarea:focus { outline: 3px solid rgba(49,164,118,.16); border-color: #31a476; }
-        @media (max-width: 900px) { .cd-layout { grid-template-columns: 1fr; }.cd-sidebar { position: static; }.cd-nav { grid-template-columns: repeat(6, minmax(9rem,1fr)); overflow-x: auto; }.cd-nav button { white-space: nowrap; }.cd-pane .cd-stats, .cd-pane .cd-revenue-summary { grid-template-columns: repeat(3, 1fr); } }
-        @media (max-width: 600px) { .cd-page { padding: 1.15rem 0 2rem; }.cd-workspace-head { align-items: flex-start; flex-direction: column; gap: .75rem; }.cd-workspace-head h1 { font-size: 2rem; }.cd-live { padding: .4rem .65rem; border-radius: 99px; background: #e7f4ec; }.cd-sidebar, .cd-pane { border-radius: 14px; }.cd-nav { grid-template-columns: repeat(6, max-content); }.cd-nav button { padding: .66rem; }.cd-nav button span { display: none; }.cd-pane { padding: 1rem; }.cd-pane .cd-stats, .cd-pane .cd-revenue-summary, .cd-quick-actions { grid-template-columns: repeat(2, 1fr); }.cd-quick-action { align-items: flex-start; }.cd-quick-action:last-child { grid-column: span 2; }.cd-pane .cd-stat-value, .cd-pane .cd-rev-value { font-size: 1.2rem; } }
+        @media (max-width: 900px) { .cd-layout { grid-template-columns: 1fr; }.cd-sidebar { position: static; }.cd-nav { grid-template-columns: repeat(7, minmax(9rem,1fr)); overflow-x: auto; }.cd-nav button { white-space: nowrap; }.cd-pane .cd-stats, .cd-pane .cd-revenue-summary { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 600px) { .cd-page { padding: 1.15rem 0 2rem; }.cd-workspace-head { align-items: flex-start; flex-direction: column; gap: .75rem; }.cd-workspace-head h1 { font-size: 2rem; }.cd-live { padding: .4rem .65rem; border-radius: 99px; background: #e7f4ec; }.cd-sidebar, .cd-pane { border-radius: 14px; }.cd-nav { grid-template-columns: repeat(7, max-content); }.cd-nav button { padding: .66rem; }.cd-nav button span { display: none; }.cd-pane { padding: 1rem; }.cd-pane .cd-stats, .cd-pane .cd-revenue-summary, .cd-quick-actions { grid-template-columns: repeat(2, 1fr); }.cd-quick-action { align-items: flex-start; }.cd-pane .cd-stat-value, .cd-pane .cd-rev-value { font-size: 1.2rem; } }
 
         /* ===== Operational records refresh: strong sans-serif system ===== */
         .cd-workspace, .cd-workspace * { font-family: 'DM Sans', 'Segoe UI', sans-serif; }
-        .cd-workspace-head h1, .cd-pane-title h2, .cd-pane .cd-name, .cd-pane .cd-fleet-head h2, .cd-pane .cd-trips-head h2, .cd-pane .cd-bookings-head h2, .cd-pane .cd-revenue-head h2, .cd-pane .cd-profile-head h2, .cd-pane .cd-stat-value, .cd-pane .cd-rev-value { font-family: 'Outfit', 'Segoe UI', sans-serif; font-weight: 800; letter-spacing: -.035em; }
+        .cd-workspace-head h1, .cd-pane-title h2, .cd-pane .cd-name, .cd-pane .cd-fleet-head h2, .cd-pane .cd-trips-head h2, .cd-pane .cd-bookings-head h2, .cd-pane .cd-revenue-head h2, .cd-pane .cd-profile-head h2, .cd-pane .cd-routes-head h2, .cd-pane .cd-stat-value, .cd-pane .cd-rev-value { font-family: 'Outfit', 'Segoe UI', sans-serif; font-weight: 800; letter-spacing: -.035em; }
         .cd-pane .cd-stat-value, .cd-pane .cd-rev-value { font-size: 1.55rem; }
         .cd-record-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: .45rem; margin: .9rem 0; }.cd-record-meta span { display: block; min-width: 0; padding: .55rem .6rem; color: #547067; background: #f4f8f6; border-radius: 8px; font-size: .73rem; font-weight: 700; }.cd-record-meta b { display: block; overflow: hidden; color: #1d483d; font-size: .84rem; text-overflow: ellipsis; white-space: nowrap; }
         .cd-pane .cd-bus-list, .cd-pane .cd-trip-list { grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 1rem; }.cd-pane .cd-bus-card, .cd-pane .cd-trip-card { padding: 1.1rem; border-top: 4px solid #3aa377; }.cd-pane .cd-trip-card { border-top-color: #4f82b6; }.cd-pane .cd-bus-name, .cd-pane .cd-trip-route { color: #153a31; font-size: 1rem; font-weight: 800; letter-spacing: -.01em; }.cd-pane .cd-bus-actions, .cd-pane .cd-trip-actions { padding-top: .75rem; border-top: 1px solid #e8efeb; }.cd-pane .cd-bus-actions select { flex: 1; min-width: 8.5rem; }
@@ -326,8 +350,9 @@
         .cd-revenue-filters, .cd-bookings-filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .65rem; padding: .85rem; margin: 1rem 0 1.15rem; background: #f2f7f4; border: 1px solid #dce9e1; border-radius: 12px; }.cd-revenue-filters label, .cd-bookings-filters label { align-self: end; margin: 0; font-size: .7rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }.cd-revenue-filters select, .cd-revenue-filters input, .cd-bookings-filters select { width: 100%; min-width: 0; min-height: 2.5rem; margin: 0; background: white; font-weight: 700; }.cd-revenue-filters label { margin-bottom: -.35rem; }.cd-revenue-filters label:nth-of-type(1) { grid-column: 1; grid-row: 1; }.cd-revenue-filters select:nth-of-type(1) { grid-column: 1; grid-row: 2; }.cd-revenue-filters label:nth-of-type(2) { grid-column: 2; grid-row: 1; }.cd-revenue-filters select:nth-of-type(2) { grid-column: 2; grid-row: 2; }.cd-revenue-filters label:nth-of-type(3) { grid-column: 3; grid-row: 1; }.cd-revenue-filters input:nth-of-type(1) { grid-column: 3; grid-row: 2; }.cd-revenue-filters label:nth-of-type(4) { grid-column: 4; grid-row: 1; }.cd-revenue-filters input:nth-of-type(2) { grid-column: 4; grid-row: 2; }
         .cd-bus-modal { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 1rem; background: rgba(8, 31, 25, .58); backdrop-filter: blur(4px); }.cd-bus-modal[hidden] { display: none; }.cd-bus-modal-box { width: min(100%, 650px); max-height: min(90vh, 760px); overflow: auto; padding: 1.4rem; background: #fff; border: 1px solid #dfe9e3; border-radius: 18px; box-shadow: 0 25px 70px rgba(5, 26, 20, .28); }.cd-bus-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid #e5ede8; }.cd-bus-modal-head p { margin: .3rem 0 0; color: #647a71; font-size: .85rem; }.cd-bus-modal-close { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; padding: 0; color: #275147; background: #edf5f0; border: 0; border-radius: 50%; cursor: pointer; font-size: 1.25rem; line-height: 1; }.cd-bus-modal .cd-bus-form { display: block; padding: 0; margin: 0; border: 0; }.cd-bus-modal .cd-bus-form h3 { display: none; }.cd-bus-modal .cd-bus-form label { margin-top: .8rem; color: #254a40; font-size: .78rem; font-weight: 800; letter-spacing: .025em; }.cd-bus-modal .cd-bus-form input, .cd-bus-modal .cd-bus-form select { min-height: 2.7rem; background: #fbfdfc; }.cd-bus-modal .cd-bus-form-actions { padding-top: 1rem; margin-top: 1.25rem; border-top: 1px solid #e5ede8; }
         .cd-trip-modal { position: fixed; inset: 0; z-index: 101; display: grid; place-items: center; padding: 1rem; background: rgba(8, 31, 25, .58); backdrop-filter: blur(4px); }.cd-trip-modal[hidden] { display: none; }.cd-trip-modal-box { width: min(100%, 650px); max-height: min(90vh, 760px); overflow: auto; padding: 1.4rem; background: #fff; border: 1px solid #dfe9e3; border-radius: 18px; box-shadow: 0 25px 70px rgba(5, 26, 20, .28); }.cd-trip-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid #e5ede8; }.cd-trip-modal-head p { margin: .3rem 0 0; color: #647a71; font-size: .85rem; }.cd-trip-modal-close { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; padding: 0; color: #275147; background: #edf5f0; border: 0; border-radius: 50%; cursor: pointer; font-size: 1.25rem; line-height: 1; }.cd-trip-modal .cd-trip-form { display: block; padding: 0; margin: 0; border: 0; }.cd-trip-modal .cd-trip-form h3 { display: none; }.cd-trip-modal .cd-trip-form label { margin-top: .8rem; color: #254a40; font-size: .78rem; font-weight: 800; letter-spacing: .025em; }.cd-trip-modal .cd-trip-form input, .cd-trip-modal .cd-trip-form select { min-height: 2.7rem; background: #fbfdfc; }.cd-trip-modal .cd-trip-form-actions { padding-top: 1rem; margin-top: 1.25rem; border-top: 1px solid #e5ede8; }
-        @media (max-width: 900px) { .cd-nav { grid-template-columns: repeat(6, minmax(9rem, 1fr)); }.cd-revenue-filters, .cd-bookings-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }.cd-revenue-filters label:nth-of-type(n), .cd-revenue-filters select:nth-of-type(n), .cd-revenue-filters input:nth-of-type(n) { grid-column: auto; grid-row: auto; } }
-        @media (max-width: 600px) { .cd-nav { grid-template-columns: repeat(6, max-content); }.cd-record-meta { grid-template-columns: 1fr 1fr; }.cd-pane .cd-bus-list, .cd-pane .cd-trip-list { grid-template-columns: 1fr; }.cd-revenue-filters, .cd-bookings-filters { grid-template-columns: 1fr; }.cd-bus-modal { align-items: end; padding: .5rem; }.cd-bus-modal-box { max-height: 94vh; border-radius: 16px 16px 10px 10px; padding: 1.1rem; } }
+        .cd-trip-modal .cd-route-form { display: block; padding: 0; margin: 0; border: 0; }.cd-trip-modal .cd-route-form h3 { display: none; }.cd-trip-modal .cd-route-form label { margin-top: .8rem; color: #254a40; font-size: .78rem; font-weight: 800; letter-spacing: .025em; }.cd-trip-modal .cd-route-form input, .cd-trip-modal .cd-route-form select { min-height: 2.7rem; background: #fbfdfc; }.cd-trip-modal .cd-route-form-actions { padding-top: 1rem; margin-top: 1.25rem; border-top: 1px solid #e5ede8; }
+        @media (max-width: 900px) { .cd-nav { grid-template-columns: repeat(7, minmax(9rem, 1fr)); }.cd-revenue-filters, .cd-bookings-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }.cd-revenue-filters label:nth-of-type(n), .cd-revenue-filters select:nth-of-type(n), .cd-revenue-filters input:nth-of-type(n) { grid-column: auto; grid-row: auto; } }
+        @media (max-width: 600px) { .cd-nav { grid-template-columns: repeat(7, max-content); }.cd-record-meta { grid-template-columns: 1fr 1fr; }.cd-pane .cd-bus-list, .cd-pane .cd-trip-list { grid-template-columns: 1fr; }.cd-revenue-filters, .cd-bookings-filters { grid-template-columns: 1fr; }.cd-bus-modal { align-items: end; padding: .5rem; }.cd-bus-modal-box { max-height: 94vh; border-radius: 16px 16px 10px 10px; padding: 1.1rem; } }
     </style>
 </head>
 <body data-auth-required="1" data-auth-role="company" data-auth-company-approved="1">
@@ -987,6 +1012,52 @@
             <div id="payment-error" class="cd-revenue-error auth-message" hidden></div>
             <div id="payment-empty" class="cd-revenue-empty" hidden>No payments found for your trips yet. Payments will appear here once passengers pay for seats on your scheduled trips.</div>
             <div id="payment-list" class="cd-payment-list" hidden></div>
+        </section>
+
+        <!-- ===== Routes ===== -->
+        <section id="company-routes" class="cd-routes" hidden>
+            <div class="cd-routes-head">
+                <h2>Routes</h2>
+                <button type="button" id="btn-add-route" class="btn btn-primary">Add Route</button>
+            </div>
+
+            <p id="route-loading" class="cd-routes-msg" hidden>Loading the route catalog&hellip;</p>
+            <div id="route-error" class="cd-routes-error auth-message" hidden></div>
+            <div id="route-empty" class="cd-routes-empty" hidden>No routes in the catalog yet. Add the first city pair to get started.</div>
+            <div id="route-list" class="cd-route-list" hidden></div>
+
+            <form id="route-form" class="cd-route-form" hidden novalidate>
+                <input type="hidden" id="route-id">
+                <h3 id="route-form-title">Add Route</h3>
+                <div class="cd-route-form-row">
+                    <div>
+                        <label for="route-from">Departure City *</label>
+                        <input type="text" id="route-from" maxlength="120" placeholder="e.g. Addis Ababa">
+                    </div>
+                    <div>
+                        <label for="route-to">Destination City *</label>
+                        <input type="text" id="route-to" maxlength="120" placeholder="e.g. Bahir Dar">
+                    </div>
+                </div>
+                <div class="cd-route-form-row">
+                    <div>
+                        <label for="route-duration">Travel Time (minutes)</label>
+                        <input type="number" id="route-duration" min="1" max="1440" step="1" placeholder="e.g. 540">
+                    </div>
+                    <div>
+                        <label for="route-status">Route Status</label>
+                        <select id="route-status">
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+                <p id="route-form-error" class="cd-route-form-error" role="alert"></p>
+                <div class="cd-route-form-actions">
+                    <button type="button" id="route-form-cancel" class="btn">Cancel</button>
+                    <button type="submit" id="route-form-submit" class="btn btn-primary">Save Route</button>
+                </div>
+            </form>
         </section>
 
         <!-- ===== Company Profile ===== -->

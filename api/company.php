@@ -35,6 +35,12 @@ declare(strict_types=1);
  *                                                     (authenticated company role only; full editable profile)
  *   POST api/company.php?action=profile_update      -> { success, message, company }
  *                                                     (authenticated company role only; updates own profile)
+ *   GET  api/company.php?action=routes               -> { success, company_id, routes }
+ *                                                     (authenticated company role only; shared platform route catalog)
+ *   POST api/company.php?action=route_create         -> { success, route }
+ *                                                     (authenticated company role only)
+ *   POST api/company.php?action=route_update         -> { success, route }
+ *                                                     (authenticated company role only)
  *
  * Only approved companies are exposed publicly through list/get. Ratings and
  * review counts are computed from the reviews table. Destinations / fleet /
@@ -101,6 +107,12 @@ function valid_bus_status(string $value): bool
     return in_array($value, ['active', 'maintenance', 'inactive'], true);
 }
 
+/** True when the value is one of the schema's route status ENUM values. */
+function valid_route_status(string $value): bool
+{
+    return in_array($value, ['active', 'inactive'], true);
+}
+
 /** Whether a key was present in the submitted payload. */
 function has_key(array $input, string $key): bool
 {
@@ -117,6 +129,20 @@ function bus_payload(array $row): array
         'model' => $row['model'] ?? null,
         'bus_type' => $row['bus_type'],
         'seat_count' => (int) $row['seat_count'],
+        'status' => $row['status'],
+        'created_at' => $row['created_at'],
+        'updated_at' => $row['updated_at'],
+    ];
+}
+
+/** Normalize one raw routes row into the operator-facing payload shape. */
+function route_payload(array $row): array
+{
+    return [
+        'id' => (int) $row['id'],
+        'from_city' => $row['from_city'],
+        'to_city' => $row['to_city'],
+        'duration' => $row['duration'] !== null ? (int) $row['duration'] : null,
         'status' => $row['status'],
         'created_at' => $row['created_at'],
         'updated_at' => $row['updated_at'],
@@ -1690,6 +1716,348 @@ function handle_trip_delete(PDO $pdo): void
     }
 }
 /* ============================================================
+ Route catalog management
+   ------------------------------------------------------------
+   Routes are the platform's shared reference data (a city pair
+   + optional duration) that trips reference through route_id.
+   They are NEVER company-owned: every approved company operates
+   against the same catalog. These endpoints let an authenticated
+   company operator add new city pairs, edit them and toggle their
+   active status. Deactivation is allowed even when trips already
+   use the route — existing trips keep their route; the route is
+   simply not offered for NEW trip creations (fetch_global_active_routes
+   only returns status = 'active').
+   ============================================================ */
+
+/**
+ * Shared SELECT for route rows. Sorting is the natural catalog order
+ * (from city, then to city) so the dashboard list reads consistently.
+ */
+function managed_route_select_sql(): string
+{
+    return '
+        SELECT id, from_city, to_city, duration, status, created_at, updated_at
+        FROM routes
+        ORDER BY from_city ASC, to_city ASC
+    ';
+}
+
+/**
+ * Load every route in the shared platform catalog (active and inactive).
+ * Operators manage routes from this screen.
+ */
+function fetch_managed_routes(PDO $pdo): array
+{
+    $stmt = $pdo->query(managed_route_select_sql());
+
+    $out = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $out[] = route_payload($row);
+    }
+
+    return $out;
+}
+
+/**
+ * A single route row from the shared catalog, or a generic 404. Routes are
+ * not company-owned, so there is no company_id scope to enforce here — the
+ * row either exists in the catalog or it does not.
+ */
+function fetch_managed_route_row(PDO $pdo, int $routeId): ?array
+{
+    $stmt = $pdo->prepare('
+        SELECT id, from_city, to_city, duration, status, created_at, updated_at
+        FROM routes
+        WHERE id = :id
+        LIMIT 1
+    ');
+    $stmt->execute([':id' => $routeId]);
+    $row = $stmt->fetch();
+
+    return $row !== false ? route_payload($row) : null;
+}
+
+/** A non-empty, trimmed city name within the schema's column limit. */
+function route_city_or_error(mixed $raw, string $label): string
+{
+    $city = trim((string) $raw);
+    if ($city === '') {
+        auth_response(422, [
+            'success' => false,
+            'message' => $label . ' is required.',
+        ]);
+    }
+    if (mb_strlen($city) > 120) {
+        auth_response(422, [
+            'success' => false,
+            'message' => $label . ' must be at most 120 characters.',
+        ]);
+    }
+
+    return $city;
+}
+
+/**
+ * An optional route travel time in whole minutes (1-1440), or null when the
+ * operator leaves it blank. Rejects zero/negative/huge/imprecise values that
+ * would be nonsense for a scheduled bus departure and cannot fit the column.
+ */
+function route_duration_or_error(mixed $raw): ?int
+{
+    $value = trim((string) $raw);
+    if ($value === '') {
+        return null;
+    }
+
+    if (preg_match('/^\d+$/', $value) !== 1) {
+        auth_response(422, [
+            'success' => false,
+            'message' => 'Travel time must be a whole number of minutes.',
+        ]);
+    }
+
+    $minutes = (int) $value;
+    if ($minutes < 1 || $minutes > 1440) {
+        auth_response(422, [
+            'success' => false,
+            'message' => 'Travel time must be between 1 and 1440 minutes.',
+        ]);
+    }
+
+    return $minutes;
+}
+
+/**
+ * The route being edited exists in the shared catalog, or a generic 404.
+ * Deleted/nonexistent route ids answer the same as "not found".
+ */
+function existing_route_or_error(PDO $pdo, mixed $raw): int
+{
+    $routeId = positive_int_or_error($raw, 'A valid route id is required.');
+
+    $stmt = $pdo->prepare('SELECT id FROM routes WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $routeId]);
+
+    if ($stmt->fetch() === false) {
+        auth_response(404, [
+            'success' => false,
+            'message' => 'Route not found.',
+        ]);
+    }
+
+    return $routeId;
+}
+
+/**
+ * True when a route between the same two cities already exists (case-
+ * insensitive). Routes are a shared catalog, so the check is intentionally
+ * not company-scoped. The DB unique key can be bypassed on deployments where
+ * stale routes rows carry a NULL company_id (MySQL lets multiple NULLs through
+ * a multi-column unique index), so the app-level check is the real guard and
+ * the PDO 23000 catch is only a fallback.
+ */
+function route_exists_between(PDO $pdo, string $fromCity, string $toCity, ?int $excludeRouteId = null): bool
+{
+    $sql = '
+        SELECT id FROM routes
+        WHERE LOWER(from_city) = LOWER(:from_city)
+          AND LOWER(to_city) = LOWER(:to_city)
+    ';
+    $params = [':from_city' => $fromCity, ':to_city' => $toCity];
+
+    if ($excludeRouteId !== null) {
+        $sql .= ' AND id <> :route_id';
+        $params[':route_id'] = $excludeRouteId;
+    }
+
+    $sql .= ' LIMIT 1';
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+
+    return $stmt->fetch() !== false;
+}
+
+/** GET /api/company.php?action=routes — the shared platform route catalog. */
+function handle_routes(PDO $pdo): void
+{
+    $user = requireRole('company');
+    $company = require_company_scope($pdo, (int) $user['id']);
+
+    auth_response(200, [
+        'success' => true,
+        'company_id' => (int) $company['id'],
+        'routes' => fetch_managed_routes($pdo),
+    ]);
+}
+
+/** POST /api/company.php?action=route_create — add a city pair to the catalog. */
+function handle_route_create(PDO $pdo): void
+{
+    require_company_post();
+    $user = requireRole('company');
+    $company = require_company_scope($pdo, (int) $user['id']);
+
+    $input = company_input();
+
+    $fromCity = route_city_or_error($input['from_city'] ?? '', 'Departure city');
+    $toCity = route_city_or_error($input['to_city'] ?? '', 'Destination city');
+    $status = trim((string) ($input['status'] ?? 'active'));
+    $duration = route_duration_or_error($input['duration'] ?? null);
+
+    if (mb_strtolower($fromCity) === mb_strtolower($toCity)) {
+        auth_response(422, [
+            'success' => false,
+            'message' => 'Departure and destination cities must be different.',
+        ]);
+    }
+    if (!valid_route_status($status)) {
+        auth_response(422, [
+            'success' => false,
+            'message' => 'Invalid route status. Use active or inactive.',
+        ]);
+    }
+    if (route_exists_between($pdo, $fromCity, $toCity)) {
+        auth_response(409, [
+            'success' => false,
+            'message' => 'A route between these cities already exists.',
+        ]);
+    }
+
+    try {
+        $ins = $pdo->prepare('
+            INSERT INTO routes (from_city, to_city, duration, status)
+            VALUES (:from_city, :to_city, :duration, :status)
+        ');
+        $ins->execute([
+            ':from_city' => $fromCity,
+            ':to_city' => $toCity,
+            ':duration' => $duration,
+            ':status' => $status,
+        ]);
+        $newId = (int) $pdo->lastInsertId();
+    } catch (PDOException $e) {
+        if ((int) $e->getCode() === 23000) {
+            auth_response(409, [
+                'success' => false,
+                'message' => 'A route between these cities already exists.',
+            ]);
+        }
+        throw $e;
+    }
+
+    auth_response(201, [
+        'success' => true,
+        'message' => 'Route added.',
+        'route' => fetch_managed_route_row($pdo, $newId),
+    ]);
+}
+
+/**
+ * POST /api/company.php?action=route_update — edit the shared catalog route
+ * and/or toggle its active status. Route ids are global (not company-owned),
+ * so the write is a plain id-scoped UPDATE.
+ */
+function handle_route_update(PDO $pdo): void
+{
+    require_company_post();
+    $user = requireRole('company');
+    $company = require_company_scope($pdo, (int) $user['id']);
+
+    $input = company_input();
+
+    $routeId = existing_route_or_error($pdo, $input['route_id'] ?? null);
+
+    $hasFrom = has_key($input, 'from_city') && trim((string) $input['from_city']) !== '';
+    $hasTo = has_key($input, 'to_city') && trim((string) $input['to_city']) !== '';
+    $hasDuration = has_key($input, 'duration');
+    $hasStatus = has_key($input, 'status') && trim((string) $input['status']) !== '';
+
+    if (!$hasFrom && !$hasTo && !$hasDuration && !$hasStatus) {
+        auth_response(422, [
+            'success' => false,
+            'message' => 'At least one field to update is required.',
+        ]);
+    }
+
+    $fromCity = $hasFrom ? route_city_or_error($input['from_city'], 'Departure city') : null;
+    $toCity = $hasTo ? route_city_or_error($input['to_city'], 'Destination city') : null;
+    $duration = $hasDuration ? route_duration_or_error($input['duration']) : null;
+    $status = $hasStatus ? trim((string) $input['status']) : null;
+
+    if ($status !== null && !valid_route_status($status)) {
+        auth_response(422, [
+            'success' => false,
+            'message' => 'Invalid route status. Use active or inactive.',
+        ]);
+    }
+
+    /* When both city fields are submitted, they must still be different. */
+    if ($hasFrom && $hasTo && mb_strtolower($fromCity) === mb_strtolower($toCity)) {
+        auth_response(422, [
+            'success' => false,
+            'message' => 'Departure and destination cities must be different.',
+        ]);
+    }
+
+    /* If either city changes, reject a pair that collides with another route. */
+    if ($hasFrom || $hasTo) {
+        $current = $pdo->prepare('SELECT from_city, to_city FROM routes WHERE id = :id LIMIT 1');
+        $current->execute([':id' => $routeId]);
+        $currentRow = $current->fetch();
+
+        $checkFrom = $hasFrom ? $fromCity : ($currentRow['from_city'] ?? '');
+        $checkTo = $hasTo ? $toCity : ($currentRow['to_city'] ?? '');
+
+        if (
+            $checkFrom !== '' && $checkTo !== ''
+            && route_exists_between($pdo, $checkFrom, $checkTo, $routeId)
+        ) {
+            auth_response(409, [
+                'success' => false,
+                'message' => 'A route between these cities already exists.',
+            ]);
+        }
+    }
+
+    $sets = [];
+    $params = [':route_id' => $routeId];
+    if ($hasFrom) { $sets[] = 'from_city = :from_city'; $params[':from_city'] = $fromCity; }
+    if ($hasTo) { $sets[] = 'to_city = :to_city'; $params[':to_city'] = $toCity; }
+    if ($hasDuration) { $sets[] = 'duration = :duration'; $params[':duration'] = $duration; }
+    if ($hasStatus) { $sets[] = 'status = :status'; $params[':status'] = $status; }
+
+    try {
+        $sql = 'UPDATE routes SET ' . implode(', ', $sets) . ' WHERE id = :route_id';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+
+        /* A route that exists but matches no rows after this update is a
+           genuine catalog error (not a filtering concern), so surface it. */
+        if ($stmt->rowCount() === 0) {
+            auth_response(404, [
+                'success' => false,
+                'message' => 'Route not found.',
+            ]);
+        }
+
+        auth_response(200, [
+            'success' => true,
+            'message' => 'Route updated.',
+            'route' => fetch_managed_route_row($pdo, $routeId),
+        ]);
+    } catch (PDOException $e) {
+        if ((int) $e->getCode() === 23000) {
+            auth_response(409, [
+                'success' => false,
+                'message' => 'A route between these cities already exists.',
+            ]);
+        }
+        throw $e;
+    }
+}
+
+/* ============================================================
  Company bookings / passenger manifests
    ------------------------------------------------------------
    READ-ONLY operator visibility: a logged-in approved company may
@@ -3035,10 +3403,19 @@ try {
     if ($action === 'profile_update') {
         handle_company_profile_update($pdo);
     }
+    if ($action === 'routes') {
+        handle_routes($pdo);
+    }
+    if ($action === 'route_create') {
+        handle_route_create($pdo);
+    }
+    if ($action === 'route_update') {
+        handle_route_update($pdo);
+    }
 
     auth_response(400, [
         'success' => false,
-        'message' => 'Unsupported action. Use action=list, action=get, action=overview, action=buses, action=bus_create, action=bus_update, action=trips, action=trip_create, action=trip_update, action=trip_status, action=trip_delete, action=bookings, action=booking_create, action=booking_cancel, action=manifest, action=revenue, action=payments, action=profile or action=profile_update.',
+        'message' => 'Unsupported action. Use action=list, action=get, action=overview, action=buses, action=bus_create, action=bus_update, action=trips, action=trip_create, action=trip_update, action=trip_status, action=trip_delete, action=bookings, action=booking_create, action=booking_cancel, action=manifest, action=revenue, action=payments, action=profile, action=profile_update, action=routes, action=route_create or action=route_update.',
     ]);
 } catch (Throwable $e) {
     auth_response(500, [
