@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Company operator dashboard for ET Transport">
     <title>Company Dashboard | ET Transport</title>
-    <link rel="stylesheet" href="css/style.css?v=20260903-refund-bank-toggle">
-    <link rel="stylesheet" href="css/walkin-booking.css?v=20260903-refund-bank-toggle">
+    <link rel="stylesheet" href="css/style.css?v=20260903-reason-suggestions">
+    <link rel="stylesheet" href="css/walkin-booking.css?v=20260903-reason-suggestions">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
@@ -165,6 +165,11 @@
         .cd-cancel-field-wide { grid-column: 1 / -1; }
         .cd-cancel-group { margin: 0.85rem 0 0; }
         .cd-cancel-label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--color-dark); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.4rem; }
+        .cd-cancel-suggestions { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+        .cd-cancel-suggestion { padding: 0.4rem 0.7rem; border: 1px solid #d7e3dd; background: #f4faf7; color: #1f5a44; border-radius: 20px; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: border-color 0.15s, background 0.15s, color 0.15s; }
+        .cd-cancel-suggestion:hover { border-color: #18b85c; background: #e6f6ee; color: #14532d; }
+        .cd-cancel-suggestion:focus-visible { outline: 2px solid #18b85c; outline-offset: 1px; }
+        .cd-cancel-suggestion.is-used { border-style: dashed; opacity: 0.6; }
         .cd-cancel-refund-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
         .cd-cancel-radio { display: flex; align-items: flex-start; gap: 0.4rem; padding: 0.55rem 0.65rem; border: 1px solid #e5e7eb; border-radius: 9px; background: #fff; cursor: pointer; font-size: 0.85rem; color: #374151; }
         .cd-cancel-radio input { margin: 0.15rem 0 0; cursor: pointer; }
@@ -820,6 +825,13 @@
                         </div>
 
                         <div class="cd-cancel-group">
+                            <span class="cd-cancel-label">Quick reasons</span>
+                            <div class="cd-cancel-suggestions" id="cancel-reason-suggestions" role="group" aria-label="Quick cancellation reasons">
+                                <!-- Populated by JS based on the selected refund type. -->
+                            </div>
+                        </div>
+
+                        <div class="cd-cancel-group">
                             <label class="cd-cancel-label" for="cancel-reason">Reason for cancellation *</label>
                             <textarea id="cancel-reason" class="cd-cancel-reason" rows="3" maxlength="500" required placeholder="e.g. Passenger requested, coach breakdown, route change..."></textarea>
                         </div>
@@ -1040,6 +1052,6 @@
 
     <script src="js/main.js"></script>
     <script src="js/auth.js"></script>
-    <script src="js/company-dashboard.js?v=20260903-refund-bank"></script>
+    <script src="js/company-dashboard.js?v=20260903-reason-suggestions-v2"></script>
 </body>
 </html>

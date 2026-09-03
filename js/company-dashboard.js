@@ -1378,6 +1378,71 @@
        cancelBooking() posts refund_type + reason to the API. */
     var cancelBookingId = null;
 
+    /* Quick-reason suggestion buttons inside the cancel modal. Clicking one
+       fills the reason textarea, so an operator never has to type the common
+       reasons from scratch. The list adapts to the chosen refund type. */
+    var CANCEL_REASON_SUGGESTIONS = {
+        none: [
+            'Passenger requested to cancel',
+            'Passenger booked by mistake',
+            'Duplicate booking — confirmed a second seat by mistake',
+            'Passenger chose another trip / company',
+            'Passenger did not show up at departure time',
+            'Booking made with wrong date / route',
+            'Trip cancelled because route closing',
+            'Trip cancelled because bus had been damaged',
+            'Trip cancelled due to bad weather / road conditions',
+            'Trip cancelled because driver / crew unavailable'
+        ],
+        full: [
+            'Full refund — Route closed',
+            'Full refund — Trip cancelled because route closing',
+            'Full refund — Bus / coach breakdown',
+            'Full refund — Bus had been damaged',
+            'Full refund — Trip cancelled by company',
+            'Full refund — Departure time rescheduled by company',
+            'Full refund — Passenger could not travel (medical / emergency)',
+            'Full refund — Overbooked by company',
+            'Full refund — Driver / crew unavailable',
+            'Full refund — Security / safety concern on the route'
+        ],
+        half: [
+            'Half refund — Passenger did not show up at time',
+            'Half refund — Passenger wanted to cancel',
+            'Half refund — Late cancellation (within T-24h)',
+            'Half refund — Passenger arrived late for boarding',
+            'Half refund — Route changed after booking',
+            'Half refund — Trip cancelled because route closing',
+            'Half refund — Bus had been damaged'
+        ]
+    };
+
+    function renderCancelReasonSuggestions() {
+        var container = byId('cancel-reason-suggestions');
+        if (!container) { return; }
+        var refundType = 'none';
+        var radios = document.querySelectorAll('input[name="cancel-refund-type"]');
+        for (var r = 0; r < radios.length; r++) {
+            if (radios[r].checked) { refundType = radios[r].value; break; }
+        }
+        var list = CANCEL_REASON_SUGGESTIONS[refundType] || CANCEL_REASON_SUGGESTIONS.none;
+        container.innerHTML = list.map(function (text) {
+            return '<button type="button" class="cd-cancel-suggestion" data-reason="' +
+                escHtml(text).replace(/"/g, '&quot;') + '">' + escHtml(text) + '</button>';
+        }).join('');
+        container.querySelectorAll('.cd-cancel-suggestion').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var reasonEl = byId('cancel-reason');
+                if (reasonEl) {
+                    reasonEl.value = this.getAttribute('data-reason');
+                    reasonEl.removeAttribute('aria-invalid');
+                }
+                var msg = byId('cancel-modal-msg');
+                if (msg) { msg.hidden = true; msg.textContent = ''; msg.className = 'cd-cancel-msg'; }
+            });
+        });
+    }
+
     function openCancelBookingModal(bookingId, bookingOverride) {
         var modal = byId('cancel-booking-modal');
         if (!modal || !bookingId) { return; }
@@ -1418,6 +1483,7 @@
         for (var r = 0; r < radios.length; r++) {
             radios[r].checked = radios[r].value === 'none';
         }
+        renderCancelReasonSuggestions();
         var reason = byId('cancel-reason');
         if (reason) { reason.value = ''; reason.removeAttribute('aria-invalid'); }
 
@@ -3080,6 +3146,16 @@
         if (cancelKeep) { cancelKeep.addEventListener('click', closeCancelBookingModal); }
         var cancelConfirm = byId('cancel-confirm-btn');
         if (cancelConfirm) { cancelConfirm.addEventListener('click', submitCancelBooking); }
+        var cancelRefundRadios = document.querySelectorAll('input[name="cancel-refund-type"]');
+        for (var cr = 0; cr < cancelRefundRadios.length; cr++) {
+            cancelRefundRadios[cr].addEventListener('change', function () {
+                renderCancelReasonSuggestions();
+                var reasonEl = byId('cancel-reason');
+                if (reasonEl) { reasonEl.removeAttribute('aria-invalid'); }
+                var msg = byId('cancel-modal-msg');
+                if (msg) { msg.hidden = true; msg.textContent = ''; msg.className = 'cd-cancel-msg'; }
+            });
+        }
 
         /* ----- Trip-cancel confirmation modal wiring ----- */
         var tripCancelModal = byId('trip-cancel-modal');
