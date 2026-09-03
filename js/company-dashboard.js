@@ -521,15 +521,28 @@
         var html = routes.map(function (r) {
             var badge = r.status === 'inactive' ? 'inactive' : '';
             var dur = routeDurationLabel(r.duration);
-            return '<div class="cd-route-card" data-route-id="' + r.id + '">' +
-                '<span class="cd-route-name">' + escHtml(r.from_city) + ' → ' + escHtml(r.to_city) + '</span>' +
-                '<span class="cd-route-badge ' + badge + '">' + escHtml(r.status) + '</span>' +
-                '<span class="cd-route-duration">' + dur + '</span>' +
-                '<div class="cd-route-actions">' +
-                    '<button type="button" class="btn btn-secondary btn-sm" data-route-edit="' + r.id + '">Edit</button>' +
-                    '<button type="button" class="btn btn-danger btn-sm" data-route-delete="' + r.id + '">Delete</button>' +
+            return '<article class="cd-route-card" data-route-id="' + r.id + '">' +
+                '<div class="cd-route-top">' +
+                    '<div class="cd-route-cities">' +
+                        '<span class="cd-route-city">' + escHtml(r.from_city) + '</span>' +
+                        '<svg class="cd-route-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>' +
+                        '<span class="cd-route-city">' + escHtml(r.to_city) + '</span>' +
+                    '</div>' +
+                    '<span class="cd-route-badge ' + badge + '">' + escHtml(r.status) + '</span>' +
                 '</div>' +
-            '</div>';
+                '<div class="cd-route-duration">' +
+                    '<svg class="cd-route-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>' +
+                    '<span>' + dur + '</span>' +
+                '</div>' +
+                '<div class="cd-route-actions">' +
+                    '<button type="button" class="btn btn-secondary btn-sm" data-route-edit="' + r.id + '">' +
+                        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.827 2.827 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg><span>Edit</span>' +
+                    '</button>' +
+                    '<button type="button" class="btn btn-danger btn-sm" data-route-delete="' + r.id + '">' +
+                        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg><span>Delete</span>' +
+                    '</button>' +
+                '</div>' +
+            '</article>';
         }).join('');
 
         list.innerHTML = html;
