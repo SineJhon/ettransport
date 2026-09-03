@@ -615,12 +615,8 @@
                 '</div>' +
                 routeStationsPreview(r) +
                 '<div class="cd-route-actions">' +
-                    '<button type="button" class="btn btn-secondary btn-sm" data-route-edit="' + r.id + '">' +
-                        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.827 2.827 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg><span>Edit</span>' +
-                    '</button>' +
-                    '<button type="button" class="btn btn-danger btn-sm" data-route-delete="' + r.id + '">' +
-                        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg><span>Delete</span>' +
-                    '</button>' +
+                    '<button type="button" class="btn btn-secondary btn-sm" data-route-edit="' + r.id + '">Edit</button>' +
+                    '<button type="button" class="btn btn-danger btn-sm" data-route-delete="' + r.id + '">Delete</button>' +
                 '</div>' +
             '</article>';
         }).join('');
