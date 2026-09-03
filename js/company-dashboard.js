@@ -55,6 +55,8 @@
 
         if (name) { name.textContent = company.name || 'My Company'; }
         if (slug) { slug.textContent = company.slug ? '@' + company.slug : ''; }
+        if (company.id !== undefined && company.id !== null) { currentCompanyId = Number(company.id); }
+        if (company.slug) { currentCompanySlug = company.slug; }
         if (status) {
             status.hidden = false;
             status.textContent = String(company.status || '').toUpperCase();
@@ -126,6 +128,7 @@
                     return;
                 }
                 renderOverview(data);
+                loadReviews();
             })
             .catch(function () {
                 if (rid !== overviewRequestId) { return; }
@@ -150,7 +153,7 @@
         var nodes = {
             identity: byId('auth-identity'), loading: byId('company-loading'), error: byId('company-error'),
             banner: byId('company-banner'), stats: byId('company-stats'), fleet: byId('company-fleet'),
-            trips: byId('company-trips'), bookings: byId('company-bookings'), revenue: byId('company-revenue'), profile: byId('company-profile'), routes: byId('company-routes')
+            trips: byId('company-trips'), bookings: byId('company-bookings'), revenue: byId('company-revenue'), profile: byId('company-profile'), routes: byId('company-routes'), reviews: byId('company-reviews')
         };
         var icon = {
             overview: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
@@ -158,7 +161,8 @@
             passengers: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20c.8-3.5 2.8-5.5 6-5.5s5.2 2 6 5.5"/><path d="M16 5.5a3 3 0 0 1 0 5"/><path d="M18 14.5c1.6.8 2.6 2.6 3 5"/></svg>',
             revenue: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5"/><path d="M4 19h16"/><path d="m7 15 4-4 3 2 4-6"/></svg>',
             route: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/></svg>',
-            profile: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.4-4 4-6 8-6s6.6 2 8 6"/></svg>'
+            profile: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.4-4 4-6 8-6s6.6 2 8 6"/></svg>',
+            reviews: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2  L14.25 8.91  L21.51 8.91  L15.63 13.18  L17.88 20.09  L12 15.82  L6.12 20.09  L8.37 13.18  L2.49 8.91  L9.75 8.91  Z"/></svg>'
         };
         main.className = 'container cd-page';
         main.innerHTML =
@@ -172,6 +176,7 @@
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-trips" data-cd-view="trips">' + icon.fleet + '<span>Trips</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-passengers" data-cd-view="passengers">' + icon.passengers + '<span>Passengers</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-revenue" data-cd-view="revenue">' + icon.revenue + '<span>Revenue</span></button>' +
+                  '<button type="button" role="tab" aria-selected="false" aria-controls="cd-reviews" data-cd-view="reviews">' + icon.reviews + '<span>Reviews</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-profile" data-cd-view="profile">' + icon.profile + '<span>Public profile</span></button>' +
                 '</nav></aside><div class="cd-content">' +
                   '<section id="cd-overview" class="cd-pane" role="tabpanel"><div id="cd-overview-slot"></div><div class="cd-quick-actions"><button type="button" class="cd-quick-action" data-cd-go="fleet" data-cd-action="btn-add-bus"><b class="cd-quick-icon">+</b><span>Add a bus<small>Expand your active fleet</small></span></button><button type="button" class="cd-quick-action" data-cd-go="trips" data-cd-action="btn-add-trip"><b class="cd-quick-icon">↗</b><span>Schedule a trip<small>Open a new departure</small></span></button><button type="button" class="cd-quick-action" data-cd-go="routes" data-cd-action="btn-add-route"><b class="cd-quick-icon">⇄</b><span>Manage routes<small>Add and update city pairs</small></span></button><button type="button" class="cd-quick-action" data-cd-go="profile" data-cd-action="btn-edit-profile"><b class="cd-quick-icon">✦</b><span>Update public profile<small>Keep passenger details current</small></span></button></div></section>' +
@@ -180,6 +185,7 @@
                   '<section id="cd-passengers" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Passengers &amp; bookings</h2><p>Review bookings and view each passenger\'s digital ticket.</p></div></div></section>' +
                   '<section id="cd-revenue" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Revenue &amp; payments</h2><p>Review paid, pending and refunded passenger payments.</p></div></div></section>' +
                   '<section id="cd-routes" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Routes</h2></div></div></section>' +
+                  '<section id="cd-reviews" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Reviews</h2><p>What passengers say about travelling with your company.</p></div><a id="cd-reviews-preview" class="cd-passenger-preview" href="company.html" target="_blank" rel="noopener">View passenger page ↗</a></div></section>' +
                   '<section id="cd-profile" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Your passenger-facing profile</h2><p>This is the information passengers use to decide who they travel with.</p></div><a id="cd-passenger-preview" class="cd-passenger-preview" href="company.html" target="_blank" rel="noopener">View passenger page ↗</a></div></section>' +
                 '</div></div></div>';
 
@@ -190,6 +196,7 @@
         if (nodes.bookings) { byId('cd-passengers').appendChild(nodes.bookings); }
         if (nodes.revenue) { byId('cd-revenue').appendChild(nodes.revenue); }
         if (nodes.routes) { byId('cd-routes').appendChild(nodes.routes); }
+        if (nodes.reviews) { byId('cd-reviews').appendChild(nodes.reviews); }
         if (nodes.profile) { byId('cd-profile').appendChild(nodes.profile); }
 
         function selectView(view) {
@@ -204,7 +211,7 @@
         var quickActions = document.querySelectorAll('[data-cd-go]');
         for (var q = 0; q < quickActions.length; q++) { quickActions[q].addEventListener('click', function () { selectView(this.getAttribute('data-cd-go')); var target = byId(this.getAttribute('data-cd-action')); if (target) { target.click(); } }); }
         var requested = window.location.hash.replace('#', '');
-        if (requested === 'fleet' || requested === 'trips' || requested === 'passengers' || requested === 'revenue' || requested === 'routes' || requested === 'profile') { selectView(requested); }
+        if (requested === 'fleet' || requested === 'trips' || requested === 'passengers' || requested === 'revenue' || requested === 'routes' || requested === 'reviews' || requested === 'profile') { selectView(requested); }
 
         var busForm = byId('bus-form');
         if (busForm) {
@@ -3172,6 +3179,125 @@
         }
     }
 
+    /* ===== Reviews (passenger feedback) =====
+       Read-only view of the real passenger reviews for this company,
+       sourced from the existing public api/review.php?action=list endpoint
+       the passenger company page uses. Reply/moderation arrive in a later phase. */
+    var currentCompanyId = null;
+    var currentCompanySlug = '';
+    var reviewsRequestId = 0;
+
+    function reviewStarsHtml(rating) {
+        var filled = Math.round(Number(rating) || 0);
+        var s = '';
+        for (var i = 0; i < 5; i++) { s += (i < filled) ? '\u2605' : '\u2606'; }
+        return s;
+    }
+
+    function formatReviewDate(value) {
+        if (!value) { return ''; }
+        var iso = String(value);
+        if (iso.indexOf(' ') > 0) { iso = iso.replace(' ', 'T'); }
+        var d = new Date(iso);
+        if (isNaN(d.getTime())) { return String(value).slice(0, 10); }
+        try {
+            return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+        } catch (e) { return String(value).slice(0, 10); }
+    }
+
+    function renderReviews(data) {
+        var sec = byId('company-reviews'); if (sec) { sec.hidden = false; }
+        var loading = byId('review-loading'); if (loading) { loading.hidden = true; }
+        var error = byId('review-error'); if (error) { error.hidden = true; }
+
+        var preview = byId('cd-reviews-preview');
+        if (preview) {
+            preview.href = currentCompanySlug ? 'company.html?company=' + encodeURIComponent(currentCompanySlug) : 'company.html';
+        }
+
+        var summary = byId('review-summary');
+        if (summary) {
+            var rating = Number(data.rating) || 0;
+            summary.hidden = false;
+            summary.innerHTML =
+                '<span class="cd-review-score">' + rating.toFixed(1) + '</span>' +
+                '<span class="cd-review-stars" role="img" aria-label="Rated ' + rating.toFixed(1) + ' out of 5">' + reviewStarsHtml(rating) + '</span>' +
+                '<span class="cd-review-count">' + (data.reviewCount ? Number(data.reviewCount).toLocaleString() + ' review' + (Number(data.reviewCount) === 1 ? '' : 's') : '0 reviews') + '</span>';
+        }
+
+        var revs = data.reviews || [];
+        var list = byId('review-list');
+        var empty = byId('review-empty');
+        if (revs.length) {
+            var html = revs.map(function (r) {
+                return '<article class="cd-review-card">' +
+                    '<div class="cd-review-card-head">' +
+                        '<strong>' + escHtml(r.name || 'Verified passenger') + '</strong>' +
+                        (r.verified ? '<span class="cd-review-badge">Verified Passenger</span>' : '') +
+                        '<span class="cd-review-when">' + (formatReviewDate(r.created_at) || '') + '</span>' +
+                    '</div>' +
+                    '<p class="cd-review-stars-row" role="img" aria-label="Rated ' + r.rating + ' out of 5 stars">' + reviewStarsHtml(r.ating) + '</p>' +
+                    (r.comment ? '<p class="cd-review-text">' + escHtml(r.comment) + '</p>' : '<p class="cd-review-text cd-review-no-comment">No written comment.</p>') +
+                '</article>';
+            }).join('');
+            if (list) { list.innerHTML = html; list.hidden = false; }
+            if (empty) { empty.hidden = true; }
+        } else {
+            if (list) { list.innerHTML = ''; list.hidden = true; }
+            if (empty) { empty.hidden = true; }
+
+
+
+            }
+    }
+
+    function showReviewsError(message) {
+        var loading = byId('review-loading'); if (loading) { loading.hidden = true; }
+        var list = byId('review-list'); if (list) { list.innerHTML = ''; list.hidden = true; }
+        var empty = byId('review-empty'); if (empty) { empty.hidden = true; }
+        var error = byId('review-error');
+        if (error) {
+            error.hidden = false;
+            error.textContent = message || 'Unable to load your reviews. Please try again later.';
+        }
+    }
+
+    function loadReviews() {
+        var loading = byId('review-loading'); if (loading) { loading.hidden = false; }
+        var error = byId('review-error'); if (error) { error.hidden = true; }
+        var empty = byId('review-empty'); if (empty) { empty.hidden = true; }
+        var list = byId('review-list'); if (list) { list.innerHTML = ''; list.hidden = true; }
+        if (!currentCompanyId) { if (loading) { loading.hidden = true; } return; }
+
+        var rid = ++reviewsRequestId;
+        fetch('api/review.php?action=list&company_id=' + encodeURIComponent(currentCompanyId), {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(function (res) {
+                return res.json().catch(function () {
+                    return { success: false, message: 'Invalid server response.' };
+                }).then(function (json) {
+                    return { ok: res.ok, status: res.status, data: json };
+                });
+            })
+            .then(function (result) {
+                if (rid !== reviewsRequestId) { return; }
+                var loadEl = byId('review-loading'); if (loadEl) { loadEl.hidden = true; }
+                var data = result.data || {};
+                if (!result.ok || result.status !== 200 || !data.success) {
+                    showReviewsError(data.message || 'Unable to load your reviews.');
+                    return;
+                }
+                renderReviews(data);
+            })
+            .catch(function () {
+                if (rid !== reviewsRequestId) { return; }
+                showReviewsError('Network error while loading your reviews.');
+            });
+    }
+
     function renderProfile(company) {
         var sec = byId('company-profile'); if (sec) { sec.hidden = false; }
         var loading = byId('profile-loading'); if (loading) { loading.hidden = true; }
@@ -3323,6 +3449,9 @@
         loadRevenueTripOptions();
         loadPayments();
         loadProfile();
+
+        var refreshReviews = byId('btn-refresh-reviews');
+        if (refreshReviews) { refreshReviews.addEventListener('click', loadReviews); }
 
         var addBtn = byId('btn-add-bus');
         if (addBtn) { addBtn.addEventListener('click', openAddForm); }
