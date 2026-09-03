@@ -91,11 +91,10 @@
         .cd-route-badge { display: inline-block; padding: 0.2rem 0.55rem; border-radius: 20px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--color-white); background: #16a34a; margin-top: 0.4rem; }
         .cd-route-badge.inactive { background: #6b7280; }
         .cd-route-actions { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
-        .cd-route-actions select { padding: 0.4rem 0.5rem; font-size: 0.85rem; }
         .cd-route-form { margin-top: var(--space-md); padding: 1rem; border: 1px solid #e5e7eb; border-radius: 10px; }
         .cd-route-form h3 { margin: 0 0 0.75rem; font-size: 1.05rem; }
         .cd-route-form label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem; }
-        .cd-route-form input, .cd-route-form select { width: 100%; padding: 0.6rem 0.7rem; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 6px; }
+        .cd-route-form input { width: 100%; padding: 0.6rem 0.7rem; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 6px; }
         .cd-route-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
         .cd-route-form-error { min-height: 1.1rem; font-size: 0.82rem; color: #b91c1c; }
         .cd-route-form-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
@@ -1044,13 +1043,6 @@
                         <label for="route-duration">Travel Time (minutes)</label>
                         <input type="number" id="route-duration" min="1" max="1440" step="1" placeholder="e.g. 540">
                     </div>
-                    <div>
-                        <label for="route-status">Route Status</label>
-                        <select id="route-status">
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                        </select>
-                    </div>
                 </div>
                 <p id="route-form-error" class="cd-route-form-error" role="alert"></p>
                 <div class="cd-route-form-actions">
@@ -1058,6 +1050,34 @@
                     <button type="submit" id="route-form-submit" class="btn btn-primary">Save Route</button>
                 </div>
             </form>
+
+                <!-- ============================================================
+                     Route-delete confirmation modal — opened by the "Delete"
+                     action on a route card. Removal is permanent, so the
+                     operator confirms explicitly before the call goes to
+                     api/company.php?action=route_delete. The API rejects the
+                     delete when any trip still references the route.
+                     ============================================================ -->
+                <div id="route-delete-modal" class="cd-trip-delete-modal" hidden>
+                    <div class="cd-trip-delete-box" role="dialog" aria-modal="true" aria-labelledby="route-delete-title">
+                        <div class="cd-cancel-head">
+                            <h3 id="route-delete-title">Delete route?</h3>
+                            <button type="button" id="route-delete-close" class="cd-cancel-close" aria-label="Close route deletion dialog">&times;</button>
+                        </div>
+                        <p class="cd-cancel-intro">This permanently removes this route from your route book. This action cannot be undone.</p>
+
+                        <div class="cd-cancel-summary">
+                            <div class="cd-cancel-field"><span class="k">Route</span><span class="v" id="route-delete-name"></span></div>
+                        </div>
+
+                        <p id="route-delete-msg" class="cd-trip-delete-msg" role="alert" hidden></p>
+
+                        <div class="cd-trip-delete-actions">
+                            <button type="button" id="route-delete-keep-btn" class="btn btn-secondary">Keep Route</button>
+                            <button type="button" id="route-delete-confirm-btn" class="btn btn-danger">Delete Route</button>
+                        </div>
+                    </div>
+                </div>
         </section>
 
         <!-- ===== Company Profile ===== -->
@@ -1136,6 +1156,6 @@
 
     <script src="js/main.js"></script>
     <script src="js/auth.js"></script>
-    <script src="js/company-dashboard.js?v=20260903-booking-reason-trim"></script>
+    <script src="js/company-dashboard.js?v=20260903-route-delete"></script>
 </body>
 </html>

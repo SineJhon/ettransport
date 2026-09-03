@@ -157,7 +157,7 @@
             fleet: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 16h18"/><path d="M5 16V9h10l4 4v3"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>',
             passengers: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20c.8-3.5 2.8-5.5 6-5.5s5.2 2 6 5.5"/><path d="M16 5.5a3 3 0 0 1 0 5"/><path d="M18 14.5c1.6.8 2.6 2.6 3 5"/></svg>',
             revenue: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5"/><path d="M4 19h16"/><path d="m7 15 4-4 3 2 4-6"/></svg>',
-            route: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M6 17 17 7"/><circle cx="6" cy="17" r="1"/><circle cx="18" cy="7" r="1"/><path d="M8 19h8"/><path d="m12 15 2-2-2-2"/></svg>',
+            route: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/></svg>',
             profile: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.4-4 4-6 8-6s6.6 2 8 6"/></svg>'
         };
         main.className = 'container cd-page';
@@ -168,10 +168,10 @@
                 '<nav class="cd-nav" role="tablist" aria-label="Company dashboard sections">' +
                   '<button type="button" role="tab" aria-selected="true" aria-controls="cd-overview" data-cd-view="overview">' + icon.overview + '<span>Overview</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-fleet" data-cd-view="fleet">' + icon.fleet + '<span>Fleet &amp; buses</span></button>' +
+                  '<button type="button" role="tab" aria-selected="false" aria-controls="cd-routes" data-cd-view="routes">' + icon.route + '<span>Routes</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-trips" data-cd-view="trips">' + icon.fleet + '<span>Trips</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-passengers" data-cd-view="passengers">' + icon.passengers + '<span>Passengers</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-revenue" data-cd-view="revenue">' + icon.revenue + '<span>Revenue</span></button>' +
-                  '<button type="button" role="tab" aria-selected="false" aria-controls="cd-routes" data-cd-view="routes">' + icon.route + '<span>Routes</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-profile" data-cd-view="profile">' + icon.profile + '<span>Public profile</span></button>' +
                 '</nav></aside><div class="cd-content">' +
                   '<section id="cd-overview" class="cd-pane" role="tabpanel"><div id="cd-overview-slot"></div><div class="cd-quick-actions"><button type="button" class="cd-quick-action" data-cd-go="fleet" data-cd-action="btn-add-bus"><b class="cd-quick-icon">+</b><span>Add a bus<small>Expand your active fleet</small></span></button><button type="button" class="cd-quick-action" data-cd-go="trips" data-cd-action="btn-add-trip"><b class="cd-quick-icon">↗</b><span>Schedule a trip<small>Open a new departure</small></span></button><button type="button" class="cd-quick-action" data-cd-go="routes" data-cd-action="btn-add-route"><b class="cd-quick-icon">⇄</b><span>Manage routes<small>Add and update city pairs</small></span></button><button type="button" class="cd-quick-action" data-cd-go="profile" data-cd-action="btn-edit-profile"><b class="cd-quick-icon">✦</b><span>Update public profile<small>Keep passenger details current</small></span></button></div></section>' +
@@ -527,10 +527,7 @@
                 '<span class="cd-route-duration">' + dur + '</span>' +
                 '<div class="cd-route-actions">' +
                     '<button type="button" class="btn btn-secondary btn-sm" data-route-edit="' + r.id + '">Edit</button>' +
-                    '<select data-route-status="' + r.id + '" aria-label="Change route status">' +
-                        '<option value="active"' + (r.status === 'active' ? ' selected' : '') + '>Active</option>' +
-                        '<option value="inactive"' + (r.status === 'inactive' ? ' selected' : '') + '>Inactive</option>' +
-                    '</select>' +
+                    '<button type="button" class="btn btn-danger btn-sm" data-route-delete="' + r.id + '">Delete</button>' +
                 '</div>' +
             '</div>';
         }).join('');
@@ -549,10 +546,10 @@
                 openEditRouteForm(this.getAttribute('data-route-edit'));
             });
         }
-        var selects = list.querySelectorAll('select[data-route-status]');
-        for (var j = 0; j < selects.length; j++) {
-            selects[j].addEventListener('change', function () {
-                changeRouteStatus(this.getAttribute('data-route-status'), this.value);
+        var deletes = list.querySelectorAll('button[data-route-delete]');
+        for (var k = 0; k < deletes.length; k++) {
+            deletes[k].addEventListener('click', function () {
+                openRouteDeleteModal(this.getAttribute('data-route-delete'));
             });
         }
     }
@@ -617,7 +614,6 @@
         byId('route-from').value = '';
         byId('route-to').value = '';
         byId('route-duration').value = '';
-        byId('route-status').value = 'active';
         byId('route-form-title').textContent = 'Add Route';
         byId('route-form-submit').textContent = 'Save Route';
         var err = byId('route-form-error'); if (err) { err.textContent = ''; }
@@ -636,7 +632,6 @@
         byId('route-from').value = route.from_city || '';
         byId('route-to').value = route.to_city || '';
         byId('route-duration').value = route.duration === null || route.duration === undefined ? '' : route.duration;
-        byId('route-status').value = route.status || 'active';
         byId('route-form-title').textContent = 'Edit Route';
         byId('route-form-submit').textContent = 'Update Route';
         var err = byId('route-form-error'); if (err) { err.textContent = ''; }
@@ -658,8 +653,7 @@
         var payload = {
             from_city: byId('route-from').value.trim(),
             to_city: byId('route-to').value.trim(),
-            duration: byId('route-duration').value.trim(),
-            status: byId('route-status').value
+            duration: byId('route-duration').value.trim()
         };
         if (id) { payload.route_id = id; }
         var action = id ? 'route_update' : 'route_create';
@@ -693,12 +687,18 @@
             });
     }
 
-    function changeRouteStatus(routeId, status) {
-        fetch('api/company.php?action=route_update', {
+    function deleteRoute(id) {
+        var modal = byId('route-delete-modal');
+        var msg = byId('route-delete-msg');
+        var confirmBtn = byId('route-delete-confirm-btn');
+        if (msg) { msg.hidden = true; msg.textContent = ''; }
+        if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Deleting\u2026'; }
+
+        fetch('api/company.php?action=route_delete', {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-            body: JSON.stringify({ route_id: routeId, status: status })
+            body: JSON.stringify({ route_id: id })
         })
             .then(function (res) {
                 return res.json().catch(function () {
@@ -708,16 +708,73 @@
                 });
             })
             .then(function (result) {
-                if (result.ok && result.status === 200) { loadRoutes(); return; }
                 var data = result.data || {};
-                showRouteError(data.message || 'Unable to change the route status.');
+                if (!result.ok || result.status !== 200 || !data.success) {
+                    if (modal && !modal.hidden && msg) {
+                        msg.textContent = data.message || 'Unable to delete the route.';
+                        msg.hidden = false;
+                        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Delete Route'; }
+                        return;
+                    }
+                    showRouteError(data.message || 'Unable to delete the route.');
+                    return;
+                }
+                if (modal && !modal.hidden) { modal.hidden = true; }
+                pendingRouteDeleteId = null;
+                loadRoutes();
+                /* New trips should immediately see the updated route catalog. */
+                loadTrips();
             })
             .catch(function () {
-                showRouteError('Network error while changing the route status.');
+                if (modal && !modal.hidden && msg) {
+                    msg.textContent = 'Network error while deleting the route.';
+                    msg.hidden = false;
+                    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Delete Route'; }
+                    return;
+                }
+                showRouteError('Network error while deleting the route.');
             });
     }
 
- /* ===== Trip management ===== */
+    var pendingRouteDeleteId = null;
+
+    function closeRouteDeleteModal() {
+        pendingRouteDeleteId = null;
+        var modal = byId('route-delete-modal');
+        if (modal) { modal.hidden = true; }
+        var msg = byId('route-delete-msg');
+        if (msg) { msg.hidden = true; msg.textContent = ''; }
+        var confirmBtn = byId('route-delete-confirm-btn');
+        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Delete Route'; }
+    }
+
+    function openRouteDeleteModal(id) {
+        var modal = byId('route-delete-modal');
+        var route = null;
+        for (var i = 0; i < currentRoutesCatalog.length; i++) {
+            if (String(currentRoutesCatalog[i].id) === String(id)) { route = currentRoutesCatalog[i]; break; }
+        }
+        if (!modal || !route) { return; }
+
+        pendingRouteDeleteId = String(id);
+
+        var nameEl = byId('route-delete-name');
+        if (nameEl) { nameEl.textContent = (route.from_city || '\u2014') + ' \u2192 ' + (route.to_city || '\u2014'); }
+
+        var msg = byId('route-delete-msg');
+        if (msg) { msg.hidden = true; msg.textContent = ''; }
+        var confirmBtn = byId('route-delete-confirm-btn');
+        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Delete Route'; }
+
+        modal.hidden = false;
+    }
+
+    function confirmRouteDelete() {
+        if (!pendingRouteDeleteId) { return; }
+        deleteRoute(pendingRouteDeleteId);
+    }
+
+    /* ===== Trip management ===== */
     var currentTrips = [];
     var currentRoutes = [];
     var selectedTripStatus = 'all';
@@ -3518,6 +3575,24 @@
         var tripDeleteConfirm = byId('trip-delete-confirm-btn');
         if (tripDeleteConfirm) { tripDeleteConfirm.addEventListener('click', confirmTripDelete); }
 
+        /* ----- Route-delete confirmation modal wiring ----- */
+        var routeDeleteModal = byId('route-delete-modal');
+        if (routeDeleteModal) {
+            if (routeDeleteModal.parentNode !== document.body) {
+                document.body.appendChild(routeDeleteModal);
+            }
+            routeDeleteModal.style.zIndex = '105';
+            routeDeleteModal.addEventListener('click', function (ev) {
+                if (ev.target === routeDeleteModal) { closeRouteDeleteModal(); }
+            });
+        }
+        var routeDeleteClose = byId('route-delete-close');
+        if (routeDeleteClose) { routeDeleteClose.addEventListener('click', closeRouteDeleteModal); }
+        var routeDeleteKeep = byId('route-delete-keep-btn');
+        if (routeDeleteKeep) { routeDeleteKeep.addEventListener('click', closeRouteDeleteModal); }
+        var routeDeleteConfirm = byId('route-delete-confirm-btn');
+        if (routeDeleteConfirm) { routeDeleteConfirm.addEventListener('click', confirmRouteDelete); }
+
         document.addEventListener('keydown', function (ev) {
             if (ev.key === 'Escape' || ev.key === 'Esc' || ev.key === 27) {
                 var wtkModal = byId('walkin-ticket-modal');
@@ -3532,6 +3607,8 @@
                 if (tcModal && !tcModal.hidden) { closeTripCancelModal(); }
                 var tdModal = byId('trip-delete-modal');
                 if (tdModal && !tdModal.hidden) { closeTripDeleteModal(); }
+                var rdModal = byId('route-delete-modal');
+                if (rdModal && !rdModal.hidden) { closeRouteDeleteModal(); }
             }
         });
 

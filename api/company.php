@@ -41,6 +41,9 @@ declare(strict_types=1);
  *                                                     (authenticated company role only)
  *   POST api/company.php?action=route_update         -> { success, route }
  *                                                     (authenticated company role only)
+ *   POST api/company.php?action=route_delete         -> { success, message }
+ *                                                     (authenticated company role only; rejected when
+ *                                                      trips still reference the route)
  *
  * Only approved companies are exposed publicly through list/get. Ratings and
  * review counts are computed from the reviews table. Destinations / fleet /
@@ -2084,6 +2087,64 @@ function handle_route_update(PDO $pdo): void
     }
 }
 
+/**
+ * POST /api/company.php?action=route_delete — permanently remove one of this
+ * company's own routes.
+ *
+ * Only the owning company may delete a route, and the route must not be
+ * referenced by any trip (the trips table holds a foreign key on routes.id).
+ * The operator therefore has to cancel or delete those trips before the route
+ * can be removed. Ownership is enforced inside the same statement, so
+ * another company's route can never be touched.
+ */
+function handle_route_delete(PDO $pdo): void
+{
+    require_company_post();
+    $user = requireRole('company');
+    $company = require_company_scope($pdo, (int) $user['id']);
+    $companyId = (int) $company['id'];
+
+    $input = company_input();
+
+    $routeId = positive_int_or_error($input['route_id'] ?? null, 'A valid route id is required.');
+
+    /* Ownership check: missing and other-company ids both answer the same 404. */
+    $owned = $pdo->prepare('SELECT id FROM routes WHERE id = :id AND company_id = :company_id LIMIT 1');
+    $owned->execute([':id' => $routeId, ':company_id' => $companyId]);
+    if ($owned->fetch() === false) {
+        auth_response(404, [
+            'success' => false,
+            'message' => 'Route not found.',
+        ]);
+    }
+
+    /* Trips reference routes by foreign key, so a route with any trip (past,
+       present or scheduled) cannot be removed yet. */
+    $tripCheck = $pdo->prepare('SELECT id FROM trips WHERE route_id = :route_id LIMIT 1');
+    $tripCheck->execute([':route_id' => $routeId]);
+    if ($tripCheck->fetch() !== false) {
+        auth_response(409, [
+            'success' => false,
+            'message' => 'This route is used by one or more trips. Cancel or delete those trips before deleting the route.',
+        ]);
+    }
+
+    $del = $pdo->prepare('DELETE FROM routes WHERE id = :id AND company_id = :company_id');
+    $del->execute([':id' => $routeId, ':company_id' => $companyId]);
+
+    if ($del->rowCount() === 0) {
+        auth_response(404, [
+            'success' => false,
+            'message' => 'Route not found.',
+        ]);
+    }
+
+    auth_response(200, [
+        'success' => true,
+        'message' => 'Route deleted.',
+    ]);
+}
+
 /* ============================================================
  Company bookings / passenger manifests
    ------------------------------------------------------------
@@ -3438,10 +3499,13 @@ try {
     if ($action === 'route_update') {
         handle_route_update($pdo);
     }
+    if ($action === 'route_delete') {
+        handle_route_delete($pdo);
+    }
 
     auth_response(400, [
         'success' => false,
-        'message' => 'Unsupported action. Use action=list, action=get, action=overview, action=buses, action=bus_create, action=bus_update, action=trips, action=trip_create, action=trip_update, action=trip_status, action=trip_delete, action=bookings, action=booking_create, action=booking_cancel, action=manifest, action=revenue, action=payments, action=profile, action=profile_update, action=routes, action=route_create or action=route_update.',
+        'message' => 'Unsupported action. Use action=list, action=get, action=overview, action=buses, action=bus_create, action=bus_update, action=trips, action=trip_create, action=trip_update, action=trip_status, action=trip_delete, action=bookings, action=booking_create, action=booking_cancel, action=manifest, action=revenue, action=payments, action=profile, action=profile_update, action=routes, action=route_create, action=route_update or action=route_delete.',
     ]);
 } catch (Throwable $e) {
     auth_response(500, [
