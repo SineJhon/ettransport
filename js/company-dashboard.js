@@ -24,6 +24,24 @@
         return document.getElementById(id);
     }
 
+    var toastTimer = null;
+    function toast(message) {
+        var t = byId('dash-toast');
+        if (!t) {
+            try { window.alert(message); } catch (e) { /* no toast target */ }
+            return;
+        }
+        t.textContent = message;
+        t.hidden = false;
+        t.className = 'dash-toast show';
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () {
+            t.className = 'dash-toast';
+            t.hidden = true;
+        }, 4000);
+    }
+
+
     function setError(message) {
         var loading = byId('company-loading');
         var error = byId('company-error');
@@ -1609,7 +1627,7 @@
                 var doneNote = 'Trip cancelled.';
                 if (notes.length) { doneNote += ' ' + notes.join(' '); }
                 doneNote += '.';
-                showTripNotice(doneNote);
+                toast(doneNote);
 
                 /* Real refunds were recorded on the way through the booking
                    popups, so every revenue surface must refresh: the overview
