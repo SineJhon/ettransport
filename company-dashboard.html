@@ -360,6 +360,20 @@
         .cd-route-actions { display: flex; align-items: stretch; gap: .5rem; padding-top: .8rem; margin-top: auto; border-top: 1px solid #edf3ef; }
         .cd-route-actions .btn { display: inline-flex; align-items: center; justify-content: center; gap: .32rem; flex: 1; }
         .cd-route-actions .btn svg { width: 14px; height: 14px; }
+        /* ===== Route on/off toggle switch (scoped to .cd-*) ===== */
+        .cd-route-form-row-switch { grid-template-columns: 1fr; margin-top: .35rem; }
+        .cd-route-form label.cd-route-toggle { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .85rem .95rem; background: #f4f9f6; border: 1px solid #dcebe3; border-radius: 12px; cursor: pointer; }
+        .cd-route-toggle-label { flex: 1 1 auto; min-width: 0; }
+        .cd-route-toggle-label strong { display: block; color: #1d483d; font-size: .9rem; letter-spacing: -.01em; }
+        .cd-switch { display: inline-flex; align-items: center; gap: .55rem; flex: 0 0 auto; margin: 0 !important; }
+        .cd-switch input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0 !important; padding: 0 !important; border: 0 !important; background: none !important; min-height: 0 !important; }
+        .cd-switch-track { position: relative; width: 2.85rem; height: 1.6rem; border-radius: 999px; background: #c3d2ca; transition: background .18s ease; }
+        .cd-switch-track::after { content: ''; position: absolute; top: .2rem; left: .22rem; width: 1.2rem; height: 1.2rem; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.28); transition: transform .18s ease; }
+        .cd-switch input:checked + .cd-switch-track { background: #17855e; }
+        .cd-switch input:checked + .cd-switch-track::after { transform: translateX(1.25rem); }
+        .cd-switch input:focus-visible + .cd-switch-track { outline: 3px solid rgba(49,164,118,.35); }
+        .cd-switch-text { font-weight: 800; font-size: .78rem; letter-spacing: .05em; text-transform: uppercase; color: #879b93; }
+        .cd-switch input:checked ~ .cd-switch-text { color: #17855e; }
         @media (max-width: 900px) { .cd-nav { grid-template-columns: repeat(7, minmax(9rem, 1fr)); }.cd-revenue-filters, .cd-bookings-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }.cd-revenue-filters label:nth-of-type(n), .cd-revenue-filters select:nth-of-type(n), .cd-revenue-filters input:nth-of-type(n) { grid-column: auto; grid-row: auto; } }
         @media (max-width: 600px) { .cd-nav { grid-template-columns: repeat(7, max-content); }.cd-record-meta { grid-template-columns: 1fr 1fr; }.cd-pane .cd-bus-list, .cd-pane .cd-trip-list { grid-template-columns: 1fr; }.cd-revenue-filters, .cd-bookings-filters { grid-template-columns: 1fr; }.cd-bus-modal { align-items: end; padding: .5rem; }.cd-bus-modal-box { max-height: 94vh; border-radius: 16px 16px 10px 10px; padding: 1.1rem; } }
     </style>
@@ -1054,6 +1068,18 @@
                         <input type="number" id="route-duration" min="1" max="1440" step="1" placeholder="e.g. 540">
                     </div>
                 </div>
+                <div class="cd-route-form-row cd-route-form-row-switch">
+                    <label class="cd-route-toggle">
+                        <span class="cd-route-toggle-label">
+                            <strong>Listing</strong>
+                        </span>
+                        <span class="cd-switch">
+                            <input type="checkbox" id="route-status" role="switch" checked>
+                            <span class="cd-switch-track" aria-hidden="true"></span>
+                            <span class="cd-switch-text" id="route-status-text">On</span>
+                        </span>
+                    </label>
+                </div>
                 <p id="route-form-error" class="cd-route-form-error" role="alert"></p>
                 <div class="cd-route-form-actions">
                     <button type="button" id="route-form-cancel" class="btn">Cancel</button>
@@ -1166,6 +1192,6 @@
 
     <script src="js/main.js"></script>
     <script src="js/auth.js"></script>
-    <script src="js/company-dashboard.js?v=20260903-route-card-ui"></script>
+    <script src="js/company-dashboard.js?v=20260903-route-toggle-row"></script>
 </body>
 </html>

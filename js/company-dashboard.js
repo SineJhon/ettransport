@@ -243,6 +243,8 @@
             document.body.appendChild(routeModal);
             byId('route-modal-close').addEventListener('click', hideRouteForm);
             routeModal.addEventListener('click', function (ev) { if (ev.target === routeModal) { hideRouteForm(); } });
+            var routeStatusBox = byId('route-status');
+            if (routeStatusBox) { routeStatusBox.addEventListener('change', updateRouteStatusUI); }
         }
 
         function syncCompanyMini() {
@@ -627,12 +629,22 @@
         byId('route-from').value = '';
         byId('route-to').value = '';
         byId('route-duration').value = '';
+        var statusBox = byId('route-status');
+        if (statusBox) { statusBox.checked = true; }
+        updateRouteStatusUI();
         byId('route-form-title').textContent = 'Add Route';
         byId('route-form-submit').textContent = 'Save Route';
         var err = byId('route-form-error'); if (err) { err.textContent = ''; }
         byId('route-form').hidden = false;
         byId('route-form-modal').hidden = false;
         byId('route-from').focus();
+    }
+
+    function updateRouteStatusUI() {
+        var box = byId('route-status');
+        if (!box) { return; }
+        var text = byId('route-status-text');
+        if (text) { text.textContent = box.checked ? 'On' : 'Off'; }
     }
 
     function openEditRouteForm(id) {
@@ -645,6 +657,9 @@
         byId('route-from').value = route.from_city || '';
         byId('route-to').value = route.to_city || '';
         byId('route-duration').value = route.duration === null || route.duration === undefined ? '' : route.duration;
+        var statusBox = byId('route-status');
+        if (statusBox) { statusBox.checked = String(route.status) !== 'inactive'; }
+        updateRouteStatusUI();
         byId('route-form-title').textContent = 'Edit Route';
         byId('route-form-submit').textContent = 'Update Route';
         var err = byId('route-form-error'); if (err) { err.textContent = ''; }
@@ -666,7 +681,8 @@
         var payload = {
             from_city: byId('route-from').value.trim(),
             to_city: byId('route-to').value.trim(),
-            duration: byId('route-duration').value.trim()
+            duration: byId('route-duration').value.trim(),
+            status: (byId('route-status') && byId('route-status').checked) ? 'active' : 'inactive'
         };
         if (id) { payload.route_id = id; }
         var action = id ? 'route_update' : 'route_create';
@@ -1010,6 +1026,19 @@
                 opt.textContent = r.from_city + ' \u2192 ' + r.to_city;
                 routeSel.appendChild(opt);
             });
+            /* If the currently assigned route was just turned off it is no
+               longer in the active list — keep it selectable while editing. */
+            var stillListed = (currentRoutes || []).some(function (r) { return String(r.id) === String(selectedRouteId); });
+            if (selectedRouteId && !stillListed) {
+                var current = null;
+                for (var ri = 0; ri < currentRoutesCatalog.length; ri++) {
+                    if (String(currentRoutesCatalog[ri].id) === String(selectedRouteId)) { current = currentRoutesCatalog[ri]; break; }
+                }
+                var fallback = document.createElement('option');
+                fallback.value = selectedRouteId;
+                fallback.textContent = (current ? current.from_city + ' \u2192 ' + current.to_city : 'Current route (#' + selectedRouteId + ')') + ' \u00b7 unlisted';
+                routeSel.appendChild(fallback);
+            }
             if (selectedRouteId) { routeSel.value = selectedRouteId; }
         }
         var busSel = byId('trip-bus');

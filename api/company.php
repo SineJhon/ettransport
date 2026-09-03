@@ -530,12 +530,13 @@ function fetch_company_destinations(PDO $pdo): array
 /**
  * Popular routes for one company's public profile.
  *
- * Routes are company-scoped reference data. Every route the company owns is a
- * candidate (active routes first, then inactive). "Popular" simply means the
- * route has scheduled upcoming departures; the min present fare is shown when
- * trips exist, otherwise the price is omitted (the frontend shows a neutral
- * "Check availability" label). This means the dashboard Routes section and the
- * public profile's Popular Routes are always the same per-company data.
+ * Only routes with status = 'active' are published. Turning a route off in
+ * the dashboard unlists it from the public profile and excludes it from the
+ * create-trip form (fetch_company_active_routes) — live trips already using
+ * the route keep running, but the route itself stops appearing publicly.
+ * "Popular" simply means the route has scheduled upcoming departures; the
+ * min present fare is shown when trips exist, otherwise the price is omitted
+ * (the frontend shows a neutral "Check availability" label).
  *
  * @return array<int, array>
  */
@@ -555,13 +556,13 @@ function fetch_popular_routes(PDO $pdo, int $companyId): array
         FROM routes r
         LEFT JOIN trips t ON t.route_id = r.id
         WHERE r.company_id = :company_id
+          AND r.status = :status
         GROUP BY r.id, r.from_city, r.to_city, r.duration, r.status
         ORDER BY
-            CASE WHEN r.status = \'active\' THEN 0 ELSE 1 END,
             r.from_city ASC,
             r.to_city ASC
     ');
-    $stmt->execute([':company_id' => $companyId]);
+    $stmt->execute([':company_id' => $companyId, ':status' => 'active']);
 
     $out = [];
     foreach ($stmt->fetchAll() as $row) {
