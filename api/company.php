@@ -1018,6 +1018,7 @@ function managed_trip_select_sql(): string
             t.departure_time,
             t.arrival_time,
             t.status,
+            t.cancellation_reason,
             t.created_at,
             t.updated_at,
             COALESCE(aff.affected_bookings, 0) AS affected_bookings,
@@ -1066,6 +1067,7 @@ function trip_payload(array $row): array
         'departure_time' => substr((string) $row['departure_time'], 0, 5),
         'arrival_time' => $row['arrival_time'] !== null ? substr((string) $row['arrival_time'], 0, 5) : null,
         'status' => $row['status'],
+        'cancellation_reason' => $row['cancellation_reason'],
         'affected_bookings' => (int) $row['affected_bookings'],
         'refund_required' => (int) $row['refund_required'],
         'created_at' => $row['created_at'],
@@ -1431,6 +1433,20 @@ function handle_trip_status(PDO $pdo): void
         ]);
     }
 
+    $cancellationReason = trim((string) ($input['reason'] ?? ''));
+    if ($cancellationReason === '') {
+        auth_response(422, [
+            'success' => false,
+            'message' => 'A cancellation reason is required.',
+        ]);
+    }
+    if (mb_strlen($cancellationReason) > 500) {
+        auth_response(422, [
+            'success' => false,
+            'message' => 'Cancellation reason must be at most 500 characters.',
+        ]);
+    }
+
     try {
         $pdo->beginTransaction();
 
@@ -1480,13 +1496,15 @@ function handle_trip_status(PDO $pdo): void
 
         $updTrip = $pdo->prepare('
             UPDATE trips
-            SET status = \'cancelled\'
+            SET status = \'cancelled\',
+                cancellation_reason = :cancellation_reason
             WHERE id = :trip_id
               AND company_id = :company_id
               AND status = \'scheduled\'');
         $updTrip->execute([
             ':trip_id' => $tripId,
             ':company_id' => $companyId,
+            ':cancellation_reason' => $cancellationReason,
         ]);
 
         if ($updTrip->rowCount() === 0) {
@@ -1534,8 +1552,8 @@ function handle_trip_status(PDO $pdo): void
                     'Trip Cancelled',
                     'Your booking ' . $book['booking_reference'] . ' (' . $trip['from_city'] . ' → '
                         . $trip['to_city'] . ') departing ' . $trip['departure_date'] . ' has been cancelled '
-                        . 'because the transport company cancelled this trip. Please contact the company '
-                        . 'for assistance or book another trip.',
+                        . 'because the transport company cancelled this trip. Reason: ' . $cancellationReason
+                        . '. Please contact the company for assistance or book another trip.',
                     'trip-cancelled:' . $book['booking_reference']
                 );
                 $notified++;

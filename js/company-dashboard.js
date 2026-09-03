@@ -814,6 +814,41 @@
        trip stays scheduled. */
     var tripCancelState = null;
 
+    /* Reason given in the trip-cancel modal for why the trip itself is being
+       cancelled (e.g. "Trip cancelled because route closing"). Sent to
+       api/company.php?action=trip_status along with status=cancelled. */
+    var pendingTripCancelReason = '';
+
+    /* Quick-reason chips for the trip-cancel modal. Clicking one fills the
+       trip reason textarea. */
+    var TRIP_CANCEL_REASON_SUGGESTIONS = [
+        'Trip cancelled because route closing',
+        'Trip cancelled because bus had been damaged',
+        'Trip cancelled because of bad weather / road conditions',
+        'Trip cancelled for security / safety concern on the route'
+    ];
+
+    function renderTripCancelReasonSuggestions() {
+        var container = byId('trip-cancel-reason-suggestions');
+        if (!container) { return; }
+        container.innerHTML = TRIP_CANCEL_REASON_SUGGESTIONS.map(function (text) {
+            return '<button type="button" class="cd-cancel-suggestion" data-reason="' +
+                escHtml(text).replace(/"/g, '&quot;') + '">' + escHtml(text) + '</button>';
+        }).join('');
+        var reasons = container.querySelectorAll('.cd-cancel-suggestion');
+        for (var s = 0; s < reasons.length; s++) {
+            reasons[s].addEventListener('click', function () {
+                var reasonEl = byId('trip-cancel-reason');
+                if (reasonEl) {
+                    reasonEl.value = this.getAttribute('data-reason');
+                    reasonEl.removeAttribute('aria-invalid');
+                }
+                var msg = byId('trip-cancel-msg');
+                if (msg) { msg.hidden = true; msg.textContent = ''; msg.className = 'cd-trip-cancel-msg'; }
+            });
+        }
+    }
+
     /* Trip-delete confirmation modal state. Used only for cancelled trips:
        deleting removes the trip row along with its cancelled booking records,
        so the operator confirms explicitly before the permanent call goes to
@@ -833,12 +868,17 @@
         tripCancelState = null;
         tripCancelActiveBookings = [];
         tripCancelBookingsReady = false;
+        pendingTripCancelReason = '';
         var modal = byId('trip-cancel-modal');
         if (modal) { modal.hidden = true; }
         var msg = byId('trip-cancel-msg');
         if (msg) { msg.hidden = true; msg.textContent = ''; msg.className = 'cd-trip-cancel-msg'; }
         var confirmBtn = byId('trip-cancel-confirm-btn');
         if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Cancel Trip'; }
+        var reasonEl = byId('trip-cancel-reason');
+        if (reasonEl) { reasonEl.value = ''; reasonEl.removeAttribute('aria-invalid'); }
+        var suggestions = byId('trip-cancel-reason-suggestions');
+        if (suggestions) { suggestions.innerHTML = ''; }
     }
 
     function renderTripCancelBookings(bookings) {
@@ -904,6 +944,7 @@
 
         pendingTripCancelId = String(id);
         tripCancelBookingsReady = false;
+        pendingTripCancelReason = '';
 
         var routeEl = byId('trip-cancel-route');
         if (routeEl) { routeEl.textContent = (trip.from_city || '\u2014') + ' \u2192 ' + (trip.to_city || '\u2014'); }
@@ -926,6 +967,10 @@
         if (msg) { msg.hidden = true; msg.textContent = ''; msg.className = 'cd-trip-cancel-msg'; }
         var confirmBtn = byId('trip-cancel-confirm-btn');
         if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Checking bookings\u2026'; }
+        var reasonEl = byId('trip-cancel-reason');
+        if (reasonEl) { reasonEl.value = ''; reasonEl.removeAttribute('aria-invalid'); }
+        pendingTripCancelReason = '';
+        renderTripCancelReasonSuggestions();
 
         modal.hidden = false;
 
@@ -979,12 +1024,29 @@
            the bookings (without refunds) inside trip_status. */
         if (!tripCancelBookingsReady) { return; }
         var id = pendingTripCancelId;
+
+        /* The trip-cancel reason is required — warn on the modal if missing. */
+        var reasonEl = byId('trip-cancel-reason');
+        var reason = reasonEl ? reasonEl.value.trim() : '';
+        if (!reason) {
+            if (reasonEl) { reasonEl.setAttribute('aria-invalid', 'true'); reasonEl.focus(); }
+            var reasonMsg = byId('trip-cancel-msg');
+            if (reasonMsg) {
+                reasonMsg.textContent = 'Please enter or pick a reason for cancelling this trip.';
+                reasonMsg.className = 'cd-trip-cancel-msg cd-trip-cancel-msg-error';
+                reasonMsg.hidden = false;
+            }
+            return;
+        }
+        if (reasonEl) { reasonEl.removeAttribute('aria-invalid'); }
+        pendingTripCancelReason = reason;
+
         var active = (Array.isArray(tripCancelActiveBookings) ? tripCancelActiveBookings : []).slice();
         closeTripCancelModal();
 
         if (active.length === 0) {
             /* No active bookings — cancel the trip directly. */
-            cancelTrip(id, 0);
+            cancelTrip(id, 0, reason);
             return;
         }
 
@@ -1007,9 +1069,10 @@
         if (tripCancelState.index >= tripCancelState.queue.length) {
             var tripId = tripCancelState.tripId;
             var total = tripCancelState.total;
+            var reason = pendingTripCancelReason;
             tripCancelState = null;
             hideCancelBookingModal();
-            cancelTrip(tripId, total);
+            cancelTrip(tripId, total, reason);
             return;
         }
         var booking = tripCancelState.queue[tripCancelState.index];
@@ -1040,7 +1103,7 @@
         }
     }
 
-    function cancelTrip(id, bookingCount) {
+    function cancelTrip(id, bookingCount, reason) {
         var modal = byId('trip-cancel-modal');
         var msg = byId('trip-cancel-msg');
         var confirmBtn = byId('trip-cancel-confirm-btn');
@@ -1051,7 +1114,7 @@
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-            body: JSON.stringify({ trip_id: id, status: 'cancelled' })
+            body: JSON.stringify({ trip_id: id, status: 'cancelled', reason: reason || '' })
         })
             .then(function (res) {
                 return res.json().catch(function () {
@@ -1386,13 +1449,11 @@
             'Passenger requested to cancel',
             'Passenger booked by mistake',
             'Duplicate booking — confirmed a second seat by mistake',
-            'Passenger chose another trip / company',
             'Passenger did not show up at departure time',
             'Booking made with wrong date / route',
             'Trip cancelled because route closing',
             'Trip cancelled because bus had been damaged',
-            'Trip cancelled due to bad weather / road conditions',
-            'Trip cancelled because driver / crew unavailable'
+            'Trip cancelled due to bad weather / road conditions'
         ],
         full: [
             'Full refund — Route closed',
@@ -1522,6 +1583,7 @@
            bookings already cancelled (with their refunds) remain cancelled. */
         if (tripCancelState) {
             tripCancelState = null;
+            pendingTripCancelReason = '';
         }
         hideCancelBookingModal();
     }

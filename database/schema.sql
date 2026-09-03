@@ -151,6 +151,9 @@ CREATE TABLE IF NOT EXISTS trips (
   arrival_time TIME DEFAULT NULL,
   price DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
   status ENUM('scheduled', 'departed', 'completed', 'cancelled') NOT NULL DEFAULT 'scheduled',
+  -- Operator cancellation record (api/company.php action=trip_status): the
+  -- reason given when a scheduled trip is cancelled, e.g. "route closing".
+  cancellation_reason VARCHAR(500) DEFAULT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
