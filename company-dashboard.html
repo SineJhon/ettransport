@@ -252,7 +252,30 @@
         .cd-payment-badge.refunded { background: #6b7280; }
         @media (max-width: 768px) { .cd-revenue-summary { grid-template-columns: repeat(2, 1fr); } }
 
- /* ===== Company profile (additive, scoped to .cd-*) ===== */
+ /* ===== Company reviews (additive, scoped to .cd-*) ===== */
+        .cd-reviews { margin-top: var(--space-md); }
+        .cd-reviews-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+        .cd-reviews-head h2 { font-size: 1.2rem; color: var(--color-dark); margin: 0; }
+        .cd-reviews-msg { color: var(--color-muted); font-size: 0.9rem; }
+        .cd-reviews-error { margin-top: 0.5rem; }
+        .cd-reviews-summary { display: grid; grid-template-columns: auto auto; justify-content: start; column-gap: 1.1rem; align-items: center; padding: 1rem 1.1rem; margin-top: var(--space-sm); background: #f4faf6; border: 1px solid #d7e8de; border-radius: 14px; }
+        .cd-review-score { grid-row: 1 / 3; font: 800 2.4rem/1 'Outfit', sans-serif; color: #163a33; }
+        .cd-review-stars { color: #f59e0b; letter-spacing: 2px; font-size: 1rem; }
+        .cd-review-count { color: var(--color-muted); font-size: 0.85rem; }
+        .cd-review-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-sm); margin-top: var(--space-sm); }
+        .cd-review-list[hidden] { display: none; }
+        .cd-review-card { padding: 1rem; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; display: flex; flex-direction: column; gap: 0.55rem; }
+        .cd-review-card-head { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+        .cd-review-card-head strong { color: var(--color-dark); font-size: 0.92rem; }
+        .cd-review-badge { padding: 0.15rem 0.5rem; border-radius: 16px; font-size:  ​​0.72rem; font-weight:  ​​700; color: #15803d; background: #dcfce7; }
+        .cd-review-when { margin-left: auto; font-size: 0.8rem; color: var(--color-muted); }
+        .cd-review-stars-row { margin: 0; color: #f59e0b; letter-spacing:  ​​2px; font-size: 1rem; }
+        .cd-review-text { margin: 0; font-size: 0.9rem; line-height: 1.6; color: var(--color-text); }
+        .cd-review-no-comment { color: var(--color-muted); font-style: oblique; }
+        .cd-review-empty { padding: 1rem; border: 1px dashed #e5e7eb; border-radius: 8px; color: var(--color-muted); text-align: center; }
+        .cd-reviews-head .btn { flex: 0 0 auto; }
+
+        /* ===== Company profile (additive, scoped to .cd-*) ===== */
         .cd-profile { margin-top: var(--space-md); }
         .cd-profile-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
         .cd-profile-head h2 { font-size: 1.2rem; color: var(--color-dark); margin: 0; }
@@ -1140,6 +1163,19 @@
                 </div>
         </section>
 
+        <!-- ===== Company Reviews ===== -->
+        <section id="company-reviews" class="cd-reviews" hidden>
+            <div class="cd-reviews-head">
+                <h2>Reviews</h2>
+                <button type="button" id="btn-refresh-reviews" class="btn btn-secondary btn-sm">Refresh</button>
+            </div>
+            <p id="review-loading" class="cd-reviews-msg" hidden>Loading passenger reviews&hellip;</p>
+            <div id="review-error" class="cd-reviews-error auth-message" hidden></div>
+            <div id="review-empty" class="cd-reviews-empty" hidden></div>
+            <div id="review-summary" class="cd-reviews-summary" hidden></div>
+            <div id="review-list" class="cd-review-list" hidden></div>
+        </section>
+
         <!-- ===== Company Profile ===== -->
         <section id="company-profile" class="cd-profile" hidden>
             <div class="cd-profile-head">
@@ -1216,6 +1252,6 @@
 
     <script src="js/main.js"></script>
     <script src="js/auth.js"></script>
-    <script src="js/company-dashboard.js?v=20260903-route-btns-no-icons"></script>
+    <script src="js/company-dashboard.js?v=20260903-reviews-no-preview-link"></script>
 </body>
 </html>
