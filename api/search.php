@@ -20,6 +20,26 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../config/auth.php';
 
+/** Decode a stored route-station JSON list into an array of clean names. */
+function decode_route_stations(mixed $raw): array
+{
+    if ($raw === null || $raw === '') {
+        return [];
+    }
+    $decoded = json_decode((string) $raw, true);
+    if (!is_array($decoded)) {
+        return [];
+    }
+    $out = [];
+    foreach ($decoded as $name) {
+        $name = trim((string) $name);
+        if ($name !== '') {
+            $out[] = $name;
+        }
+    }
+    return $out;
+}
+
 if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
     auth_response(405, [
         'success' => false,
@@ -66,6 +86,8 @@ try {
             c.status                         AS company_status,
             r.from_city,
             r.to_city,
+            r.pickup_stations,
+            r.dropoff_stations,
             r.duration                       AS route_duration,
             t.departure_date,
             t.departure_time,
@@ -131,6 +153,8 @@ try {
             'company_name' => $row['company_name'],
             'from' => $row['from_city'],
             'to' => $row['to_city'],
+            'pickup_stations' => decode_route_stations($row['pickup_stations'] ?? null),
+            'dropoff_stations' => decode_route_stations($row['dropoff_stations'] ?? null),
             'departure_date' => $row['departure_date'],
             'departure_time' => substr((string) $row['departure_time'], 0, 5),
             'arrival_time' => $row['arrival_time'] !== null ? substr((string) $row['arrival_time'], 0, 5) : null,

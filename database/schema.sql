@@ -125,6 +125,11 @@ CREATE TABLE IF NOT EXISTS routes (
   company_id BIGINT UNSIGNED NOT NULL,
   from_city VARCHAR(120) NOT NULL,
   to_city VARCHAR(120) NOT NULL,
+  -- Operation pickup / drop-off stations: JSON arrays of 1+ station names
+  -- (e.g. ["Piassa", "Bole"]). Required on route create; shown on the public
+  -- profile's popular-route card and on the booking seat page.
+  pickup_stations TEXT NULL,
+  dropoff_stations TEXT NULL,
   duration INT UNSIGNED DEFAULT NULL,
   status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

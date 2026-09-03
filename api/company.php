@@ -38,7 +38,9 @@ declare(strict_types=1);
  *   GET  api/company.php?action=routes               -> { success, company_id, routes }
  *                                                     (authenticated company role only; this company's own routes)
  *   POST api/company.php?action=route_create         -> { success, route }
- *                                                     (authenticated company role only)
+ *                                                     (authenticated company role only;
+ *                                                      requires pickup_stations and
+ *                                                      dropoff_stations arrays)
  *   POST api/company.php?action=route_update         -> { success, route }
  *                                                     (authenticated company role only)
  *   POST api/company.php?action=route_delete         -> { success, message }
@@ -146,11 +148,50 @@ function route_payload(array $row): array
         'company_id' => isset($row['company_id']) && $row['company_id'] !== null ? (int) $row['company_id'] : null,
         'from_city' => $row['from_city'],
         'to_city' => $row['to_city'],
+        'pickup_stations' => route_stations_decode($row['pickup_stations'] ?? null),
+        'dropoff_stations' => route_stations_decode($row['dropoff_stations'] ?? null),
         'duration' => $row['duration'] !== null ? (int) $row['duration'] : null,
         'status' => $row['status'],
         'created_at' => $row['created_at'],
         'updated_at' => $row['updated_at'],
     ];
+}
+
+/**
+ * Decode a stored route-station JSON list into an array of clean station
+ * names. Legacy rows without the column (or empty values) become [].
+ */
+function route_stations_decode(mixed $raw): array
+{
+    if ($raw === null || $raw === '') {
+        return [];
+    }
+    $decoded = json_decode((string) $raw, true);
+    if (!is_array($decoded)) {
+        return [];
+    }
+    $out = [];
+    foreach ($decoded as $name) {
+        $name = trim((string) $name);
+        if ($name !== '') {
+            $out[] = $name;
+        }
+    }
+    return $out;
+}
+
+/**
+ * Encode an ordered route-station list for storage in the JSON text columns.
+ * An empty list stores NULL (a route should always have at least one, but
+ * never write a malformed value).
+ */
+function route_stations_encode(array $stations): ?string
+{
+    if ($stations === []) {
+        return null;
+    }
+    $json = json_encode(array_values($stations), JSON_UNESCAPED_UNICODE);
+    return $json === false ? null : $json;
 }
 
 /**
@@ -547,6 +588,8 @@ function fetch_popular_routes(PDO $pdo, int $companyId): array
             r.id AS route_id,
             r.from_city,
             r.to_city,
+            r.pickup_stations,
+            r.dropoff_stations,
             r.duration,
             r.status,
             MIN(
@@ -557,7 +600,7 @@ function fetch_popular_routes(PDO $pdo, int $companyId): array
         LEFT JOIN trips t ON t.route_id = r.id
         WHERE r.company_id = :company_id
           AND r.status = :status
-        GROUP BY r.id, r.from_city, r.to_city, r.duration, r.status
+        GROUP BY r.id, r.from_city, r.to_city, r.pickup_stations, r.dropoff_stations, r.duration, r.status
         ORDER BY
             r.from_city ASC,
             r.to_city ASC
@@ -569,6 +612,8 @@ function fetch_popular_routes(PDO $pdo, int $companyId): array
         $out[] = [
             'from_city' => $row['from_city'],
             'to_city' => $row['to_city'],
+            'pickup_stations' => route_stations_decode($row['pickup_stations'] ?? null),
+            'dropoff_stations' => route_stations_decode($row['dropoff_stations'] ?? null),
             'duration' => $row['duration'] !== null ? (int) $row['duration'] : null,
             'status' => $row['status'],
             'price' => $row['price'] !== null ? (float) $row['price'] : null,
@@ -1154,7 +1199,7 @@ function fetch_managed_trip_row(PDO $pdo, int $tripId, int $companyId): ?array
 function fetch_company_active_routes(PDO $pdo, int $companyId): array
 {
     $stmt = $pdo->prepare('
-        SELECT id, from_city, to_city, duration, status, company_id
+        SELECT id, from_city, to_city, pickup_stations, dropoff_stations, duration, status, company_id
         FROM routes
         WHERE company_id = :company_id AND status = :status
         ORDER BY from_city ASC, to_city ASC
@@ -1167,6 +1212,8 @@ function fetch_company_active_routes(PDO $pdo, int $companyId): array
             'id' => (int) $row['id'],
             'from_city' => $row['from_city'],
             'to_city' => $row['to_city'],
+            'pickup_stations' => route_stations_decode($row['pickup_stations'] ?? null),
+            'dropoff_stations' => route_stations_decode($row['dropoff_stations'] ?? null),
             'duration' => $row['duration'] !== null ? (int) $row['duration'] : null,
             'status' => $row['status'],
         ];
@@ -1743,9 +1790,11 @@ function handle_trip_delete(PDO $pdo): void
    approved company maintains its OWN route book: the dashboard
    Routes section lists exactly the routes the company has created,
    and the company's public profile "Popular Routes" section is fed
-   from the same per-company rows. Ownership is enforced server-side
-   from the authenticated session — a browser-supplied company_id is
-   never trusted.
+   from the same per-company rows. Each route also carries pickup /
+   drop-off station lists (JSON arrays) that are required at creation
+   and shown on the public profile and booking pages. Ownership is
+   enforced server-side from the authenticated session — a
+   browser-supplied company_id is never trusted.
 
    Each creation/update/deactivation is scoped to the resolved
    company; trips may only reference routes the company itself owns.
@@ -1762,7 +1811,8 @@ function handle_trip_delete(PDO $pdo): void
 function managed_route_select_sql(): string
 {
     return '
-        SELECT id, company_id, from_city, to_city, duration, status, created_at, updated_at
+        SELECT id, company_id, from_city, to_city, pickup_stations, dropoff_stations,
+               duration, status, created_at, updated_at
         FROM routes
         WHERE company_id = :company_id
         ORDER BY from_city ASC, to_city ASC
@@ -1794,7 +1844,8 @@ function fetch_managed_routes(PDO $pdo, int $companyId): array
 function fetch_managed_route_row(PDO $pdo, int $routeId, int $companyId): ?array
 {
     $stmt = $pdo->prepare('
-        SELECT id, company_id, from_city, to_city, duration, status, created_at, updated_at
+        SELECT id, company_id, from_city, to_city, pickup_stations, dropoff_stations,
+               duration, status, created_at, updated_at
         FROM routes
         WHERE id = :id AND company_id = :company_id
         LIMIT 1
@@ -1853,6 +1904,51 @@ function route_duration_or_error(mixed $raw): ?int
     }
 
     return $minutes;
+}
+
+/**
+ * Route pickup / drop-off stations: a non-empty array of 1-12 non-empty
+ * names. Required on create; optional but replaceable on update. Each name
+ * fits the schema's 120-char limit.
+ */
+function route_stations_or_error(mixed $raw, string $label): array
+{
+    if (!is_array($raw)) {
+        auth_response(422, [
+            'success' => false,
+            'message' => $label . ' stations are required.',
+        ]);
+    }
+    if (count($raw) < 1) {
+        auth_response(422, [
+            'success' => false,
+            'message' => 'At least one ' . $label . ' station is required.',
+        ]);
+    }
+    if (count($raw) > 12) {
+        auth_response(422, [
+            'success' => false,
+            'message' => $label . ' stations must be 12 or fewer.',
+        ]);
+    }
+    $out = [];
+    foreach ($raw as $name) {
+        $name = trim((string) $name);
+        if ($name === '') {
+            auth_response(422, [
+                'success' => false,
+                'message' => $label . ' stations cannot be empty.',
+            ]);
+        }
+        if (mb_strlen($name) > 120) {
+            auth_response(422, [
+                'success' => false,
+                'message' => $label . ' stations must be at most 120 characters each.',
+            ]);
+        }
+        $out[] = $name;
+    }
+    return $out;
 }
 
 /**
@@ -1933,6 +2029,8 @@ function handle_route_create(PDO $pdo): void
     $toCity = route_city_or_error($input['to_city'] ?? '', 'Destination city');
     $status = trim((string) ($input['status'] ?? 'active'));
     $duration = route_duration_or_error($input['duration'] ?? null);
+    $pickupStations = route_stations_or_error($input['pickup_stations'] ?? null, 'Pickup');
+    $dropoffStations = route_stations_or_error($input['dropoff_stations'] ?? null, 'Drop-off');
 
     if (mb_strtolower($fromCity) === mb_strtolower($toCity)) {
         auth_response(422, [
@@ -1955,13 +2053,15 @@ function handle_route_create(PDO $pdo): void
 
     try {
         $ins = $pdo->prepare('
-            INSERT INTO routes (company_id, from_city, to_city, duration, status)
-            VALUES (:company_id, :from_city, :to_city, :duration, :status)
+            INSERT INTO routes (company_id, from_city, to_city, pickup_stations, dropoff_stations, duration, status)
+            VALUES (:company_id, :from_city, :to_city, :pickup_stations, :dropoff_stations, :duration, :status)
         ');
         $ins->execute([
             ':company_id' => $companyId,
             ':from_city' => $fromCity,
             ':to_city' => $toCity,
+            ':pickup_stations' => route_stations_encode($pickupStations),
+            ':dropoff_stations' => route_stations_encode($dropoffStations),
             ':duration' => $duration,
             ':status' => $status,
         ]);
@@ -2003,8 +2103,10 @@ function handle_route_update(PDO $pdo): void
     $hasTo = has_key($input, 'to_city') && trim((string) $input['to_city']) !== '';
     $hasDuration = has_key($input, 'duration');
     $hasStatus = has_key($input, 'status') && trim((string) $input['status']) !== '';
+    $hasPickup = has_key($input, 'pickup_stations');
+    $hasDropoff = has_key($input, 'dropoff_stations');
 
-    if (!$hasFrom && !$hasTo && !$hasDuration && !$hasStatus) {
+    if (!$hasFrom && !$hasTo && !$hasDuration && !$hasStatus && !$hasPickup && !$hasDropoff) {
         auth_response(422, [
             'success' => false,
             'message' => 'At least one field to update is required.',
@@ -2015,6 +2117,8 @@ function handle_route_update(PDO $pdo): void
     $toCity = $hasTo ? route_city_or_error($input['to_city'], 'Destination city') : null;
     $duration = $hasDuration ? route_duration_or_error($input['duration']) : null;
     $status = $hasStatus ? trim((string) $input['status']) : null;
+    $pickupStations = $hasPickup ? route_stations_or_error($input['pickup_stations'], 'Pickup') : null;
+    $dropoffStations = $hasDropoff ? route_stations_or_error($input['dropoff_stations'], 'Drop-off') : null;
 
     if ($status !== null && !valid_route_status($status)) {
         auth_response(422, [
@@ -2057,6 +2161,8 @@ function handle_route_update(PDO $pdo): void
     if ($hasTo) { $sets[] = 'to_city = :to_city'; $params[':to_city'] = $toCity; }
     if ($hasDuration) { $sets[] = 'duration = :duration'; $params[':duration'] = $duration; }
     if ($hasStatus) { $sets[] = 'status = :status'; $params[':status'] = $status; }
+    if ($hasPickup) { $sets[] = 'pickup_stations = :pickup_stations'; $params[':pickup_stations'] = route_stations_encode($pickupStations); }
+    if ($hasDropoff) { $sets[] = 'dropoff_stations = :dropoff_stations'; $params[':dropoff_stations'] = route_stations_encode($dropoffStations); }
 
     try {
         $sql = 'UPDATE routes SET ' . implode(', ', $sets) . ' WHERE id = :route_id AND company_id = :company_id';

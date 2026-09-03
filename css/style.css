@@ -2309,6 +2309,30 @@ input:focus-visible {
     color: var(--color-muted);
 }
 
+.route-stations {
+    display: flex;
+    flex-direction: column;
+    gap: 0.18rem;
+    text-align: left;
+    font-size: 0.8rem;
+    color: var(--color-muted);
+    padding: 0.55rem 0.15rem 0;
+    border-top: 1px dashed #e5e7eb;
+}
+
+.route-stations-label {
+    font-size: 0.66rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-accent-dark);
+}
+
+.route-stations-value {
+    line-height: 1.4;
+    word-break: break-word;
+}
+
 .btn-route {
     background-color: var(--color-primary);
     color: var(--color-white);

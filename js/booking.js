@@ -105,7 +105,9 @@
             type: picked.type || 'Standard',
             seats: Number(picked.seats) || 0,
             busType: picked.busType || '',
-            amenities: []
+            amenities: [],
+            pickupStations: Array.isArray(picked.pickupStations) ? picked.pickupStations.slice() : (Array.isArray(picked.pickup_stations) ? picked.pickup_stations.slice() : []),
+            dropoffStations: Array.isArray(picked.dropoffStations) ? picked.dropoffStations.slice() : (Array.isArray(picked.dropoff_stations) ? picked.dropoff_stations.slice() : [])
         };
     } else {
         for (var i = 0; i < trips.length; i++) {
@@ -129,6 +131,21 @@
     document.getElementById('sum-route').textContent = trip.from + ' \u2192 ' + trip.to;
     document.getElementById('sum-date').textContent = formatDate(date);
     document.getElementById('sum-passengers').textContent = passengers;
+
+    /* Pickup / drop-off station rows (hidden when the route has none). */
+    function renderStations() {
+        var pickup = Array.isArray(trip.pickupStations) ? trip.pickupStations : [];
+        var dropoff = Array.isArray(trip.dropoffStations) ? trip.dropoffStations : [];
+        var pEl = document.getElementById('trip-pickup');
+        var dEl = document.getElementById('trip-dropoff');
+        var pItem = document.getElementById('trip-pickup-item');
+        var dItem = document.getElementById('trip-dropoff-item');
+        if (pEl) { pEl.textContent = pickup.join(', '); }
+        if (dEl) { dEl.textContent = dropoff.join(', '); }
+        if (pItem) { pItem.hidden = !pickup.length; }
+        if (dItem) { dItem.hidden = !dropoff.length; }
+    }
+    renderStations();
 
     /* ---------- Generate the 51-seat Ethiopian coach map ----------
        Each layout row is one of:
@@ -255,6 +272,18 @@
 
                 redrawSeats();
                 updateSummary();
+
+                /* The authoritative trip row also carries the route's station
+                   lists — refresh them so the summary always matches the DB. */
+                if (json.trip) {
+                    if (Array.isArray(json.trip.pickup_stations)) {
+                        trip.pickupStations = json.trip.pickup_stations.slice();
+                    }
+                    if (Array.isArray(json.trip.dropoff_stations)) {
+                        trip.dropoffStations = json.trip.dropoff_stations.slice();
+                    }
+                    renderStations();
+                }
             })
             .catch(function () { /* keep demo seat data when the API is unavailable */ });
     }

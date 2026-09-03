@@ -245,6 +245,36 @@
             routeModal.addEventListener('click', function (ev) { if (ev.target === routeModal) { hideRouteForm(); } });
             var routeStatusBox = byId('route-status');
             if (routeStatusBox) { routeStatusBox.addEventListener('change', updateRouteStatusUI); }
+
+            /* Station add/remove wiring (the lists live inside the form). */
+            var stationAddButtons = routeForm.querySelectorAll('.cd-station-add');
+            for (var si = 0; si < stationAddButtons.length; si++) {
+                stationAddButtons[si].addEventListener('click', function () {
+                    var type = this.getAttribute('data-station-type') === 'dropoff' ? 'dropoff' : 'pickup';
+                    var rows = routeStationRows(type);
+                    rows.push('');
+                    renderStationRows(type, rows);
+                    var list = byId(type === 'dropoff' ? 'route-dropoff-list' : 'route-pickup-list');
+                    if (list) {
+                        var inputs = list.querySelectorAll('.cd-station-row input');
+                        if (inputs.length) { inputs[inputs.length - 1].focus(); }
+                    }
+                });
+            }
+            ['route-pickup-list', 'route-dropoff-list'].forEach(function (listId) {
+                var list = byId(listId);
+                if (!list) { return; }
+                list.addEventListener('click', function (ev) {
+                    var btn = ev.target.closest ? ev.target.closest('.cd-station-remove') : null;
+                    if (!btn) { return; }
+                    var type = list.id === 'route-dropoff-list' ? 'dropoff' : 'pickup';
+                    var rows = routeStationRows(type);
+                    var removeButtons = list.querySelectorAll('.cd-station-row .cd-station-remove');
+                    var idx = Array.prototype.indexOf.call(removeButtons, btn);
+                    if (idx >= 0) { rows.splice(idx + 1, 1); }
+                    renderStationRows(type, rows);
+                });
+            });
         }
 
         function syncCompanyMini() {
@@ -504,6 +534,53 @@
         return 'Travel time ' + parts.join(' ');
     }
 
+    /* Small station summary shown on each dashboard route card. */
+    function routeStationsPreview(r) {
+        var pickup = Array.isArray(r.pickup_stations) ? r.pickup_stations : [];
+        var dropoff = Array.isArray(r.dropoff_stations) ? r.dropoff_stations : [];
+        if (!pickup.length && !dropoff.length) { return ''; }
+        var html = '<div class="cd-route-stations-preview">';
+        if (pickup.length) {
+            html += '<span><b>Pickup</b>' + escHtml(pickup.join(' \u00b7 ')) + '</span>';
+        }
+        if (dropoff.length) {
+            html += '<span><b>Drop-off</b>' + escHtml(dropoff.join(' \u00b7 ')) + '</span>';
+        }
+        html += '</div>';
+        return html;
+    }
+
+    /* Ordered list of non-empty station names currently typed in the form. */
+    function routeStationRows(type) {
+        var listId = type === 'dropoff' ? 'route-dropoff-list' : 'route-pickup-list';
+        var list = byId(listId);
+        if (!list) { return []; }
+        var out = [];
+        var inputs = list.querySelectorAll('.cd-station-row input');
+        for (var i = 0; i < inputs.length; i++) {
+            var val = String(inputs[i].value || '').trim();
+            if (val !== '') { out.push(val); }
+        }
+        return out;
+    }
+
+    /* Rebuild the station input rows for one side (pickup/dropoff). */
+    function renderStationRows(type, values) {
+        var listId = type === 'dropoff' ? 'route-dropoff-list' : 'route-pickup-list';
+        var list = byId(listId);
+        if (!list) { return; }
+        var vals = values && values.length ? values.slice() : [''];
+        var label = type === 'dropoff' ? 'Drop-off' : 'Pickup';
+        var html = '';
+        for (var i = 0; i < vals.length; i++) {
+            html += '<div class="cd-station-row">' +
+                '<input type="text" maxlength="120" placeholder="Enter station name" value="' + escHtml(vals[i]) + '" aria-label="' + label + ' station ' + (i + 1) + '">' +
+                (i > 0 ? '<button type="button" class="cd-station-remove" aria-label="Remove ' + label.toLowerCase() + ' station">&times;</button>' : '') +
+            '</div>';
+        }
+        list.innerHTML = html;
+    }
+
     function renderRoutes(routes) {
         var list = byId('route-list');
         var empty = byId('route-empty');
@@ -536,6 +613,7 @@
                     '<svg class="cd-route-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>' +
                     '<span>' + dur + '</span>' +
                 '</div>' +
+                routeStationsPreview(r) +
                 '<div class="cd-route-actions">' +
                     '<button type="button" class="btn btn-secondary btn-sm" data-route-edit="' + r.id + '">' +
                         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.827 2.827 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg><span>Edit</span>' +
@@ -629,6 +707,8 @@
         byId('route-from').value = '';
         byId('route-to').value = '';
         byId('route-duration').value = '';
+        renderStationRows('pickup', ['']);
+        renderStationRows('dropoff', ['']);
         var statusBox = byId('route-status');
         if (statusBox) { statusBox.checked = true; }
         updateRouteStatusUI();
@@ -657,6 +737,8 @@
         byId('route-from').value = route.from_city || '';
         byId('route-to').value = route.to_city || '';
         byId('route-duration').value = route.duration === null || route.duration === undefined ? '' : route.duration;
+        renderStationRows('pickup', Array.isArray(route.pickup_stations) ? route.pickup_stations : []);
+        renderStationRows('dropoff', Array.isArray(route.dropoff_stations) ? route.dropoff_stations : []);
         var statusBox = byId('route-status');
         if (statusBox) { statusBox.checked = String(route.status) !== 'inactive'; }
         updateRouteStatusUI();
@@ -678,11 +760,23 @@
  function submitRouteForm() {
         var errEl = byId('route-form-error');
         var id = byId('route-id').value;
+        var pickupStations = routeStationRows('pickup');
+        var dropoffStations = routeStationRows('dropoff');
+        if (!pickupStations.length) {
+            if (errEl) { errEl.textContent = 'Add at least one pickup station.'; }
+            return;
+        }
+        if (!dropoffStations.length) {
+            if (errEl) { errEl.textContent = 'Add at least one drop-off station.'; }
+            return;
+        }
         var payload = {
             from_city: byId('route-from').value.trim(),
             to_city: byId('route-to').value.trim(),
             duration: byId('route-duration').value.trim(),
-            status: (byId('route-status') && byId('route-status').checked) ? 'active' : 'inactive'
+            status: (byId('route-status') && byId('route-status').checked) ? 'active' : 'inactive',
+            pickup_stations: pickupStations,
+            dropoff_stations: dropoffStations
         };
         if (id) { payload.route_id = id; }
         var action = id ? 'route_update' : 'route_create';

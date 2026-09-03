@@ -65,6 +65,12 @@
         return s;
     }
 
+    function esc(str) {
+        return String(str == null ? '' : str).replace(/[&<>"']/g, function (ch) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+        });
+    }
+
     /* ---------- Canonical company trips ----------
        These trip IDs (1001+) are ALSO appended to the mock trip
        datasets in booking.js / passenger.js / payment.js /
@@ -620,6 +626,20 @@
         return 'From ' + formatPrice(Number(price) || 0);
     }
 
+    /* Pickup / drop-off station lines on a popular-route card. */
+    function stationBlockHtml(r) {
+        var html = '';
+        var pickup = Array.isArray(r.pickupStations) ? r.pickupStations : [];
+        var dropoff = Array.isArray(r.dropoffStations) ? r.dropoffStations : [];
+        if (pickup.length) {
+            html += '<div class="route-stations"><span class="route-stations-label">Pickup</span><span class="route-stations-value">' + pickup.map(esc).join(', ') + '</span></div>';
+        }
+        if (dropoff.length) {
+            html += '<div class="route-stations"><span class="route-stations-label">Drop-off</span><span class="route-stations-value">' + dropoff.map(esc).join(', ') + '</span></div>';
+        }
+        return html;
+    }
+
     function renderRoutes(c) {
         var el = document.getElementById('route-grid');
         if (!el) { return; }
@@ -635,6 +655,7 @@
                     '<span class="route-line" aria-hidden="true"><span class="route-arrow">\u2193</span></span>' +
                     '<span class="route-city route-to">' + r.to + '</span>' +
                 '</div>' +
+                stationBlockHtml(r) +
                 '<div class="route-meta">' +
                     '<span class="route-price">' + routePriceLabel(r.price) + '</span>' +
                     '<span class="route-duration">' + durationLabel + '</span>' +
@@ -1068,6 +1089,8 @@
             popularRoutes.push({
                 from: pr.from_city,
                 to: pr.to_city,
+                pickupStations: Array.isArray(pr.pickup_stations) ? pr.pickup_stations.slice() : [],
+                dropoffStations: Array.isArray(pr.dropoff_stations) ? pr.dropoff_stations.slice() : [],
                 price: pr.price === null || pr.price === undefined ? null : Number(pr.price),
                 minutes: pr.duration === null || pr.duration === undefined ? null : Number(pr.duration),
                 status: pr.status || 'active'

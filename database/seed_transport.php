@@ -92,7 +92,7 @@ try {
     $insBus   = $pdo->prepare('INSERT INTO buses (company_id, name, model, bus_type, seat_count, registration_number, status) VALUES (:company_id, :name, :model, :bus_type, :seat_count, :registration_number, :status)');
     $selBusReg = $pdo->prepare('SELECT id FROM buses WHERE company_id = :company_id AND registration_number = :registration_number LIMIT 1');
     $selRoute = $pdo->prepare('SELECT id FROM routes WHERE company_id = :company_id AND LOWER(from_city) = LOWER(:from_city) AND LOWER(to_city) = LOWER(:to_city) LIMIT 1');
-    $insRoute = $pdo->prepare('INSERT INTO routes (company_id, from_city, to_city, duration, status) VALUES (:company_id, :from_city, :to_city, :duration, :status)');
+    $insRoute = $pdo->prepare('INSERT INTO routes (company_id, from_city, to_city, pickup_stations, dropoff_stations, duration, status) VALUES (:company_id, :from_city, :to_city, :pickup_stations, :dropoff_stations, :duration, :status)');
     $selBus   = $pdo->prepare('SELECT id FROM buses WHERE company_id = :company_id AND bus_type = :bus_type ORDER BY id LIMIT 1');
     $selTrip  = $pdo->prepare('SELECT id FROM trips WHERE company_id = :company_id AND route_id = :route_id AND departure_date = :departure_date AND departure_time = :departure_time LIMIT 1');
     $insTrip  = $pdo->prepare('INSERT INTO trips (company_id, bus_id, route_id, departure_date, departure_time, arrival_time, price, status) VALUES (:company_id, :bus_id, :route_id, :departure_date, :departure_time, :arrival_time, :price, :status)');
@@ -174,6 +174,8 @@ try {
                 ':company_id' => $companyId,
                 ':from_city' => $fromCity,
                 ':to_city' => $toCity,
+                ':pickup_stations' => json_encode([$fromCity . ' (Central Station)'], JSON_UNESCAPED_UNICODE),
+                ':dropoff_stations' => json_encode([$toCity . ' (Central Station)'], JSON_UNESCAPED_UNICODE),
                 ':duration' => $durationMinutes,
                 ':status' => 'active',
             ]);

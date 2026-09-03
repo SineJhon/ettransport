@@ -6,6 +6,7 @@ platform. It is built for XAMPP and works on ordinary PHP/MySQL hosting.
 | File | Purpose |
 | --- | --- |
 | `schema.sql` | Creates the `ethio_transport` database and all tables |
+| `migrate_route_stations.php` | One-time idempotent migration adding pickup/drop-off stations to `routes` |
 | `seed_admin.php` | Creates one development `admin` account (idempotent) |
 | `README.md` | This guide |
 

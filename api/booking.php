@@ -92,6 +92,26 @@ function require_booking_post(): void
     }
 }
 
+/** Decode a stored route-station JSON list into an array of clean names. */
+function decode_route_stations(mixed $raw): array
+{
+    if ($raw === null || $raw === '') {
+        return [];
+    }
+    $decoded = json_decode((string) $raw, true);
+    if (!is_array($decoded)) {
+        return [];
+    }
+    $out = [];
+    foreach ($decoded as $name) {
+        $name = trim((string) $name);
+        if ($name !== '') {
+            $out[] = $name;
+        }
+    }
+    return $out;
+}
+
 /**
  * Parses + validates the optional limit / offset query params used by the
  * passenger booking list and search. The passenger is NEVER read here —
@@ -405,6 +425,8 @@ function handle_availability(): void
                 c.name        AS company_name,
                 r.from_city,
                 r.to_city,
+                r.pickup_stations,
+                r.dropoff_stations,
                 r.duration
             FROM trips t
             JOIN buses b     ON b.id = t.bus_id
@@ -442,6 +464,8 @@ function handle_availability(): void
                 'companyId' => $trip['company_slug'],
                 'from' => $trip['from_city'],
                 'to' => $trip['to_city'],
+                'pickup_stations' => decode_route_stations($trip['pickup_stations'] ?? null),
+                'dropoff_stations' => decode_route_stations($trip['dropoff_stations'] ?? null),
                 'date' => $trip['departure_date'],
                 'depart' => substr((string) $trip['departure_time'], 0, 5),
                 'arrive' => $trip['arrival_time'] !== null ? substr((string) $trip['arrival_time'], 0, 5) : '',
