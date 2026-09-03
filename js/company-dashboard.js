@@ -1499,6 +1499,7 @@
            is the trip itself cancelled. */
         tripCancelState = {
             tripId: String(id),
+            reason: reason,
             queue: active,
             index: 0,
             total: active.length
@@ -1513,7 +1514,7 @@
         if (tripCancelState.index >= tripCancelState.queue.length) {
             var tripId = tripCancelState.tripId;
             var total = tripCancelState.total;
-            var reason = pendingTripCancelReason;
+            var reason = tripCancelState.reason;
             tripCancelState = null;
             hideCancelBookingModal();
             cancelTrip(tripId, total, reason);
@@ -1888,7 +1889,7 @@
     /* Quick-reason suggestion buttons inside the cancel modal. Clicking one
        fills the reason textarea, so an operator never has to type the common
        reasons from scratch. The list adapts to the chosen refund type. */
-    var CANCEL_REASON_SUGGESTIONS = {
+        var CANCEL_REASON_SUGGESTIONS = {
         none: [
             'Passenger requested to cancel',
             'Passenger booked by mistake',
@@ -1900,25 +1901,24 @@
             'Trip cancelled due to bad weather / road conditions'
         ],
         full: [
-            'Full refund — Route closed',
-            'Full refund — Trip cancelled because route closing',
-            'Full refund — Bus / coach breakdown',
-            'Full refund — Bus had been damaged',
-            'Full refund — Trip cancelled by company',
-            'Full refund — Departure time rescheduled by company',
-            'Full refund — Passenger could not travel (medical / emergency)',
-            'Full refund — Overbooked by company',
-            'Full refund — Driver / crew unavailable',
-            'Full refund — Security / safety concern on the route'
+            'Passenger requested to cancel',
+            'Passenger booked by mistake',
+            'Duplicate booking — confirmed a second seat by mistake',
+            'Passenger did not show up at departure time',
+            'Booking made with wrong date / route',
+            'Trip cancelled because route closing',
+            'Trip cancelled because bus had been damaged',
+            'Trip cancelled due to bad weather / road conditions'
         ],
         half: [
-            'Half refund — Passenger did not show up at time',
-            'Half refund — Passenger wanted to cancel',
-            'Half refund — Late cancellation (within T-24h)',
-            'Half refund — Passenger arrived late for boarding',
-            'Half refund — Route changed after booking',
-            'Half refund — Trip cancelled because route closing',
-            'Half refund — Bus had been damaged'
+            'Passenger requested to cancel',
+            'Passenger booked by mistake',
+            'Duplicate booking — confirmed a second seat by mistake',
+            'Passenger did not show up at departure time',
+            'Booking made with wrong date / route',
+            'Trip cancelled because route closing',
+            'Trip cancelled because bus had been damaged',
+            'Trip cancelled due to bad weather / road conditions'
         ]
     };
 
@@ -3243,7 +3243,32 @@
         '</div>';
     }
 
-    function reviewCardHtml(r) {        var editing = Number(reviewEditingReplyId) === Number(r.id);        return '<article class="cd-review-card' + (editing ? ' is-editing' : '') + '" data-review-id="' + r.id + '">' +            '<div class="cd-review-card-head">' +                '<strong>' + escHtml(r.name || 'Verified passenger') + '</strong>' +                (r.verified ? '<span class="cd-review-badge">Verified Passenger</span>' : '') +                '<span class="cd-review-when">' + (formatReviewDate(r.created_at) || '') + '</span>' +            '</div>' +            '<p class="cd-review-stars-row" role="img" aria-label="Rated ' + r.rating + ' out of 5 stars">' + reviewStarsHtml(r.ating) + '</p>' +            (r.comment ? '<p class="cd-review-text">' + escHtml(r.comment) + '</p>' : '<p class="cd-review-text cd-review-no-comment">No written comment.</p>') +            '<div class="cd-review-actions">' + reviewLikeButtonHtml(r) +                (!editing ? '<button type="button" class="cd-review-reply-btn" data-review-id="' + r.id + '">' + (r.reply ? 'Edit reply' : 'Reply') + '</button>' : '') +            '</div>' +            (editing ? reviewReplyEditorHtml(r) : reviewReplyBlockHtml(r)) +        '</article>';    }    function reviewReplyEditorHtml(r) {        return '<div class="cd-review-reply-editor">' +            '<textarea class="cd-review-reply-input" maxlength="1000" placeholder="Write a reply to this passenger...">' + escHtml(r.reply || '') + '</textarea>' +            '<div class="cd-review-reply-editor-actions">' +                '<button type="button" class="btn btn-sm btn-secondary cd-review-reply-cancel" data-review-id="' + r.id + '">Cancel</button>' +                '<button type="button" class="btn btn-sm btn-primary cd-review-reply-save" data-review-id="' + r.id + '">' + (r.reply ? 'Save reply' : 'Post reply') + '</button>' +            '</div>' +        '</div>';    }
+    function reviewCardHtml(r) {
+        var editing = Number(reviewEditingReplyId) === Number(r.id);
+        return '<article class="cd-review-card' + (editing ? ' is-editing' : '') + '" data-review-id="' + r.id + '">' +
+            '<div class="cd-review-card-head">' +
+                '<strong>' + escHtml(r.name || 'Verified passenger') + '</strong>' +
+                (r.verified ? '<span class="cd-review-badge">Verified Passenger</span>' : '') +
+                '<span class="cd-review-when">' + (formatReviewDate(r.created_at) || '') + '</span>' +
+            '</div>' +
+            '<p class="cd-review-stars-row" role="img" aria-label="Rated ' + r.rating + ' out of 5 stars">' + reviewStarsHtml(r.ating) + '</p>' +
+            (r.comment ? '<p class="cd-review-text">' + escHtml(r.comment) + '</p>' : '<p class="cd-review-text cd-review-no-comment">No written comment.</p>') +
+            '<div class="cd-review-actions">' + reviewLikeButtonHtml(r) +
+                (!editing ? '<button type="button" class="cd-review-reply-btn" data-review-id="' + r.id + '">' + (r.reply ? 'Edit reply' : 'Reply') + '</button>' : '') +
+            '</div>' +
+            (editing ? reviewReplyEditorHtml(r) : reviewReplyBlockHtml(r)) +
+        '</article>';
+    }
+
+    function reviewReplyEditorHtml(r) {
+        return '<div class="cd-review-reply-editor">' +
+            '<textarea class="cd-review-reply-input" maxlength="1000" placeholder="Write a reply to this passenger...">' + escHtml(r.reply || '') + '</textarea>' +
+            '<div class="cd-review-reply-editor-actions">' +
+                '<button type="button" class="btn btn-sm btn-secondary cd-review-reply-cancel" data-review-id="' + r.id + '">Cancel</button>' +
+                '<button type="button" class="btn btn-sm btn-primary cd-review-reply-save" data-review-id="' + r.id + '">' + (r.reply ? 'Save reply' : 'Post reply') + '</button>' +
+            '</div>' +
+        '</div>';
+    }
     function renderReviewCards() {
         var list = byId('review-list');
         var empty = byId('review-empty');
