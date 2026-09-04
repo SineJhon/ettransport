@@ -581,9 +581,9 @@
                     <span class="cd-stat-value" id="stat-upcomingTrips"></span>
                     <span class="cd-stat-label">Upcoming Trips</span>
                 </div>
-                <div class="cd-stat" data-stat="pendingPayments">
-                    <span class="cd-stat-value" id="stat-pendingPayments"></span>
-                    <span class="cd-stat-label">Pending Payments</span>
+                <div class="cd-stat" data-stat="routeCount">
+                    <span class="cd-stat-value" id="stat-routeCount"></span>
+                    <span class="cd-stat-label">Routes</span>
                 </div>
                 <div class="cd-stat" data-stat="bookedPassengers">
                     <span class="cd-stat-value" id="stat-bookedPassengers"></span>
@@ -1153,8 +1153,6 @@
             <div class="cd-payment-toolbar" role="group" aria-label="Filter payments by status">
                 <button type="button" class="cd-payment-filter is-active" data-payment-status="all" aria-pressed="true">All payments</button>
                 <button type="button" class="cd-payment-filter" data-payment-status="paid" aria-pressed="false">Paid</button>
-                <button type="button" class="cd-payment-filter" data-payment-status="pending" aria-pressed="false">Pending</button>
-                <button type="button" class="cd-payment-filter" data-payment-status="failed" aria-pressed="false">Failed</button>
                 <button type="button" class="cd-payment-filter" data-payment-status="refunded" aria-pressed="false">Refunded</button>
             </div>
 
@@ -1178,14 +1176,6 @@
                 <div class="cd-rev-stat">
                     <span class="cd-rev-value" id="rev-paidPayments">0</span>
                     <span class="cd-rev-label">Paid Payments</span>
-                </div>
-                <div class="cd-rev-stat">
-                    <span class="cd-rev-value" id="rev-pendingPayments">0</span>
-                    <span class="cd-rev-label">Pending Payments</span>
-                </div>
-                <div class="cd-rev-stat">
-                    <span class="cd-rev-value" id="rev-failedPayments">0</span>
-                    <span class="cd-rev-label">Failed Payments</span>
                 </div>
                 <div class="cd-rev-stat">
                     <span class="cd-rev-value" id="rev-refundedPayments">0</span>

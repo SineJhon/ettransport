@@ -813,7 +813,7 @@ function resolve_company_by_user(PDO $pdo, int $userId): ?array
  * revenue reaches its company through payments -> bookings -> trips. No
  * schema changes and no global counters. Existing status values only.
  *
- * @return array{activeBuses:int, upcomingTrips:int, pendingPayments:int,
+ * @return array{activeBuses:int, upcomingTrips:int, routeCount:int,
  *               bookedPassengers:int, revenue:float}
  */
 function company_overview_stats(PDO $pdo, int $companyId): array
@@ -837,18 +837,11 @@ function company_overview_stats(PDO $pdo, int $companyId): array
     $stmt->execute([':company_id' => $companyId, ':status' => 'scheduled']);
     $upcomingTrips = (int) $stmt->fetchColumn();
 
-    /* pendingPayments — this company's pending (not yet confirmed) payments.
-       Cancelled/failed/refunded rows are excluded by only counting status = pending. */
-    $stmt = $pdo->prepare('
-        SELECT COUNT(*)
-        FROM payments p
-        JOIN bookings bk ON bk.id = p.booking_id
-        JOIN trips t ON t.id = bk.trip_id
-        WHERE t.company_id = :company_id
-          AND p.status = :payment_status
-    ');
-    $stmt->execute([':company_id' => $companyId, ':payment_status' => 'pending']);
-    $pendingPayments = (int) $stmt->fetchColumn();
+    /* routeCount — every route in this company's own route book
+       (active and inactive), matching the Routes tab list. */
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM routes WHERE company_id = :company_id');
+    $stmt->execute([':company_id' => $companyId]);
+    $routeCount = (int) $stmt->fetchColumn();
 
     /* bookedPassengers — every traveler on this company's non-cancelled
        bookings, regardless of trip status or departure date. Real passengers
@@ -877,7 +870,7 @@ function company_overview_stats(PDO $pdo, int $companyId): array
     return [
         'activeBuses' => $activeBuses,
         'upcomingTrips' => $upcomingTrips,
-        'pendingPayments' => $pendingPayments,
+        'routeCount' => $routeCount,
         'bookedPassengers' => $bookedPassengers,
         'revenue' => $revenue,
     ];
@@ -3091,7 +3084,7 @@ function company_payment_payload(array $row): array
  *                          payments later refunded after cancellation
  *   - refunds_paid         the exact refund amount recorded per booking
  *   - net_revenue          gross paid minus refunds paid
- *   - paid/pending/failed/refunded counts are per payment row
+ *   - paid/refunded counts are per payment row
  *   - paid_booking_count   distinct bookings with a 'paid' payment
  * The schema allows more than one payment row per booking, but the
  * current payment flow (api/payment.php) creates exactly one 'paid'
@@ -3106,8 +3099,6 @@ function company_revenue_summary(PDO $pdo, int $companyId, ?int $tripId, ?string
         . ' COALESCE(SUM(CASE WHEN p.status IN (\'paid\', \'refunded\') THEN p.amount ELSE 0 END), 0) AS gross_paid_revenue'
         . ', COUNT(*) AS total_payment_count'
         . ', COUNT(CASE WHEN p.status = \'paid\' THEN 1 END) AS paid_payment_count'
-        . ', COUNT(CASE WHEN p.status = \'pending\' THEN 1 END) AS pending_payment_count'
-        . ', COUNT(CASE WHEN p.status = \'failed\' THEN 1 END) AS failed_payment_count'
         . ', COUNT(CASE WHEN p.status = \'refunded\' THEN 1 END) AS refunded_payment_count'
         . ', COUNT(DISTINCT CASE WHEN p.status = \'paid\' THEN p.booking_id END) AS paid_booking_count'
         . $sqlBody;
@@ -3167,8 +3158,6 @@ function company_revenue_summary(PDO $pdo, int $companyId, ?int $tripId, ?string
         /* Kept for any older client that still reads this key. */
         'total_paid_revenue' => $grossPaid,
         'paid_payment_count' => (int) ($row['paid_payment_count'] ?? 0),
-        'pending_payment_count' => (int) ($row['pending_payment_count'] ?? 0),
-        'failed_payment_count' => (int) ($row['failed_payment_count'] ?? 0),
         'refunded_payment_count' => (int) ($row['refunded_payment_count'] ?? 0),
         'total_payment_count' => (int) ($row['total_payment_count'] ?? 0),
         'paid_booking_count' => (int) ($row['paid_booking_count'] ?? 0),

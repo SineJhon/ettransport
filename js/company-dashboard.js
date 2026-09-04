@@ -96,7 +96,7 @@
         var map = {
             activeBuses: 'stat-activeBuses',
             upcomingTrips: 'stat-upcomingTrips',
-            pendingPayments: 'stat-pendingPayments',
+            routeCount: 'stat-routeCount',
             bookedPassengers: 'stat-bookedPassengers',
             revenue: 'stat-revenue'
         };
@@ -201,7 +201,7 @@
                   '<section id="cd-fleet" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Fleet register</h2><p>Add, edit and update the operating status of every vehicle.</p></div></div></section>' +
                   '<section id="cd-trips" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Trips</h2><p>Publish, update and manage each scheduled departure.</p></div></div></section>' +
                   '<section id="cd-passengers" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Passengers &amp; bookings</h2><p>Review bookings and view each passenger\'s digital ticket.</p></div></div></section>' +
-                  '<section id="cd-revenue" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Revenue &amp; payments</h2><p>Review paid, pending and refunded passenger payments.</p></div></div></section>' +
+                  '<section id="cd-revenue" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Revenue &amp; payments</h2><p>Review paid and refunded passenger payments.</p></div></div></section>' +
                   '<section id="cd-routes" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Routes</h2></div></div></section>' +
                   '<section id="cd-reviews" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Reviews</h2><p>What passengers say about travelling with your company.</p></div></div></section>' +
                   '<section id="cd-profile" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Your passenger-facing profile</h2><p>This is the information passengers use to decide who they travel with.</p></div><a id="cd-passenger-preview" class="cd-passenger-preview" href="company.html" target="_blank" rel="noopener">View passenger page ↗</a></div></section>' +
@@ -2994,8 +2994,6 @@
         setRevStat('rev-refundsPaid', formatMoney(rev.refunds_paid));
         setRevStat('rev-netRevenue', formatMoney(rev.net_revenue));
         setRevStat('rev-paidPayments', rev.paid_payment_count == null ? 0 : rev.paid_payment_count);
-        setRevStat('rev-pendingPayments', rev.pending_payment_count == null ? 0 : rev.pending_payment_count);
-        setRevStat('rev-failedPayments', rev.failed_payment_count == null ? 0 : rev.failed_payment_count);
         setRevStat('rev-refundedPayments', rev.refunded_payment_count == null ? 0 : rev.refunded_payment_count);
         setRevStat('rev-noRefundCancellations', rev.no_refund_cancellation_count == null ? 0 : rev.no_refund_cancellation_count);
         setRevStat('rev-halfRefunds', rev.half_refund_count == null ? 0 : rev.half_refund_count);
@@ -3016,8 +3014,6 @@
                 var emptyMsg = 'No payments found for your trips yet. Payments will appear here once passengers pay for seats on your scheduled trips.';
                 if (selectedPaymentStatus !== 'all') {
                     if (selectedPaymentStatus === 'paid') { emptyMsg = 'No paid payments match the current filters.'; }
-                    else if (selectedPaymentStatus === 'pending') { emptyMsg = 'No pending payments match the current filters.'; }
-                    else if (selectedPaymentStatus === 'failed') { emptyMsg = 'No failed payments match the current filters.'; }
                     else if (selectedPaymentStatus === 'refunded') { emptyMsg = 'No refunded payments match the current filters.'; }
                 } else if (selectedRevenueDate) {
                     emptyMsg = 'No payments match the current filters.';
@@ -4440,7 +4436,7 @@ function submitBranchForm() {
         var revToFilter = byId('revenue-to-filter');
         if (revToFilter) { revToFilter.addEventListener('change', applyRevenueFilters); }
 
-        /* Wire the payment status filter buttons (All payments / Paid / Pending / Failed / Refunded). */
+        /* Wire the payment status filter buttons (All payments / Paid / Refunded). */
         var revStatusButtons = document.querySelectorAll('.cd-payment-filter[data-payment-status]');
         for (var rsf = 0; rsf < revStatusButtons.length; rsf++) {
             (function (btn) {
