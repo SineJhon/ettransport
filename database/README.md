@@ -51,7 +51,7 @@ In phpMyAdmin you should now see a database named `ethio_transport` with the
 following tables:
 
 ```
-users, companies, buses, routes, trips, bookings,
+users, companies, company_branches, buses, routes, trips, bookings,
 booking_passengers, payments, reviews, review_likes, notifications
 ```
 

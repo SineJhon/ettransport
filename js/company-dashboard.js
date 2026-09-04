@@ -3625,6 +3625,7 @@ var reviewEditingReplyId = null;
         var view = byId('profile-view'); if (view) { view.hidden = true; }
         var form = byId('profile-form'); if (form) { form.hidden = false; }
         var editBtn = byId('btn-edit-profile'); if (editBtn) { editBtn.hidden = true; }
+        var bs = byId('profile-branches'); if (bs) { bs.hidden = true; }
     }
 
     function closeProfileForm() {
@@ -3632,6 +3633,7 @@ var reviewEditingReplyId = null;
         var form = byId('profile-form'); if (form) { form.hidden = true; }
         var view = byId('profile-view'); if (view) { view.hidden = false; }
         var editBtn = byId('btn-edit-profile'); if (editBtn) { editBtn.hidden = false; }
+        var bs = byId('profile-branches'); if (bs) { bs.hidden = false; }
     }
 
     function submitProfileForm() {
@@ -3684,6 +3686,199 @@ var reviewEditingReplyId = null;
             });
     }
 
+    /* ===== Company branches (additive) ===== */
+    function cdEsc(str) {
+        return String(str == null ? '' : str).replace(/[&<>"']/g, function (ch) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+        });
+    }
+
+    var currentBranches = [];
+
+    function setBranchError(message) {
+        var loading = byId('branch-loading'); if (loading) { loading.hidden = true; }
+        var err = byId('branch-error');
+        if (err) {
+            err.hidden = false;
+            err.className = 'cd-profile-error auth-message error';
+            err.textContent = message || 'Unable to load your branches.';
+        }
+    }
+
+    function setBranchFormError(message) {
+        var err = byId('branch-form-error');
+        if (err) {
+            err.hidden = false;
+            err.textContent = message || 'Unable to save the branch.';
+        }
+    }
+
+    function clearBranchMessages() {
+        var err = byId('branch-error'); if (err) { err.hidden = true; }
+        var ferr = byId('branch-form-error'); if (ferr) { ferr.hidden = true; }
+    }
+
+    function renderBranches(list) {
+        currentBranches = Array.isArray(list) ? list : [];
+        var listEl = byId('branch-list');
+        var emptyEl = byId('branch-empty');
+        if (emptyEl) {
+            emptyEl.hidden = currentBranches.length > 0;
+            emptyEl.textContent = 'No branches yet. Add your first branch so passengers can find you.';
+        }
+        if (listEl) {
+            listEl.hidden = currentBranches.length === 0;
+            var html = '';
+            for (var i = 0; i < currentBranches.length; i++) {
+                var b = currentBranches[i];
+                html += '<div class="cd-profile-branch-card">' +
+                    '<h4>' + cdEsc(b.name || 'Branch') + '</h4>' +
+                    (b.is_head ? '<span class="cd-branch-head-tag">Head office</span>' : '') +
+                    (b.city ? '<p class="cd-branch-line"><b>City</b> ' + cdEsc(b.city) + '</p>' : '') +
+                    (b.address ? '<p class="cd-branch-line"><b>Address</b> ' + cdEsc(b.address) + '</p>' : '') +
+                    (b.hours ? '<p class="cd-branch-line"><b>Hours</b> ' + cdEsc(b.hours) + '</p>' : '') +
+                    (b.phone ? '<p class="cd-branch-line"><b>Phone</b> <a href="tel:' + String(b.phone).replace(/\s+/g, '') + '">' + cdEsc(b.phone) + '</a></p>' : '') +
+                    (b.email ? '<p class="cd-branch-line"><b>Email</b> <a href="mailto:' + cdEsc(b.email) + '">' + cdEsc(b.email) + '</a></p>' : '') +
+                    (b.status === 'inactive' ? '<p class="cd-branch-line"><b>Status</b> <span class="cd-branch-status-off">Hidden from public profile</span></p>' : '') +
+                    '<div class="cd-branch-actions">' +
+                        '<button type="button" class="btn btn-secondary btn-sm" data-branch-edit="' + b.id + '">Edit</button>' +
+                        '<button type="button" class="btn btn-danger btn-sm" data-branch-delete="' + b.id + '">Delete</button>' +
+                    '</div>' +
+                '</div>';
+            }
+            listEl.innerHTML = html;
+        }
+    }
+function loadBranches() {
+        var sec = byId('profile-branches'); if (sec) { sec.hidden = false; }
+        var loading = byId('branch-loading'); if (loading) { loading.hidden = false; }
+        var err = byId('branch-error'); if (err) { err.hidden = true; }
+        fetch('api/company.php?action=branches', {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(function (res) {
+                return res.json().catch(function () {
+                    return { success: false, message: 'Invalid server response.' };
+                }).then(function (json) {
+                    return { ok: res.ok, status: res.status, data: json };
+                });
+            })
+            .then(function (result) {
+                if (loading) { loading.hidden = true; }
+                var data = result.data || {};
+                if (!result.ok || result.status !== 200 || !data.success) {
+                    setBranchError(data.message || 'Unable to load your branches.');
+                    return;
+                }
+                renderBranches(data.branches || []);
+            })
+            .catch(function () {
+                if (loading) { loading.hidden = true; }
+                setBranchError('Network error while loading your branches.');
+            });
+    }
+
+    function openBranchForm(branch) {
+        clearBranchMessages();
+        var idInput = byId('branch-id'); if (idInput) { idInput.value = branch ? branch.id : ''; }
+        var nameInput = byId('branch-input-name'); if (nameInput) { nameInput.value = branch ? branch.name : ''; }
+        var cityInput = byId('branch-input-city'); if (cityInput) { cityInput.value = branch ? branch.city : ''; }
+        var addrInput = byId('branch-input-address'); if (addrInput) { addrInput.value = branch ? branch.address : ''; }
+        var hourInput = byId('branch-input-hours'); if (hourInput) { hourInput.value = branch ? branch.hours : ''; }
+        var phoneInput = byId('branch-input-phone'); if (phoneInput) { phoneInput.value = branch ? localPhoneValue(branch.phone) : ''; }
+        var emailInput = byId('branch-input-email'); if (emailInput) { emailInput.value = branch ? branch.email : ''; }
+        var headChk = byId('branch-input-head'); if (headChk) { headChk.checked = !!(branch && branch.is_head); }
+        var statusChk = byId('branch-input-status'); if (statusChk) { statusChk.checked = !(branch && branch.status === 'inactive'); }
+        var title = byId('branch-form-title'); if (title) { title.textContent = branch ? 'Edit Branch' : 'Add Branch'; }
+        var form = byId('branch-form'); if (form) { form.hidden = false; }
+        var btn = byId('btn-add-branch'); if (btn) { btn.hidden = true; }
+        var listEl = byId('branch-list'); if (listEl) { listEl.hidden = true; }
+    }
+
+    function closeBranchForm() {
+        clearBranchMessages();
+        var form = byId('branch-form'); if (form) { form.hidden = true; }
+        var btn = byId('btn-add-branch'); if (btn) { btn.hidden = false; }
+        renderBranches(currentBranches);
+    }
+function submitBranchForm() {
+        var form = byId('branch-form');
+        if (form && !form.checkValidity()) {
+            setBranchFormError('Please fill in the required fields.');
+            return;
+        }
+        clearBranchMessages();
+        var saveBtn = byId('btn-branch-save');
+        if (saveBtn) { saveBtn.disabled = true; }
+        var branchIdInput = byId('branch-id');
+        var branchId = branchIdInput ? String(branchIdInput.value || '') : '';
+        var phoneInput = byId('branch-input-phone');
+        if (phoneInput) { phoneInput.value = fullPhoneValue(phoneInput.value); }
+        var payload = new FormData(form);
+        var statusChk = byId('branch-input-status');
+        if (statusChk && !statusChk.checked) { payload.set('status', 'inactive'); }
+        var action = branchId ? 'branch_update' : 'branch_create';
+        fetch('api/company.php?action=' + action, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' },
+            body: payload
+        })
+            .then(function (res) {
+                return res.json().catch(function () {
+                    return { success: false, message: 'Invalid server response.' };
+                }).then(function (json) {
+                    return { ok: res.ok, status: res.status, data: json };
+                });
+            })
+            .then(function (result) {
+                if (saveBtn) { saveBtn.disabled = false; }
+                var data = result.data || {};
+                if (!result.ok || result.status !== 200 || !data.success) {
+                    setBranchFormError(data.message || 'Unable to save the branch.');
+                    return;
+                }
+                toast(data.message || 'Branch saved.');
+                closeBranchForm();
+                loadBranches();
+            })
+            .catch(function () {
+                if (saveBtn) { saveBtn.disabled = false; }
+                setBranchFormError('Network error while saving the branch.');
+            });
+    }
+
+    function deleteBranch(id) {
+        if (!window.confirm('Delete this branch? This cannot be undone.')) { return; }
+        var payload = new FormData();
+        payload.append('branch_id', String(id));
+        fetch('api/company.php?action=branch_delete', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' },
+            body: payload
+        })
+            .then(function (res) {
+                return res.json().catch(function () {
+                    return { success: false, message: 'Invalid server response.' };
+                }).then(function (json) {
+                    return { ok: res.ok, status: res.status, data: json };
+                });
+            })
+            .then(function (result) {
+                var data = result.data || {};
+                if (!result.ok || result.status !== 200 || !data.success) {
+                    toast((data.message || 'Unable to delete the branch.'));
+                    return;
+                }
+                toast(data.message || 'Branch deleted.');
+                loadBranches();
+            })
+            .catch(function () { toast('Network error while deleting the branch.'); });
+    }
+
     function refreshRevenue() {
         loadRevenueSummary();
         loadRevenueTripOptions();
@@ -3702,6 +3897,7 @@ var reviewEditingReplyId = null;
         loadRevenueTripOptions();
         loadPayments();
         loadProfile();
+        loadBranches();
 
         var refreshReviews = byId('btn-refresh-reviews');
         if (refreshReviews) { refreshReviews.addEventListener('click', loadReviews); }
@@ -4220,6 +4416,39 @@ var reviewEditingReplyId = null;
 
         var cancelProfileBtn = byId('btn-profile-cancel');
         if (cancelProfileBtn) { cancelProfileBtn.addEventListener('click', closeProfileForm); }
+
+        var addBranchBtn = byId('btn-add-branch');
+        if (addBranchBtn) { addBranchBtn.addEventListener('click', function () { openBranchForm(null); }); }
+
+        var cancelBranchBtn = byId('btn-branch-cancel');
+        if (cancelBranchBtn) { cancelBranchBtn.addEventListener('click', closeBranchForm); }
+
+        var branchForm = byId('branch-form');
+        if (branchForm) {
+            branchForm.addEventListener('submit', function (ev) {
+                ev.preventDefault();
+                submitBranchForm();
+            });
+        }
+
+        var branchListEl = byId('branch-list');
+        if (branchListEl) {
+            branchListEl.addEventListener('click', function (ev) {
+                var t = ev.target;
+                if (!t || !t.getAttribute) { return; }
+                var editId = t.getAttribute('data-branch-edit');
+                if (editId) {
+                    var match = null;
+                    for (var bi = 0; bi < currentBranches.length; bi++) {
+                        if (String(currentBranches[bi].id) === editId) { match = currentBranches[bi]; break; }
+                    }
+                    openBranchForm(match);
+                    return;
+                }
+                var delId = t.getAttribute('data-branch-delete');
+                if (delId) { deleteBranch(delId); }
+            });
+        }
 
         var profileForm = byId('profile-form');
         if (profileForm) {

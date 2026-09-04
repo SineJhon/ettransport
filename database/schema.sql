@@ -103,6 +103,37 @@ CREATE TABLE IF NOT EXISTS companies (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
+-- company_branches — one company can run many offices/branches
+-- (e.g. an "Arba Minch Branch"). Shown on the passenger-facing
+-- profile and managed from the company dashboard.
+-- is_head marks the main/head-office branch.
+--
+-- NOTE: for an EXISTING database created before this table was
+-- added, run the whole table DDL below once (the CREATE TABLE
+-- is idempotent — safe to paste into phpMyAdmin).
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS company_branches (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  company_id BIGINT UNSIGNED NOT NULL,
+  name VARCHAR(190) NOT NULL,
+  city VARCHAR(120) DEFAULT NULL,
+  address VARCHAR(255) DEFAULT NULL,
+  phone VARCHAR(30) DEFAULT NULL,
+  email VARCHAR(190) DEFAULT NULL,
+  hours VARCHAR(255) DEFAULT NULL,
+  is_head TINYINT(1) NOT NULL DEFAULT 0,
+  status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_company_branches_company (company_id),
+  CONSTRAINT fk_company_branches_company
+    FOREIGN KEY (company_id) REFERENCES companies(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
 -- buses — fleet vehicles owned by a company
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS buses (

@@ -2763,7 +2763,17 @@ input:focus-visible {
     color: var(--color-primary);
 }
 
-/* ---------- 10. Contact / Offices ---------- */
+/* ---------- 10. Branches / Contact ---------- */
+.branch-head-badge {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 16px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #fff;
+    background: #16a34a;
+    letter-spacing: 0.03em;
+}
 .contact-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);

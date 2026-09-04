@@ -171,8 +171,8 @@
                 { from: 'Addis Ababa', to: 'Jinka', price: 900, minutes: 690 }
             ],
             offices: [
-                { city: 'Addis Ababa', address: 'Addis Ketema Main Terminal', phone: '+251 11 228 4455', email: 'info@skybus.example.com' },
-                { city: 'Hawassa', address: 'Hawassa Intercity Terminal, Piassa', phone: '+251 46 221 7788', email: 'hawassa@skybus.example.com' }
+                { name: 'Addis Ababa Head Office', city: 'Addis Ababa', address: 'Addis Ketema Main Terminal', phone: '+251 11 228 4455', email: 'info@skybus.example.com', hours: 'Mon-Sun 6:00-22:00', isHead: true },
+                { name: 'Arba Minch Branch', city: 'Arba Minch', address: 'Near Cayro Hotel, Arba Minch', phone: '+251 46 881 2233', email: 'arbaminch@skybus.example.com', hours: 'Mon-Sat 6:00-20:00', isHead: false }
             ],
             reviews: [
                 { name: 'Mahlet D.', rating: 5, when: '1 week ago', verified: true, text: 'Quick and easy booking, and the bus to Hawassa arrived right on schedule.' },
@@ -869,27 +869,33 @@
                 '<div class="info-body"><span class="info-label">Main Destinations</span><span class="info-value info-tags">' + tags + '</span></div></li>';
     }
 
-    /* ---------- Contact / offices ---------- */
+    /* ---------- Branches / contact ---------- */
     function renderContact(c) {
         var title = document.getElementById('contact-title');
         var grid = document.getElementById('contact-grid');
-        if (title) { title.textContent = 'Contact ' + c.name; }
+        if (title) { title.textContent = 'Branches & Contact'; }
         if (!grid) { return; }
+        var offices = (c.offices && c.offices.length) ? c.offices : [];
         var html = '';
-        for (var i = 0; i < c.offices.length; i++) {
-            var o = c.offices[i];
+        for (var i = 0; i < offices.length; i++) {
+            var o = offices[i];
+            var name = o.name || o.city || 'Branch';
+            var city = (o.city && o.city !== name) ? o.city : '';
             html += '<div class="contact-card">' +
                 '<span class="contact-icon" aria-hidden="true">&#128205;</span>' +
-                '<h3>' + o.city + '</h3>' +
-                '<p class="contact-address">' + o.address + '</p>' +
-                '<p class="contact-line"><span aria-hidden="true">&#128222;</span> ' + o.phone + '</p>' +
-                '<p class="contact-line"><span aria-hidden="true">&#9993;</span> ' + o.email + '</p>' +
+                '<h3>' + esc(name) + '</h3>' +
+                (o.isHead ? '<p class="branch-head-badge">Head Office</p>' : '') +
+                (o.address ? '<p class="contact-address">' + esc(o.address) + '</p>' : (city ? '<p class="contact-address">' + esc(city) + '</p>' : '')) +
+                (o.hours ? '<p class="contact-line"><span aria-hidden="true">&#128337;</span> ' + esc(o.hours) + '</p>' : '') +
+                (o.phone ? '<p class="contact-line"><span aria-hidden="true">&#128222;</span> ' + esc(o.phone) + '</p>' : '') +
+                (o.email ? '<p class="contact-line"><span aria-hidden="true">&#9993;</span> ' + esc(o.email) + '</p>' : '') +
                 '<div class="contact-actions">' +
-                    '<a class="btn btn-call" href="tel:' + o.phone.replace(/\s+/g, '') + '">Call</a>' +
-                    '<a class="btn btn-email" href="mailto:' + o.email + '">Email</a>' +
+                    (o.phone ? '<a class="btn btn-call" href="tel:' + o.phone.replace(/\s+/g, '') + '">Call</a>' : '') +
+                    (o.email ? '<a class="btn btn-email" href="mailto:' + o.email + '">Email</a>' : '') +
                 '</div>' +
             '</div>';
         }
+        if (!html) { html = '<p class="review-none" style="padding:1rem 0;">No branch contact information yet.</p>'; }
         grid.innerHTML = html;
     }
 
@@ -1125,6 +1131,31 @@
             });
         }
 
+        var branches = [];
+        var branchesRaw = (bag.branches && Array.isArray(bag.branches)) ? bag.branches : [];
+        for (var bi = 0; bi < branchesRaw.length; bi++) {
+            var br = branchesRaw[bi];
+            branches.push({
+                name: br.name || '',
+                city: br.city || '',
+                address: br.address || '',
+                phone: br.phone || '',
+                email: br.email || '',
+                hours: br.hours || '',
+                isHead: !!br.is_head,
+                status: br.status || 'active'
+            });
+        }
+        var offices = branches.length
+            ? branches
+            : [{
+                name: 'Head office',
+                city: bag.address ? 'Head office' : '',
+                address: bag.address || '',
+                phone: bag.phone || '',
+                email: bag.email || ''
+            }];
+
         return {
             id: bag.id !== undefined ? bag.id : null,
             slug: bag.slug || '',
@@ -1146,12 +1177,8 @@
             busCount: Number(bag.bus_count) || fleet.length,
             fleet: fleet,
             popularRoutes: popularRoutes,
-            offices: [{
-                city: bag.address ? 'Head office' : '',
-                address: bag.address || '',
-                phone: bag.phone || '',
-                email: bag.email || ''
-            }],
+            branches: branches,
+            offices: offices,
             reviews: reviewed,
             trips: trips
         };

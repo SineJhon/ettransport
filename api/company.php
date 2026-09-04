@@ -35,6 +35,11 @@ declare(strict_types=1);
  *                                                     (authenticated company role only; full editable profile)
  *   POST api/company.php?action=profile_update      -> { success, message, company }
  *                                                     (authenticated company role only; updates own profile)
+ *   GET  api/company.php?action=branches             -> { success, branches }
+ *                                                     (authenticated company role only; this company's own branches)
+ *   POST api/company.php?action=branch_create        -> { success, message, branch }
+ *   POST api/company.php?action=branch_update        -> { success, message, branch }
+ *   POST api/company.php?action=branch_delete        -> { success, message }
  *   GET  api/company.php?action=routes               -> { success, company_id, routes }
  *                                                     (authenticated company role only; this company's own routes)
  *   POST api/company.php?action=route_create         -> { success, route }
@@ -3562,6 +3567,251 @@ function handle_company_profile_update(PDO $pdo): void
         'company' => company_profile_payload($updated),
     ]);
 }
+/* ============================================================
+   Company branches — one company can operate many offices.
+   ============================================================ */
+
+/** One branch row owned by the given company, or a 404 response. */
+function fetch_company_branch_row(PDO $pdo, int $companyId, int $branchId): array
+{
+    $stmt = $pdo->prepare('
+        SELECT id, name, city, address, phone, email, hours, is_head, status
+        FROM company_branches
+        WHERE id = :id AND company_id = :company_id
+        LIMIT 1
+    ');
+    $stmt->execute([':id' => $branchId, ':company_id' => $companyId]);
+    $row = $stmt->fetch();
+    if ($row === false) {
+        auth_response(404, [
+            'success' => false,
+            'message' => 'Branch not found.',
+        ]);
+    }
+    return $row;
+}
+
+/** All branches for a company (owner view: any status), main/head first. */
+function fetch_company_branches(PDO $pdo, int $companyId): array
+{
+    $stmt = $pdo->prepare('
+        SELECT id, name, city, address, phone, email, hours, is_head, status
+        FROM company_branches
+        WHERE company_id = :company_id
+        ORDER BY is_head DESC, id ASC
+    ');
+    $stmt->execute([':company_id' => $companyId]);
+    return $stmt->fetchAll();
+}
+
+/** Public subset: only active branches, main/head first. */
+function fetch_public_branches(PDO $pdo, int $companyId): array
+{
+    $stmt = $pdo->prepare('
+        SELECT id, name, city, address, phone, email, hours, is_head, status
+        FROM company_branches
+        WHERE company_id = :company_id AND status = :status
+        ORDER BY is_head DESC, id ASC
+    ');
+    $stmt->execute([':company_id' => $companyId, ':status' => 'active']);
+    return $stmt->fetchAll();
+}
+
+/** Shape one branch row into the JSON payload. */
+function company_branch_payload(array $row): array
+{
+    return [
+        'id' => (int) $row['id'],
+        'name' => $row['name'],
+        'city' => $row['city'],
+        'address' => $row['address'],
+        'phone' => $row['phone'],
+        'email' => $row['email'],
+        'hours' => $row['hours'],
+        'is_head' => (($row['is_head'] ?? 0) === 1),
+        'status' => $row['status'],
+    ];
+}
+/** Parse + validate branch fields from the request body (422 on invalid). */
+function company_branch_input_or_error(): array
+{
+    $input = company_input();
+    $name = trim((string) ($input['name'] ?? ''));
+    $city = trim((string) ($input['city'] ?? ''));
+    $address = trim((string) ($input['address'] ?? ''));
+    $phone = trim((string) ($input['phone'] ?? ''));
+    $email = strtolower(trim((string) ($input['email'] ?? '')));
+    $hours = trim((string) ($input['hours'] ?? ''));
+    $isHead = ((string) ($input['is_head'] ?? '')) === '1';
+    $status = strtolower(trim((string) ($input['status'] ?? 'active')));
+
+    if ($name === '') {
+        auth_response(422, ['success' => false, 'message' => 'Branch name is required.']);
+    }
+    if (mb_strlen($name) > 190) {
+        auth_response(422, ['success' => false, 'message' => 'Branch name must be at most 190 characters.']);
+    }
+    if (mb_strlen($city) > 120) {
+        auth_response(422, ['success' => false, 'message' => 'City must be at most 120 characters.']);
+    }
+    if (mb_strlen($address) > 255) {
+        auth_response(422, ['success' => false, 'message' => 'Address must be at most 255 characters.']);
+    }
+    if ($phone !== '' && preg_match('/^[+0-9][0-9\\-\\s]{6,20}$/', $phone) !== 1) {
+        auth_response(422, ['success' => false, 'message' => 'Please enter a valid phone number.']);
+    }
+    if (mb_strlen($phone) > 30) {
+        auth_response(422, ['success' => false, 'message' => 'Phone must be at most 30 characters.']);
+    }
+    if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+        auth_response(422, ['success' => false, 'message' => 'Please enter a valid email address.']);
+    }
+    if (mb_strlen($email) > 190) {
+        auth_response(422, ['success' => false, 'message' => 'Email must be at most 190 characters.']);
+    }
+    if (mb_strlen($hours) > 255) {
+        auth_response(422, ['success' => false, 'message' => 'Working hours must be at most 255 characters.']);
+    }
+    if (!in_array($status, ['active', 'inactive'], true)) {
+        $status = 'active';
+    }
+
+    return [
+        'name' => $name,
+        'city' => $city !== '' ? $city : null,
+        'address' => $address !== '' ? $address : null,
+        'phone' => $phone !== '' ? $phone : null,
+        'email' => $email !== '' ? $email : null,
+        'hours' => $hours !== '' ? $hours : null,
+        'is_head' => $isHead ? 1 : 0,
+        'status' => $status,
+    ];
+}
+
+/** Ensure at most one head branch per company. */
+function company_clear_head_branch(PDO $pdo, int $companyId): void
+{
+    $stmt = $pdo->prepare('UPDATE company_branches SET is_head = 0 WHERE company_id = :company_id');
+    $stmt->execute([':company_id' => $companyId]);
+}
+
+/** GET /api/company.php?action=branches — the company's own branch list. */
+function handle_branches(PDO $pdo): void
+{
+    $user = requireRole('company');
+    $company = require_company_scope($pdo, (int) $user['id']);
+    $branches = [];
+    foreach (fetch_company_branches($pdo, (int) $company['id']) as $row) {
+        $branches[] = company_branch_payload($row);
+    }
+    auth_response(200, ['success' => true, 'branches' => $branches]);
+}
+/** POST /api/company.php?action=branch_create — add a branch. */
+function handle_branch_create(PDO $pdo): void
+{
+    require_company_post();
+    $user = requireRole('company');
+    $company = require_company_scope($pdo, (int) $user['id']);
+    $companyId = (int) $company['id'];
+    $b = company_branch_input_or_error();
+
+    if (($b['is_head'] ?? 0) === 1) {
+        company_clear_head_branch($pdo, $companyId);
+    }
+
+    $stmt = $pdo->prepare('
+        INSERT INTO company_branches (company_id, name, city, address, phone, email, hours, is_head, status)
+        VALUES (:company_id, :name, :city, :address, :phone, :email, :hours, :is_head, :status)
+    ');
+    $stmt->execute([
+        ':company_id' => $companyId,
+        ':name' => $b['name'],
+        ':city' => $b['city'],
+        ':address' => $b['address'],
+        ':phone' => $b['phone'],
+        ':email' => $b['email'],
+        ':hours' => $b['hours'],
+        ':is_head' => $b['is_head'],
+        ':status' => $b['status'],
+    ]);
+
+    $row = fetch_company_branch_row($pdo, $companyId, (int) $pdo->lastInsertId());
+    auth_response(200, [
+        'success' => true,
+        'message' => 'Branch added.',
+        'branch' => company_branch_payload($row),
+    ]);
+}
+
+/** POST /api/company.php?action=branch_update — edit one owned branch. */
+function handle_branch_update(PDO $pdo): void
+{
+    require_company_post();
+    $user = requireRole('company');
+    $company = require_company_scope($pdo, (int) $user['id']);
+    $companyId = (int) $company['id'];
+    $input = company_input();
+    $branchId = positive_int_or_error($input['branch_id'] ?? null, 'Branch id is required.');
+    fetch_company_branch_row($pdo, $companyId, $branchId);
+
+    $b = company_branch_input_or_error();
+    if (($b['is_head'] ?? 0) === 1) {
+        company_clear_head_branch($pdo, $companyId);
+    }
+
+    $stmt = $pdo->prepare('
+        UPDATE company_branches
+        SET name = :name,
+            city = :city,
+            address = :address,
+            phone = :phone,
+            email = :email,
+            hours = :hours,
+            is_head = :is_head,
+            status = :status
+        WHERE id = :id AND company_id = :company_id
+    ');
+    $stmt->execute([
+        ':name' => $b['name'],
+        ':city' => $b['city'],
+        ':address' => $b['address'],
+        ':phone' => $b['phone'],
+        ':email' => $b['email'],
+        ':hours' => $b['hours'],
+        ':is_head' => $b['is_head'],
+        ':status' => $b['status'],
+        ':id' => $branchId,
+        ':company_id' => $companyId,
+    ]);
+
+    $row = fetch_company_branch_row($pdo, $companyId, $branchId);
+    auth_response(200, [
+        'success' => true,
+        'message' => 'Branch updated.',
+        'branch' => company_branch_payload($row),
+    ]);
+}
+
+/** POST /api/company.php?action=branch_delete — remove one owned branch. */
+function handle_branch_delete(PDO $pdo): void
+{
+    require_company_post();
+    $user = requireRole('company');
+    $company = require_company_scope($pdo, (int) $user['id']);
+    $companyId = (int) $company['id'];
+    $input = company_input();
+    $branchId = positive_int_or_error($input['branch_id'] ?? null, 'Branch id is required.');
+    fetch_company_branch_row($pdo, $companyId, $branchId);
+
+    $stmt = $pdo->prepare('DELETE FROM company_branches WHERE id = :id AND company_id = :company_id');
+    $stmt->execute([':id' => $branchId, ':company_id' => $companyId]);
+
+    auth_response(200, [
+        'success' => true,
+        'message' => 'Branch deleted.',
+    ]);
+}
+
 try {
     $pdo = db();
     $action = company_action();
@@ -3612,6 +3862,11 @@ try {
         $company['reviews'] = fetch_reviews($pdo, $companyId);
         $company['trips'] = fetch_company_trips($pdo, $companyId);
         $company['popular_routes'] = fetch_popular_routes($pdo, $companyId);
+        $companyBranches = [];
+        foreach (fetch_public_branches($pdo, $companyId) as $brow) {
+            $companyBranches[] = company_branch_payload($brow);
+        }
+        $company['branches'] = $companyBranches;
 
         auth_response(200, ['success' => true, 'company' => $company]);
     }
@@ -3688,6 +3943,18 @@ try {
     if ($action === 'profile_update') {
         handle_company_profile_update($pdo);
     }
+    if ($action === 'branches') {
+        handle_branches($pdo);
+    }
+    if ($action === 'branch_create') {
+        handle_branch_create($pdo);
+    }
+    if ($action === 'branch_update') {
+        handle_branch_update($pdo);
+    }
+    if ($action === 'branch_delete') {
+        handle_branch_delete($pdo);
+    }
     if ($action === 'routes') {
         handle_routes($pdo);
     }
@@ -3703,7 +3970,7 @@ try {
 
     auth_response(400, [
         'success' => false,
-        'message' => 'Unsupported action. Use action=list, action=get, action=overview, action=buses, action=bus_create, action=bus_update, action=trips, action=trip_create, action=trip_update, action=trip_status, action=trip_delete, action=bookings, action=booking_create, action=booking_cancel, action=manifest, action=revenue, action=payments, action=profile, action=profile_update, action=routes, action=route_create, action=route_update or action=route_delete.',
+        'message' => 'Unsupported action. Use action=list, action=get, action=overview, action=buses, action=bus_create, action=bus_update, action=trips, action=trip_create, action=trip_update, action=trip_status, action=trip_delete, action=bookings, action=booking_create, action=booking_cancel, action=manifest, action=revenue, action=payments, action=profile, action=profile_update, action=branches, action=branch_create, action=branch_update, action=branch_delete, action=routes, action=route_create, action=route_update or action=route_delete.',
     ]);
 } catch (Throwable $e) {
     auth_response(500, [

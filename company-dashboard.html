@@ -382,6 +382,24 @@
         .cd-profile-form input, .cd-profile-form textarea { width: 100%; padding: 0.6rem 0.7rem; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 6px; font-family: inherit; }
         .cd-profile-form textarea { min-height: 90px; resize: vertical; }
         .cd-profile-form .phone-field input { width: auto; flex: 1 1 auto; min-width: 0; }
+        .cd-profile-branches { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid #e5e7eb; }
+        .cd-profile-branches-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+        .cd-profile-branches-head h3 { margin: 0; font-size: 1.05rem; color: var(--color-dark); }
+        .cd-profile-branches-head p { margin: .2rem 0 0; color: var(--color-muted); font-size: .85rem; }
+        .cd-profile-empty { padding: 1rem; border: 1px dashed #e5e7eb; border-radius: 8px; color: var(--color-muted); text-align: center; margin-top: .75rem; }
+        .cd-profile-branch-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-sm); margin-top: .9rem; }
+        .cd-profile-branch-card { padding: 1rem; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; display: flex; flex-direction: column; gap: .55rem; }
+        .cd-profile-branch-card h4 { margin: 0; font-size: 1rem; color: var(--color-dark); }
+        .cd-branch-head-tag { display: inline-block; align-self: flex-start; padding: .18rem .6rem; border-radius: 16px; font-size: .68rem; font-weight: 800; color: #fff; background: #16a34a; text-transform: uppercase; letter-spacing: .04em; }
+        .cd-branch-line { margin:  ​0; font-size: .85rem; color: #3c4a45; }
+        .cd-branch-line b { color: var(--color-muted); font-weight: 700; }
+        .cd-branch-line a { color: #176647; text-decoration: underline; }
+        .cd-branch-status-off { color: #b45309; font-weight: 700; }
+        .cd-branch-actions { display: flex; gap: .5rem; margin-top: .35rem; }
+        .cd-branch-form-meta { display: flex; flex-wrap: wrap; gap: 1.2rem; margin-top: .5rem; }
+        .cd-branch-check { display: inline-flex; align-items: center; gap: .4rem; font-size: .85rem; font-weight: 600; color: #3c4a45; cursor: pointer; }
+        .cd-branch-check input { width: auto; }
+        .cd-branch-form { margin-top: .9rem; }
         .cd-profile-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); margin-bottom: var(--space-sm); }
         .cd-profile-form-hint { font-size: 0.78rem; color: var(--color-muted); }
         .cd-profile-form-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: var(--space-sm); }
@@ -1408,6 +1426,67 @@
                     <button type="submit" id="btn-profile-save" class="btn btn-primary">Save Changes</button>
                 </div>
             </form>
+
+            <div id="profile-branches" class="cd-profile-branches" hidden>
+                <div class="cd-profile-branches-head">
+                    <div>
+                        <h3>Branches</h3>
+                        <p>Offices where passengers can find and reach you. Add every branch you operate.</p>
+                    </div>
+                    <button type="button" id="btn-add-branch" class="btn btn-primary btn-sm">Add Branch</button>
+                </div>
+                <p id="branch-loading" class="cd-profile-msg" hidden>Loading your branches&hellip;</p>
+                <div id="branch-error" class="cd-profile-error auth-message" hidden></div>
+                <div id="branch-empty" class="cd-profile-empty" hidden></div>
+                <div id="branch-list" class="cd-profile-branch-list" hidden></div>
+
+                <form id="branch-form" class="cd-profile-form cd-branch-form" hidden novalidate>
+                    <h3 id="branch-form-title">Add Branch</h3>
+                    <input type="hidden" id="branch-id" name="branch_id">
+                    <div class="cd-profile-form-row">
+                        <div>
+                            <label for="branch-input-name">Branch Name *</label>
+                            <input id="branch-input-name" name="name" type="text" maxlength="190" required placeholder="e.g. Arba Minch Branch">
+                        </div>
+                        <div>
+                            <label for="branch-input-city">City</label>
+                            <input id="branch-input-city" name="city" type="text" maxlength="120" placeholder="Arba Minch">
+                        </div>
+                    </div>
+                    <div class="cd-profile-form-row">
+                        <div>
+                            <label for="branch-input-address">Address</label>
+                            <input id="branch-input-address" name="address" type="text" maxlength="255" placeholder="Near Cayro Hotel, Arba Minch">
+                        </div>
+                        <div>
+                            <label for="branch-input-hours">Working Hours</label>
+                            <input id="branch-input-hours" name="hours" type="text" maxlength="255" placeholder="Mon-Sat 6:00-20:00">
+                        </div>
+                    </div>
+                    <div class="cd-profile-form-row">
+                        <div>
+                            <label for="branch-input-phone">Phone</label>
+                            <div class="phone-field">
+                                <span class="phone-prefix" aria-hidden="true">+251</span>
+                                <input id="branch-input-phone" name="phone" type="tel" class="field-input" maxlength="12" placeholder="9XX XXX XXXX" inputmode="numeric" autocomplete="tel-national">
+                            </div>
+                        </div>
+                        <div>
+                            <label for="branch-input-email">Email</label>
+                            <input id="branch-input-email" name="email" type="email" maxlength="190" placeholder="arbaminch@company.com">
+                        </div>
+                    </div>
+                    <div class="cd-branch-form-meta">
+                        <label class="cd-branch-check"><input id="branch-input-head" name="is_head" type="checkbox" value="1"> Head office (main branch)</label>
+                        <label class="cd-branch-check"><input id="branch-input-status" name="status" type="checkbox" value="active" checked> Visible on the public profile</label>
+                    </div>
+                    <div id="branch-form-error" class="cd-profile-error auth-message" hidden></div>
+                    <div class="cd-profile-form-actions">
+                        <button type="button" id="btn-branch-cancel" class="btn btn-secondary">Cancel</button>
+                        <button type="submit" id="btn-branch-save" class="btn btn-primary">Save Branch</button>
+                    </div>
+                </form>
+            </div>
         </section>
     </section>
     </main>
@@ -1416,6 +1495,6 @@
 
     <script src="js/main.js"></script>
     <script src="js/auth.js"></script>
-    <script src="js/company-dashboard.js?v=20260904-profile-phone251"></script>
+    <script src="js/company-dashboard.js?v=20260904-branches"></script>
 </body>
 </html>
