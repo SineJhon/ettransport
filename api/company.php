@@ -813,7 +813,7 @@ function resolve_company_by_user(PDO $pdo, int $userId): ?array
  * revenue reaches its company through payments -> bookings -> trips. No
  * schema changes and no global counters. Existing status values only.
  *
- * @return array{activeBuses:int, upcomingTrips:int, upcomingBookings:int,
+ * @return array{activeBuses:int, upcomingTrips:int, pendingPayments:int,
  *               bookedPassengers:int, revenue:float}
  */
 function company_overview_stats(PDO $pdo, int $companyId): array
@@ -837,46 +837,31 @@ function company_overview_stats(PDO $pdo, int $companyId): array
     $stmt->execute([':company_id' => $companyId, ':status' => 'scheduled']);
     $upcomingTrips = (int) $stmt->fetchColumn();
 
-    /* upcomingBookings — active bookings on this company's future trips
-       (cancelled bookings are not counted as upcoming). */
+    /* pendingPayments — this company's pending (not yet confirmed) payments.
+       Cancelled/failed/refunded rows are excluded by only counting status = pending. */
     $stmt = $pdo->prepare('
         SELECT COUNT(*)
-        FROM bookings bk
+        FROM payments p
+        JOIN bookings bk ON bk.id = p.booking_id
         JOIN trips t ON t.id = bk.trip_id
         WHERE t.company_id = :company_id
-          AND t.status = :trip_status
-          AND (
-              t.departure_date > CURRENT_DATE()
-           OR (t.departure_date = CURRENT_DATE() AND t.departure_time > CURRENT_TIME())
-          )
-          AND bk.booking_status <> :cancelled
+          AND p.status = :payment_status
     ');
-    $stmt->execute([
-        ':company_id' => $companyId,
-        ':trip_status' => 'scheduled',
-        ':cancelled' => 'cancelled',
-    ]);
-    $upcomingBookings = (int) $stmt->fetchColumn();
+    $stmt->execute([':company_id' => $companyId, ':payment_status' => 'pending']);
+    $pendingPayments = (int) $stmt->fetchColumn();
 
-    /* bookedPassengers — travelers on this company's relevant upcoming trips. */
+    /* bookedPassengers — every traveler on this company's non-cancelled
+       bookings, regardless of trip status or departure date. Real passengers
+       remain counted even after their trip has departed or completed. */
     $stmt = $pdo->prepare('
         SELECT COUNT(*)
         FROM booking_passengers bp
         JOIN bookings bk ON bk.id = bp.booking_id
         JOIN trips t ON t.id = bk.trip_id
         WHERE t.company_id = :company_id
-          AND t.status = :trip_status
-          AND (
-              t.departure_date > CURRENT_DATE()
-           OR (t.departure_date = CURRENT_DATE() AND t.departure_time > CURRENT_TIME())
-          )
           AND bk.booking_status <> :cancelled
     ');
-    $stmt->execute([
-        ':company_id' => $companyId,
-        ':trip_status' => 'scheduled',
-        ':cancelled' => 'cancelled',
-    ]);
+    $stmt->execute([':company_id' => $companyId, ':cancelled' => 'cancelled']);
     $bookedPassengers = (int) $stmt->fetchColumn();
 
     /* revenue — sum of this company's paid payments, reached through the
@@ -895,7 +880,7 @@ function company_overview_stats(PDO $pdo, int $companyId): array
     return [
         'activeBuses' => $activeBuses,
         'upcomingTrips' => $upcomingTrips,
-        'upcomingBookings' => $upcomingBookings,
+        'pendingPayments' => $pendingPayments,
         'bookedPassengers' => $bookedPassengers,
         'revenue' => $revenue,
     ];

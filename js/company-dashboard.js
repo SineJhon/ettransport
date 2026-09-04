@@ -96,7 +96,7 @@
         var map = {
             activeBuses: 'stat-activeBuses',
             upcomingTrips: 'stat-upcomingTrips',
-            upcomingBookings: 'stat-upcomingBookings',
+            pendingPayments: 'stat-pendingPayments',
             bookedPassengers: 'stat-bookedPassengers',
             revenue: 'stat-revenue'
         };
