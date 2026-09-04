@@ -3202,6 +3202,7 @@
 
     /* ===== Company profile management (additive) ===== */
     function setProfileError(message) {
+        var sec = byId('company-profile'); if (sec) { sec.hidden = false; }
         var loading = byId('profile-loading'); if (loading) { loading.hidden = true; }
         var success = byId('profile-success'); if (success) { success.hidden = true; }
         var ferr = byId('profile-form-error'); if (ferr) { ferr.hidden = true; }
@@ -3534,10 +3535,16 @@ var reviewEditingReplyId = null;
         byId('profile-email').textContent = profileValue(company.email);
         byId('profile-phone').textContent = profileValue(company.phone);
         byId('profile-address').textContent = profileValue(company.address);
-        byId('profile-status').textContent = profileValue(company.status);
+        byId('profile-head-office').textContent = profileValue(company.head_office);
+        byId('profile-website').textContent = profileValue(company.website);
         byId('profile-desc').textContent = company.description ? company.description : '';
-        setProfileLink(byId('profile-logo'), company.logo);
-        setProfileLink(byId('profile-cover'), company.cover_image);
+        var statusBadge = byId('profile-status');
+        if (statusBadge) {
+            statusBadge.textContent = String(company.status ? company.status : '\u2014');
+            statusBadge.className = 'cd-profile-status' + (typeof company.status === 'string' && company.status ? ' is-' + company.status : '');
+        }
+        setProfileImagePreview('profile-cover-view', company.cover_image, 'PREVIEW');
+        setProfileImagePreview('profile-logo-view', company.logo, 'LOGO');
         var passengerPreview = byId('cd-passenger-preview');
         if (passengerPreview) {
             passengerPreview.href = company.slug ? 'company.html?company=' + encodeURIComponent(company.slug) : 'company.html';
@@ -3551,6 +3558,10 @@ var reviewEditingReplyId = null;
         if (phoneInput) { phoneInput.value = company.phone || ''; }
         var addressInput = byId('profile-input-address');
         if (addressInput) { addressInput.value = company.address || ''; }
+        var websiteInput = byId('profile-input-website');
+        if (websiteInput) { websiteInput.value = company.website || ''; }
+        var headOfficeInput = byId('profile-input-head-office');
+        if (headOfficeInput) { headOfficeInput.value = company.head_office || ''; }
         var logoInput = byId('profile-input-logo');
         if (logoInput) { logoInput.value = ''; }
         var coverInput = byId('profile-input-cover');
@@ -3564,6 +3575,7 @@ var reviewEditingReplyId = null;
     }
 
     function loadProfile() {
+        var sec = byId('company-profile'); if (sec) { sec.hidden = false; }
         var loading = byId('profile-loading'); if (loading) { loading.hidden = false; }
         var err = byId('profile-error'); if (err) { err.hidden = true; }
 

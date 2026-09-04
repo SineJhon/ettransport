@@ -522,6 +522,8 @@ function company_profile_rows(PDO $pdo, ?string $slug = null): array
             c.phone,
             c.email,
             c.address,
+            c.website,
+            c.head_office,
             c.status,
             c.created_at,
             (SELECT COUNT(*) FROM buses b WHERE b.company_id = c.id) AS bus_count,
@@ -641,6 +643,8 @@ function company_payload(array $row, array $destinations): array
         'phone' => $row['phone'],
         'email' => $row['email'],
         'address' => $row['address'],
+        'website' => $row['website'],
+        'head_office' => $row['head_office'],
         'status' => $row['status'],
         'verified' => $row['status'] === 'approved',
         'rating' => $rating,
@@ -3278,7 +3282,7 @@ function handle_payments(PDO $pdo): void
 function fetch_company_profile_row(PDO $pdo, int $companyId): ?array
 {
     $stmt = $pdo->prepare('
-        SELECT id, name, slug, description, logo, cover_image, phone, email, address, status
+        SELECT id, name, slug, description, logo, cover_image, phone, email, address, website, head_office, status
         FROM companies
         WHERE id = :id
         LIMIT 1
@@ -3302,6 +3306,8 @@ function company_profile_payload(array $row): array
         'email' => $row['email'],
         'phone' => $row['phone'],
         'address' => $row['address'],
+        'website' => $row['website'],
+        'head_office' => $row['head_office'],
         'logo' => $row['logo'],
         'cover_image' => $row['cover_image'],
         'status' => $row['status'],
@@ -3443,6 +3449,8 @@ function handle_company_profile_update(PDO $pdo): void
     $email = strtolower(trim((string) ($input['email'] ?? '')));
     $phone = trim((string) ($input['phone'] ?? ''));
     $address = trim((string) ($input['address'] ?? ''));
+    $website = trim((string) ($input['website'] ?? ''));
+    $headOffice = trim((string) ($input['head_office'] ?? ''));
     $uploadedLogo = company_uploaded_image_or_error($_FILES['logo_file'] ?? null, $companyId, 'logo');
     $uploadedCover = company_uploaded_image_or_error($_FILES['cover_file'] ?? null, $companyId, 'cover');
     $logo = $uploadedLogo ?? ((string) ($input['remove_logo'] ?? '') === '1' ? null : ($existing['logo'] ?? null));
@@ -3496,6 +3504,29 @@ function handle_company_profile_update(PDO $pdo): void
             'message' => 'Address must be at most 255 characters.',
         ]);
     }
+    if (mb_strlen($website) > 255) {
+        auth_response(422, [
+            'success' => false,
+            'message' => 'Website must be at most 255 characters.',
+        ]);
+    }
+    if ($website !== '') {
+        // Accept a bare domain (ettrans.com) and normalize it to https://.
+        $site = preg_match('#^https?://#i', $website) === 1 ? $website : 'https://' . $website;
+        if (filter_var($site, FILTER_VALIDATE_URL) === false) {
+            auth_response(422, [
+                'success' => false,
+                'message' => 'Please enter a valid website URL.',
+            ]);
+        }
+        $website = $site;
+    }
+    if (mb_strlen($headOffice) > 255) {
+        auth_response(422, [
+            'success' => false,
+            'message' => 'Head office must be at most 255 characters.',
+        ]);
+    }
 
     $stmt = $pdo->prepare('
         UPDATE companies
@@ -3504,6 +3535,8 @@ function handle_company_profile_update(PDO $pdo): void
             email = :email,
             phone = :phone,
             address = :address,
+            website = :website,
+            head_office = :head_office,
             logo = :logo,
             cover_image = :cover_image
         WHERE id = :id
@@ -3514,6 +3547,8 @@ function handle_company_profile_update(PDO $pdo): void
         ':email' => $email !== '' ? $email : null,
         ':phone' => $phone !== '' ? $phone : null,
         ':address' => $address !== '' ? $address : null,
+        ':website' => $website !== '' ? $website : null,
+        ':head_office' => $headOffice !== '' ? $headOffice : null,
         ':logo' => $logo,
         ':cover_image' => $coverImage,
         ':id' => $companyId,

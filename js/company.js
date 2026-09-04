@@ -1137,7 +1137,7 @@
             rating: Number(bag.rating) || 0,
             reviewCount: Number(bag.review_count) || 0,
             founded: createdYear,
-            headOffice: bag.address || '',
+            headOffice: bag.head_office || bag.address || '',
             phone: bag.phone || '',
             email: bag.email || '',
             website: bag.website || '',

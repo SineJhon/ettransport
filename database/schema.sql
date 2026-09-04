@@ -68,6 +68,12 @@ CREATE TABLE IF NOT EXISTS users (
 -- companies — one company profile linked to one company user account.
 -- status supports the admin approval workflow:
 --   pending → approved → suspended | rejected
+--
+-- NOTE: for an EXISTING database (created before website/head_office
+-- were added) apply this once:
+--   ALTER TABLE companies
+--     ADD COLUMN website VARCHAR(255) DEFAULT NULL AFTER address,
+--     ADD COLUMN head_office VARCHAR(255) DEFAULT NULL AFTER website;
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS companies (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -80,6 +86,8 @@ CREATE TABLE IF NOT EXISTS companies (
   phone VARCHAR(30) DEFAULT NULL,
   email VARCHAR(190) DEFAULT NULL,
   address VARCHAR(255) DEFAULT NULL,
+  website VARCHAR(255) DEFAULT NULL,
+  head_office VARCHAR(255) DEFAULT NULL,
   status ENUM('pending', 'approved', 'suspended', 'rejected') NOT NULL DEFAULT 'pending',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

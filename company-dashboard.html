@@ -278,7 +278,26 @@
         .cd-review-empty { padding: 1rem; border: 1px dashed #e5e7eb; border-radius: 8px; color: var(--color-muted); text-align: center; }
         .cd-reviews-head .btn { flex: 0 0 auto; }
 
-        .cd-review-filterbar { display: flex; flex-wrap: wrap; gap: 0.45rem; padding: 0.6rem 0; }        .cd-review-filterbar[hidden] { display: none; }        .cd-review-filter { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.45rem 0.8rem; color: #587068; background: #fff; border:  1px solid #e5e7eb; border-radius: 10px; cursor: pointer; font:  800 0.78rem/1 'DM Sans', sans-serif; }        .cd-review-filter:hover { border-color: #6cb48c; }        .cd-review-filter.is-active { color: #fff; background: #187653; border-color: #187653; }        .cd-review-filter-count { display: inline-grid; place-items: center; min-width: 1.1rem; height:  1.1rem; padding: 0.15rem; border-radius: 50%; background: rgba(0, 0, 0, .1); font-size:  0.7rem; }        .cd-review-actions { display: flex; align-items: center; gap: 0.5rem; margin-top:  0.25rem; }        .cd-review-like { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.65rem; color: #6b7c76; background: #f3f7f5; border:  1px solid #e3ece7; border-radius: 50px; cursor: pointer; font-size:  0.82rem; font-weight:  700; }        .cd-review-like:hover { color: #b91c1c; border-color: #eec5c5; }        .cd-review-like.is-liked { color: #b91c1c; background: #fdeeee; border-color: #f3c2c2; }        .cd-review-reply-btn { margin-left: auto; padding: 0.3rem 0.65rem; color: #176447; background: #eff8f3; border:  1px solid #cce5d7; border-radius: 50px; cursor: pointer; font-size:  0.8rem; font-weight:  700; }        .cd-review-reply-btn:hover { background: #e2f3e9; }        .cd-review-reply { margin-top: 0.6rem; padding: 0.7rem 1rem; background: #f4faf6; border-left:  3px solid #6cb48c; border-radius: 8px; }        .cd-review-reply-label { display: block; font-size: 0.68rem; font-weight:  800; color: #2e6e59; text-transform: uppercase; letter-spacing:  0.05em; margin-bottom:  0.3rem; }        .cd-review-reply p { margin: 0; font-size: 0.88rem; line-height: 1.55; color: var(--color-text); }        .cd-review-reply-meta { display: block; margin-top: 0.35rem; font-size: 0.78rem; color: var(--color-muted); }        .cd-review-reply-meta button { padding: 0; color: #176447; background: transparent; border: 0; cursor: pointer; font-size: inherit; font-weight:  700; text-decoration: underline; }        .cd-review-reply-editor { margin-top: 0.6rem; padding: 0.7rem 1rem; background: #f4faf6; border:  1px solid #d7e8de; border-radius: 9px; }        .cd-review-reply-input { width: 100%; min-height: 4.5rem; padding: 0.55rem; border:  1px solid #cbd5e1; border-radius: 8px; font:  inherit; font-size: 0.88rem; resize: vertical; box-sizing: border-box; }        .cd-review-reply-editor-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.6rem; }        /* ===== Company profile (additive, scoped to .cd-*) ===== */
+        .cd-review-filterbar { display: flex; flex-wrap: wrap; gap: 0.45rem; padding: 0.6rem 0; }
+        .cd-review-filterbar[hidden] { display: none; }
+        .cd-review-filter { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.45rem 0.8rem; color: #587068; background: #fff; border:  1px solid #e5e7eb; border-radius: 10px; cursor: pointer; font:  800 0.78rem/1 'DM Sans', sans-serif; }
+        .cd-review-filter:hover { border-color: #6cb48c; }
+        .cd-review-filter.is-active { color: #fff; background: #187653; border-color: #187653; }
+        .cd-review-filter-count { display: inline-grid; place-items: center; min-width: 1.1rem; height:  1.1rem; padding: 0.15rem; border-radius: 50%; background: rgba(0, 0, 0, .1); font-size:  0.7rem; }
+        .cd-review-actions { display: flex; align-items: center; gap: 0.5rem; margin-top:  0.25rem; }
+        .cd-review-like { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.65rem; color: #6b7c76; background: #f3f7f5; border:  1px solid #e3ece7; border-radius: 50px; cursor: pointer; font-size:  0.82rem; font-weight:  700; }
+        .cd-review-like:hover { color: #b91c1c; border-color: #eec5c5; }
+        .cd-review-like.is-liked { color: #b91c1c; background: #fdeeee; border-color: #f3c2c2; }
+        .cd-review-reply-btn { margin-left: auto; padding: 0.3rem 0.65rem; color: #176447; background: #eff8f3; border:  1px solid #cce5d7; border-radius: 50px; cursor: pointer; font-size:  0.8rem; font-weight:  700; }
+        .cd-review-reply-btn:hover { background: #e2f3e9; }
+        .cd-review-reply { margin-top: 0.6rem; padding: 0.7rem 1rem; background: #f4faf6; border-left:  3px solid #6cb48c; border-radius: 8px; }
+        .cd-review-reply-label { display: block; font-size: 0.68rem; font-weight:  800; color: #2e6e59; text-transform: uppercase; letter-spacing:  0.05em; margin-bottom:  0.3rem; }
+        .cd-review-reply p { margin: 0; font-size: 0.88rem; line-height: 1.55; color: var(--color-text); }
+        .cd-review-reply-meta { display: block; margin-top: 0.35rem; font-size: 0.78rem; color: var(--color-muted); }
+        .cd-review-reply-meta button { padding: 0; color: #176447; background: transparent; border: 0; cursor: pointer; font-size: inherit; font-weight:  700; text-decoration: underline; }
+        .cd-review-reply-editor { margin-top: 0.6rem; padding: 0.7rem 1rem; background: #f4faf6; border:  1px solid #d7e8de; border-radius: 9px; }
+        .cd-review-reply-input { width: 100%; min-height: 4.5rem; padding: 0.55rem; border:  1px solid #cbd5e1; border-radius: 8px; font:  inherit; font-size: 0.88rem; resize: vertical; box-sizing: border-box; }
+        .cd-review-reply-editor-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.6rem; }        /* ===== Company profile (additive, scoped to .cd-*) ===== */
         /* ===== Reviews: passenger-sentiment studio ===== */
         .cd-reviews { --review-ink: #193c35; --review-green: #177550; --review-mist: #eef7f1; --review-line: #dcebe2; --review-gold: #e7a22d; margin-top: 0; }
         .cd-pane-title #btn-refresh-reviews { flex: 0 0 auto; border-color: #cfe0d6; background: #fff; color: #245d49; box-shadow: none; }
@@ -338,10 +357,25 @@
         .cd-profile-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
         .cd-profile-head h2 { font-size: 1.2rem; color: var(--color-dark); margin: 0; }
         .cd-profile-msg { color: var(--color-muted); font-size: 0.9rem; }
-        .cd-profile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.5rem 1.5rem; margin-top: var(--space-sm); }
-        .cd-profile-field .k { display: block; font-size: 0.7rem; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.04em; }
-        .cd-profile-field .v { font-size: 0.92rem; color: var(--color-dark); font-weight: 600; word-break: break-word; }
-        .cd-profile-desc { margin-top: 0.5rem; font-size: 0.9rem; color: var(--color-dark); }
+        .cd-profile-card { overflow: hidden; margin-top: var(--space-sm); background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; box-shadow: 0 1px 2px rgba(16, 59, 45, .05); }
+        .cd-profile-cover { position: relative; height: 112px; display: grid; place-items: center; color: rgba(255,255,255,.6); background: linear-gradient(120deg, #12603f, #2c9b6b 55%, #63c49a); font-size: .68rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+        .cd-profile-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+        .cd-profile-card-body { padding: 0 1.25rem 1.25rem; }
+        .cd-profile-brand { display: flex; align-items: center; gap: 1rem; }
+        .cd-profile-logo { display: grid; place-items: center; position: relative; z-index: 1; width: 74px; height: 74px; overflow: hidden; flex: 0 0 74px; margin-top: -2.05rem; color: #38624f; background: #eaf4ee; border:  3px solid #fff; border-radius: 14px; font-size: .66rem; font-weight: 800; text-align: center; box-shadow:  0 2px 6px rgba(16,59,45,.16); }
+        .cd-profile-logo img { width: 100%; height: 100%; object-fit: contain; }
+        .cd-profile-identity { min-width: 0; }
+        .cd-profile-identity h3 { margin: 0; font-size: 1.25rem; color: var(--color-dark); line-height:  1.2; }
+        .cd-profile-slug { margin: .15rem 0 0; color: var(--color-muted); font-size: .82rem; }
+        .cd-profile-status { display: inline-block; margin-top: .45rem; padding: .22rem .6rem; border-radius: 20px; color: #fff; background: #6b7280; font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; }
+        .cd-profile-status.is-approved { background: #16a34a; }
+        .cd-profile-status.is-pending { background: #d97706; }
+        .cd-profile-status.is-suspended, .cd-profile-status.is-rejected { background: #b91c1c; }
+        .cd-profile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: .7rem 1.5rem; margin-top: var(--space-sm); padding: 1rem 1.25rem; background: #f4f8f6; border:  1px solid #e3ece7; border-radius: 12px; }
+        .cd-profile-field .k { display: block; font-size: .68rem; color: #5f766d; text-transform: uppercase; letter-spacing: .05em; font-weight: 700; }
+        .cd-profile-field .v { display: block; margin-top: .2rem; font-size: .92rem; color: var(--color-dark); font-weight: 600; word-break: break-word; }
+        .cd-profile-desc { margin: 1rem 0 0; font-size: .9rem; line-height: 1.62; color: #3c4a45; }
+        .cd-profile-field .v a { color: #176647; text-decoration: underline; text-underline-offset: 2px; }
         .cd-profile-form { margin-top: var(--space-md); padding: 1.1rem; border: 1px solid #e5e7eb; border-radius: 10px; }
         .cd-profile-form h3 { margin: 0 0 0.75rem; font-size: 1.05rem; }
         .cd-profile-form label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem; }
@@ -1287,15 +1321,27 @@
             <p id="profile-success" class="cd-profile-success" hidden></p>
 
             <div id="profile-view" hidden>
+                <div class="cd-profile-card">
+                    <div class="cd-profile-cover" id="profile-cover-view"><span>Company Preview</span><img alt="Company cover image" hidden></div>
+                    <div class="cd-profile-card-body">
+                        <div class="cd-profile-brand">
+                            <div class="cd-profile-logo" id="profile-logo-view"><span>LOGO</span><img alt="Company logo" hidden></div>
+                            <div class="cd-profile-identity">
+                                <h3 id="profile-name"></h3>
+                                <p class="cd-profile-slug" id="profile-slug"></p>
+                                <span class="cd-profile-status" id="profile-status"></span>
+                            </div>
+                        </div>
+                        <p class="cd-profile-desc" id="profile-desc"></p>
+                    </div>
+                </div>
                 <div class="cd-profile-grid">
-                    <div class="cd-profile-field"><span class="k">Company Name</span><span class="v" id="profile-name"></span></div>
-                    <div class="cd-profile-field"><span class="k">Slug</span><span class="v" id="profile-slug"></span></div>
+                    <div class="cd-profile-field"><span class="k">Head Office</span><span class="v" id="profile-head-office"></span></div>
                     <div class="cd-profile-field"><span class="k">Contact Email</span><span class="v" id="profile-email"></span></div>
                     <div class="cd-profile-field"><span class="k">Phone</span><span class="v" id="profile-phone"></span></div>
-                    <div class="cd-profile-field"><span class="k">Address</span><span class="v" id="profile-address"></span></div>
-                    <div class="cd-profile-field"><span class="k">Status</span><span class="v" id="profile-status"></span></div>
+                    <div class="cd-profile-field"><span class="k">Website</span><span class="v" id="profile-website"></span></div>
+                    <div class="cd-profile-field"><span class="k">Registered Address</span><span class="v" id="profile-address"></span></div>
                 </div>
-                <p class="cd-profile-desc" id="profile-desc"></p>
             </div>
 
             <form id="profile-form" class="cd-profile-form" hidden novalidate>
@@ -1319,6 +1365,18 @@
                         <label for="profile-input-address">Address</label>
                         <input id="profile-input-address" name="address" type="text" maxlength="255">
                     </div>
+                <div class="cd-profile-form-row">
+                    <div>
+                        <label for="profile-input-website">Website</label>
+                        <input id="profile-input-website" name="website" type="text" maxlength="255" placeholder="https://yoursite.com">
+                        <span class="cd-profile-form-hint">Shown as a link on your passenger-facing page.</span>
+                    </div>
+                    <div>
+                        <label for="profile-input-head-office">Head Office</label>
+                        <input id="profile-input-head-office" name="head_office" type="text" maxlength="255" placeholder="e.g. Addis Ababa, Piassa">
+                        <span class="cd-profile-form-hint">Where passengers can find your main office.</span>
+                    </div>
+                </div>
                 </div>
                 <div class="cd-profile-form-row">
                     <div>
@@ -1354,6 +1412,6 @@
 
     <script src="js/main.js"></script>
     <script src="js/auth.js"></script>
-    <script src="js/company-dashboard.js?v=20260904-reviews-header-refresh"></script>
+    <script src="js/company-dashboard.js?v=20260904-profile-redesign"></script>
 </body>
 </html>
