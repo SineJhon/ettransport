@@ -3233,6 +3233,22 @@
         return String(v == null || v === '' ? '\u2014' : v);
     }
 
+    /* Show the phone without the locked +251 prefix inside the edit field. */
+    function localPhoneValue(v) {
+        var s = String(v == null ? '' : v).trim();
+        if (s.indexOf('+251') === 0) { s = s.slice(4); }
+        return s.trim();
+    }
+
+    /* Build the full stored phone number: locked +251 prefix + local digits.
+       Strips a leading 0 (09X -> 9X) to match the app's phone convention. */
+    function fullPhoneValue(v) {
+        var digits = String(v == null ? '' : v).replace(/\D/g, '');
+        if (digits.length === 10 && digits.charAt(0) === '0') { digits = digits.slice(1); }
+        else if (digits.length > 10) { digits = digits.slice(0, 10); }
+        return digits ? ('+251' + digits) : '';
+    }
+
     function setProfileLink(el, value) {
         if (!el) { return; }
         if (value) {
@@ -3555,7 +3571,7 @@ var reviewEditingReplyId = null;
         var emailInput = byId('profile-input-email');
         if (emailInput) { emailInput.value = company.email || ''; }
         var phoneInput = byId('profile-input-phone');
-        if (phoneInput) { phoneInput.value = company.phone || ''; }
+        if (phoneInput) { phoneInput.value = localPhoneValue(company.phone); }
         var addressInput = byId('profile-input-address');
         if (addressInput) { addressInput.value = company.address || ''; }
         var websiteInput = byId('profile-input-website');
@@ -3629,6 +3645,9 @@ var reviewEditingReplyId = null;
         var saveBtn = byId('btn-profile-save');
         var original = saveBtn ? saveBtn.textContent : '';
         if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving\u2026'; }
+
+        var phoneInput = byId('profile-input-phone');
+        if (phoneInput) { phoneInput.value = fullPhoneValue(phoneInput.value); }
 
         var payload = new FormData(form);
 
