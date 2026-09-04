@@ -488,6 +488,7 @@
         .cd-bus-modal { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 1rem; background: rgba(8, 31, 25, .58); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }.cd-bus-modal[hidden] { display: none; }.cd-bus-modal-box { width: min(100%, 650px); max-height: min(90vh, 760px); overflow: auto; padding: 1.4rem; background: #fff; border: 1px solid #dfe9e3; border-radius: 18px; box-shadow: 0 25px 70px rgba(5, 26, 20, .28); }.cd-bus-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid #e5ede8; }.cd-bus-modal-head p { margin: .3rem 0 0; color: #647a71; font-size: .85rem; }.cd-bus-modal-close { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; padding: 0; color: #275147; background: #edf5f0; border: 0; border-radius: 50%; cursor: pointer; font-size: 1.25rem; line-height: 1; }.cd-bus-modal .cd-bus-form { display: block; padding: 0; margin: 0; border: 0; }.cd-bus-modal .cd-bus-form h3 { display: none; }.cd-bus-modal .cd-bus-form label { margin-top: .8rem; color: #254a40; font-size: .78rem; font-weight: 800; letter-spacing: .025em; }.cd-bus-modal .cd-bus-form input, .cd-bus-modal .cd-bus-form select { min-height: 2.7rem; background: #fbfdfc; }.cd-bus-modal .cd-bus-form-actions { padding-top: 1rem; margin-top: 1.25rem; border-top: 1px solid #e5ede8; }
         .cd-trip-modal { position: fixed; inset: 0; z-index: 101; display: grid; place-items: center; padding: 1rem; background: rgba(8, 31, 25, .58); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }.cd-trip-modal[hidden] { display: none; }.cd-trip-modal-box { width: min(100%, 650px); max-height: min(90vh, 760px); overflow: auto; padding: 1.4rem; background: #fff; border: 1px solid #dfe9e3; border-radius: 18px; box-shadow: 0 25px 70px rgba(5, 26, 20, .28); }.cd-trip-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid #e5ede8; }.cd-trip-modal-head p { margin: .3rem 0 0; color: #647a71; font-size: .85rem; }.cd-trip-modal-close { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; padding: 0; color: #275147; background: #edf5f0; border: 0; border-radius: 50%; cursor: pointer; font-size: 1.25rem; line-height: 1; }.cd-trip-modal .cd-trip-form { display: block; padding: 0; margin: 0; border: 0; }.cd-trip-modal .cd-trip-form h3 { display: none; }.cd-trip-modal .cd-trip-form label { margin-top: .8rem; color: #254a40; font-size: .78rem; font-weight: 800; letter-spacing: .025em; }.cd-trip-modal .cd-trip-form input, .cd-trip-modal .cd-trip-form select { min-height: 2.7rem; background: #fbfdfc; }.cd-trip-modal .cd-trip-form-actions { padding-top: 1rem; margin-top: 1.25rem; border-top: 1px solid #e5ede8; }
         .cd-trip-modal .cd-route-form { display: block; padding: 0; margin: 0; border: 0; }.cd-trip-modal .cd-route-form h3 { display: none; }.cd-trip-modal .cd-route-form label { margin-top: .8rem; color: #254a40; font-size: .78rem; font-weight: 800; letter-spacing: .025em; }.cd-trip-modal .cd-route-form input, .cd-trip-modal .cd-route-form select { min-height: 2.7rem; background: #fbfdfc; }.cd-trip-modal .cd-route-form-actions { padding-top: 1rem; margin-top: 1.25rem; border-top: 1px solid #e5ede8; }
+        .cd-trip-modal .cd-branch-form { display: block; padding: 0; margin: 0; border: 0; }.cd-trip-modal .cd-branch-form h3 { display: none; }.cd-trip-modal .cd-branch-form label { margin-top: .8rem; color: #254a40; font-size: .78rem; font-weight: 800; letter-spacing: .025em; }.cd-trip-modal .cd-branch-form input, .cd-trip-modal .cd-branch-form select { min-height: 2.7rem; background: #fbfdfc; }.cd-trip-modal .cd-branch-form .cd-profile-form-row { margin-top: 0; margin-bottom: 0; }.cd-trip-modal .cd-branch-form .cd-branch-form-meta { margin-top: .4rem; }.cd-trip-modal .cd-branch-form .cd-branch-check { align-items: center; margin-top: .8rem; font-size: .8rem; font-weight: 600; letter-spacing: normal; color: #3c4a45; }.cd-trip-modal .cd-branch-form .cd-branch-check input[type="checkbox"] { width: auto; min-height: 0; margin: 0 .4rem 0 0; background: transparent; }.cd-trip-modal .cd-branch-form .cd-profile-form-actions { padding-top: 1rem; margin-top: 1.25rem; border-top: 1px solid #e5ede8; }
 /* ===== Route cards — refined layout (additive, scoped to .cd-*).
              Placed after the pane rules so these win the cascade. ===== */
         .cd-route-card { position: relative; display: flex; flex-direction: column; gap: .85rem; padding: 1.15rem 1.15rem 1rem; background: #fff; border: 1px solid #e1eae5; border-radius: 14px; overflow: hidden; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
@@ -1439,57 +1440,98 @@
                 <div id="branch-error" class="cd-profile-error auth-message" hidden></div>
                 <div id="branch-empty" class="cd-profile-empty" hidden></div>
                 <div id="branch-list" class="cd-profile-branch-list" hidden></div>
-
-                <form id="branch-form" class="cd-profile-form cd-branch-form" hidden novalidate>
-                    <h3 id="branch-form-title">Add Branch</h3>
-                    <input type="hidden" id="branch-id" name="branch_id">
-                    <div class="cd-profile-form-row">
-                        <div>
-                            <label for="branch-input-name">Branch Name *</label>
-                            <input id="branch-input-name" name="name" type="text" maxlength="190" required placeholder="e.g. Arba Minch Branch">
-                        </div>
-                        <div>
-                            <label for="branch-input-city">City</label>
-                            <input id="branch-input-city" name="city" type="text" maxlength="120" placeholder="Arba Minch">
-                        </div>
-                    </div>
-                    <div class="cd-profile-form-row">
-                        <div>
-                            <label for="branch-input-address">Address</label>
-                            <input id="branch-input-address" name="address" type="text" maxlength="255" placeholder="Near Cayro Hotel, Arba Minch">
-                        </div>
-                        <div>
-                            <label for="branch-input-hours">Working Hours</label>
-                            <input id="branch-input-hours" name="hours" type="text" maxlength="255" placeholder="Mon-Sat 6:00-20:00">
-                        </div>
-                    </div>
-                    <div class="cd-profile-form-row">
-                        <div>
-                            <label for="branch-input-phone">Phone</label>
-                            <div class="phone-field">
-                                <span class="phone-prefix" aria-hidden="true">+251</span>
-                                <input id="branch-input-phone" name="phone" type="tel" class="field-input" maxlength="12" placeholder="9XX XXX XXXX" inputmode="numeric" autocomplete="tel-national">
-                            </div>
-                        </div>
-                        <div>
-                            <label for="branch-input-email">Email</label>
-                            <input id="branch-input-email" name="email" type="email" maxlength="190" placeholder="arbaminch@company.com">
-                        </div>
-                    </div>
-                    <div class="cd-branch-form-meta">
-                        <label class="cd-branch-check"><input id="branch-input-head" name="is_head" type="checkbox" value="1"> Head office (main branch)</label>
-                        <label class="cd-branch-check"><input id="branch-input-status" name="status" type="checkbox" value="active" checked> Visible on the public profile</label>
-                    </div>
-                    <div id="branch-form-error" class="cd-profile-error auth-message" hidden></div>
-                    <div class="cd-profile-form-actions">
-                        <button type="button" id="btn-branch-cancel" class="btn btn-secondary">Cancel</button>
-                        <button type="submit" id="btn-branch-save" class="btn btn-primary">Save Branch</button>
-                    </div>
-                </form>
             </div>
         </section>
     </section>
     </main>
+
+    <!-- ============================================================
+         Branch form modal (add / edit) — scoped to the public-profile
+         branch management. Reuses the trip modal design for the overlay.
+         ============================================================ -->
+    <div id="branch-form-modal" class="cd-trip-modal cd-workspace" hidden>
+        <div class="cd-trip-modal-box" role="dialog" aria-modal="true" aria-labelledby="branch-form-title">
+            <div class="cd-trip-modal-head">
+                <div>
+                    <strong id="branch-modal-heading">Branch details</strong>
+                    <p>Add or edit a branch so passengers can find and reach you.</p>
+                </div>
+                <button type="button" id="branch-modal-close" class="cd-trip-modal-close" aria-label="Close branch form">&times;</button>
+            </div>
+
+            <form id="branch-form" class="cd-profile-form cd-branch-form" novalidate>
+                <h3 id="branch-form-title">Add Branch</h3>
+                <input type="hidden" id="branch-id" name="branch_id">
+                <div class="cd-profile-form-row">
+                    <div>
+                        <label for="branch-input-name">Branch Name *</label>
+                        <input id="branch-input-name" name="name" type="text" maxlength="190" required placeholder="e.g. Arba Minch Branch">
+                    </div>
+                    <div>
+                        <label for="branch-input-city">City</label>
+                        <input id="branch-input-city" name="city" type="text" maxlength="120" placeholder="Arba Minch">
+                    </div>
+                </div>
+                <div class="cd-profile-form-row">
+                    <div>
+                        <label for="branch-input-address">Address</label>
+                        <input id="branch-input-address" name="address" type="text" maxlength="255" placeholder="Near Cayro Hotel, Arba Minch">
+                    </div>
+                    <div>
+                        <label for="branch-input-hours">Working Hours</label>
+                        <input id="branch-input-hours" name="hours" type="text" maxlength="255" placeholder="Mon-Sat 6:00-20:00">
+                    </div>
+                </div>
+                <div class="cd-profile-form-row">
+                    <div>
+                        <label for="branch-input-phone">Phone</label>
+                        <div class="phone-field">
+                            <span class="phone-prefix" aria-hidden="true">+251</span>
+                            <input id="branch-input-phone" name="phone" type="tel" class="field-input" maxlength="12" placeholder="9XX XXX XXXX" inputmode="numeric" autocomplete="tel-national">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="branch-input-email">Email</label>
+                        <input id="branch-input-email" name="email" type="email" maxlength="190" placeholder="arbaminch@company.com">
+                    </div>
+                </div>
+                <div class="cd-branch-form-meta">
+                    <label class="cd-branch-check"><input id="branch-input-head" name="is_head" type="checkbox" value="1"> Head office (main branch)</label>
+                    <label class="cd-branch-check"><input id="branch-input-status" name="status" type="checkbox" value="active" checked> Visible on the public profile</label>
+                </div>
+                <div id="branch-form-error" class="cd-profile-error auth-message" hidden></div>
+                <div class="cd-profile-form-actions">
+                    <button type="button" id="btn-branch-cancel" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" id="btn-branch-save" class="btn btn-primary">Save Branch</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         Branch delete confirmation modal.
+         ============================================================ -->
+    <div id="branch-delete-modal" class="cd-trip-delete-modal" hidden>
+        <div class="cd-trip-delete-box" role="dialog" aria-modal="true" aria-labelledby="branch-delete-title">
+            <div class="cd-cancel-head">
+                <h3 id="branch-delete-title">Delete branch?</h3>
+                <button type="button" id="branch-delete-close" class="cd-cancel-close" aria-label="Close branch deletion dialog">&times;</button>
+            </div>
+            <p class="cd-cancel-intro">This permanently removes this branch from your public profile. This action cannot be undone.</p>
+
+            <div class="cd-cancel-summary">
+                <div class="cd-cancel-field"><span class="k">Branch</span><span class="v" id="branch-delete-name"></span></div>
+                <div class="cd-cancel-field"><span class="k">City</span><span class="v" id="branch-delete-city"></span></div>
+            </div>
+
+            <p id="branch-delete-msg" class="cd-trip-delete-msg" role="alert" hidden></p>
+
+            <div class="cd-trip-delete-actions">
+                <button type="button" id="branch-delete-keep-btn" class="btn btn-secondary">Keep Branch</button>
+                <button type="button" id="branch-delete-confirm-btn" class="btn btn-danger">Delete Branch</button>
+            </div>
+        </div>
+    </div>
 
     <div id="dash-toast" class="dash-toast" role="status" hidden></div>
 

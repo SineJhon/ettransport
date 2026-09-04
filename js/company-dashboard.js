@@ -3792,15 +3792,14 @@ function loadBranches() {
         var headChk = byId('branch-input-head'); if (headChk) { headChk.checked = !!(branch && branch.is_head); }
         var statusChk = byId('branch-input-status'); if (statusChk) { statusChk.checked = !(branch && branch.status === 'inactive'); }
         var title = byId('branch-form-title'); if (title) { title.textContent = branch ? 'Edit Branch' : 'Add Branch'; }
-        var form = byId('branch-form'); if (form) { form.hidden = false; }
-        var btn = byId('btn-add-branch'); if (btn) { btn.hidden = true; }
-        var listEl = byId('branch-list'); if (listEl) { listEl.hidden = true; }
+        var heading = byId('branch-modal-heading'); if (heading) { heading.textContent = branch ? 'Edit branch' : 'Add a branch'; }
+        var modal = byId('branch-form-modal'); if (modal) { modal.hidden = false; }
+        if (nameInput) { nameInput.focus(); }
     }
 
     function closeBranchForm() {
         clearBranchMessages();
-        var form = byId('branch-form'); if (form) { form.hidden = true; }
-        var btn = byId('btn-add-branch'); if (btn) { btn.hidden = false; }
+        var modal = byId('branch-form-modal'); if (modal) { modal.hidden = true; }
         renderBranches(currentBranches);
     }
 function submitBranchForm() {
@@ -3850,8 +3849,52 @@ function submitBranchForm() {
             });
     }
 
+    var pendingBranchDeleteId = null;
+
+    function openBranchDeleteModal(id) {
+        var modal = byId('branch-delete-modal');
+        var branch = null;
+        for (var i = 0; i < currentBranches.length; i++) {
+            if (String(currentBranches[i].id) === String(id)) { branch = currentBranches[i]; break; }
+        }
+        if (!modal || !branch) { return; }
+
+        pendingBranchDeleteId = String(id);
+
+        var nameEl = byId('branch-delete-name');
+        if (nameEl) { nameEl.textContent = branch.name || 'Branch'; }
+        var cityEl = byId('branch-delete-city');
+        if (cityEl) { cityEl.textContent = branch.city || '\u2014'; }
+
+        var msg = byId('branch-delete-msg');
+        if (msg) { msg.hidden = true; msg.textContent = ''; }
+        var confirmBtn = byId('branch-delete-confirm-btn');
+        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Delete Branch'; }
+
+        modal.hidden = false;
+    }
+
+    function closeBranchDeleteModal() {
+        pendingBranchDeleteId = null;
+        var modal = byId('branch-delete-modal');
+        if (modal) { modal.hidden = true; }
+        var msg = byId('branch-delete-msg');
+        if (msg) { msg.hidden = true; msg.textContent = ''; }
+        var confirmBtn = byId('branch-delete-confirm-btn');
+        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Delete Branch'; }
+    }
+
+    function confirmBranchDelete() {
+        if (!pendingBranchDeleteId) { return; }
+        deleteBranch(pendingBranchDeleteId);
+    }
+
     function deleteBranch(id) {
-        if (!window.confirm('Delete this branch? This cannot be undone.')) { return; }
+        var modal = byId('branch-delete-modal');
+        var msg = byId('branch-delete-msg');
+        var confirmBtn = byId('branch-delete-confirm-btn');
+        if (msg) { msg.hidden = true; msg.textContent = ''; }
+        if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Deleting\u2026'; }
         var payload = new FormData();
         payload.append('branch_id', String(id));
         fetch('api/company.php?action=branch_delete', {
@@ -3870,13 +3913,29 @@ function submitBranchForm() {
             .then(function (result) {
                 var data = result.data || {};
                 if (!result.ok || result.status !== 200 || !data.success) {
-                    toast((data.message || 'Unable to delete the branch.'));
+                    if (modal && !modal.hidden && msg) {
+                        msg.textContent = data.message || 'Unable to delete the branch.';
+                        msg.hidden = false;
+                        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Delete Branch'; }
+                        return;
+                    }
+                    toast(data.message || 'Unable to delete the branch.');
                     return;
                 }
+                if (modal && !modal.hidden) { modal.hidden = true; }
+                pendingBranchDeleteId = null;
                 toast(data.message || 'Branch deleted.');
                 loadBranches();
             })
-            .catch(function () { toast('Network error while deleting the branch.'); });
+            .catch(function () {
+                if (modal && !modal.hidden && msg) {
+                    msg.textContent = 'Network error while deleting the branch.';
+                    msg.hidden = false;
+                    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Delete Branch'; }
+                    return;
+                }
+                toast('Network error while deleting the branch.');
+            });
     }
 
     function refreshRevenue() {
@@ -4363,6 +4422,10 @@ function submitBranchForm() {
                 if (tdModal && !tdModal.hidden) { closeTripDeleteModal(); }
                 var rdModal = byId('route-delete-modal');
                 if (rdModal && !rdModal.hidden) { closeRouteDeleteModal(); }
+                var bfModal = byId('branch-form-modal');
+                if (bfModal && !bfModal.hidden) { closeBranchForm(); }
+                var bdModal = byId('branch-delete-modal');
+                if (bdModal && !bdModal.hidden) { closeBranchDeleteModal(); }
             }
         });
 
@@ -4431,6 +4494,20 @@ function submitBranchForm() {
             });
         }
 
+        /* ----- Branch form modal (add/edit) mounting ----- */
+        var branchFormModal = byId('branch-form-modal');
+        if (branchFormModal) {
+            if (branchFormModal.parentNode !== document.body) {
+                document.body.appendChild(branchFormModal);
+            }
+            branchFormModal.style.zIndex = '106';
+            branchFormModal.addEventListener('click', function (ev) {
+                if (ev.target === branchFormModal) { closeBranchForm(); }
+            });
+        }
+        var branchModalClose = byId('branch-modal-close');
+        if (branchModalClose) { branchModalClose.addEventListener('click', closeBranchForm); }
+
         var branchListEl = byId('branch-list');
         if (branchListEl) {
             branchListEl.addEventListener('click', function (ev) {
@@ -4446,9 +4523,27 @@ function submitBranchForm() {
                     return;
                 }
                 var delId = t.getAttribute('data-branch-delete');
-                if (delId) { deleteBranch(delId); }
+                if (delId) { openBranchDeleteModal(delId); }
             });
         }
+
+        /* ----- Branch-delete confirmation modal wiring ----- */
+        var branchDeleteModal = byId('branch-delete-modal');
+        if (branchDeleteModal) {
+            if (branchDeleteModal.parentNode !== document.body) {
+                document.body.appendChild(branchDeleteModal);
+            }
+            branchDeleteModal.style.zIndex = '107';
+            branchDeleteModal.addEventListener('click', function (ev) {
+                if (ev.target === branchDeleteModal) { closeBranchDeleteModal(); }
+            });
+        }
+        var branchDeleteClose = byId('branch-delete-close');
+        if (branchDeleteClose) { branchDeleteClose.addEventListener('click', closeBranchDeleteModal); }
+        var branchDeleteKeep = byId('branch-delete-keep-btn');
+        if (branchDeleteKeep) { branchDeleteKeep.addEventListener('click', closeBranchDeleteModal); }
+        var branchDeleteConfirm = byId('branch-delete-confirm-btn');
+        if (branchDeleteConfirm) { branchDeleteConfirm.addEventListener('click', confirmBranchDelete); }
 
         var profileForm = byId('profile-form');
         if (profileForm) {
