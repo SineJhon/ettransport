@@ -431,22 +431,25 @@ function renderDetail(c) {
 
  /* ---------- read-only operational oversight ---------- */
     var sectionMap = {
-        overview: ['section-overview', 'section-companies'],
-        companies: ['section-overview', 'section-companies'],
-        trips: ['section-trips'],
-        bookings: ['section-bookings']
+        overview: ['section-overview'],
+        companies: ['section-companies'],
+        passengers: ['section-bookings'],
+        revenue: ['section-trips'],
+        reviews: ['section-reviews']
     };
 
     function setActiveTab(name) {
         var tabs = document.querySelectorAll('#ad-tabs .ad-tab');
         for (var i = 0; i < tabs.length; i++) {
-            tabs[i].className = 'ad-tab' + (tabs[i].getAttribute('data-section') === name ? ' active' : '');
+            var selected = tabs[i].getAttribute('data-section') === name;
+            tabs[i].className = 'ad-tab' + (selected ? ' active' : '');
+            tabs[i].setAttribute('aria-selected', selected ? 'true' : 'false');
         }
     }
 
     function switchSection(name) {
         var map = sectionMap[name] || ['section-overview', 'section-companies'];
-        var all = ['section-overview', 'section-companies', 'section-detail', 'section-trips', 'section-bookings'];
+        var all = ['section-overview', 'section-companies', 'section-detail', 'section-trips', 'section-bookings', 'section-reviews'];
         for (var i = 0; i < all.length; i++) {
             hide(byId(all[i]));
         }
@@ -455,8 +458,22 @@ function renderDetail(c) {
             if (el) { show(el); }
         }
         setActiveTab(name);
-        if (name === 'trips') { loadTrips(); }
-        if (name === 'bookings') { loadBookings(); }
+        if (name === 'revenue') { loadTrips(); }
+        if (name === 'passengers') { loadBookings(); }
+        if (name === 'reviews') { renderReviews(); }
+    }
+
+    function renderReviews() {
+        var grid = byId('ad-review-grid');
+        var empty = byId('ad-reviews-empty');
+        if (!grid) { return; }
+        var reviewed = currentCompanies.filter(function (company) { return Number(company.review_count) > 0; });
+        if (!reviewed.length) { grid.innerHTML = ''; show(empty); return; }
+        hide(empty);
+        grid.innerHTML = reviewed.map(function (company) {
+            var rating = Math.max(0, Math.min(5, Math.round(Number(company.avg_rating) || 0)));
+            return '<article class="ad-review-card"><h3>' + escHtml(company.name) + '</h3><p class="ad-stars" aria-label="' + rating + ' out of 5 stars">' + '★'.repeat(rating) + '☆'.repeat(5 - rating) + '</p><p>' + escHtml(company.avg_rating) + ' average from ' + escHtml(company.review_count) + ' approved review' + (Number(company.review_count) === 1 ? '' : 's') + '.</p></article>';
+        }).join('');
     }
 
     function populateCompanyFilters() {
@@ -711,6 +728,14 @@ function renderDetail(c) {
 
         var refreshCompanies = byId('btn-refresh-companies');
         if (refreshCompanies) { refreshCompanies.addEventListener('click', loadCompanies); }
+
+        var refreshReviews = byId('btn-refresh-reviews');
+        if (refreshReviews) {
+            refreshReviews.addEventListener('click', function () {
+                loadCompanies();
+                window.setTimeout(renderReviews, 300);
+            });
+        }
 
         var closeBtn = byId('btn-close-detail');
         if (closeBtn) { closeBtn.addEventListener('click', closeDetail); }

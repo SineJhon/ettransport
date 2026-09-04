@@ -149,6 +149,26 @@
         }
     }
 
+    function bindPasswordToggles() {
+        var toggles = document.querySelectorAll('.password-toggle[aria-controls]');
+        for (var i = 0; i < toggles.length; i++) {
+            toggles[i].addEventListener('click', function () {
+                var input = byId(this.getAttribute('aria-controls'));
+                if (!input) { return; }
+
+                var revealPassword = input.type === 'password';
+                input.type = revealPassword ? 'text' : 'password';
+                this.setAttribute('aria-pressed', String(revealPassword));
+                this.setAttribute('aria-label', revealPassword ? 'Hide password' : 'Show password');
+
+                var label = this.querySelector('.sr-only');
+                if (label) {
+                    label.textContent = revealPassword ? 'Hide password' : 'Show password';
+                }
+            });
+        }
+    }
+
     function bindRegisterForm() {
         var form = byId('register-form');
         if (!form) { return; }
@@ -451,6 +471,7 @@
     };
 
     document.addEventListener('DOMContentLoaded', function () {
+        bindPasswordToggles();
         bindLoginForm();
         bindRegisterForm();
         bindLogoutButtons();
