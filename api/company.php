@@ -864,18 +864,15 @@ function company_overview_stats(PDO $pdo, int $companyId): array
     $stmt->execute([':company_id' => $companyId, ':cancelled' => 'cancelled']);
     $bookedPassengers = (int) $stmt->fetchColumn();
 
-    /* revenue — sum of this company's paid payments, reached through the
-       booking's trip so another company's payments can never be included. */
-    $stmt = $pdo->prepare('
-        SELECT COALESCE(SUM(p.amount), 0)
-        FROM payments p
-        JOIN bookings bk ON bk.id = p.booking_id
-        JOIN trips t ON t.id = bk.trip_id
-        WHERE t.company_id = :company_id
-          AND p.status = :payment_status
-    ');
-    $stmt->execute([':company_id' => $companyId, ':payment_status' => 'paid']);
-    $revenue = round((float) $stmt->fetchColumn(), 2);
+    /* revenue — NET revenue after refunds, reached through the booking's
+       trip so another company's payments can never be included. Reuses the
+       authoritative company_revenue_summary() so this overview card always
+       matches the Revenue tab exactly: every payment this company collected
+       (paid + refunded) minus the exact refund amounts recorded on cancelled
+       bookings. A half-refunded booking therefore books the remaining half
+       as revenue instead of dropping the whole payment, and a no-refund
+       cancellation keeps the full fare because the operator kept the money. */
+    $revenue = (float) company_revenue_summary($pdo, $companyId, null, null, null, null)['net_revenue'];
 
     return [
         'activeBuses' => $activeBuses,
