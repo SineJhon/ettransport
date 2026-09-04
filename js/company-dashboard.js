@@ -2984,11 +2984,16 @@
 
     function renderRevenueSummary(rev) {
         rev = rev || {};
-        setRevStat('rev-totalPaidRevenue', formatMoney(rev.total_paid_revenue));
+        setRevStat('rev-grossPaidRevenue', formatMoney(rev.gross_paid_revenue));
+        setRevStat('rev-refundsPaid', formatMoney(rev.refunds_paid));
+        setRevStat('rev-netRevenue', formatMoney(rev.net_revenue));
         setRevStat('rev-paidPayments', rev.paid_payment_count == null ? 0 : rev.paid_payment_count);
         setRevStat('rev-pendingPayments', rev.pending_payment_count == null ? 0 : rev.pending_payment_count);
         setRevStat('rev-failedPayments', rev.failed_payment_count == null ? 0 : rev.failed_payment_count);
         setRevStat('rev-refundedPayments', rev.refunded_payment_count == null ? 0 : rev.refunded_payment_count);
+        setRevStat('rev-noRefundCancellations', rev.no_refund_cancellation_count == null ? 0 : rev.no_refund_cancellation_count);
+        setRevStat('rev-halfRefunds', rev.half_refund_count == null ? 0 : rev.half_refund_count);
+        setRevStat('rev-fullRefunds', rev.full_refund_count == null ? 0 : rev.full_refund_count);
         var box = byId('revenue-summary');
         if (box) { box.hidden = false; }
     }
@@ -3018,6 +3023,14 @@
         }
 
         var html = payments.map(function (p) {
+            var refundedAmount = Number(p.refunded_amount) || 0;
+            var cancellationDetail = '';
+            if (String(p.booking_status) === 'cancelled') {
+                var refundLabel = String(p.refund_type) === 'half' ? 'Half refund' : String(p.refund_type) === 'full' ? 'Full refund' : 'No refund';
+                cancellationDetail = '<span class="cd-payment-row-text">Cancelled · ' + refundLabel +
+                    (refundedAmount ? ': ETB ' + formatMoney(refundedAmount) + ' · Net retained: ETB ' + formatMoney(Math.max(0, Number(p.amount || 0) - refundedAmount)) : '') +
+                    '</span>';
+            }
             return '<div class="cd-payment-card" data-payment-id="' + p.id + '">' +
                 '<span class="cd-payment-ref">' + escHtml(p.booking_reference) + '</span>' +
                 '<span class="cd-payment-route">' + escHtml(p.route_from) + ' \u2192 ' + escHtml(p.route_to) + '</span>' +
@@ -3027,6 +3040,7 @@
                 '<span class="cd-payment-row-text">Method: ' + escHtml(p.method) +
                     (p.transaction_reference ? ' \u2022 ' + escHtml(p.transaction_reference) : '') + '</span>' +
                 '<span class="cd-payment-row-text">' + paymentStatusBadge(p.status) + '</span>' +
+                cancellationDetail +
                 '<span class="cd-payment-row-text">Payment date: ' + escHtml(p.created_at) + '</span>' +
                 '</div>';
         }).join('');

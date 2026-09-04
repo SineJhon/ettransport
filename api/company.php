@@ -3085,6 +3085,9 @@ function company_payment_payload(array $row): array
         'method' => $row['method'],
         'transaction_reference' => $row['transaction_reference'],
         'status' => $row['status'],
+        'booking_status' => $row['booking_status'],
+        'refund_type' => $row['refund_type'],
+        'refunded_amount' => $row['refunded_amount'] !== null ? (float) $row['refunded_amount'] : 0.0,
         'created_at' => $row['created_at'],
         'updated_at' => $row['updated_at'],
     ];
@@ -3093,7 +3096,10 @@ function company_payment_payload(array $row): array
 /**
  * Aggregate revenue summary for one company, scoped through
  * payments -> bookings -> trips.company_id. Honest to the schema:
- *   - total_paid_revenue   sum of payment rows marked 'paid'
+ *   - gross_paid_revenue   all money successfully collected, including
+ *                          payments later refunded after cancellation
+ *   - refunds_paid         the exact refund amount recorded per booking
+ *   - net_revenue          gross paid minus refunds paid
  *   - paid/pending/failed/refunded counts are per payment row
  *   - paid_booking_count   distinct bookings with a 'paid' payment
  * The schema allows more than one payment row per booking, but the
@@ -3105,8 +3111,8 @@ function company_revenue_summary(PDO $pdo, int $companyId, ?int $tripId, ?string
 {
     [$sqlBody, $params] = company_payments_query($companyId, $tripId, $status, $fromDate, $toDate);
 
-        $sql = 'SELECT'
-        . ' COALESCE(SUM(CASE WHEN p.status = \'paid\' THEN p.amount ELSE 0 END), 0) AS total_paid_revenue'
+    $sql = 'SELECT'
+        . ' COALESCE(SUM(CASE WHEN p.status IN (\'paid\', \'refunded\') THEN p.amount ELSE 0 END), 0) AS gross_paid_revenue'
         . ', COUNT(*) AS total_payment_count'
         . ', COUNT(CASE WHEN p.status = \'paid\' THEN 1 END) AS paid_payment_count'
         . ', COUNT(CASE WHEN p.status = \'pending\' THEN 1 END) AS pending_payment_count'
@@ -3123,14 +3129,61 @@ function company_revenue_summary(PDO $pdo, int $companyId, ?int $tripId, ?string
         $row = [];
     }
 
+    /* Refunds live on bookings because a half refund is not representable by
+       the payment status alone. Aggregate per booking (not per payment row)
+       so the same refund can never be counted twice. */
+    $refundSql = '
+        SELECT
+            COALESCE(SUM(CASE WHEN b.refund_type IN (\'half\', \'full\') THEN COALESCE(b.refunded_amount, 0) ELSE 0 END), 0) AS refunds_paid,
+            COUNT(CASE WHEN b.booking_status = \'cancelled\' AND b.refund_type = \'none\' THEN 1 END) AS no_refund_cancellation_count,
+            COUNT(CASE WHEN b.booking_status = \'cancelled\' AND b.refund_type = \'half\' THEN 1 END) AS half_refund_count,
+            COUNT(CASE WHEN b.booking_status = \'cancelled\' AND b.refund_type = \'full\' THEN 1 END) AS full_refund_count
+        FROM bookings b
+        JOIN trips t ON t.id = b.trip_id
+        WHERE t.company_id = :company_id
+          AND EXISTS (
+              SELECT 1 FROM payments rp
+              WHERE rp.booking_id = b.id
+                AND rp.status IN (\'paid\', \'refunded\')
+          )';
+    $refundParams = [':company_id' => $companyId];
+    if ($tripId !== null) {
+        $refundSql .= ' AND t.id = :trip_id';
+        $refundParams[':trip_id'] = $tripId;
+    }
+    if ($status !== null) {
+        $refundSql .= ' AND EXISTS (SELECT 1 FROM payments sp WHERE sp.booking_id = b.id AND sp.status = :status)';
+        $refundParams[':status'] = $status;
+    }
+    if ($fromDate !== null) {
+        $refundSql .= ' AND EXISTS (SELECT 1 FROM payments fp WHERE fp.booking_id = b.id AND fp.created_at >= :from_date)';
+        $refundParams[':from_date'] = $fromDate . ' 00:00:00';
+    }
+    if ($toDate !== null) {
+        $refundSql .= ' AND EXISTS (SELECT 1 FROM payments tp WHERE tp.booking_id = b.id AND tp.created_at <= :to_date)';
+        $refundParams[':to_date'] = $toDate . ' 23:59:59';
+    }
+    $refundStmt = $pdo->prepare($refundSql);
+    $refundStmt->execute($refundParams);
+    $refundRow = $refundStmt->fetch() ?: [];
+    $grossPaid = round((float) ($row['gross_paid_revenue'] ?? 0), 2);
+    $refundsPaid = round((float) ($refundRow['refunds_paid'] ?? 0), 2);
+
     return [
-        'total_paid_revenue' => round((float) ($row['total_paid_revenue'] ?? 0), 2),
+        'gross_paid_revenue' => $grossPaid,
+        'refunds_paid' => $refundsPaid,
+        'net_revenue' => round($grossPaid - $refundsPaid, 2),
+        /* Kept for any older client that still reads this key. */
+        'total_paid_revenue' => $grossPaid,
         'paid_payment_count' => (int) ($row['paid_payment_count'] ?? 0),
         'pending_payment_count' => (int) ($row['pending_payment_count'] ?? 0),
         'failed_payment_count' => (int) ($row['failed_payment_count'] ?? 0),
         'refunded_payment_count' => (int) ($row['refunded_payment_count'] ?? 0),
         'total_payment_count' => (int) ($row['total_payment_count'] ?? 0),
         'paid_booking_count' => (int) ($row['paid_booking_count'] ?? 0),
+        'no_refund_cancellation_count' => (int) ($refundRow['no_refund_cancellation_count'] ?? 0),
+        'half_refund_count' => (int) ($refundRow['half_refund_count'] ?? 0),
+        'full_refund_count' => (int) ($refundRow['full_refund_count'] ?? 0),
     ];
 }
 
@@ -3143,6 +3196,9 @@ function fetch_company_payments(PDO $pdo, int $companyId, ?int $tripId, ?string 
         . ' p.id'
         . ', b.id AS booking_id'
         . ', b.booking_reference'
+        . ', b.booking_status'
+        . ', b.refund_type'
+        . ', b.refunded_amount'
         . ', t.id AS trip_id'
         . ', r.from_city'
         . ', r.to_city'

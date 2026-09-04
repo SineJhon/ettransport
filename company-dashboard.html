@@ -231,7 +231,7 @@
         .cd-revenue-head h2 { font-size: 1.2rem; color: var(--color-dark); margin: 0; }
         .cd-revenue-msg { color: var(--color-muted); font-size: 0.9rem; }
         .cd-revenue-error { margin-top: 0.5rem; }
-        .cd-revenue-summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-sm); margin-top: var(--space-sm); }
+        .cd-revenue-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-sm); margin-top: var(--space-sm); }
         .cd-rev-stat { padding: 0.85rem 1rem; border: 1px solid #e5e7eb; border-radius: 10px; text-align: center; }
         .cd-rev-value { display: block; font-size: 1.4rem; font-weight: 800; color: var(--color-dark); }
         .cd-rev-label { display: block; font-size: 0.7rem; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.04em; }
@@ -350,7 +350,7 @@
         .cd-pane .cd-banner { margin: 0 0 1.2rem; padding: 1rem; background: linear-gradient(110deg, #eef8f2, #f9fcfa); border: 1px solid #dcece3; border-radius: 14px; }
         .cd-pane .cd-name { font: 700 1.4rem/1.1 Georgia, 'Times New Roman', serif; color: #173b34; }
         .cd-pane .cd-logo { border-radius: 12px; border-color: #d6e5dc; }
-        .cd-pane .cd-stats, .cd-pane .cd-revenue-summary { grid-template-columns: repeat(5, minmax(0,1fr)); gap: .75rem; margin-top: 0; }
+        .cd-pane .cd-stats { grid-template-columns: repeat(5, minmax(0,1fr)); gap: .75rem; margin-top: 0; }.cd-pane .cd-revenue-summary { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .75rem; margin-top: 0; }
         .cd-pane .cd-stat, .cd-pane .cd-rev-stat { position: relative; overflow: hidden; padding: 1rem; border: 1px solid #e0eae4; border-radius: 12px; background: #fff; text-align: left; }
         .cd-pane .cd-stat::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: #31a476; }
         .cd-pane .cd-stat:nth-child(2)::before { background: #e3a73a; }.cd-pane .cd-stat:nth-child(3)::before { background: #3a82c5; }.cd-pane .cd-stat:nth-child(4)::before { background: #9b6dcc; }.cd-pane .cd-stat:nth-child(5)::before { background: #df785f; }
@@ -1055,8 +1055,16 @@
             <!-- A. Revenue summary cards -->
             <section id="revenue-summary" class="cd-revenue-summary" hidden>
                 <div class="cd-rev-stat">
-                    <span class="cd-rev-value" id="rev-totalPaidRevenue">0</span>
-                    <span class="cd-rev-label">Total Paid Revenue (ETB)</span>
+                    <span class="cd-rev-value" id="rev-grossPaidRevenue">0</span>
+                    <span class="cd-rev-label">Gross Paid (ETB)</span>
+                </div>
+                <div class="cd-rev-stat">
+                    <span class="cd-rev-value" id="rev-refundsPaid">0</span>
+                    <span class="cd-rev-label">Refunds Paid (ETB)</span>
+                </div>
+                <div class="cd-rev-stat">
+                    <span class="cd-rev-value" id="rev-netRevenue">0</span>
+                    <span class="cd-rev-label">Net Revenue (ETB)</span>
                 </div>
                 <div class="cd-rev-stat">
                     <span class="cd-rev-value" id="rev-paidPayments">0</span>
@@ -1073,6 +1081,18 @@
                 <div class="cd-rev-stat">
                     <span class="cd-rev-value" id="rev-refundedPayments">0</span>
                     <span class="cd-rev-label">Refunded Payments</span>
+                </div>
+                <div class="cd-rev-stat">
+                    <span class="cd-rev-value" id="rev-noRefundCancellations">0</span>
+                    <span class="cd-rev-label">No-refund Cancellations</span>
+                </div>
+                <div class="cd-rev-stat">
+                    <span class="cd-rev-value" id="rev-halfRefunds">0</span>
+                    <span class="cd-rev-label">Half Refunds</span>
+                </div>
+                <div class="cd-rev-stat">
+                    <span class="cd-rev-value" id="rev-fullRefunds">0</span>
+                    <span class="cd-rev-label">Full Refunds</span>
                 </div>
             </section>
 
@@ -1282,6 +1302,6 @@
 
     <script src="js/main.js"></script>
     <script src="js/auth.js"></script>
-    <script src="js/company-dashboard.js?v=20260904-inline-validation-2"></script>
+    <script src="js/company-dashboard.js?v=20260904-revenue-refunds"></script>
 </body>
 </html>
