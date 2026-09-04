@@ -6,7 +6,7 @@
     <meta name="description" content="Company operator dashboard for ET Transport">
     <title>Company Dashboard | ET Transport</title>
     <link rel="stylesheet" href="css/style.css?v=20260903-reason-suggestions">
-    <link rel="stylesheet" href="css/walkin-booking.css?v=20260903-reason-suggestions">
+    <link rel="stylesheet" href="css/walkin-booking.css?v=20260904-inline-validation">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
@@ -157,7 +157,8 @@
         .cd-walkin-trip-card strong { display: block; font-size: 0.95rem; }
         .cd-walkin-trip-meta { display: block; font-size: 0.8rem; color: var(--color-muted); margin-top: 0.2rem; }
         .cd-walkin-trip-price { display: block; font-weight: 700; color: var(--color-primary, #16a34a); margin-top: 0.35rem; }
-        .cd-walkin-booking-error { min-height: 1.1rem; font-size: 0.82rem; color: #b91c1c; }
+        .cd-walkin-field-error { margin: 0.35rem 0 0; color: #b91c1c; font-size: 0.82rem; line-height: 1.35; }
+        .cd-walkin-field-error[hidden] { display: none; }
         .cd-walkin-booking-info { font-size: 0.82rem; color: var(--color-muted); }
         .cd-walkin-payment-box { border: 1px solid #e5e7eb; border-radius: 10px; background: #f8fafc; padding: 0.8rem; display: grid; gap: 0.7rem; }
         .cd-walkin-transfer-fields { display: none; gap: 0.7rem; }
@@ -660,6 +661,7 @@
                                     <label class="cd-walkin-booking-radio"><input type="radio" name="walkin-booking-type" value="office"> <span>Office / Walk-in</span></label>
                                     <label class="cd-walkin-booking-radio"><input type="radio" name="walkin-booking-type" value="call_in"> <span>Call-in</span></label>
                                 </div>
+                                <p id="walkin-booking-type-error" class="cd-walkin-field-error" role="alert" hidden></p>
                             </div>
                             <div id="walkin-step-2" class="cd-walkin-booking-step">
                                 <div class="cd-walkin-booking-section">
@@ -667,6 +669,7 @@
                                     <div class="cd-walkin-day-picker">
                                         <div class="cd-date-head"><p id="walkin-booking-date-label" class="cd-selected-date">Select a date</p></div>
                                         <div id="walkin-booking-day-list" class="cd-day-list" role="group" aria-label="Travel date"></div>
+                                        <p id="walkin-date-error" class="cd-walkin-field-error" role="alert" hidden></p>
                                     </div>
                                 </div>
                                 <div class="cd-walkin-booking-section">
@@ -674,6 +677,7 @@
                                     <select id="walkin-trip" required>
                                         <option value="">Select trip</option>
                                     </select>
+                                    <p id="walkin-trip-error" class="cd-walkin-field-error" role="alert" hidden></p>
                                 </div>
                             </div>
                             <div id="walkin-step-3" class="cd-walkin-booking-step">
@@ -688,6 +692,7 @@
                                         <div id="walkin-seat-map" class="seat-grid" role="group" aria-label="Bus seat map"></div>
                                     </div>
                                     <p id="walkin-limit-msg" class="limit-msg" hidden></p>
+                                    <p id="walkin-seat-error" class="cd-walkin-field-error" role="alert" hidden></p>
                                     <ul class="seat-legend">
                                         <li><span class="swatch available" aria-hidden="true"></span>Available</li>
                                         <li><span class="swatch selected" aria-hidden="true"></span>Selected</li>
@@ -703,6 +708,7 @@
                                         <div>
                                             <label for="walkin-passenger-name">Full name *</label>
                                             <input type="text" id="walkin-passenger-name" maxlength="120" required placeholder="e.g. John Doe">
+                                            <p id="walkin-passenger-name-error" class="cd-walkin-field-error" role="alert" hidden></p>
                                         </div>
                                         <div>
                                             <label for="walkin-passenger-phone">Phone number *</label>
@@ -710,12 +716,14 @@
                                                 <span class="phone-prefix" aria-hidden="true">+251</span>
                                                 <input type="tel" id="walkin-passenger-phone" maxlength="9" required placeholder="7XXXXXXXX / 9XXXXXXXX" inputmode="numeric" autocomplete="tel-national">
                                             </div>
+                                            <p id="walkin-passenger-phone-error" class="cd-walkin-field-error" role="alert" hidden></p>
                                         </div>
                                     </div>
                                     <div class="cd-walkin-booking-form-row">
                                         <div>
                                             <label for="walkin-passenger-age">Age *</label>
                                             <input type="number" id="walkin-passenger-age" min="1" max="200" step="1" required placeholder="e.g. 25" inputmode="numeric">
+                                            <p id="walkin-passenger-age-error" class="cd-walkin-field-error" role="alert" hidden></p>
                                         </div>
                                         <div>
                                             <label>Gender *</label>
@@ -723,6 +731,7 @@
                                                 <label class="cd-walkin-booking-radio"><input type="radio" name="walkin-passenger-gender" value="male" required> <span>Male</span></label>
                                                 <label class="cd-walkin-booking-radio"><input type="radio" name="walkin-passenger-gender" value="female" required> <span>Female</span></label>
                                             </div>
+                                            <p id="walkin-passenger-gender-error" class="cd-walkin-field-error" role="alert" hidden></p>
                                         </div>
                                     </div>
                                     <div class="cd-walkin-booking-section-sub" id="walkin-refund-account">
@@ -766,11 +775,13 @@
                                         <label class="cd-walkin-booking-radio"><input type="radio" name="walkin-payment-method" value="cash"> <span>Cash</span></label>
                                         <label class="cd-walkin-booking-radio"><input type="radio" name="walkin-payment-method" value="transfer"> <span>Bank Transfer</span></label>
                                     </div>
+                                    <p id="walkin-payment-method-error" class="cd-walkin-field-error" role="alert" hidden></p>
                                     <div id="walkin-transfer-fields" class="cd-walkin-transfer-fields">
                                         <div class="cd-walkin-booking-form-row">
                                             <div>
                                                 <label for="walkin-transfer-transaction">Transaction number</label>
                                                 <input type="text" id="walkin-transfer-transaction" placeholder="e.g. T12345">
+                                                <p id="walkin-transfer-transaction-error" class="cd-walkin-field-error" role="alert" hidden></p>
                                             </div>
                                             <div>
                                                 <label for="walkin-transfer-sender">Sender / account name</label>
@@ -809,9 +820,9 @@
                                             <span class="cd-walkin-info-value" id="walkin-confirm-refund">—</span>
                                         </div>
                                     </div>
+                                    <p id="walkin-booking-submit-error" class="cd-walkin-field-error" role="alert" hidden></p>
                                 </div>
                             </div>
-                            <p id="walkin-booking-error" class="cd-walkin-booking-error" role="alert"></p>
                             <div class="cd-walkin-booking-form-actions">
                                 <button type="button" id="walkin-booking-back" class="btn btn-secondary">← Back</button>
                                 <button type="button" id="walkin-booking-next" class="btn btn-primary">Continue →</button>
@@ -1267,6 +1278,6 @@
 
     <script src="js/main.js"></script>
     <script src="js/auth.js"></script>
-    <script src="js/company-dashboard.js?v=20260903-trip-cancel-reason-fix"></script>
+    <script src="js/company-dashboard.js?v=20260904-inline-validation"></script>
 </body>
 </html>
