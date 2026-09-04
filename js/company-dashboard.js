@@ -214,7 +214,13 @@
         if (nodes.bookings) { byId('cd-passengers').appendChild(nodes.bookings); }
         if (nodes.revenue) { byId('cd-revenue').appendChild(nodes.revenue); }
         if (nodes.routes) { byId('cd-routes').appendChild(nodes.routes); }
-        if (nodes.reviews) { byId('cd-reviews').appendChild(nodes.reviews); }
+        if (nodes.reviews) {
+            var reviewsPane = byId('cd-reviews');
+            reviewsPane.appendChild(nodes.reviews);
+            var reviewsRefresh = byId('btn-refresh-reviews');
+            var reviewsTitle = reviewsPane.querySelector('.cd-pane-title');
+            if (reviewsRefresh && reviewsTitle) { reviewsTitle.appendChild(reviewsRefresh); }
+        }
         if (nodes.profile) { byId('cd-profile').appendChild(nodes.profile); }
 
         function selectView(view) {
@@ -3283,18 +3289,14 @@
         var bar = byId('review-filterbar');
         if (!bar) { return; }
         if (!currentReviews.length) { bar.hidden = true; bar.innerHTML = ''; return; }
-        var options = [[null, 'All'], [5, '5\u2605'], [4, '4\u2605'], [3, '3\u2605'], [2, '2\u2605'], [1, '1\u2605']];
+        var options = [[null, 'All feedback'], [5, '5 stars'], [4, '4 stars'], [3, '3 stars'], [2, '2 stars'], [1, '1 star']];
         var html = '';
         for (var i = 0; i < options.length; i++) {
             var val = options[i][0]; var label = options[i][1];
             var active = val === reviewFilter;
-            html += '<button type="button" class="cd-review-filter' + (active ? ' is-active' : '') + '" data-review-filter="' + (val === null ? '' : val) + '" aria-pressed="' + (active ? 'true' : 'false') + '">' + label;
-            if (val !== null) {
-                var count = 0;
-                for (var k = 0; k < currentReviews.length; k++) { if (currentReviews[k].rating === val) { count++; } }
-                html += ' <span class="cd-review-filter-count">' + count + '</span>';
-            }
-            html += '</button>';
+            var count = 0;
+            for (var k = 0; k < currentReviews.length; k++) { if (val === null || Number(currentReviews[k].rating) === val) { count++; } }
+            html += '<button type="button" class="cd-review-filter' + (active ? ' is-active' : '') + '" data-review-filter="' + (val === null ? '' : val) + '" aria-pressed="' + (active ? 'true' : 'false') + '">' + label + ' <span class="cd-review-filter-count">' + count + '</span></button>';
         }
         bar.innerHTML = html;
         bar.hidden = false;
@@ -3312,22 +3314,23 @@
         return '<div class="cd-review-reply" data-review-id="' + r.id + '">' +
             '<span class="cd-review-reply-label">Company reply</span>' +
             '<p>' + escHtml(r.reply) + '</p>' +
-            '<span class="cd-review-reply-meta">' + (formatReviewDate(r.reply_at) || '') + ' · <button type="button" class="cd-review-reply-edit" data-review-id="' + r.id + '">Edit reply</button></span>' +
+            '<span class="cd-review-reply-meta">Published ' + (formatReviewDate(r.reply_at) || '') + '</span>' +
         '</div>';
     }
 
     function reviewCardHtml(r) {
         var editing = Number(reviewEditingReplyId) === Number(r.id);
+        var initial = String(r.name || 'P').trim().charAt(0).toUpperCase() || 'P';
         return '<article class="cd-review-card' + (editing ? ' is-editing' : '') + '" data-review-id="' + r.id + '">' +
             '<div class="cd-review-card-head">' +
-                '<strong>' + escHtml(r.name || 'Verified passenger') + '</strong>' +
-                (r.verified ? '<span class="cd-review-badge">Verified Passenger</span>' : '') +
-                '<span class="cd-review-when">' + (formatReviewDate(r.created_at) || '') + '</span>' +
+                '<span class="cd-review-avatar" aria-hidden="true">' + escHtml(initial) + '</span>' +
+                '<div class="cd-review-person"><strong>' + escHtml(r.name || 'Passenger') + '</strong><span class="cd-review-meta">' + (formatReviewDate(r.created_at) || 'Recent review') + '</span></div>' +
+                (r.verified ? '<span class="cd-review-badge">Verified</span>' : '') +
+                '<span class="cd-review-rating" aria-label="Rated ' + r.rating + ' out of 5"><span aria-hidden="true">★</span> ' + Number(r.rating || 0).toFixed(1) + '</span>' +
             '</div>' +
-            '<p class="cd-review-stars-row" role="img" aria-label="Rated ' + r.rating + ' out of 5 stars">' + reviewStarsHtml(r.ating) + '</p>' +
             (r.comment ? '<p class="cd-review-text">' + escHtml(r.comment) + '</p>' : '<p class="cd-review-text cd-review-no-comment">No written comment.</p>') +
             '<div class="cd-review-actions">' + reviewLikeButtonHtml(r) +
-                (!editing ? '<button type="button" class="cd-review-reply-btn" data-review-id="' + r.id + '">' + (r.reply ? 'Edit reply' : 'Reply') + '</button>' : '') +
+                (!editing ? '<button type="button" class="cd-review-reply-btn" data-review-id="' + r.id + '">' + (r.reply ? 'Edit response' : 'Respond') + '</button>' : '') +
             '</div>' +
             (editing ? reviewReplyEditorHtml(r) : reviewReplyBlockHtml(r)) +
         '</article>';
@@ -3335,6 +3338,7 @@
 
     function reviewReplyEditorHtml(r) {
         return '<div class="cd-review-reply-editor">' +
+            '<div class="cd-review-reply-editor-head"><span>Public response</span><small data-review-reply-count>' + String(r.reply || '').length + ' / 1000</small></div>' +
             '<textarea class="cd-review-reply-input" maxlength="1000" placeholder="Write a reply to this passenger...">' + escHtml(r.reply || '') + '</textarea>' +
             '<div class="cd-review-reply-editor-actions">' +
                 '<button type="button" class="btn btn-sm btn-secondary cd-review-reply-cancel" data-review-id="' + r.id + '">Cancel</button>' +
@@ -3367,11 +3371,20 @@
         var summary = byId('review-summary');
         if (summary) {
             var rating = Number(data.rating) || 0;
+            var reviews = data.reviews || [];
+            var ratingCounts = [0, 0, 0, 0, 0, 0];
+            for (var i = 0; i < reviews.length; i++) { var reviewRating = Math.round(Number(reviews[i].rating) || 0); if (reviewRating >= 1 && reviewRating <= 5) { ratingCounts[reviewRating]++; } }
+            var totalReviews = Number(data.reviewCount) || reviews.length;
+            var distribution = '';
+            for (var star = 5; star >= 1; star--) {
+                var count = ratingCounts[star];
+                var width = totalReviews ? Math.round((count / totalReviews) * 100) : 0;
+                distribution += '<div class="cd-review-distribution-row"><b>' + star + ' ★</b><span class="cd-review-distribution-track"><i class="cd-review-distribution-fill" style="width:' + width + '%"></i></span><span>' + count + '</span></div>';
+            }
             summary.hidden = false;
             summary.innerHTML =
-                '<span class="cd-review-score">' + rating.toFixed(1) + '</span>' +
-                '<span class="cd-review-stars" role="img" aria-label="Rated ' + rating.toFixed(1) + ' out of 5">' + reviewStarsHtml(rating) + '</span>' +
-                '<span class="cd-review-count">' + (data.reviewCount ? Number(data.reviewCount).toLocaleString() + ' review' + (Number(data.reviewCount) === 1 ? '' : 's') : '0 reviews') + '</span>';
+                '<div class="cd-review-score-panel"><p class="cd-review-kicker">Passenger sentiment</p><span class="cd-review-score">' + rating.toFixed(1) + '</span><span class="cd-review-stars" role="img" aria-label="Rated ' + rating.toFixed(1) + ' out of 5">' + reviewStarsHtml(rating) + '</span><span class="cd-review-count">' + totalReviews.toLocaleString() + ' review' + (totalReviews === 1 ? '' : 's') + '</span></div>' +
+                '<div class="cd-review-distribution" aria-label="Rating distribution">' + distribution + '</div>';
         }
 
         currentReviews = data.reviews || [];
@@ -3469,6 +3482,10 @@ var reviewEditingReplyId = null;
     function beginReviewReply(id) {
         reviewEditingReplyId = Number(id) || null;
         renderReviewCards();
+        setTimeout(function () {
+            var editor = document.querySelector('.cd-review-card.is-editing .cd-review-reply-input');
+            if (editor) { editor.focus(); }
+        }, 0);
     }
 
     function cancelReviewReply() {
@@ -3672,13 +3689,20 @@ var reviewEditingReplyId = null;
 
         var reviewListEl = byId('review-list');
         if (reviewListEl) {
+            reviewListEl.addEventListener('input', function (ev) {
+                var input = ev.target;
+                if (!input || !input.classList || !input.classList.contains('cd-review-reply-input')) { return; }
+                var card = input.closest ? input.closest('.cd-review-card') : null;
+                var count = card ? card.querySelector('[data-review-reply-count]') : null;
+                if (count) { count.textContent = input.value.length + ' / 1000'; }
+            });
             reviewListEl.addEventListener('click', function (ev) {
-                var target = ev.target.closest ? ev.target.closest('.cd-review-like, .cd-review-reply-btn, .cd-review-reply-edit, .cd-review-reply-save, .cd-review-reply-cancel') : null;
+                var target = ev.target.closest ? ev.target.closest('.cd-review-like, .cd-review-reply-btn, .cd-review-reply-save, .cd-review-reply-cancel') : null;
                 if (!target) { return; }
                 var id = target.getAttribute('data-review-id');
                 if (!id) { return; }
                 if (target.classList.contains('cd-review-like')) { toggleReviewLike(id); return; }
-                if (target.classList.contains('cd-review-reply-btn') || target.classList.contains('cd-review-reply-edit')) { beginReviewReply(id); return; }
+                if (target.classList.contains('cd-review-reply-btn')) { beginReviewReply(id); return; }
                 if (target.classList.contains('cd-review-reply-cancel')) { cancelReviewReply(); return; }
                 if (target.classList.contains('cd-review-reply-save')) {
                     var card = target.closest ? target.closest('.cd-review-card') : null;

@@ -279,6 +279,61 @@
         .cd-reviews-head .btn { flex: 0 0 auto; }
 
         .cd-review-filterbar { display: flex; flex-wrap: wrap; gap: 0.45rem; padding: 0.6rem 0; }        .cd-review-filterbar[hidden] { display: none; }        .cd-review-filter { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.45rem 0.8rem; color: #587068; background: #fff; border:  1px solid #e5e7eb; border-radius: 10px; cursor: pointer; font:  800 0.78rem/1 'DM Sans', sans-serif; }        .cd-review-filter:hover { border-color: #6cb48c; }        .cd-review-filter.is-active { color: #fff; background: #187653; border-color: #187653; }        .cd-review-filter-count { display: inline-grid; place-items: center; min-width: 1.1rem; height:  1.1rem; padding: 0.15rem; border-radius: 50%; background: rgba(0, 0, 0, .1); font-size:  0.7rem; }        .cd-review-actions { display: flex; align-items: center; gap: 0.5rem; margin-top:  0.25rem; }        .cd-review-like { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.65rem; color: #6b7c76; background: #f3f7f5; border:  1px solid #e3ece7; border-radius: 50px; cursor: pointer; font-size:  0.82rem; font-weight:  700; }        .cd-review-like:hover { color: #b91c1c; border-color: #eec5c5; }        .cd-review-like.is-liked { color: #b91c1c; background: #fdeeee; border-color: #f3c2c2; }        .cd-review-reply-btn { margin-left: auto; padding: 0.3rem 0.65rem; color: #176447; background: #eff8f3; border:  1px solid #cce5d7; border-radius: 50px; cursor: pointer; font-size:  0.8rem; font-weight:  700; }        .cd-review-reply-btn:hover { background: #e2f3e9; }        .cd-review-reply { margin-top: 0.6rem; padding: 0.7rem 1rem; background: #f4faf6; border-left:  3px solid #6cb48c; border-radius: 8px; }        .cd-review-reply-label { display: block; font-size: 0.68rem; font-weight:  800; color: #2e6e59; text-transform: uppercase; letter-spacing:  0.05em; margin-bottom:  0.3rem; }        .cd-review-reply p { margin: 0; font-size: 0.88rem; line-height: 1.55; color: var(--color-text); }        .cd-review-reply-meta { display: block; margin-top: 0.35rem; font-size: 0.78rem; color: var(--color-muted); }        .cd-review-reply-meta button { padding: 0; color: #176447; background: transparent; border: 0; cursor: pointer; font-size: inherit; font-weight:  700; text-decoration: underline; }        .cd-review-reply-editor { margin-top: 0.6rem; padding: 0.7rem 1rem; background: #f4faf6; border:  1px solid #d7e8de; border-radius: 9px; }        .cd-review-reply-input { width: 100%; min-height: 4.5rem; padding: 0.55rem; border:  1px solid #cbd5e1; border-radius: 8px; font:  inherit; font-size: 0.88rem; resize: vertical; box-sizing: border-box; }        .cd-review-reply-editor-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.6rem; }        /* ===== Company profile (additive, scoped to .cd-*) ===== */
+        /* ===== Reviews: passenger-sentiment studio ===== */
+        .cd-reviews { --review-ink: #193c35; --review-green: #177550; --review-mist: #eef7f1; --review-line: #dcebe2; --review-gold: #e7a22d; margin-top: 0; }
+        .cd-pane-title #btn-refresh-reviews { flex: 0 0 auto; border-color: #cfe0d6; background: #fff; color: #245d49; box-shadow: none; }
+        .cd-reviews-head { padding: 0 0 1.1rem; border-bottom: 1px solid var(--review-line); }
+        .cd-reviews-head h2 { font: 800 1.5rem/1 'Outfit', sans-serif; color: var(--review-ink); letter-spacing: -0.03em; }
+        .cd-reviews-head .btn { border-color: #cfe0d6; background: #fff; color: #245d49; box-shadow: none; }
+        .cd-reviews-summary { position: relative; display: grid; grid-template-columns: minmax(150px, .85fr) 1.7fr; gap: 1.5rem; align-items: stretch; margin: 1.25rem 0 0; padding: 1.25rem; overflow: hidden; color: var(--review-ink); background: linear-gradient(135deg, #edf8f1 0%, #f9fcfa 62%, #f2f8e6 100%); border: 1px solid var(--review-line); border-radius: 16px; }
+        .cd-reviews-summary::after { content: ''; position: absolute; right: -2.5rem; bottom: -4.5rem; width: 12rem; height: 12rem; border: 1.4rem solid rgba(70, 147, 99, .09); border-radius: 50%; pointer-events: none; }
+        .cd-review-score-panel { position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: center; padding-right: 1.5rem; border-right: 1px solid #cfe4d7; }
+        .cd-review-kicker { margin: 0 0 .42rem; color: #487268; font-size: .68rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+        .cd-review-score { display: block; font: 800 3.35rem/.9 'Outfit', sans-serif; color: var(--review-ink); letter-spacing: -.07em; }
+        .cd-review-stars { display: block; margin-top: .45rem; color: var(--review-gold); letter-spacing: .12em; font-size: 1rem; }
+        .cd-review-count { display: block; margin-top: .45rem; color: #567168; font-size: .82rem; }
+        .cd-review-distribution { position: relative; z-index: 1; display: grid; align-content: center; gap: .42rem; }
+        .cd-review-distribution-row { display: grid; grid-template-columns: 2.4rem 1fr 2rem; gap: .55rem; align-items: center; color: #41675b; font-size: .76rem; font-weight: 700; }
+        .cd-review-distribution-row b { color: #8a640d; font-size: .74rem; }
+        .cd-review-distribution-track { height: .42rem; overflow: hidden; background: #dcece2; border-radius: 99px; }
+        .cd-review-distribution-fill { display: block; height: 100%; min-width: 0; background: linear-gradient(90deg, #dca026, #f0bf5a); border-radius: inherit; }
+        .cd-review-filterbar { display: flex; align-items: center; flex-wrap: wrap; gap: .45rem; margin-top: 1rem; padding: .6rem; background: #f7faf8; border: 1px solid #e1ece6; border-radius: 12px; }
+        .cd-review-filterbar::before { content: 'Show'; margin: 0 .15rem 0 .25rem; color: #69827a; font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+        .cd-review-filter { min-height: 2.25rem; padding: .45rem .72rem; color: #527168; background: transparent; border: 1px solid transparent; border-radius: 8px; font: 800 .76rem/1 'DM Sans', sans-serif; transition: .16s ease; }
+        .cd-review-filter:hover { color: #174d3b; background: #fff; border-color: #d3e3da; transform: translateY(-1px); }
+        .cd-review-filter.is-active { color: #fff; background: var(--review-green); border-color: var(--review-green); box-shadow: 0 5px 12px rgba(23, 117, 80, .18); }
+        .cd-review-filter-count { min-width: 1.25rem; height: 1.25rem; padding: 0 .23rem; color: inherit; background: rgba(20, 65, 50, .09); border-radius: 99px; font-size: .68rem; line-height: 1.25rem; }
+        .cd-review-filter.is-active .cd-review-filter-count { background: rgba(255,255,255,.18); }
+        .cd-review-list { grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: .9rem; margin-top: 1rem; }
+        .cd-review-card { position: relative; padding: 1.1rem; gap: .8rem; border: 1px solid #dfeae4; border-radius: 14px; box-shadow: 0 1px 0 rgba(17, 61, 45, .02); transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+        .cd-review-card:hover { border-color: #b8d8c5; box-shadow: 0 12px 24px rgba(25, 71, 54, .08); transform: translateY(-2px); }
+        .cd-review-card.is-editing { grid-column: span 2; border-color: #82b89a; background: #fbfefc; box-shadow: 0 12px 30px rgba(25, 71, 54, .1); }
+        .cd-review-card-head { align-items: center; gap: .65rem; }
+        .cd-review-avatar { display: inline-grid; flex: 0 0 2.35rem; width: 2.35rem; height: 2.35rem; place-items: center; color: #fff; background: #2c765a; border-radius: 50%; font: 800 .86rem/1 'Outfit', sans-serif; }
+        .cd-review-person { display: grid; gap: .12rem; min-width: 0; }
+        .cd-review-card-head strong { color: var(--review-ink); font-size: .92rem; }
+        .cd-review-meta { color: #72877f; font-size: .73rem; }
+        .cd-review-badge { color: #22674b; background: #e5f5ea; font-size: .66rem; }
+        .cd-review-rating { display: inline-flex; align-items: center; gap: .25rem; margin-left: auto; padding: .34rem .5rem; color: #895e08; background: #fff8e7; border: 1px solid #f3dfad; border-radius: 99px; font: 800 .75rem/1 'DM Sans', sans-serif; }
+        .cd-review-rating span { color: var(--review-gold); font-size: .88rem; letter-spacing: .03em; }
+        .cd-review-text { min-height: 3.5em; color: #385148; font-size: .9rem; line-height: 1.65; }
+        .cd-review-actions { min-height: 2rem; padding-top: .7rem; margin-top: auto; border-top: 1px solid #edf2ef; }
+        .cd-review-like { padding: .34rem .58rem; color: #70847c; background: transparent; border-color: transparent; }
+        .cd-review-reply-btn { margin-left: auto; padding: .42rem .72rem; color: #fff; background: var(--review-green); border: 1px solid var(--review-green); border-radius: 7px; font-size: .76rem; transition: .16s ease; }
+        .cd-review-reply-btn:hover { color: #fff; background: #105c3e; transform: translateY(-1px); }
+        .cd-review-reply { padding: .8rem .9rem; background: #f0f8f3; border: 1px solid #d7eade; border-left: 3px solid #58a275; border-radius: 10px; }
+        .cd-review-reply-label { color: #2a7054; }
+        .cd-review-reply-meta { display: flex; align-items: center; gap: .35rem; color: #70847c; }
+        .cd-review-reply-meta button { color: #216c4e; }
+        .cd-review-reply-editor { padding: 1rem; background: #f1f8f3; border: 1px solid #c6e0d0; border-radius: 11px; }
+        .cd-review-reply-editor-head { display: flex; justify-content: space-between; gap: 1rem; margin-bottom: .6rem; color: #356357; font-size: .78rem; font-weight: 800; }
+        .cd-review-reply-editor-head small { color: #6f857c; font-size: .72rem; font-weight: 600; }
+        .cd-review-reply-input { min-height: 7rem; padding: .72rem .8rem; border-color: #c8ded1; background: #fff; line-height: 1.55; }
+        .cd-review-reply-input:focus { outline: 3px solid rgba(49,164,118,.16); border-color: #3f976a; }
+        .cd-review-reply-editor-actions { justify-content: space-between; align-items: center; }
+        .cd-review-empty { margin-top: 1rem; padding: 2.4rem 1rem; border-color: #cfe1d6; background: #f8fbf9; color: #668078; }
+        @media (max-width: 680px) { .cd-reviews-summary { grid-template-columns: 1fr; gap: 1rem; }.cd-review-score-panel { padding: 0 0 1rem; border-right: 0; border-bottom: 1px solid #cfe4d7; }.cd-review-card.is-editing { grid-column: auto; }.cd-review-filterbar::before { width: 100%; }.cd-review-rating { margin-left: 0; }.cd-review-card-head { align-items: flex-start; } }
+
         .cd-profile { margin-top: var(--space-md); }
         .cd-profile-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
         .cd-profile-head h2 { font-size: 1.2rem; color: var(--color-dark); margin: 0; }
@@ -1212,10 +1267,7 @@
 
         <!-- ===== Company Reviews ===== -->
         <section id="company-reviews" class="cd-reviews" hidden>
-            <div class="cd-reviews-head">
-                <h2>Reviews</h2>
-                <button type="button" id="btn-refresh-reviews" class="btn btn-secondary btn-sm">Refresh</button>
-            </div>
+            <button type="button" id="btn-refresh-reviews" class="btn btn-secondary btn-sm">Refresh</button>
             <p id="review-loading" class="cd-reviews-msg" hidden>Loading passenger reviews&hellip;</p>
             <div id="review-error" class="cd-reviews-error auth-message" hidden></div>
             <div id="review-empty" class="cd-reviews-empty" hidden></div>
@@ -1302,6 +1354,6 @@
 
     <script src="js/main.js"></script>
     <script src="js/auth.js"></script>
-    <script src="js/company-dashboard.js?v=20260904-revenue-refunds"></script>
+    <script src="js/company-dashboard.js?v=20260904-reviews-header-refresh"></script>
 </body>
 </html>
