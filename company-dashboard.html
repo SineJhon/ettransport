@@ -6,7 +6,7 @@
     <meta name="description" content="Company operator dashboard for ET Transport">
     <title>Company Dashboard | ET Transport</title>
     <link rel="stylesheet" href="css/style.css?v=20260903-reason-suggestions">
-    <link rel="stylesheet" href="css/walkin-booking.css?v=20260904-inline-validation">
+    <link rel="stylesheet" href="css/walkin-booking.css?v=20260904-inline-validation-2">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
@@ -739,18 +739,20 @@
                                         <p class="cd-walkin-refund-hint">If this booking is cancelled and a refund is issued, the money will be sent to the account below.</p>
                                         <div class="cd-walkin-booking-form-row">
                                             <div>
-                                                <label for="walkin-refund-account-name">Account Name</label>
-                                                <input type="text" id="walkin-refund-account-name" maxlength="120" placeholder="e.g. John Doe">
+                                                <label for="walkin-refund-account-name">Account Name *</label>
+                                                <input type="text" id="walkin-refund-account-name" maxlength="120" required placeholder="e.g. John Doe">
+                                                <p id="walkin-refund-account-name-error" class="cd-walkin-field-error" role="alert" hidden></p>
                                             </div>
                                             <div>
-                                                <label for="walkin-refund-account-number">Account Number</label>
-                                                <input type="text" id="walkin-refund-account-number" maxlength="50" placeholder="e.g. 1000134567890">
+                                                <label for="walkin-refund-account-number">Account Number *</label>
+                                                <input type="text" id="walkin-refund-account-number" maxlength="50" required placeholder="e.g. 1000134567890">
+                                                <p id="walkin-refund-account-number-error" class="cd-walkin-field-error" role="alert" hidden></p>
                                             </div>
                                         </div>
                                         <div class="cd-walkin-booking-form-row">
                                             <div>
-                                                <label for="walkin-refund-account-type">Type of Bank</label>
-                                                <select id="walkin-refund-account-type">
+                                                <label for="walkin-refund-account-type">Type of Bank *</label>
+                                                <select id="walkin-refund-account-type" required>
                                                     <option value="">Select bank…</option>
                                                     <option value="CBE">CBE</option>
                                                     <option value="CBE Birr">CBE Birr</option>
@@ -759,10 +761,12 @@
                                                     <option value="Dashen Bank">Dashen Bank</option>
                                                     <option value="Other">Other</option>
                                                 </select>
+                                                <p id="walkin-refund-account-type-error" class="cd-walkin-field-error" role="alert" hidden></p>
                                             </div>
                                             <div id="walkin-refund-account-other-wrap" hidden>
-                                                <label for="walkin-refund-account-other">Other Bank Name</label>
+                                                <label for="walkin-refund-account-other">Other Bank Name *</label>
                                                 <input type="text" id="walkin-refund-account-other" maxlength="50" placeholder="e.g. Awash Bank">
+                                                <p id="walkin-refund-account-other-error" class="cd-walkin-field-error" role="alert" hidden></p>
                                             </div>
                                         </div>
                                     </div>
@@ -1278,6 +1282,6 @@
 
     <script src="js/main.js"></script>
     <script src="js/auth.js"></script>
-    <script src="js/company-dashboard.js?v=20260904-inline-validation"></script>
+    <script src="js/company-dashboard.js?v=20260904-inline-validation-2"></script>
 </body>
 </html>

@@ -2542,6 +2542,30 @@
         };
     }
 
+    function validateWalkInRefundAccount() {
+        var accountName = byId('walkin-refund-account-name') ? byId('walkin-refund-account-name').value.trim() : '';
+        var accountNumber = byId('walkin-refund-account-number') ? byId('walkin-refund-account-number').value.trim() : '';
+        var bankType = byId('walkin-refund-account-type') ? byId('walkin-refund-account-type').value : '';
+        var otherBank = byId('walkin-refund-account-other') ? byId('walkin-refund-account-other').value.trim() : '';
+        if (!accountName) {
+            showWalkInError('walkin-refund-account-name-error', 'Refund account name is required.', 'walkin-refund-account-name');
+            return false;
+        }
+        if (!accountNumber) {
+            showWalkInError('walkin-refund-account-number-error', 'Refund account number is required.', 'walkin-refund-account-number');
+            return false;
+        }
+        if (!bankType) {
+            showWalkInError('walkin-refund-account-type-error', 'Please select the bank for this refund account.', 'walkin-refund-account-type');
+            return false;
+        }
+        if (bankType === 'Other' && !otherBank) {
+            showWalkInError('walkin-refund-account-other-error', 'Please enter the bank name.', 'walkin-refund-account-other');
+            return false;
+        }
+        return true;
+    }
+
     function updateWalkInConfirmation() {
         var source = walkInState.bookingType === 'office' ? 'Office / Walk-in' : walkInState.bookingType === 'call_in' ? 'Call-in' : '—';
         var trip = getSelectedTripFromWizard();
@@ -2672,6 +2696,7 @@
         }
         var passengerData = validateWalkInPassenger();
         if (!passengerData) { return; }
+        if (!validateWalkInRefundAccount()) { return; }
         passengerName = passengerData.name;
         passengerPhone = passengerData.phone;
         passengerAge = passengerData.age;
@@ -3791,6 +3816,7 @@ var reviewEditingReplyId = null;
                 }
                 if (walkInState.step === 4) {
                     if (!validateWalkInPassenger()) { return; }
+                    if (!validateWalkInRefundAccount()) { return; }
                     setWalkInStep(5);
                     return;
                 }
@@ -3863,7 +3889,7 @@ var reviewEditingReplyId = null;
                 clearWalkInError();
             });
         }
-        ['walkin-passenger-name', 'walkin-passenger-age', 'walkin-transfer-transaction'].forEach(function (fieldId) {
+        ['walkin-passenger-name', 'walkin-passenger-age', 'walkin-transfer-transaction', 'walkin-refund-account-name', 'walkin-refund-account-number', 'walkin-refund-account-other'].forEach(function (fieldId) {
             var field = byId(fieldId);
             if (field) { field.addEventListener('input', clearWalkInError); }
         });
