@@ -89,6 +89,25 @@
         .ad-add-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; }
         .ad-add-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.9rem; }
         @media (max-width: 560px) { .ad-add-form-row { grid-template-columns: 1fr; } }
+        /* Locked +251 phone field (same pattern as the company dashboard walk-in form). */
+        .ad-add-phone-field { display: flex; align-items: stretch; }
+        .ad-add-phone-prefix { display: inline-flex; align-items: center; padding: 0 0.65rem; background: #eef2f7; border: 1px solid #cbd5e1; border-right: none; border-radius: 6px 0 0 6px; font-weight: 700; color: #374151; font-size: 0.9rem; white-space: nowrap; }
+        .ad-add-phone-field input { width: auto; flex: 1 1 auto; min-width: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; }
+        /* Per-field inline validation messages. */
+        .ad-add-field-error { margin: 0.35rem 0 0; color: #b91c1c; font-size: 0.82rem; line-height: 1.35; }
+        .ad-add-field-error[hidden] { display: none; }
+        /* Password requirements checklist — lives outside the input, below it. */
+        .ad-pw-reqs { display: grid; gap: 0.3rem; margin: 0.45rem 0 0; padding: 0.6rem 0.75rem; list-style: none; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; }
+        .ad-pw-reqs li { display: flex; align-items: center; gap: 0.45rem; color: #6b7280; font-size: 0.78rem; font-weight: 600; transition: color 0.15s ease; }
+        .ad-pw-reqs li::before { content: '\2715'; display: inline-grid; place-items: center; width: 1rem; height: 1rem; border-radius: 50%; background: #eef2f7; color: #94a3b8; font-size: 0.6rem; font-weight: 800; flex: 0 0 auto; }
+        .ad-pw-reqs li.is-met { color: #166534; }
+        .ad-pw-reqs li.is-met::before { content: '\2713'; background: #16a34a; color: #fff; }
+        /* Live confirm-password status hint. */
+        .ad-add-field-hint { margin: 0.35rem 0 0; color: #6b7280; font-size: 0.8rem; line-height: 1.35; }
+        .ad-add-field-hint.ok { color: #166534; font-weight: 600; }
+        .ad-add-field-hint.bad { color: #b91c1c; font-weight: 600; }
+        /* The shared password-toggle button needs input padding inside this modal. */
+        #ad-add-company-form .password-field input { padding-right: 3.25rem; }
         /* Single-page admin workspace, aligned with the company dashboard. */
         body { background:#f4f6fb; }.ad-page{padding:2rem 0 3.5rem}.ad-workspace-head{display:flex;align-items:flex-end;justify-content:space-between;gap:1.5rem;margin-bottom:1.5rem}.ad-workspace-head h1{margin:0;color:#182448;font-size:clamp(2rem,4vw,3rem);letter-spacing:-.045em}.ad-workspace-head p{margin:.5rem 0 0;max-width:42rem;color:#64708a}.ad-live{display:flex;align-items:center;gap:.5rem;color:#3b537f;font-size:.8rem;font-weight:700;white-space:nowrap}.ad-live i{width:.55rem;height:.55rem;border-radius:50%;background:#3ea87a;box-shadow:0 0 0 4px #dff4e8}.ad-layout{display:grid;grid-template-columns:230px minmax(0,1fr);gap:1.25rem;align-items:start}.ad-sidebar{position:sticky;top:1rem;padding:.8rem;color:#dce5fb;background:#182448;border-radius:18px;box-shadow:0 16px 35px rgba(24,36,72,.16)}.ad-admin-mini{padding:.45rem .5rem 1rem;margin-bottom:.7rem;border-bottom:1px solid rgba(255,255,255,.13)}.ad-admin-mini strong,.ad-admin-mini small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ad-admin-mini strong{color:#fff;font-size:.9rem}.ad-admin-mini small{margin-top:.15rem;color:#aebddd;font-size:.72rem}.ad-nav{display:grid;gap:.3rem}.ad-nav .ad-tab{display:flex;align-items:center;width:100%;padding:.75rem;color:#dce5fb;background:transparent;border:0;border-radius:10px;font:650 .88rem/1.1 var(--font-sans);text-align:left;cursor:pointer}.ad-nav .ad-tab:hover{color:#fff;background:rgba(255,255,255,.09)}.ad-nav .ad-tab.active{color:#182448;background:#edf2ff;box-shadow:0 4px 12px rgba(0,0,0,.09)}.ad-content{min-width:0}.ad-content .ad-card{margin-top:0;padding:clamp(1rem,2.5vw,1.6rem);border-color:#e0e6f1;border-radius:18px;box-shadow:0 10px 28px rgba(30,47,88,.055)}.ad-content .ad-card+.ad-card{margin-top:1.25rem}.ad-content .ad-card-head{padding-bottom:1.1rem;margin-bottom:1rem;border-bottom:1px solid #e8ecf4}.ad-content .ad-card-head h2{color:#1a2a52;font-size:1.35rem}.ad-content .ad-stat{position:relative;overflow:hidden;padding:1rem;border:1px solid #e0e6f1;border-radius:12px;box-shadow:none}.ad-content .ad-stat::before{content:'';position:absolute;inset:0 0 auto;height:3px;background:#4e74c9}.ad-review-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:.8rem}.ad-review-card{padding:1rem;border:1px solid #e1e7f1;border-radius:12px;background:#fbfcff}.ad-review-card h3{color:#1b2d55;font-size:1rem}.ad-review-card p{margin:.4rem 0 0;color:#68758d;font-size:.84rem}.ad-stars{color:#dc9a2c;letter-spacing:.08em;font-weight:700}@media(max-width:900px){.ad-layout{grid-template-columns:1fr}.ad-sidebar{position:static}.ad-nav{grid-template-columns:repeat(5,minmax(9rem,1fr));overflow-x:auto}.ad-nav .ad-tab{white-space:nowrap}}@media(max-width:600px){.ad-page{padding-top:1.15rem}.ad-workspace-head{align-items:flex-start;flex-direction:column;gap:.7rem}.ad-sidebar,.ad-content .ad-card{border-radius:14px}.ad-nav{grid-template-columns:repeat(5,max-content)}.ad-stats{grid-template-columns:repeat(2,1fr)}}
         /* Same forest-green dashboard system used by company-dashboard.html. */
@@ -377,49 +396,58 @@
             <div id="ad-add-company-error" class="auth-message" hidden></div>
             <form id="ad-add-company-form" class="ad-add-form" novalidate>
                 <label for="add-company-name">Full Name / Contact Person</label>
-                <input id="add-company-name" name="name" type="text" placeholder="Full name">
+                <input id="add-company-name" name="name" type="text" placeholder="Full name" autocomplete="name">
+                <p id="add-company-name-error" class="ad-add-field-error" hidden role="alert"></p>
 
                 <div class="ad-add-form-row">
                     <div>
                         <label for="add-company-email">Email</label>
-                        <input id="add-company-email" name="email" type="email" placeholder="you@example.com">
+                        <input id="add-company-email" name="email" type="email" placeholder="you@example.com" autocomplete="email">
+                        <p id="add-company-email-error" class="ad-add-field-error" hidden role="alert"></p>
                     </div>
                     <div>
                         <label for="add-company-phone">Phone</label>
-                        <input id="add-company-phone" name="phone" type="tel" placeholder="+2519XXXXXXXX">
+                        <div class="ad-add-phone-field">
+                            <span class="ad-add-phone-prefix" aria-hidden="true">+251</span>
+                            <input type="tel" id="add-company-phone" name="phone" maxlength="9" placeholder="7XXXXXXXX / 9XXXXXXXX" inputmode="numeric" autocomplete="tel-national">
+                        </div>
+                        <p id="add-company-phone-error" class="ad-add-field-error" hidden role="alert"></p>
                     </div>
                 </div>
 
-                <div class="ad-add-form-row">
-                    <div>
-                        <label for="add-company-password">Password</label>
-                        <div class="password-field">
-                            <input id="add-company-password" name="password" type="password" autocomplete="new-password" placeholder="At least 8 chars with letters and numbers">
-                            <button class="password-toggle" type="button" aria-controls="add-company-password" aria-pressed="false" aria-label="Show password">
-                                <svg class="password-toggle-icon password-toggle-icon--show" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.75"/></svg>
-                                <svg class="password-toggle-icon password-toggle-icon--hide" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18M10.6 6.2A10.8 10.8 0 0 1 12 6c6.1 0 9.5 6 9.5 6a18.2 18.2 0 0 1-3.3 3.8M6.1 6.1A18.5 18.5 0 0 0 2.5 12S5.9 18 12 18c1.3 0 2.5-.3 3.5-.7"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
-                                <span class="sr-only">Show password</span>
-                            </button>
-                        </div>
-                    </div>
-                    <div>
-                        <label for="add-company-confirm">Confirm Password</label>
-                        <div class="password-field">
-                            <input id="add-company-confirm" name="password_confirmation" type="password" autocomplete="new-password" placeholder="Re-enter your password">
-                            <button class="password-toggle" type="button" aria-controls="add-company-confirm" aria-pressed="false" aria-label="Show password">
-                                <svg class="password-toggle-icon password-toggle-icon--show" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.75"/></svg>
-                                <svg class="password-toggle-icon password-toggle-icon--hide" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18M10.6 6.2A10.8 10.8 0 0 1 12 6c6.1 0 9.5 6 9.5 6a18.2 18.2 0 0 1-3.3 3.8M6.1 6.1A18.5 18.5 0 0 0 2.5 12S5.9 18 12 18c1.3 0 2.5-.3 3.5-.7"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
-                                <span class="sr-only">Show password</span>
-                            </button>
-                        </div>
-                    </div>
+                <label for="add-company-password">Password</label>
+                <div class="password-field">
+                    <input id="add-company-password" name="password" type="password" autocomplete="new-password" placeholder="Create a password">
+                    <button class="password-toggle" type="button" aria-controls="add-company-password" aria-pressed="false" aria-label="Show password">
+                        <svg class="password-toggle-icon password-toggle-icon--show" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.75"/></svg>
+                        <svg class="password-toggle-icon password-toggle-icon--hide" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18M10.6 6.2A10.8 10.8 0 0 1 12 6c6.1 0 9.5 6 9.5 6a18.2 18.2 0 0 1-3.3 3.8M6.1 6.1A18.5 18.5 0 0 0 2.5 12S5.9 18 12 18c1.3 0 2.5-.3 3.5-.7"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+                        <span class="sr-only">Show password</span>
+                    </button>
                 </div>
+                <ul class="ad-pw-reqs" aria-label="Password requirements">
+                    <li data-pw-req="length">At least 8 characters</li>
+                    <li data-pw-req="letter">At least one letter</li>
+                    <li data-pw-req="number">At least one number</li>
+                </ul>
+
+                <label for="add-company-confirm">Confirm Password</label>
+                <div class="password-field">
+                    <input id="add-company-confirm" name="password_confirmation" type="password" autocomplete="new-password" placeholder="Re-enter your password">
+                    <button class="password-toggle" type="button" aria-controls="add-company-confirm" aria-pressed="false" aria-label="Show password">
+                        <svg class="password-toggle-icon password-toggle-icon--show" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.75"/></svg>
+                        <svg class="password-toggle-icon password-toggle-icon--hide" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18M10.6 6.2A10.8 10.8 0 0 1 12 6c6.1 0 9.5 6 9.5 6a18.2 18.2 0 0 1-3.3 3.8M6.1 6.1A18.5 18.5 0 0 0 2.5 12S5.9 18 12 18c1.3 0 2.5-.3 3.5-.7"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+                        <span class="sr-only">Show password</span>
+                    </button>
+                </div>
+                <p id="add-company-confirm-hint" class="ad-add-field-hint" data-default="Passwords must match.">Passwords must match.</p>
 
                 <label for="add-company-company-name">Company Name</label>
                 <input id="add-company-company-name" name="company_name" type="text" placeholder="Company legal name">
+                <p id="add-company-company-name-error" class="ad-add-field-error" hidden role="alert"></p>
 
                 <label for="add-company-address">Company Address</label>
                 <input id="add-company-address" name="company_address" type="text" placeholder="City, sub-city, area">
+                <p id="add-company-address-error" class="ad-add-field-error" hidden role="alert"></p>
 
                 <label for="add-company-description">Company Description (optional)</label>
                 <textarea id="add-company-description" name="company_description" rows="3" placeholder="Short company profile"></textarea>

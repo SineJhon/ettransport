@@ -719,12 +719,92 @@ function renderDetail(c) {
     }
 
     /* ---------- Add company (same flow as a public company registration) ---------- */
-    function openAddCompany() {
-        var modal = byId('ad-add-company-modal');
-        if (!modal) { return; }
+    function showAddFieldError(fieldId, message) {
+        var field = byId(fieldId);
+        var err = byId(fieldId + '-error');
+        if (field) { field.setAttribute('aria-invalid', 'true'); }
+        if (err) {
+            err.textContent = message;
+            err.hidden = false;
+        }
+    }
+
+    function clearAddFieldError(fieldId) {
+        var field = byId(fieldId);
+        var err = byId(fieldId + '-error');
+        if (field) { field.removeAttribute('aria-invalid'); }
+        if (err) {
+            err.textContent = '';
+            err.hidden = true;
+        }
+    }
+
+    function resetAddCompanyForm() {
         var form = byId('ad-add-company-form');
         if (form) { form.reset(); }
         hide(byId('ad-add-company-error'));
+        ['add-company-name', 'add-company-email', 'add-company-phone',
+         'add-company-password', 'add-company-confirm',
+         'add-company-company-name', 'add-company-address'].forEach(clearAddFieldError);
+        var reqs = document.querySelectorAll('.ad-pw-reqs li[data-pw-req]');
+        for (var i = 0; i < reqs.length; i++) { reqs[i].classList.remove('is-met'); }
+        var hint = byId('add-company-confirm-hint');
+        if (hint) {
+            hint.textContent = hint.getAttribute('data-default') || 'Passwords must match.';
+            hint.className = 'ad-add-field-hint';
+        }
+    }
+
+    /* Live password requirements checklist (below the input). */
+    function updatePasswordRequirements() {
+        var pw = byId('add-company-password');
+        var value = pw ? pw.value : '';
+        var checks = {
+            length: value.length >= 8,
+            letter: /[A-Za-z]/.test(value),
+            number: /\d/.test(value)
+        };
+        var keys = Object.keys(checks);
+        for (var i = 0; i < keys.length; i++) {
+            var li = document.querySelector('.ad-pw-reqs li[data-pw-req="' + keys[i] + '"]');
+            if (li) { li.classList.toggle('is-met', checks[keys[i]]); }
+        }
+        updateConfirmHint();
+    }
+
+    /* Live confirm-password match hint. */
+    function updateConfirmHint() {
+        var hint = byId('add-company-confirm-hint');
+        if (!hint) { return; }
+        var pw = byId('add-company-password') ? byId('add-company-password').value : '';
+        var confirm = byId('add-company-confirm') ? byId('add-company-confirm').value : '';
+        if (!confirm) {
+            hint.textContent = hint.getAttribute('data-default') || 'Passwords must match.';
+            hint.className = 'ad-add-field-hint';
+        } else if (pw === confirm) {
+            hint.textContent = 'Passwords match.';
+            hint.className = 'ad-add-field-hint ok';
+        } else {
+            hint.textContent = 'Passwords do not match.';
+            hint.className = 'ad-add-field-hint bad';
+        }
+    }
+
+    /* Phone is locked to +251; the field only holds the local 9 digits. */
+    function sanitizeAddCompanyPhone() {
+        var input = byId('add-company-phone');
+        if (!input) { return; }
+        var digits = input.value.replace(/\D/g, '');
+        if (digits.length === 10 && digits.charAt(0) === '0') { digits = digits.slice(1); }
+        if (digits.indexOf('251') === 0 && digits.length >= 10) { digits = digits.slice(3); }
+        if (digits.length > 9) { digits = digits.slice(0, 9); }
+        input.value = digits;
+    }
+
+    function openAddCompany() {
+        var modal = byId('ad-add-company-modal');
+        if (!modal) { return; }
+        resetAddCompanyForm();
         modal.hidden = false;
         var first = byId('add-company-name');
         if (first) { first.focus(); }
@@ -735,36 +815,86 @@ function renderDetail(c) {
         if (modal) { modal.hidden = true; }
     }
 
+    function validateAddCompanyField(fieldId) {
+        switch (fieldId) {
+        case 'add-company-name': {
+            var name = byId(fieldId).value.trim();
+            if (name.length < 2) { showAddFieldError(fieldId, 'Please enter a valid full name.'); return false; }
+            clearAddFieldError(fieldId);
+            return true;
+        }
+        case 'add-company-email': {
+            var email = byId(fieldId).value.trim();
+            if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { showAddFieldError(fieldId, 'Please enter a valid email address.'); return false; }
+            clearAddFieldError(fieldId);
+            return true;
+        }
+        case 'add-company-phone': {
+            var digits = byId(fieldId).value.replace(/\D/g, '');
+            if (!/^[79][0-9]{8}$/.test(digits)) {
+                showAddFieldError(fieldId, 'Enter a valid Ethiopian phone: +251 followed by 9 digits starting with 7 or 9.');
+                return false;
+            }
+            clearAddFieldError(fieldId);
+            return true;
+        }
+        case 'add-company-password': {
+            var pw = byId(fieldId).value;
+            if (pw.length < 8 || !/[A-Za-z]/.test(pw) || !/\d/.test(pw)) {
+                showAddFieldError(fieldId, 'Password must be at least 8 characters and include letters and numbers.');
+                return false;
+            }
+            clearAddFieldError(fieldId);
+            return true;
+        }
+        case 'add-company-confirm': {
+            var confirm = byId(fieldId).value;
+            var original = byId('add-company-password').value;
+            updateConfirmHint();
+            return confirm !== '' && confirm === original;
+        }
+        case 'add-company-company-name': {
+            var companyName = byId(fieldId).value.trim();
+            if (companyName.length < 2) { showAddFieldError(fieldId, 'Company name is required.'); return false; }
+            clearAddFieldError(fieldId);
+            return true;
+        }
+        case 'add-company-address': {
+            var address = byId(fieldId).value.trim();
+            if (address === '') { showAddFieldError(fieldId, 'Company address is required.'); return false; }
+            clearAddFieldError(fieldId);
+            return true;
+        }
+        }
+        return true;
+    }
+
     function submitAddCompany(e) {
         e.preventDefault();
 
         var msg = byId('ad-add-company-error');
         var submitBtn = byId('btn-add-company-submit');
 
-        var name = byId('add-company-name').value.trim();
-        var email = byId('add-company-email').value.trim();
-        var phone = byId('add-company-phone').value.trim();
-        var password = byId('add-company-password').value;
-        var confirm = byId('add-company-confirm').value;
-        var companyName = byId('add-company-company-name').value.trim();
-        var companyAddress = byId('add-company-address').value.trim();
-        var companyDescription = byId('add-company-description').value.trim();
+        sanitizeAddCompanyPhone();
+        updatePasswordRequirements();
 
-        function fail(message) {
-            setError(msg, message);
-            return;
-        }
+        var fields = [
+            'add-company-name',
+            'add-company-email',
+            'add-company-phone',
+            'add-company-password',
+            'add-company-confirm',
+            'add-company-company-name',
+            'add-company-address'
+        ];
 
-        /* Mirrors the validation the public register form + api/auth.php apply. */
-        if (name.length < 2) { return fail('Please enter a valid full name.'); }
-        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { return fail('Please enter a valid email address.'); }
-        if (phone !== '' && !/^[+0-9][0-9\-]{6,20}$/.test(phone)) { return fail('Please enter a valid phone number.'); }
-        if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
-            return fail('Password must be at least 8 characters and include letters and numbers.');
+        for (var i = 0; i < fields.length; i++) {
+            if (!validateAddCompanyField(fields[i])) {
+                var badField = byId(fields[i]);
+                if (badField) { badField.focus(); }
+                return;
+            }
         }
-        if (confirm === '' || confirm !== password) { return fail('Password confirmation does not match.'); }
-        if (companyName.length < 2) { return fail('Company name is required.'); }
-        if (companyAddress === '') { return fail('Company address is required.'); }
 
         hide(msg);
         if (submitBtn) { submitBtn.disabled = true; }
@@ -772,14 +902,14 @@ function renderDetail(c) {
         /* Same endpoint + payload the public company registration posts to. */
         var payload = {
             role: 'company',
-            name: name,
-            email: email,
-            phone: phone,
-            password: password,
-            password_confirmation: confirm,
-            company_name: companyName,
-            company_address: companyAddress,
-            company_description: companyDescription
+            name: byId('add-company-name').value.trim(),
+            email: byId('add-company-email').value.trim(),
+            phone: '+251' + byId('add-company-phone').value.replace(/\D/g, ''),
+            password: byId('add-company-password').value,
+            password_confirmation: byId('add-company-confirm').value,
+            company_name: byId('add-company-company-name').value.trim(),
+            company_address: byId('add-company-address').value.trim(),
+            company_description: byId('add-company-description').value.trim()
         };
 
         var data = new FormData();
@@ -854,6 +984,33 @@ function renderDetail(c) {
 
         var addCompanyForm = byId('ad-add-company-form');
         if (addCompanyForm) { addCompanyForm.addEventListener('submit', submitAddCompany); }
+
+        /* Live per-field validation in the Add Company modal. */
+        ['add-company-name', 'add-company-email', 'add-company-phone',
+         'add-company-company-name', 'add-company-address'].forEach(function (id) {
+            var el = byId(id);
+            if (el) {
+                el.addEventListener('blur', function () { validateAddCompanyField(id); });
+                el.addEventListener('input', function () { clearAddFieldError(id); });
+            }
+        });
+        ['add-company-password', 'add-company-confirm'].forEach(function (id) {
+            var el = byId(id);
+            if (el) {
+                el.addEventListener('blur', function () { validateAddCompanyField(id); });
+                el.addEventListener('input', function () {
+                    updatePasswordRequirements();
+                    clearAddFieldError(id);
+                });
+            }
+        });
+        var addPhone = byId('add-company-phone');
+        if (addPhone) {
+            addPhone.addEventListener('input', function () {
+                sanitizeAddCompanyPhone();
+                clearAddFieldError('add-company-phone');
+            });
+        }
 
         var refreshReviews = byId('btn-refresh-reviews');
         if (refreshReviews) {
