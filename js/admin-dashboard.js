@@ -65,6 +65,7 @@
     var currentCompanies = [];
     var currentDetail = null;
     var pendingMutation = null;
+    var selectedCompanyStatus = '';   // active status filter button value ('' = All)
 
     /* ---------- Admin identity ---------- */
     function loadIdentity() {
@@ -131,12 +132,23 @@
         applyFilter();
     }
 
+    /* Mark one status filter button active and re-render the table. */
+    function setCompanyStatusFilter(value) {
+        selectedCompanyStatus = value || '';
+        var buttons = document.querySelectorAll('.ad-status-filter[data-status-filter]');
+        for (var i = 0; i < buttons.length; i++) {
+            var active = (buttons[i].getAttribute('data-status-filter') || '') === selectedCompanyStatus;
+            buttons[i].classList.toggle('is-active', active);
+            buttons[i].setAttribute('aria-pressed', active ? 'true' : 'false');
+        }
+        applyFilter();
+    }
+
     function applyFilter() {
         var tbody = byId('ad-company-rows');
         if (!tbody) { return; }
 
-        var filterEl = byId('ad-status-filter');
-        var filter = filterEl ? filterEl.value : '';
+        var filter = selectedCompanyStatus;
 
         var filtered = currentCompanies.filter(function (c) {
             return filter === '' || c.status === filter;
@@ -718,9 +730,14 @@ function renderDetail(c) {
         loadTrips();
         loadBookings();
 
-        var statusFilter = byId('ad-status-filter');
-        if (statusFilter) {
-            statusFilter.addEventListener('change', applyFilter);
+        /* Status pill buttons (All / Pending / Approved / Suspended / Rejected). */
+        var statusBtns = document.querySelectorAll('.ad-status-filter[data-status-filter]');
+        for (var si = 0; si < statusBtns.length; si++) {
+            (function (btn) {
+                btn.addEventListener('click', function () {
+                    setCompanyStatusFilter(btn.getAttribute('data-status-filter') || '');
+                });
+            })(statusBtns[si]);
         }
 
         var refreshOverview = byId('btn-refresh-overview');

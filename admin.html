@@ -22,6 +22,12 @@
         .ad-filters { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
         .ad-filters label { font-size: 0.8rem; font-weight: 600; color: var(--color-dark); }
         .ad-filters select { padding: 0.4rem 0.6rem; font-size: 0.85rem; border: 1px solid #cbd5e1; border-radius: 6px; }
+        /* Status filter buttons — same pill-style bar as the company dashboard's
+           trip / booking / payment toolbars, scoped to .ad-* here. */
+        .ad-status-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 0.45rem; padding: 0.65rem 0 0.35rem; }
+        .ad-status-filter { flex: 0 0 auto; padding: 0.52rem 0.78rem; color: #5c736a; background: #f2f7f4; border: 1px solid #dceae2; border-radius: 8px; cursor: pointer; font: 800 0.74rem/1 var(--font-sans); }
+        .ad-status-filter:hover { color: #245944; background: #e7f4ec; }
+        .ad-status-filter.is-active { color: #fff; background: #187653; border-color: #187653; box-shadow: 0 4px 10px rgba(24,118,83,.17); }
         .ad-empty { padding: 1rem; border: 1px dashed #e5e7eb; border-radius: 8px; color: var(--color-muted); text-align: center; }
         .ad-table-wrap { overflow-x: auto; margin-top: var(--space-sm); }
         .ad-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
@@ -127,17 +133,15 @@
 <section id="section-companies" class="ad-card" hidden>
             <div class="ad-card-head">
                 <h2>Company Applications</h2>
-                <div class="ad-filters">
-                    <label for="ad-status-filter">Status</label>
-                    <select id="ad-status-filter">
-                        <option value="">All statuses</option>
-                        <option value="pending">Pending</option>
-                        <option value="approved">Approved</option>
-                        <option value="suspended">Suspended</option>
-                        <option value="rejected">Rejected</option>
-                    </select>
-                    <button type="button" id="btn-refresh-companies" class="btn btn-secondary btn-sm">Refresh</button>
-                </div>
+                <button type="button" id="btn-refresh-companies" class="btn btn-secondary btn-sm">Refresh</button>
+            </div>
+
+            <div class="ad-status-toolbar" role="group" aria-label="Filter companies by status">
+                <button type="button" class="ad-status-filter is-active" data-status-filter="" aria-pressed="true">All</button>
+                <button type="button" class="ad-status-filter" data-status-filter="pending" aria-pressed="false">Pending</button>
+                <button type="button" class="ad-status-filter" data-status-filter="approved" aria-pressed="false">Approved</button>
+                <button type="button" class="ad-status-filter" data-status-filter="suspended" aria-pressed="false">Suspended</button>
+                <button type="button" class="ad-status-filter" data-status-filter="rejected" aria-pressed="false">Rejected</button>
             </div>
 
             <p id="ad-list-loading" class="auth-identity" hidden>Loading companies&hellip;</p>
