@@ -46,7 +46,10 @@
         .ad-detail-field .k { display: block; font-size: 0.7rem; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.04em; }
         .ad-detail-field .v { font-size: 0.92rem; color: var(--color-dark); font-weight: 600; }
         .ad-detail-desc { margin-top: var(--space-sm); font-size: 0.88rem; color: var(--color-muted); }
-        .ad-modal { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.55); z-index: 100; }
+        /* Highest overlay on the page: this confirmation dialog can be opened
+           from inside other modals (e.g. the manage-company popup at z-index 103),
+           so it must always stack above them. */
+        .ad-modal { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.55); z-index: 200; }
         .ad-modal[hidden] { display: none; }
         .ad-modal-box { width: min(420px, 90vw); background: var(--color-white); border-radius: 12px; padding: 1.25rem 1.4rem; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28); }
         .ad-modal-box h3 { margin: 0 0 0.5rem; font-size: 1.05rem; color: var(--color-dark); }

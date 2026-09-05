@@ -1269,6 +1269,7 @@ function renderDetail(c) {
 
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
+                closeModal();
                 closeManifest();
                 closeAddCompany();
                 closeManage();
