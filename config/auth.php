@@ -213,3 +213,40 @@ function latest_company_reason(PDO $pdo, int $companyId, string $actionType): ?s
         return null;
     }
 }
+
+/**
+ * Verify a supplied password against the currently authenticated session
+ * user's stored hash. Used to require the admin's own password before a
+ * sensitive action (approve / reject / suspend / unsuspend / delete).
+ *
+ * The user id is always taken from the server-side session — never from the
+ * browser. Returns false for any missing session, unknown user, or lookup
+ * failure so a wrong call can never bypass the check.
+ */
+function verify_current_password(string $password): bool
+{
+    start_secure_session();
+
+    if (empty($_SESSION['auth_user_id'])) {
+        return false;
+    }
+
+    $userId = (int) $_SESSION['auth_user_id'];
+    if ($userId <= 0) {
+        return false;
+    }
+
+    try {
+        $stmt = db()->prepare('SELECT password_hash FROM users WHERE id = :id LIMIT 1');
+        $stmt->execute([':id' => $userId]);
+        $hash = $stmt->fetchColumn();
+
+        if ($hash === false || $hash === null || $hash === '') {
+            return false;
+        }
+
+        return password_verify($password, (string) $hash);
+    } catch (Throwable $e) {
+        return false;
+    }
+}

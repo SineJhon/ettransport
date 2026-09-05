@@ -1110,6 +1110,21 @@ function delete_company(PDO $pdo, array $input): void
     ]);
 }
 
+/**
+ * Verify the admin's current password for a sensitive mutation. Every
+ * company lifecycle / delete action requires the admin's own password.
+ */
+function require_admin_password(array $input): void
+{
+    $adminPassword = (string) ($input['admin_password'] ?? '');
+    if ($adminPassword === '' || !verify_current_password($adminPassword)) {
+        auth_response(401, [
+            'success' => false,
+            'message' => 'Your admin password is required to perform this action.',
+        ]);
+    }
+}
+
 /** POST entries — every mutation must pass requireRole('admin') FIRST. */
 function require_admin_mutation(PDO $pdo, string $action): void
 {
@@ -1117,7 +1132,10 @@ function require_admin_mutation(PDO $pdo, string $action): void
     $user = requireRole('admin');
     $adminUserId = (int) $user['id'];
 
-    apply_company_status($pdo, admin_input(), $action, $adminUserId);
+    $input = admin_input();
+    require_admin_password($input);
+
+    apply_company_status($pdo, $input, $action, $adminUserId);
 }
 try {
     $pdo = db();
@@ -1167,6 +1185,7 @@ try {
         require_admin_post();
         $user = requireRole('admin');
         unset($user);
+        require_admin_password(admin_input());
         update_company_listing($pdo, admin_input(), $action);
     }
 
@@ -1174,6 +1193,7 @@ try {
         require_admin_post();
         $user = requireRole('admin');
         unset($user);
+        require_admin_password(admin_input());
         delete_company($pdo, admin_input());
     }
 

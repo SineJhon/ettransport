@@ -577,70 +577,38 @@ function renderDetail(c) {
         hide(byId('ad-manage-modal'));
     }
 
-    /* Toggle the listed flag via the on/off switch (reversible, no confirm). */
-    function updateListing(value) {
-        var toggle = byId('ad-manage-listed');
-        if (!currentDetail || !toggle) { return; }
-
-        var action = value ? 'company_list' : 'company_unlist';
-        toggle.disabled = true;
-        hide(byId('ad-manage-error'));
-
-        fetch('api/admin.php?action=' + action, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ company_id: currentDetail.id })
-        })
-            .then(parseJson)
-            .then(function (result) {
-                toggle.disabled = false;
-                var data = result.data || {};
-                if (!result.ok || result.status !== 200 || !data.success) {
-                    toggle.checked = !value;
-                    setError(byId('ad-manage-error'), data.message || 'Could not update the listing.');
-                    return;
-                }
-                hide(byId('ad-manage-error'));
-                if (data.company) {
-                    currentDetail = data.company;
-                    renderManage(data.company);
-                }
-                loadCompanies();
-                loadOverview();
-            })
-            .catch(function () {
-                toggle.disabled = false;
-                toggle.checked = !value;
-                setError(byId('ad-manage-error'), 'Network error while updating the listing.');
-            });
-    }
-
-/* ---------- Confirmation modal (never mutate on a single click) ---------- */
+    /* ---------- Confirmation modal (never mutate on a single click) ---------- */
     function askConfirmation(action, reason) {
         if (!currentDetail) { return; }
 
         var titles = {
-            approve: 'Approve this company?',
-            reject: 'Reject this company?',
-            suspend: 'Suspend this company?',
-            activate: 'Unsuspend this company?',
-            delete: 'Delete this company?'
+            approve: 'Approve company?',
+            reject: 'Reject company?',
+            suspend: 'Suspend company?',
+            activate: 'Unsuspend company?',
+            delete: 'Delete company?',
+            list: 'List company?',
+            unlist: 'Unlist company?'
         };
         var messages = {
-            approve: 'Approve "' + currentDetail.name + '"? The owner will be able to sign in and manage the company immediately. The listing stays as it is until you turn it on.',
-            reject: 'Reject "' + currentDetail.name + '"? The owner will lose access and the company will be hidden from public areas. This cannot be undone.',
-            suspend: 'Suspend "' + currentDetail.name + '"? The owner loses access immediately, the company is hidden, but all trips, bookings and records are kept.',
-            activate: 'Unsuspend "' + currentDetail.name + '"? The owner will be able to sign in again and the previous listing state is restored.',
-            delete: 'Delete "' + currentDetail.name + '"? This permanently removes the company, its owner account, fleet, trips and reviews. This cannot be undone.'
+            approve: 'Approve "' + currentDetail.name + '"? The owner will gain access.',
+            reject: 'Reject "' + currentDetail.name + '"? The owner loses access.',
+            suspend: 'Suspend "' + currentDetail.name + '"? Access is paused.',
+            activate: 'Restore access for "' + currentDetail.name + '"?',
+            delete: 'Permanently delete "' + currentDetail.name + '"? This cannot be undone.',
+            list: 'Show "' + currentDetail.name + '" on the public directory?',
+            unlist: 'Hide "' + currentDetail.name + '" from the public directory?'
         };
+
+        /* Red accent bar for destructive actions. */
+        var modalBox = byId('ad-modal-box');
+        if (modalBox) {
+            modalBox.classList.toggle('is-danger', action === 'delete');
+        }
 
         if (reason) {
             var actionWord = action === 'suspend' ? 'Suspension' : 'Rejection';
-            messages[action] = (messages[action] || '') + ' ' + actionWord + ' reason: "' + reason + '"';
+            messages[action] = (messages[action] || '') + ' ' + actionWord + ': "' + reason + '"';
         }
 
         setText('ad-modal-title', titles[action] || 'Confirm action');
@@ -649,26 +617,61 @@ function renderDetail(c) {
         var confirmBtn = byId('ad-modal-confirm');
         if (confirmBtn) {
             confirmBtn.className = 'btn ' + (action === 'delete' ? 'btn-danger' : 'btn-primary');
-            confirmBtn.textContent = action === 'delete' ? 'Delete' : 'Confirm';
+            confirmBtn.textContent = action === 'delete' ? 'Delete'
+                : (action === 'list' ? 'List'
+                : (action === 'unlist' ? 'Unlist' : 'Confirm'));
         }
+
+        /* Require the admin's own password before any sensitive action. */
+        var pwInput = byId('ad-modal-password');
+        if (pwInput) {
+            pwInput.value = '';
+            pwInput.focus();
+        }
+        var pwErr = byId('ad-modal-password-error');
+        if (pwErr) { pwErr.hidden = true; pwErr.textContent = ''; }
+        syncConfirmPassword();
 
         pendingMutation = { action: action, companyId: currentDetail.id, reason: reason || null };
         show(byId('ad-modal'));
     }
 
+    function syncConfirmPassword() {
+        var pwInput = byId('ad-modal-password');
+        var confirmBtn = byId('ad-modal-confirm');
+        if (!pwInput || !confirmBtn) { return; }
+        confirmBtn.disabled = pwInput.value.trim() === '';
+    }
+
     function closeModal() {
         pendingMutation = null;
+        var pwInput = byId('ad-modal-password');
+        if (pwInput) { pwInput.value = ''; }
+        var pwErr = byId('ad-modal-password-error');
+        if (pwErr) { pwErr.hidden = true; pwErr.textContent = ''; }
         hide(byId('ad-modal'));
     }
 
     function runMutation(action, companyId, reason) {
         var confirmBtn = byId('ad-modal-confirm');
+        var adminPassword = (byId('ad-modal-password') || {}).value || '';
+        if (adminPassword === '') {
+            var pwErr = byId('ad-modal-password-error');
+            if (pwErr) {
+                pwErr.textContent = 'Enter your admin password.';
+                pwErr.hidden = false;
+            }
+            var pwInput = byId('ad-modal-password');
+            if (pwInput) { pwInput.focus(); }
+            return;
+        }
+
         if (confirmBtn) {
             confirmBtn.disabled = true;
             confirmBtn.textContent = 'Working\u2026';
         }
 
-        var payload = { company_id: companyId };
+        var payload = { company_id: companyId, admin_password: adminPassword };
         if (reason) { payload.reason = reason; }
 
         fetch('api/admin.php?action=company_' + action, {
@@ -688,6 +691,24 @@ function renderDetail(c) {
                 }
 
                 var data = result.data || {};
+
+                /* Wrong / expired admin password (401): keep the modal open
+                   and show the message inline so the admin can retry. All
+                   other errors close the modal and appear in the section. */
+                if (result.status === 401) {
+                    var pwErr = byId('ad-modal-password-error');
+                    if (pwErr) {
+                        pwErr.textContent = data.message || 'Your admin password was not accepted.';
+                        pwErr.hidden = false;
+                    }
+                    var pwInput = byId('ad-modal-password');
+                    if (pwInput) {
+                        pwInput.select();
+                        pwInput.focus();
+                    }
+                    return;
+                }
+
                 closeModal();
 
                 if (!result.ok || result.status !== 200 || !data.success) {
@@ -1461,6 +1482,17 @@ function renderDetail(c) {
         var modalCancel = byId('ad-modal-cancel');
         if (modalCancel) { modalCancel.addEventListener('click', closeModal); }
 
+        var modalPw = byId('ad-modal-password');
+        if (modalPw) {
+            modalPw.addEventListener('input', syncConfirmPassword);
+            modalPw.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    var btn = byId('ad-modal-confirm');
+                    if (btn && !btn.disabled) { btn.click(); }
+                }
+            });
+        }
+
                         var modalConfirm = byId('ad-modal-confirm');
         if (modalConfirm) {
             modalConfirm.addEventListener('click', function () {
@@ -1524,7 +1556,11 @@ function renderDetail(c) {
         var listedToggle = byId('ad-manage-listed');
         if (listedToggle) {
             listedToggle.addEventListener('change', function () {
-                updateListing(listedToggle.checked);
+                var target = listedToggle.checked;
+                /* Revert the switch immediately — the actual change happens in
+                   the confirm modal, which also requires the admin password. */
+                listedToggle.checked = !target;
+                askConfirmation(target ? 'list' : 'unlist');
             });
         }
 
