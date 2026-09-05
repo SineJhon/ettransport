@@ -113,7 +113,6 @@
 
     function loadOverview() {
         var rid = ++adOverviewRequestId;
-        show(byId('section-overview'));
         hide(byId('ad-error'));
 
         fetch('api/admin.php?action=overview', {
@@ -159,6 +158,12 @@
     function renderCompanies(companies) {
         currentCompanies = Array.isArray(companies) ? companies : [];
         applyFilter();
+
+        /* Keep the Reviews grid fresh when it is the active section. */
+        var reviewsSection = byId('section-reviews');
+        if (reviewsSection && !reviewsSection.hidden) {
+            renderReviews();
+        }
     }
 
     /* Mark one status filter button active and re-render the table. */
@@ -727,6 +732,15 @@ function renderDetail(c) {
     function closeDetail() {
         currentDetail = null;
         hide(byId('section-detail'));
+
+        /* If this leaves no main section visible, fall back to Companies. */
+        var anyVisible = ['section-overview', 'section-companies', 'section-trips', 'section-bookings', 'section-reviews'].some(function (id) {
+            var el = byId(id);
+            return el && !el.hidden;
+        });
+        if (!anyVisible) {
+            switchSection('companies');
+        }
     }
 
     /* ---------- Reason modal (Reject / Suspend require a reason) ---------- */
@@ -874,6 +888,19 @@ function renderDetail(c) {
             if (el) { show(el); }
         }
         setActiveTab(name);
+
+        /* Remember the active section in the URL hash (e.g. #companies) so a
+           page refresh returns to the same tab instead of Overview. */
+        if (sectionMap[name]) {
+            try {
+                if (window.history && window.history.replaceState) {
+                    window.history.replaceState(null, '', '#' + name);
+                } else {
+                    window.location.hash = name;
+                }
+            } catch (e) { /* hash update is best-effort only */ }
+        }
+
         if (name === 'revenue') { loadTrips(); }
         if (name === 'passengers') { loadBookings(); }
         if (name === 'reviews') { renderReviews(); }
@@ -1348,6 +1375,12 @@ function renderDetail(c) {
     /* ---------- Wiring ---------- */
     function init() {
         loadIdentity();
+
+        /* Restore the previously active section from the URL hash (e.g.
+           #companies, #revenue) instead of always opening on Overview. */
+        var requested = window.location.hash.replace('#', '');
+        switchSection(sectionMap[requested] ? requested : 'overview');
+
         loadOverview();
         loadCompanies();
         /* Pre-load trips/bookings into their hidden tables so the tbody is
