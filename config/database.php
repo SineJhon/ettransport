@@ -43,5 +43,42 @@ function db(): PDO
         throw new RuntimeException('Database connection failed. Check config/database.php or ET_DB_* environment variables.');
     }
 
+    ensure_schema_columns($pdo);
+
     return $pdo;
+}
+
+/**
+ * Lightweight, idempotent schema upgrade for databases created before a
+ * column was added. schema.sql remains the single source of truth for fresh
+ * installs; this only back-fills columns that are missing in existing DBs.
+ *
+ * Runs at most once per PHP process (static guard). Non-fatal: read-only and
+ * admin paths keep working even if the upgrade cannot run (e.g. read-only
+ * shared hosting), because callers still tolerate a missing column.
+ */
+function ensure_schema_columns(PDO $pdo): void
+{
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    $done = true;
+
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT COUNT(*)
+               FROM information_schema.columns
+              WHERE table_schema = DATABASE()
+                AND table_name = 'companies'
+                AND column_name = 'listed'"
+        );
+        $stmt->execute();
+
+        if ((int) $stmt->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE companies ADD COLUMN listed TINYINT(1) NOT NULL DEFAULT 1 AFTER status");
+        }
+    } catch (Throwable $e) {
+        /* Non-fatal on upgrade path — surfaces only if the app cannot query the schema. */
+    }
 }

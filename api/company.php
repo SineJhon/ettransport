@@ -535,7 +535,8 @@ function company_profile_rows(PDO $pdo, ?string $slug = null): array
             COALESCE((SELECT AVG(rv.rating) FROM reviews rv WHERE rv.company_id = c.id AND rv.status = \'approved\'), 0) AS rating,
             (SELECT COUNT(*) FROM reviews rv WHERE rv.company_id = c.id AND rv.status = \'approved\') AS review_count
         FROM companies c
-        WHERE c.status = \'approved\'';
+        WHERE c.status = \'approved\'
+          AND c.listed = 1';
 
     $params = [];
     if ($slug !== null) {

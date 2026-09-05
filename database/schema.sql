@@ -74,6 +74,11 @@ CREATE TABLE IF NOT EXISTS users (
 --   ALTER TABLE companies
 --     ADD COLUMN website VARCHAR(255) DEFAULT NULL AFTER address,
 --     ADD COLUMN head_office VARCHAR(255) DEFAULT NULL AFTER website;
+--
+-- And for a database created before the public-directory listing flag
+-- was added, apply this once:
+--   ALTER TABLE companies
+--     ADD COLUMN listed TINYINT(1) NOT NULL DEFAULT 1 AFTER status;
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS companies (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -89,6 +94,7 @@ CREATE TABLE IF NOT EXISTS companies (
   website VARCHAR(255) DEFAULT NULL,
   head_office VARCHAR(255) DEFAULT NULL,
   status ENUM('pending', 'approved', 'suspended', 'rejected') NOT NULL DEFAULT 'pending',
+  listed TINYINT(1) NOT NULL DEFAULT 1,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),

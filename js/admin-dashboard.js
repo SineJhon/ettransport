@@ -187,7 +187,7 @@
                 '<td>' + c.booking_count + '</td>' +
                 '<td>' + rating + '</td>' +
                 '<td>' + formatDate(c.created_at) + '</td>' +
-                '<td><button type="button" class="btn btn-secondary btn-sm" data-view="' + c.id + '">View</button></td>' +
+                '<td><button type="button" class="btn btn-secondary btn-sm" data-manage="' + c.id + '">Manage</button></td>' +
             '</tr>';
         }).join('');
 
@@ -196,11 +196,11 @@
     }
 
     function wireRowEvents() {
-        var buttons = document.querySelectorAll('#ad-company-rows button[data-view]');
+        var buttons = document.querySelectorAll('#ad-company-rows button[data-manage]');
         for (var i = 0; i < buttons.length; i++) {
             buttons[i].addEventListener('click', function () {
-                var id = parseInt(this.getAttribute('data-view'), 10);
-                if (id > 0) { openDetail(id); }
+                var id = parseInt(this.getAttribute('data-manage'), 10);
+                if (id > 0) { openManage(id); }
             });
         }
     }
@@ -359,6 +359,173 @@ function renderDetail(c) {
             box.appendChild(b);
         });
     }
+/* ---------- Manage company modal (Suspend / Activate / Delete / List-Unlist) ---------- */
+    function openManage(id) {
+        var modal = byId('ad-manage-modal');
+        if (!modal) { return; }
+
+        hide(byId('ad-manage-error'));
+        hide(byId('ad-manage-body'));
+        modal.hidden = false;
+
+        fetch('api/admin.php?action=company&id=' + encodeURIComponent(id), {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(parseJson)
+            .then(function (result) {
+                var data = result.data || {};
+                if (!result.ok || result.status !== 200 || !data.success) {
+                    setError(byId('ad-manage-error'), data.message || 'Unable to load the company.');
+                    return;
+                }
+                currentDetail = data.company;
+                renderManage(data.company);
+                show(byId('ad-manage-body'));
+            })
+            .catch(function () {
+                setError(byId('ad-manage-error'), 'Network error while loading the company.');
+            });
+    }
+
+    function renderManage(c) {
+        if (!c) { return; }
+
+        setText('ad-manage-title', 'Manage Company');
+        setText('ad-manage-sub', c.name + ' \u00b7 @' + (c.slug || ''));
+
+        var logo = byId('ad-manage-logo');
+        if (logo) {
+            if (c.logo) {
+                logo.src = c.logo;
+                show(logo);
+            } else {
+                logo.removeAttribute('src');
+                hide(logo);
+            }
+        }
+
+        var st = byId('ad-manage-status');
+        if (st) {
+            st.className = badgeClass(c.status);
+            st.textContent = (c.status || '').toUpperCase();
+        }
+
+        var listedBadge = byId('ad-manage-listed-badge');
+        if (listedBadge) {
+            var unlisted = c.listed === 0;
+            listedBadge.className = 'ad-badge ad-badge-listed' + (unlisted ? ' unlisted' : '');
+            listedBadge.textContent = unlisted ? 'UNLISTED' : 'LISTED';
+        }
+
+        var toggle = byId('ad-manage-listed');
+        if (toggle) {
+            toggle.checked = c.listed === 1;
+            toggle.disabled = false;
+        }
+
+        var actionTitle = byId('ad-manage-action-title');
+        var actionNote = byId('ad-manage-action-note');
+        if (actionTitle) {
+            actionTitle.textContent = c.status === 'pending' ? 'Review application' : 'Account status';
+        }
+        if (actionNote) {
+            actionNote.textContent = c.status === 'pending'
+                ? 'This company is awaiting your decision.'
+                : (c.status === 'approved' ? 'This company can sign in and operate.' : '');
+        }
+
+        renderManageActions(c);
+    }
+
+    function renderManageActions(c) {
+        var box = byId('ad-manage-actions');
+        if (!box) { return; }
+        box.innerHTML = '';
+
+        var actions = [];
+        if (c.status === 'pending') {
+            actions = [
+                { action: 'approve', label: 'Approve', cls: 'btn-primary' },
+                { action: 'reject', label: 'Reject', cls: 'btn-secondary' }
+            ];
+        } else if (c.status === 'approved') {
+            actions = [
+                { action: 'suspend', label: 'Suspend', cls: 'btn-secondary' },
+                { action: 'reject', label: 'Reject', cls: 'btn-secondary' }
+            ];
+        } else if (c.status === 'suspended') {
+            actions = [
+                { action: 'activate', label: 'Activate', cls: 'btn-primary' }
+            ];
+        }
+
+        if (!actions.length) {
+            box.textContent = 'No status actions are available.';
+            return;
+        }
+
+        actions.forEach(function (a) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'btn ' + a.cls + ' btn-sm ad-action';
+            b.setAttribute('data-action', a.action);
+            b.textContent = a.label;
+            b.addEventListener('click', function () {
+                askConfirmation(a.action);
+            });
+            box.appendChild(b);
+        });
+    }
+
+    function closeManage() {
+        currentDetail = null;
+        hide(byId('ad-manage-modal'));
+    }
+
+    /* Toggle the listed flag via the on/off switch (reversible, no confirm). */
+    function updateListing(value) {
+        var toggle = byId('ad-manage-listed');
+        if (!currentDetail || !toggle) { return; }
+
+        var action = value ? 'company_list' : 'company_unlist';
+        toggle.disabled = true;
+        hide(byId('ad-manage-error'));
+
+        fetch('api/admin.php?action=' + action, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ company_id: currentDetail.id })
+        })
+            .then(parseJson)
+            .then(function (result) {
+                toggle.disabled = false;
+                var data = result.data || {};
+                if (!result.ok || result.status !== 200 || !data.success) {
+                    toggle.checked = !value;
+                    setError(byId('ad-manage-error'), data.message || 'Could not update the listing.');
+                    return;
+                }
+                hide(byId('ad-manage-error'));
+                if (data.company) {
+                    currentDetail = data.company;
+                    renderManage(data.company);
+                }
+                loadCompanies();
+                loadOverview();
+            })
+            .catch(function () {
+                toggle.disabled = false;
+                toggle.checked = !value;
+                setError(byId('ad-manage-error'), 'Network error while updating the listing.');
+            });
+    }
+
 /* ---------- Confirmation modal (never mutate on a single click) ---------- */
     function askConfirmation(action) {
         if (!currentDetail) { return; }
@@ -367,17 +534,25 @@ function renderDetail(c) {
             approve: 'Approve this company?',
             reject: 'Reject this company?',
             suspend: 'Suspend this company?',
-            activate: 'Activate this company?'
+            activate: 'Activate this company?',
+            delete: 'Delete this company?'
         };
         var messages = {
             approve: 'Approve "' + currentDetail.name + '"? The owner will be able to sign in and manage the company immediately.',
             reject: 'Reject "' + currentDetail.name + '"? The owner will lose access permanently and login stays blocked.',
             suspend: 'Suspend "' + currentDetail.name + '"? Trips and data are kept, but the owner will not be able to sign in.',
-            activate: 'Reactivate "' + currentDetail.name + '"? The owner will be able to sign in again.'
+            activate: 'Reactivate "' + currentDetail.name + '"? The owner will be able to sign in again.',
+            delete: 'Delete "' + currentDetail.name + '"? This permanently removes the company, its owner account, fleet, trips and reviews. This cannot be undone.'
         };
 
         setText('ad-modal-title', titles[action] || 'Confirm action');
         setText('ad-modal-message', messages[action] || 'Continue with this action?');
+
+        var confirmBtn = byId('ad-modal-confirm');
+        if (confirmBtn) {
+            confirmBtn.className = 'btn ' + (action === 'delete' ? 'btn-danger' : 'btn-primary');
+            confirmBtn.textContent = action === 'delete' ? 'Delete' : 'Confirm';
+        }
 
         pendingMutation = { action: action, companyId: currentDetail.id };
         show(byId('ad-modal'));
@@ -415,13 +590,25 @@ function renderDetail(c) {
                 closeModal();
 
                 if (!result.ok || result.status !== 200 || !data.success) {
-                    setError(byId('ad-detail-error'), data.message || 'The action could not be completed.');
+                    var manageModal = byId('ad-manage-modal');
+                    var errBox = (manageModal && !manageModal.hidden) ? byId('ad-manage-error') : byId('ad-detail-error');
+                    setError(errBox, data.message || 'The action could not be completed.');
                     loadCompanies();
                     return;
                 }
 
-                if (data.company) {
-                    renderDetail(data.company);
+                if (action === 'delete') {
+                    closeManage();
+                } else if (data.company) {
+                    currentDetail = data.company;
+                    var manageBody = byId('ad-manage-modal');
+                    if (manageBody && !manageBody.hidden) {
+                        renderManage(data.company);
+                    }
+                    var detailSection = byId('section-detail');
+                    if (detailSection && !detailSection.hidden) {
+                        renderDetail(data.company);
+                    }
                 }
                 loadOverview();
                 loadCompanies();
@@ -432,7 +619,9 @@ function renderDetail(c) {
                     confirmBtn.textContent = 'Confirm';
                 }
                 closeModal();
-                setError(byId('ad-detail-error'), 'Network error while applying the action.');
+                var manageModal = byId('ad-manage-modal');
+                var errBox = (manageModal && !manageModal.hidden) ? byId('ad-manage-error') : byId('ad-detail-error');
+                setError(errBox, 'Network error while applying the action.');
             });
     }
 
@@ -1056,10 +1245,33 @@ function renderDetail(c) {
                 if (e.target === manModal) { closeManifest(); }
             });
         }
+
+        /* Manage-company modal wiring. */
+        var manageClose = byId('btn-manage-close');
+        if (manageClose) { manageClose.addEventListener('click', closeManage); }
+
+        var manageModal = byId('ad-manage-modal');
+        if (manageModal) {
+            manageModal.addEventListener('click', function (e) {
+                if (e.target === manageModal) { closeManage(); }
+            });
+        }
+
+        var listedToggle = byId('ad-manage-listed');
+        if (listedToggle) {
+            listedToggle.addEventListener('change', function () {
+                updateListing(listedToggle.checked);
+            });
+        }
+
+        var deleteBtn = byId('btn-manage-delete');
+        if (deleteBtn) { deleteBtn.addEventListener('click', function () { askConfirmation('delete'); }); }
+
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
                 closeManifest();
                 closeAddCompany();
+                closeManage();
             }
         });
 

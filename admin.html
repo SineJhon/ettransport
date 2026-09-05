@@ -108,6 +108,34 @@
         .ad-add-field-hint.bad { color: #b91c1c; font-weight: 600; }
         /* The shared password-toggle button needs input padding inside this modal. */
         #ad-add-company-form .password-field input { padding-right: 3.25rem; }
+        /* Manage-company modal — company operations (listing toggle, status, delete). */
+        .ad-manage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.55); z-index: 103; }
+        .ad-manage[hidden] { display: none; }
+        .ad-manage-box { width: min(560px, 92vw); max-height: 88vh; overflow-y: auto; background: var(--color-white); border-radius: 12px; padding: 1.25rem 1.4rem; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28); }
+        .ad-manage-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.75rem; }
+        .ad-manage-identity { display: flex; align-items: center; gap: 0.75rem; min-width: 0; }
+        .ad-manage-logo { width: 44px; height: 44px; border-radius: 8px; object-fit: contain; background: #f8fafc; border: 1px solid #e5e7eb; }
+        .ad-manage-box h3 { margin: 0; font-size: 1.05rem; color: var(--color-dark); }
+        .ad-manage-sub { margin: 0.15rem 0 0; font-size: 0.78rem; color: var(--color-muted); word-break: break-word; }
+        .ad-manage-meta { display: flex; gap: 0.4rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+        .ad-badge-listed { background: #16a34a; }
+        .ad-badge-listed.unlisted { background: #6b7280; }
+        .ad-manage-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 0.9rem 0; border-top: 1px solid #eef2f7; }
+        .ad-manage-row strong { display: block; color: var(--color-dark); font-size: 0.92rem; }
+        .ad-manage-row p { margin: 0.25rem 0 0; color: var(--color-muted); font-size: 0.8rem; line-height: 1.45; }
+        .ad-manage-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .ad-manage-danger { padding: 0.9rem; margin-top: 0.5rem; border: 1px solid #fecaca; background: #fef2f2; border-radius: 10px; }
+        .ad-manage-danger strong { color: #b91c1c; font-size: 0.85rem; }
+        .ad-manage-danger p { margin: 0.3rem 0 0.7rem; color: #991b1b; font-size: 0.78rem; line-height: 1.45; }
+        /* On / off switch (list / unlist). */
+        .ad-switch { position: relative; display: inline-flex; flex: 0 0 auto; }
+        .ad-switch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; z-index: 1; }
+        .ad-switch-track { display: inline-flex; align-items: center; width: 3rem; height: 1.55rem; padding: 0.15rem; background: #cbd5e1; border-radius: 999px; transition: background 0.2s ease; }
+        .ad-switch-thumb { display: inline-block; width: 1.25rem; height: 1.25rem; background: #fff; border-radius: 50%; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); transform: translateX(0); transition: transform 0.2s ease; }
+        .ad-switch input:checked + .ad-switch-track { background: #16a34a; }
+        .ad-switch input:checked + .ad-switch-track .ad-switch-thumb { transform: translateX(1.45rem); }
+        .ad-switch input:focus-visible + .ad-switch-track { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+        .ad-switch input:disabled + .ad-switch-track { opacity: 0.55; cursor: not-allowed; }
         /* Single-page admin workspace, aligned with the company dashboard. */
         body { background:#f4f6fb; }.ad-page{padding:2rem 0 3.5rem}.ad-workspace-head{display:flex;align-items:flex-end;justify-content:space-between;gap:1.5rem;margin-bottom:1.5rem}.ad-workspace-head h1{margin:0;color:#182448;font-size:clamp(2rem,4vw,3rem);letter-spacing:-.045em}.ad-workspace-head p{margin:.5rem 0 0;max-width:42rem;color:#64708a}.ad-live{display:flex;align-items:center;gap:.5rem;color:#3b537f;font-size:.8rem;font-weight:700;white-space:nowrap}.ad-live i{width:.55rem;height:.55rem;border-radius:50%;background:#3ea87a;box-shadow:0 0 0 4px #dff4e8}.ad-layout{display:grid;grid-template-columns:230px minmax(0,1fr);gap:1.25rem;align-items:start}.ad-sidebar{position:sticky;top:1rem;padding:.8rem;color:#dce5fb;background:#182448;border-radius:18px;box-shadow:0 16px 35px rgba(24,36,72,.16)}.ad-admin-mini{padding:.45rem .5rem 1rem;margin-bottom:.7rem;border-bottom:1px solid rgba(255,255,255,.13)}.ad-admin-mini strong,.ad-admin-mini small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ad-admin-mini strong{color:#fff;font-size:.9rem}.ad-admin-mini small{margin-top:.15rem;color:#aebddd;font-size:.72rem}.ad-nav{display:grid;gap:.3rem}.ad-nav .ad-tab{display:flex;align-items:center;width:100%;padding:.75rem;color:#dce5fb;background:transparent;border:0;border-radius:10px;font:650 .88rem/1.1 var(--font-sans);text-align:left;cursor:pointer}.ad-nav .ad-tab:hover{color:#fff;background:rgba(255,255,255,.09)}.ad-nav .ad-tab.active{color:#182448;background:#edf2ff;box-shadow:0 4px 12px rgba(0,0,0,.09)}.ad-content{min-width:0}.ad-content .ad-card{margin-top:0;padding:clamp(1rem,2.5vw,1.6rem);border-color:#e0e6f1;border-radius:18px;box-shadow:0 10px 28px rgba(30,47,88,.055)}.ad-content .ad-card+.ad-card{margin-top:1.25rem}.ad-content .ad-card-head{padding-bottom:1.1rem;margin-bottom:1rem;border-bottom:1px solid #e8ecf4}.ad-content .ad-card-head h2{color:#1a2a52;font-size:1.35rem}.ad-content .ad-stat{position:relative;overflow:hidden;padding:1rem;border:1px solid #e0e6f1;border-radius:12px;box-shadow:none}.ad-content .ad-stat::before{content:'';position:absolute;inset:0 0 auto;height:3px;background:#4e74c9}.ad-review-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:.8rem}.ad-review-card{padding:1rem;border:1px solid #e1e7f1;border-radius:12px;background:#fbfcff}.ad-review-card h3{color:#1b2d55;font-size:1rem}.ad-review-card p{margin:.4rem 0 0;color:#68758d;font-size:.84rem}.ad-stars{color:#dc9a2c;letter-spacing:.08em;font-weight:700}@media(max-width:900px){.ad-layout{grid-template-columns:1fr}.ad-sidebar{position:static}.ad-nav{grid-template-columns:repeat(5,minmax(9rem,1fr));overflow-x:auto}.ad-nav .ad-tab{white-space:nowrap}}@media(max-width:600px){.ad-page{padding-top:1.15rem}.ad-workspace-head{align-items:flex-start;flex-direction:column;gap:.7rem}.ad-sidebar,.ad-content .ad-card{border-radius:14px}.ad-nav{grid-template-columns:repeat(5,max-content)}.ad-stats{grid-template-columns:repeat(2,1fr)}}
         /* Same forest-green dashboard system used by company-dashboard.html. */
@@ -457,6 +485,53 @@
                     <button type="submit" id="btn-add-company-submit" class="btn btn-primary">Add Company</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <div id="ad-manage-modal" class="ad-manage" hidden role="dialog" aria-modal="true" aria-labelledby="ad-manage-title">
+        <div class="ad-manage-box">
+            <div class="ad-manage-head">
+                <div class="ad-manage-identity">
+                    <img id="ad-manage-logo" class="ad-manage-logo" alt="" hidden>
+                    <div>
+                        <h3 id="ad-manage-title">Manage Company</h3>
+                        <p id="ad-manage-sub" class="ad-manage-sub"></p>
+                    </div>
+                </div>
+                <button type="button" id="btn-manage-close" class="btn btn-secondary btn-sm">Close</button>
+            </div>
+            <div id="ad-manage-error" class="auth-message" hidden></div>
+            <div id="ad-manage-body" hidden>
+                <div class="ad-manage-meta">
+                    <span id="ad-manage-status" class="ad-badge"></span>
+                    <span id="ad-manage-listed-badge" class="ad-badge ad-badge-listed"></span>
+                </div>
+
+                <div class="ad-manage-row">
+                    <div>
+                        <strong>Listed on public directory</strong>
+                        <p id="ad-manage-listing-note">Controls whether this company is shown on the passenger-facing Companies page, public profile and search.</p>
+                    </div>
+                    <label class="ad-switch">
+                        <input type="checkbox" role="switch" id="ad-manage-listed" aria-label="Listed on public directory">
+                        <span class="ad-switch-track" aria-hidden="true"><span class="ad-switch-thumb"></span></span>
+                    </label>
+                </div>
+
+                <div class="ad-manage-row">
+                    <div>
+                        <strong id="ad-manage-action-title">Account status</strong>
+                        <p id="ad-manage-action-note"></p>
+                    </div>
+                    <div id="ad-manage-actions" class="ad-manage-actions"></div>
+                </div>
+
+                <div class="ad-manage-danger">
+                    <strong>Danger zone</strong>
+                    <p>Permanently deletes this company, its owner account and all related records. Deletion is blocked while the company still has passenger bookings.</p>
+                    <button type="button" id="btn-manage-delete" class="btn btn-danger btn-sm">Delete Company</button>
+                </div>
+            </div>
         </div>
     </div>
 

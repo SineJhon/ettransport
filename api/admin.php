@@ -127,6 +127,7 @@ function admin_company_payload(array $row): array
         'email' => $row['email'],
         'address' => $row['address'],
         'status' => $row['status'],
+        'listed' => (int) ($row['listed'] ?? 1),
         'account_status' => $row['account_status'],
         'owner_name' => $row['owner_name'],
         'owner_email' => $row['owner_email'],
@@ -161,6 +162,7 @@ function admin_company_select_sql(): string
             c.email,
             c.address,
             c.status,
+            c.listed,
             c.created_at,
             c.updated_at,
             u.id                          AS user_id,
@@ -796,6 +798,130 @@ $updCompany = $pdo->prepare('
     ]);
 }
 
+/**
+ * POST /api/admin.php?action=company_list | action=company_unlist —
+ * toggle the company's public-directory listing flag.
+ *
+ * 'listed' only controls public visibility (the passenger-facing Companies
+ * page, company profile and search). It never touches the approval lifecycle:
+ * an approved-but-unlisted company still signs in and operates normally.
+ * Unlisted also does not block the admin overview/companies views.
+ */
+function update_company_listing(PDO $pdo, array $input, string $action): void
+{
+    $companyId = admin_company_id_or_error($input['company_id'] ?? null);
+    $listed = $action === 'company_list' ? 1 : 0;
+
+    try {
+        $pdo->beginTransaction();
+
+        $upd = $pdo->prepare('UPDATE companies SET listed = :listed WHERE id = :company_id');
+        $upd->execute([
+            ':listed' => $listed,
+            ':company_id' => $companyId,
+        ]);
+
+        if ($upd->rowCount() === 0) {
+            $pdo->rollBack();
+            auth_response(404, [
+                'success' => false,
+                'message' => 'Company not found.',
+            ]);
+        }
+
+        $name = $pdo->prepare('SELECT name FROM companies WHERE id = :company_id LIMIT 1');
+        $name->execute([':company_id' => $companyId]);
+        $companyName = (string) ($name->fetchColumn() ?: 'Company');
+
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
+
+    $fresh = fetch_admin_company_rows($pdo, $companyId);
+
+    auth_response(200, [
+        'success' => true,
+        'message' => $listed === 1
+            ? '"' . $companyName . '" is now listed in the public directory.'
+            : '"' . $companyName . '" is hidden from the public directory.',
+        'company' => $fresh ? admin_company_payload($fresh[0]) : null,
+    ]);
+}
+
+/**
+ * POST /api/admin.php?action=company_delete — permanently remove a company
+ * and its owner account.
+ *
+ * Deleting a company cascades to its buses, routes, company_branches, trips,
+ * reviews and booking_passengers/payments (via the bookings/trips chain in
+ * schema.sql). The bookings table RESTRICTs on trips, so a company that has
+ * any passenger booking rows cannot be deleted — this is the deliberate
+ * safety valve that prevents destroying paid passenger history.
+ */
+function delete_company(PDO $pdo, array $input): void
+{
+    $companyId = admin_company_id_or_error($input['company_id'] ?? null);
+
+    try {
+        $pdo->beginTransaction();
+
+        $sel = $pdo->prepare('SELECT id, user_id, name FROM companies WHERE id = :company_id LIMIT 1 FOR UPDATE');
+        $sel->execute([':company_id' => $companyId]);
+        $company = $sel->fetch();
+
+        if (!$company) {
+            $pdo->rollBack();
+            auth_response(404, [
+                'success' => false,
+                'message' => 'Company not found.',
+            ]);
+        }
+
+        $bookings = $pdo->prepare('
+            SELECT COUNT(*)
+            FROM bookings bk
+            JOIN trips t ON t.id = bk.trip_id
+            WHERE t.company_id = :company_id
+        ');
+        $bookings->execute([':company_id' => $companyId]);
+        if ((int) $bookings->fetchColumn() > 0) {
+            $pdo->rollBack();
+            auth_response(409, [
+                'success' => false,
+                'message' => 'This company has passenger bookings and cannot be deleted. Suspend or reject it instead.',
+            ]);
+        }
+
+        $delCompany = $pdo->prepare('DELETE FROM companies WHERE id = :company_id');
+        $delCompany->execute([':company_id' => $companyId]);
+
+        $delUser = $pdo->prepare('DELETE FROM users WHERE id = :user_id');
+        $delUser->execute([':user_id' => (int) $company['user_id']]);
+
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        if ($e instanceof PDOException && (int) $e->getCode() === 23000) {
+            auth_response(409, [
+                'success' => false,
+                'message' => 'This company cannot be deleted because related records still exist. Suspend or reject it instead.',
+            ]);
+        }
+        throw $e;
+    }
+
+    auth_response(200, [
+        'success' => true,
+        'message' => 'Company deleted.',
+    ]);
+}
+
 /** POST entries — every mutation must pass requireRole('admin') FIRST. */
 function require_admin_mutation(PDO $pdo, string $action): void
 {
@@ -849,9 +975,23 @@ try {
         require_admin_mutation($pdo, 'company_activate');
     }
 
+    if ($action === 'company_list' || $action === 'company_unlist') {
+        require_admin_post();
+        $user = requireRole('admin');
+        unset($user);
+        update_company_listing($pdo, admin_input(), $action);
+    }
+
+    if ($action === 'company_delete') {
+        require_admin_post();
+        $user = requireRole('admin');
+        unset($user);
+        delete_company($pdo, admin_input());
+    }
+
     auth_response(400, [
         'success' => false,
-        'message' => 'Unsupported action. Use action=overview, action=companies, action=company, action=trips, action=bookings, action=manifest, action=company_approve, action=company_reject, action=company_suspend or action=company_activate.',
+        'message' => 'Unsupported action. Use action=overview, action=companies, action=company, action=trips, action=bookings, action=manifest, action=company_approve, action=company_reject, action=company_suspend, action=company_activate, action=company_list, action=company_unlist or action=company_delete.',
     ]);
 } catch (Throwable $e) {
     auth_response(500, [
