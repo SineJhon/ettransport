@@ -370,8 +370,7 @@ function renderDetail(c) {
             ];
         } else if (bucket === 'approved') {
             actions = [
-                { action: 'suspend', label: 'Suspend', cls: 'btn-secondary' },
-                { action: 'reject', label: 'Reject', cls: 'btn-secondary' }
+                { action: 'suspend', label: 'Suspend', cls: 'btn-secondary' }
             ];
         } else if (bucket === 'suspended') {
             actions = [
@@ -539,8 +538,7 @@ function renderDetail(c) {
             ];
         } else if (bucket === 'approved') {
             actions = [
-                { action: 'suspend', label: 'Suspend', cls: 'btn-secondary' },
-                { action: 'reject', label: 'Reject', cls: 'btn-secondary' }
+                { action: 'suspend', label: 'Suspend', cls: 'btn-secondary' }
             ];
         } else if (bucket === 'suspended') {
             actions = [

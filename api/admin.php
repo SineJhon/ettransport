@@ -28,7 +28,7 @@ declare(strict_types=1);
  *   GET  ?action=companies           -> admin company list (admin only)
  *   GET  ?action=company&id=N        -> one company's administrative summary
  *   POST ?action=company_approve     -> pending -> approved          (admin only)
- *   POST ?action=company_reject      -> pending|approved -> rejected (admin only)
+ *   POST ?action=company_reject      -> pending -> rejected (admin only)
  *   POST ?action=company_suspend     -> approved -> suspended        (admin only)
  *   POST ?action=company_activate    -> suspended -> approved        (admin only)
  *
@@ -737,7 +737,6 @@ function apply_company_status(PDO $pdo, array $input, string $action, int $admin
             $allowedStates = [
                 ['pending', 'pending'],
                 ['pending', 'active'],
-                ['approved', 'active'],
             ];
             $message = 'Company rejected. Listing turned off and login remains blocked.';
             break;
