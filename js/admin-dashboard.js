@@ -718,6 +718,99 @@ function renderDetail(c) {
         if (modal) { modal.hidden = true; }
     }
 
+    /* ---------- Add company (same flow as a public company registration) ---------- */
+    function openAddCompany() {
+        var modal = byId('ad-add-company-modal');
+        if (!modal) { return; }
+        var form = byId('ad-add-company-form');
+        if (form) { form.reset(); }
+        hide(byId('ad-add-company-error'));
+        modal.hidden = false;
+        var first = byId('add-company-name');
+        if (first) { first.focus(); }
+    }
+
+    function closeAddCompany() {
+        var modal = byId('ad-add-company-modal');
+        if (modal) { modal.hidden = true; }
+    }
+
+    function submitAddCompany(e) {
+        e.preventDefault();
+
+        var msg = byId('ad-add-company-error');
+        var submitBtn = byId('btn-add-company-submit');
+
+        var name = byId('add-company-name').value.trim();
+        var email = byId('add-company-email').value.trim();
+        var phone = byId('add-company-phone').value.trim();
+        var password = byId('add-company-password').value;
+        var confirm = byId('add-company-confirm').value;
+        var companyName = byId('add-company-company-name').value.trim();
+        var companyAddress = byId('add-company-address').value.trim();
+        var companyDescription = byId('add-company-description').value.trim();
+
+        function fail(message) {
+            setError(msg, message);
+            return;
+        }
+
+        /* Mirrors the validation the public register form + api/auth.php apply. */
+        if (name.length < 2) { return fail('Please enter a valid full name.'); }
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { return fail('Please enter a valid email address.'); }
+        if (phone !== '' && !/^[+0-9][0-9\-]{6,20}$/.test(phone)) { return fail('Please enter a valid phone number.'); }
+        if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+            return fail('Password must be at least 8 characters and include letters and numbers.');
+        }
+        if (confirm === '' || confirm !== password) { return fail('Password confirmation does not match.'); }
+        if (companyName.length < 2) { return fail('Company name is required.'); }
+        if (companyAddress === '') { return fail('Company address is required.'); }
+
+        hide(msg);
+        if (submitBtn) { submitBtn.disabled = true; }
+
+        /* Same endpoint + payload the public company registration posts to. */
+        var payload = {
+            role: 'company',
+            name: name,
+            email: email,
+            phone: phone,
+            password: password,
+            password_confirmation: confirm,
+            company_name: companyName,
+            company_address: companyAddress,
+            company_description: companyDescription
+        };
+
+        var data = new FormData();
+        Object.keys(payload).forEach(function (key) {
+            data.append(key, payload[key]);
+        });
+
+        fetch('api/auth.php?action=register', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' },
+            body: data
+        })
+            .then(parseJson)
+            .then(function (result) {
+                var res = result.data || {};
+                if (!result.ok || !res.success) {
+                    if (submitBtn) { submitBtn.disabled = false; }
+                    setError(msg, res.message || 'Unable to create the company account.');
+                    return;
+                }
+                closeAddCompany();
+                loadCompanies();
+                loadOverview();
+            })
+            .catch(function () {
+                if (submitBtn) { submitBtn.disabled = false; }
+                setError(msg, 'Could not reach the server. Please try again.');
+            });
+    }
+
     /* ---------- Wiring ---------- */
     function init() {
         loadIdentity();
@@ -743,8 +836,24 @@ function renderDetail(c) {
         var refreshOverview = byId('btn-refresh-overview');
         if (refreshOverview) { refreshOverview.addEventListener('click', loadOverview); }
 
-        var refreshCompanies = byId('btn-refresh-companies');
-        if (refreshCompanies) { refreshCompanies.addEventListener('click', loadCompanies); }
+        var addCompanyBtn = byId('btn-add-company');
+        if (addCompanyBtn) { addCompanyBtn.addEventListener('click', openAddCompany); }
+
+        var addCompanyClose = byId('btn-add-company-close');
+        if (addCompanyClose) { addCompanyClose.addEventListener('click', closeAddCompany); }
+
+        var addCompanyCancel = byId('btn-add-company-cancel');
+        if (addCompanyCancel) { addCompanyCancel.addEventListener('click', closeAddCompany); }
+
+        var addCompanyModal = byId('ad-add-company-modal');
+        if (addCompanyModal) {
+            addCompanyModal.addEventListener('click', function (e) {
+                if (e.target === addCompanyModal) { closeAddCompany(); }
+            });
+        }
+
+        var addCompanyForm = byId('ad-add-company-form');
+        if (addCompanyForm) { addCompanyForm.addEventListener('submit', submitAddCompany); }
 
         var refreshReviews = byId('btn-refresh-reviews');
         if (refreshReviews) {
@@ -791,7 +900,10 @@ function renderDetail(c) {
             });
         }
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') { closeManifest(); }
+            if (e.key === 'Escape') {
+                closeManifest();
+                closeAddCompany();
+            }
         });
 
         populateCompanyFilters();

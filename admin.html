@@ -46,7 +46,7 @@
         .ad-detail-field .k { display: block; font-size: 0.7rem; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.04em; }
         .ad-detail-field .v { font-size: 0.92rem; color: var(--color-dark); font-weight: 600; }
         .ad-detail-desc { margin-top: var(--space-sm); font-size: 0.88rem; color: var(--color-muted); }
-        .ad-modal { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.55); z-index: 60; }
+        .ad-modal { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.55); z-index: 100; }
         .ad-modal[hidden] { display: none; }
         .ad-modal-box { width: min(420px, 90vw); background: var(--color-white); border-radius: 12px; padding: 1.25rem 1.4rem; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28); }
         .ad-modal-box h3 { margin: 0 0 0.5rem; font-size: 1.05rem; color: var(--color-dark); }
@@ -63,7 +63,7 @@
         .ad-route { font-weight: 600; color: var(--color-dark); }
         .ad-sub { display: block; font-size: 0.74rem; color: var(--color-muted); }
         .ad-muted { color: var(--color-muted); }
-        .ad-manifest { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.55); z-index: 70; }
+        .ad-manifest { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.55); z-index: 101; }
         .ad-manifest[hidden] { display: none; }
         .ad-manifest-box { width: min(640px, 92vw); max-height: 88vh; overflow-y: auto; background: var(--color-white); border-radius: 12px; padding: 1.25rem 1.4rem; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28); }
         .ad-manifest-box h3 { margin: 0 0 0.75rem; font-size: 1.05rem; color: var(--color-dark); }
@@ -76,6 +76,19 @@
         .ad-manifest-table th { text-align: left; color: var(--color-muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; padding: 0.4rem 0.5rem; border-bottom: 1px solid #e5e7eb; }
         .ad-manifest-table td { padding: 0.5rem; border-bottom: 1px solid #f1f5f9; color: var(--color-dark); }
         .ad-cancelled-note { font-size: 0.74rem; color: #b91c1c; font-weight: 600; }
+        /* Add-company modal — mirrors the public company registration form. */
+        .ad-add { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.55); z-index: 102; }
+        .ad-add[hidden] { display: none; }
+        .ad-add-box { width: min(560px, 92vw); max-height: 88vh; overflow-y: auto; background: var(--color-white); border-radius: 12px; padding: 1.25rem 1.4rem; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28); }
+        .ad-add-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; }
+        .ad-add-box h3 { margin: 0 0 0.5rem; font-size: 1.05rem; color: var(--color-dark); }
+        .ad-add-note { margin: 0 0 0.9rem; font-size: 0.82rem; color: var(--color-muted); }
+        .ad-add-form { display: grid; gap: 0.65rem; }
+        .ad-add-form label { display: block; font-size: 0.82rem; font-weight: 600; color: var(--color-dark); margin-bottom: 0.25rem; }
+        .ad-add-form input, .ad-add-form textarea { width: 100%; padding: 0.55rem 0.65rem; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 6px; font-family: inherit; box-sizing: border-box; }
+        .ad-add-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; }
+        .ad-add-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.9rem; }
+        @media (max-width: 560px) { .ad-add-form-row { grid-template-columns: 1fr; } }
         /* Single-page admin workspace, aligned with the company dashboard. */
         body { background:#f4f6fb; }.ad-page{padding:2rem 0 3.5rem}.ad-workspace-head{display:flex;align-items:flex-end;justify-content:space-between;gap:1.5rem;margin-bottom:1.5rem}.ad-workspace-head h1{margin:0;color:#182448;font-size:clamp(2rem,4vw,3rem);letter-spacing:-.045em}.ad-workspace-head p{margin:.5rem 0 0;max-width:42rem;color:#64708a}.ad-live{display:flex;align-items:center;gap:.5rem;color:#3b537f;font-size:.8rem;font-weight:700;white-space:nowrap}.ad-live i{width:.55rem;height:.55rem;border-radius:50%;background:#3ea87a;box-shadow:0 0 0 4px #dff4e8}.ad-layout{display:grid;grid-template-columns:230px minmax(0,1fr);gap:1.25rem;align-items:start}.ad-sidebar{position:sticky;top:1rem;padding:.8rem;color:#dce5fb;background:#182448;border-radius:18px;box-shadow:0 16px 35px rgba(24,36,72,.16)}.ad-admin-mini{padding:.45rem .5rem 1rem;margin-bottom:.7rem;border-bottom:1px solid rgba(255,255,255,.13)}.ad-admin-mini strong,.ad-admin-mini small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ad-admin-mini strong{color:#fff;font-size:.9rem}.ad-admin-mini small{margin-top:.15rem;color:#aebddd;font-size:.72rem}.ad-nav{display:grid;gap:.3rem}.ad-nav .ad-tab{display:flex;align-items:center;width:100%;padding:.75rem;color:#dce5fb;background:transparent;border:0;border-radius:10px;font:650 .88rem/1.1 var(--font-sans);text-align:left;cursor:pointer}.ad-nav .ad-tab:hover{color:#fff;background:rgba(255,255,255,.09)}.ad-nav .ad-tab.active{color:#182448;background:#edf2ff;box-shadow:0 4px 12px rgba(0,0,0,.09)}.ad-content{min-width:0}.ad-content .ad-card{margin-top:0;padding:clamp(1rem,2.5vw,1.6rem);border-color:#e0e6f1;border-radius:18px;box-shadow:0 10px 28px rgba(30,47,88,.055)}.ad-content .ad-card+.ad-card{margin-top:1.25rem}.ad-content .ad-card-head{padding-bottom:1.1rem;margin-bottom:1rem;border-bottom:1px solid #e8ecf4}.ad-content .ad-card-head h2{color:#1a2a52;font-size:1.35rem}.ad-content .ad-stat{position:relative;overflow:hidden;padding:1rem;border:1px solid #e0e6f1;border-radius:12px;box-shadow:none}.ad-content .ad-stat::before{content:'';position:absolute;inset:0 0 auto;height:3px;background:#4e74c9}.ad-review-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:.8rem}.ad-review-card{padding:1rem;border:1px solid #e1e7f1;border-radius:12px;background:#fbfcff}.ad-review-card h3{color:#1b2d55;font-size:1rem}.ad-review-card p{margin:.4rem 0 0;color:#68758d;font-size:.84rem}.ad-stars{color:#dc9a2c;letter-spacing:.08em;font-weight:700}@media(max-width:900px){.ad-layout{grid-template-columns:1fr}.ad-sidebar{position:static}.ad-nav{grid-template-columns:repeat(5,minmax(9rem,1fr));overflow-x:auto}.ad-nav .ad-tab{white-space:nowrap}}@media(max-width:600px){.ad-page{padding-top:1.15rem}.ad-workspace-head{align-items:flex-start;flex-direction:column;gap:.7rem}.ad-sidebar,.ad-content .ad-card{border-radius:14px}.ad-nav{grid-template-columns:repeat(5,max-content)}.ad-stats{grid-template-columns:repeat(2,1fr)}}
         /* Same forest-green dashboard system used by company-dashboard.html. */
@@ -133,7 +146,7 @@
 <section id="section-companies" class="ad-card" hidden>
             <div class="ad-card-head">
                 <h2>Company Applications</h2>
-                <button type="button" id="btn-refresh-companies" class="btn btn-secondary btn-sm">Refresh</button>
+                <button type="button" id="btn-add-company" class="btn btn-primary btn-sm">Add Company</button>
             </div>
 
             <div class="ad-status-toolbar" role="group" aria-label="Filter companies by status">
@@ -349,6 +362,73 @@
                 <button type="button" id="ad-modal-cancel" class="btn btn-secondary">Cancel</button>
                 <button type="button" id="ad-modal-confirm" class="btn btn-primary">Confirm</button>
             </div>
+        </div>
+    </div>
+
+    <div id="ad-add-company-modal" class="ad-add" hidden role="dialog" aria-modal="true" aria-labelledby="ad-add-company-title">
+        <div class="ad-add-box">
+            <div class="ad-add-head">
+                <div>
+                    <h3 id="ad-add-company-title">Add Company</h3>
+                    <p class="ad-add-note">Creates a company account exactly like a company self-registration. It stays pending until you approve it.</p>
+                </div>
+                <button type="button" id="btn-add-company-close" class="btn btn-secondary btn-sm">Close</button>
+            </div>
+            <div id="ad-add-company-error" class="auth-message" hidden></div>
+            <form id="ad-add-company-form" class="ad-add-form" novalidate>
+                <label for="add-company-name">Full Name / Contact Person</label>
+                <input id="add-company-name" name="name" type="text" placeholder="Full name">
+
+                <div class="ad-add-form-row">
+                    <div>
+                        <label for="add-company-email">Email</label>
+                        <input id="add-company-email" name="email" type="email" placeholder="you@example.com">
+                    </div>
+                    <div>
+                        <label for="add-company-phone">Phone</label>
+                        <input id="add-company-phone" name="phone" type="tel" placeholder="+2519XXXXXXXX">
+                    </div>
+                </div>
+
+                <div class="ad-add-form-row">
+                    <div>
+                        <label for="add-company-password">Password</label>
+                        <div class="password-field">
+                            <input id="add-company-password" name="password" type="password" autocomplete="new-password" placeholder="At least 8 chars with letters and numbers">
+                            <button class="password-toggle" type="button" aria-controls="add-company-password" aria-pressed="false" aria-label="Show password">
+                                <svg class="password-toggle-icon password-toggle-icon--show" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.75"/></svg>
+                                <svg class="password-toggle-icon password-toggle-icon--hide" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18M10.6 6.2A10.8 10.8 0 0 1 12 6c6.1 0 9.5 6 9.5 6a18.2 18.2 0 0 1-3.3 3.8M6.1 6.1A18.5 18.5 0 0 0 2.5 12S5.9 18 12 18c1.3 0 2.5-.3 3.5-.7"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+                                <span class="sr-only">Show password</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="add-company-confirm">Confirm Password</label>
+                        <div class="password-field">
+                            <input id="add-company-confirm" name="password_confirmation" type="password" autocomplete="new-password" placeholder="Re-enter your password">
+                            <button class="password-toggle" type="button" aria-controls="add-company-confirm" aria-pressed="false" aria-label="Show password">
+                                <svg class="password-toggle-icon password-toggle-icon--show" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.75"/></svg>
+                                <svg class="password-toggle-icon password-toggle-icon--hide" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18M10.6 6.2A10.8 10.8 0 0 1 12 6c6.1 0 9.5 6 9.5 6a18.2 18.2 0 0 1-3.3 3.8M6.1 6.1A18.5 18.5 0 0 0 2.5 12S5.9 18 12 18c1.3 0 2.5-.3 3.5-.7"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+                                <span class="sr-only">Show password</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <label for="add-company-company-name">Company Name</label>
+                <input id="add-company-company-name" name="company_name" type="text" placeholder="Company legal name">
+
+                <label for="add-company-address">Company Address</label>
+                <input id="add-company-address" name="company_address" type="text" placeholder="City, sub-city, area">
+
+                <label for="add-company-description">Company Description (optional)</label>
+                <textarea id="add-company-description" name="company_description" rows="3" placeholder="Short company profile"></textarea>
+
+                <div class="ad-add-actions">
+                    <button type="button" id="btn-add-company-cancel" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" id="btn-add-company-submit" class="btn btn-primary">Add Company</button>
+                </div>
+            </form>
         </div>
     </div>
 
