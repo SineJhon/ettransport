@@ -130,6 +130,24 @@
         .ad-manage-danger { padding: 0.9rem; margin-top: 0.5rem; border: 1px solid #fecaca; background: #fef2f2; border-radius: 10px; }
         .ad-manage-danger strong { color: #b91c1c; font-size: 0.85rem; }
         .ad-manage-danger p { margin: 0.3rem 0 0.7rem; color: #991b1b; font-size: 0.78rem; line-height: 1.45; }
+        /* Reason modal — Reject / Suspend require a non-empty final reason. */
+        .ad-reason { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.55); z-index: 104; }
+        .ad-reason[hidden] { display: none; }
+        .ad-reason-box { width: min(560px, 92vw); max-height: 88vh; overflow-y: auto; background: var(--color-white); border-radius: 12px; padding: 1.25rem 1.4rem; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28); }
+        .ad-reason-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.5rem; }
+        .ad-reason-box h3 { margin: 0; font-size: 1.05rem; color: var(--color-dark); }
+        .ad-reason-sub { margin: 0.15rem 0 0; font-size: 0.78rem; color: var(--color-muted); word-break: break-word; }
+        .ad-reason-desc { margin: 0.5rem 0 0.9rem; font-size: 0.85rem; color: var(--color-muted); line-height: 1.45; }
+        .ad-reason-chips { display: flex; flex-wrap: wrap; gap: 0.45rem; margin: 0 0 0.9rem; }
+        .ad-reason-chip { flex: 0 0 auto; padding: 0.5rem 0.8rem; color: #374151; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 999px; cursor: pointer; font: 600 0.8rem/1 var(--font-sans); }
+        .ad-reason-chip:hover { background: #e2e8f0; }
+        .ad-reason-chip.is-selected { color: #fff; background: #187653; border-color: #187653; }
+        .ad-reason-label { display: block; font-size: 0.72rem; font-weight: 700; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.3rem; }
+        .ad-reason-textarea { width: 100%; min-height: 84px; padding: 0.55rem 0.65rem; font: inherit; font-size: 0.9rem; color: var(--color-dark); border: 1px solid #cbd5e1; border-radius: 8px; resize: vertical; box-sizing: border-box; }
+        .ad-reason-textarea:focus { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+        .ad-reason-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.9rem; }
+        .ad-reason-error { margin: 0.5rem 0 0; color: #b91c1c; font-size: 0.82rem; }
+        .ad-reason-error[hidden] { display: none; }
         /* On / off switch (list / unlist). */
         .ad-switch { position: relative; display: inline-flex; flex: 0 0 auto; }
         .ad-switch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; z-index: 1; }
@@ -510,6 +528,13 @@
                     <span id="ad-manage-listed-badge" class="ad-badge ad-badge-listed"></span>
                 </div>
 
+                <div class="ad-manage-row" id="ad-manage-reason-row" hidden>
+                    <div>
+                        <strong id="ad-manage-reason-title">Latest review</strong>
+                        <p id="ad-manage-reason-text"></p>
+                    </div>
+                </div>
+
                 <div class="ad-manage-row">
                     <div>
                         <strong>Listed on public directory</strong>
@@ -534,6 +559,27 @@
                     <p>Permanently deletes this company, its owner account and all related records. Deletion is blocked while the company still has passenger bookings.</p>
                     <button type="button" id="btn-manage-delete" class="btn btn-danger btn-sm">Delete Company</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="ad-reason-modal" class="ad-reason" hidden role="dialog" aria-modal="true" aria-labelledby="ad-reason-title">
+        <div class="ad-reason-box">
+            <div class="ad-reason-head">
+                <div>
+                    <h3 id="ad-reason-title">Reject company</h3>
+                    <p id="ad-reason-sub" class="ad-reason-sub"></p>
+                </div>
+                <button type="button" id="btn-reason-close" class="btn btn-secondary btn-sm">Close</button>
+            </div>
+            <p id="ad-reason-desc" class="ad-reason-desc"></p>
+            <div id="ad-reason-chips" class="ad-reason-chips" role="group" aria-label="Quick reason suggestions"></div>
+            <label class="ad-reason-label" for="ad-reason-text">Reason (required)</label>
+            <textarea id="ad-reason-text" class="ad-reason-textarea" rows="3" maxlength="500" placeholder="Type a reason, or pick a suggestion above and edit it&hellip;"></textarea>
+            <p id="ad-reason-error" class="ad-reason-error" hidden role="alert"></p>
+            <div class="ad-reason-actions">
+                <button type="button" id="btn-reason-cancel" class="btn btn-secondary">Cancel</button>
+                <button type="button" id="btn-reason-confirm" class="btn btn-danger" disabled>Continue</button>
             </div>
         </div>
     </div>

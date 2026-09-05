@@ -431,9 +431,13 @@ function handle_availability(): void
             FROM trips t
             JOIN buses b     ON b.id = t.bus_id
             JOIN companies c ON c.id = t.company_id
+            JOIN users u     ON u.id = c.user_id
             JOIN routes r    ON r.id = t.route_id
             WHERE t.id = :id
               AND t.status = \'scheduled\'
+              AND c.status = \'approved\'
+              AND c.listed = 1
+              AND u.status = \'active\'
             LIMIT 1');
         $stmt->execute([':id' => $tripId]);
         $trip = $stmt->fetch();
@@ -624,8 +628,12 @@ function handle_create(): void
             FROM trips t
             JOIN buses b     ON b.id = t.bus_id
             JOIN companies c ON c.id = t.company_id
+            JOIN users u     ON u.id = c.user_id
             JOIN routes r    ON r.id = t.route_id
             WHERE t.id = :id
+              AND c.status = \'approved\'
+              AND c.listed = 1
+              AND u.status = \'active\'
             FOR UPDATE');
         $tripStmt->execute([':id' => $tripId]);
         $trip = $tripStmt->fetch();

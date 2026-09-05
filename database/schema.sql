@@ -66,8 +66,19 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- ------------------------------------------------------------
 -- companies — one company profile linked to one company user account.
--- status supports the admin approval workflow:
---   pending → approved → suspended | rejected
+-- Three independent lifecycle axes:
+--   approval_status  companies.status   pending | approved | rejected
+--   account_status   users.status       active  | suspended
+--   listing_status   companies.listed   1 (on) | 0 (off)
+--
+-- A company may appear publicly ONLY when
+--   approval_status='approved' AND account_status='active' AND listed=1.
+-- A company may log in ONLY when
+--   approval_status='approved' AND account_status='active'.
+--
+-- Suspension keeps approval_status='approved' and flips account_status to
+-- 'suspended' + listed to 0 (the prior listing is remembered in
+-- company_reason_history so an unsuspension can restore it).
 --
 -- NOTE: for an EXISTING database (created before website/head_office
 -- were added) apply this once:
@@ -79,6 +90,10 @@ CREATE TABLE IF NOT EXISTS users (
 -- was added, apply this once:
 --   ALTER TABLE companies
 --     ADD COLUMN listed TINYINT(1) NOT NULL DEFAULT 1 AFTER status;
+--
+-- And the company_reason_history audit table (rejection/suspension reasons +
+-- listed_before restore) is auto-created by config/database.php, or by the
+-- CREATE TABLE in this file for fresh installs.
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS companies (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -388,6 +403,34 @@ CREATE TABLE IF NOT EXISTS review_likes (
     ON DELETE CASCADE
     ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- ------------------------------------------------------------
+-- company_reason_history — audit trail for company rejections and
+-- suspensions. One row is appended per action (never overwritten),
+-- so re-suspending a company later preserves every prior reason.
+-- listed_before records the company's public listing state at the
+-- moment of a suspension so an unsuspension can restore it.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS company_reason_history (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  company_id BIGINT UNSIGNED NOT NULL,
+  action_type ENUM('rejected', 'suspended') NOT NULL,
+  reason VARCHAR(500) NOT NULL,
+  admin_user_id BIGINT UNSIGNED NOT NULL,
+  listed_before TINYINT(1) DEFAULT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_company_reason_history_company (company_id),
+  KEY idx_company_reason_history_action (company_id, action_type),
+  CONSTRAINT fk_company_reason_history_company
+    FOREIGN KEY (company_id) REFERENCES companies(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
+  CONSTRAINT fk_company_reason_history_admin
+    FOREIGN KEY (admin_user_id) REFERENCES users(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ------------------------------------------------------------
 -- notifications — per-user in-app notifications.
 -- type examples: booking, payment, review, promotion, system

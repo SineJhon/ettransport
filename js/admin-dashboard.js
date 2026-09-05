@@ -62,6 +62,35 @@
         return 'ad-badge ' + String(status == null ? '' : status);
     }
 
+    /* Display bucket for the status filter pills. "Approved" shows only
+       approved + account-active companies; suspended companies (approval
+       stays 'approved', account becomes 'suspended') appear under their own
+       bucket. Legacy rows that still carry companies.status='suspended' are
+       also bucketed as suspended. */
+    function companyBucket(c) {
+        if (!c) { return ''; }
+        if (c.status === 'approved' && c.account_status === 'suspended') { return 'suspended'; }
+        if (c.status === 'suspended') { return 'suspended'; }
+        return c.status || '';
+    }
+
+    var REASON_SUGGESTIONS = [
+        'Not Enough Information Submitted',
+        'Incomplete Company Profile',
+        'Invalid Company Information',
+        'Documents Could Not Be Verified',
+        'Duplicate Company Account',
+        'Company Information Does Not Match',
+        'Violation of Platform Rules',
+        'Suspicious or Fraudulent Activity',
+        'Repeated Customer Complaints',
+        'Inactive Company',
+        'Temporary Suspension for Review',
+        'Other'
+    ];
+    var pendingReasonData = null;   // { action, companyId }
+    var selectedReasonChip = null;
+
     var currentCompanies = [];
     var currentDetail = null;
     var pendingMutation = null;
@@ -151,7 +180,7 @@
         var filter = selectedCompanyStatus;
 
         var filtered = currentCompanies.filter(function (c) {
-            return filter === '' || c.status === filter;
+            return filter === '' || companyBucket(c) === filter;
         });
 
         hide(byId('ad-list-loading'));
@@ -172,7 +201,8 @@
 
         var html = filtered.map(function (c) {
             var rating = c.review_count > 0 ? (c.avg_rating + ' (' + c.review_count + ')') : '\u2014';
-            return '<tr data-company-id="' + c.id + '" data-status="' + escHtml(c.status) + '">' +
+            var bucket = companyBucket(c);
+            return '<tr data-company-id="' + c.id + '" data-status="' + escHtml(bucket) + '">' +
                 '<td>' +
                     '<div class="ad-co-name">' +
                         (c.logo ? '<img class="ad-co-logo" src="' + escHtml(c.logo) + '" alt="">' : '') +
@@ -180,7 +210,7 @@
                     '</div>' +
                     '<span class="ad-co-slug">@' + escHtml(c.slug) + '</span>' +
                 '</td>' +
-                '<td><span class="' + badgeClass(c.status) + '">' + escHtml(c.status) + '</span></td>' +
+                '<td><span class="' + badgeClass(bucket) + '">' + escHtml(bucket) + '</span></td>' +
                 '<td><span class="' + badgeClass(c.account_status) + '">' + escHtml(c.account_status) + '</span></td>' +
                 '<td>' + c.bus_count + '</td>' +
                 '<td>' + c.trip_count + '</td>' +
@@ -282,8 +312,9 @@ function renderDetail(c) {
 
         var st = byId('ad-detail-status');
         if (st) {
-            st.className = badgeClass(c.status);
-            st.textContent = c.status ? c.status.toUpperCase() : '';
+            var bucket = companyBucket(c);
+            st.className = badgeClass(bucket);
+            st.textContent = bucket ? bucket.toUpperCase() : '';
         }
         var ac = byId('ad-detail-account-status');
         if (ac) {
@@ -326,19 +357,24 @@ function renderDetail(c) {
         box.innerHTML = '';
 
         var actions = [];
-        if (c.status === 'pending') {
+        var bucket = companyBucket(c);
+        if (bucket === 'pending') {
             actions = [
                 { action: 'approve', label: 'Approve', cls: 'btn-primary' },
                 { action: 'reject', label: 'Reject', cls: 'btn-secondary' }
             ];
-        } else if (c.status === 'approved') {
+        } else if (bucket === 'approved') {
             actions = [
                 { action: 'suspend', label: 'Suspend', cls: 'btn-secondary' },
                 { action: 'reject', label: 'Reject', cls: 'btn-secondary' }
             ];
-        } else if (c.status === 'suspended') {
+        } else if (bucket === 'suspended') {
             actions = [
-                { action: 'activate', label: 'Activate', cls: 'btn-primary' }
+                { action: 'activate', label: 'Unsuspend', cls: 'btn-primary' }
+            ];
+        } else if (bucket === 'rejected') {
+            actions = [
+                { action: 'approve', label: 'Approve', cls: 'btn-primary' }
             ];
         }
 
@@ -354,7 +390,11 @@ function renderDetail(c) {
             b.setAttribute('data-action', a.action);
             b.textContent = a.label;
             b.addEventListener('click', function () {
-                askConfirmation(a.action);
+                if (a.action === 'reject' || a.action === 'suspend') {
+                    openReasonModal(a.action);
+                } else {
+                    askConfirmation(a.action);
+                }
             });
             box.appendChild(b);
         });
@@ -392,6 +432,8 @@ function renderDetail(c) {
     function renderManage(c) {
         if (!c) { return; }
 
+        var bucket = companyBucket(c);
+
         setText('ad-manage-title', 'Manage Company');
         setText('ad-manage-sub', c.name + ' \u00b7 @' + (c.slug || ''));
 
@@ -408,8 +450,8 @@ function renderDetail(c) {
 
         var st = byId('ad-manage-status');
         if (st) {
-            st.className = badgeClass(c.status);
-            st.textContent = (c.status || '').toUpperCase();
+            st.className = badgeClass(bucket);
+            st.textContent = bucket.toUpperCase();
         }
 
         var listedBadge = byId('ad-manage-listed-badge');
@@ -419,21 +461,60 @@ function renderDetail(c) {
             listedBadge.textContent = unlisted ? 'UNLISTED' : 'LISTED';
         }
 
+        /* Listing can only be toggled while approval='approved' AND
+           account='active'. Otherwise the fixed badge explains why. */
+        var canToggleListing = (bucket === 'approved');
         var toggle = byId('ad-manage-listed');
+        var listingNote = byId('ad-manage-listing-note');
         if (toggle) {
             toggle.checked = c.listed === 1;
-            toggle.disabled = false;
+            toggle.disabled = !canToggleListing;
+        }
+        if (listingNote) {
+            if (canToggleListing) {
+                listingNote.textContent = 'Controls whether this company is shown on the passenger-facing Companies page, public profile and search. Turning it off does not suspend the company.';
+            } else if (bucket === 'suspended') {
+                listingNote.textContent = 'This company is suspended and stays hidden. Turning the public listing back on is available again after unsuspension.';
+            } else if (bucket === 'rejected') {
+                listingNote.textContent = 'This company is rejected and stays hidden. Listing can be enabled again only after it is approved.';
+            } else {
+                listingNote.textContent = 'This company is pending approval and stays hidden. Approval is required before it can be publicly listed.';
+            }
+        }
+
+        var reasonRow = byId('ad-manage-reason-row');
+        var reasonTitle = byId('ad-manage-reason-title');
+        var reasonText = byId('ad-manage-reason-text');
+        if (reasonRow && reasonTitle && reasonText) {
+            var hasReason = (bucket === 'suspended' || bucket === 'rejected') && c.current_reason;
+            if (hasReason) {
+                reasonRow.hidden = false;
+                reasonTitle.textContent = (c.current_action === 'suspended' ? 'Suspension reason' : 'Rejection reason');
+                reasonText.textContent = c.current_reason + (c.current_action_at ? ' \u00b7 ' + String(c.current_action_at).slice(0, 10) : '');
+            } else {
+                reasonRow.hidden = true;
+                reasonTitle.textContent = 'Latest review';
+                reasonText.textContent = '';
+            }
         }
 
         var actionTitle = byId('ad-manage-action-title');
         var actionNote = byId('ad-manage-action-note');
         if (actionTitle) {
-            actionTitle.textContent = c.status === 'pending' ? 'Review application' : 'Account status';
+            actionTitle.textContent = bucket === 'pending' ? 'Review application' : 'Account status';
         }
         if (actionNote) {
-            actionNote.textContent = c.status === 'pending'
-                ? 'This company is awaiting your decision.'
-                : (c.status === 'approved' ? 'This company can sign in and operate.' : '');
+            if (bucket === 'pending') {
+                actionNote.textContent = 'This company is awaiting your decision.';
+            } else if (bucket === 'approved') {
+                actionNote.textContent = 'This company can sign in and operate.\u2002' + (c.listed === 1 ? 'It is currently publicly listed.' : 'It is currently hidden from public areas.');
+            } else if (bucket === 'suspended') {
+                actionNote.textContent = 'This company cannot sign in while suspended. Unsuspending restores its previous listing state.';
+            } else if (bucket === 'rejected') {
+                actionNote.textContent = 'This company cannot sign in. Approving it will let the owner in; it will stay hidden until listed.';
+            } else {
+                actionNote.textContent = '';
+            }
         }
 
         renderManageActions(c);
@@ -445,19 +526,24 @@ function renderDetail(c) {
         box.innerHTML = '';
 
         var actions = [];
-        if (c.status === 'pending') {
+        var bucket = companyBucket(c);
+        if (bucket === 'pending') {
             actions = [
                 { action: 'approve', label: 'Approve', cls: 'btn-primary' },
                 { action: 'reject', label: 'Reject', cls: 'btn-secondary' }
             ];
-        } else if (c.status === 'approved') {
+        } else if (bucket === 'approved') {
             actions = [
                 { action: 'suspend', label: 'Suspend', cls: 'btn-secondary' },
                 { action: 'reject', label: 'Reject', cls: 'btn-secondary' }
             ];
-        } else if (c.status === 'suspended') {
+        } else if (bucket === 'suspended') {
             actions = [
-                { action: 'activate', label: 'Activate', cls: 'btn-primary' }
+                { action: 'activate', label: 'Unsuspend', cls: 'btn-primary' }
+            ];
+        } else if (bucket === 'rejected') {
+            actions = [
+                { action: 'approve', label: 'Approve', cls: 'btn-primary' }
             ];
         }
 
@@ -473,7 +559,11 @@ function renderDetail(c) {
             b.setAttribute('data-action', a.action);
             b.textContent = a.label;
             b.addEventListener('click', function () {
-                askConfirmation(a.action);
+                if (a.action === 'reject' || a.action === 'suspend') {
+                    openReasonModal(a.action);
+                } else {
+                    askConfirmation(a.action);
+                }
             });
             box.appendChild(b);
         });
@@ -527,23 +617,28 @@ function renderDetail(c) {
     }
 
 /* ---------- Confirmation modal (never mutate on a single click) ---------- */
-    function askConfirmation(action) {
+    function askConfirmation(action, reason) {
         if (!currentDetail) { return; }
 
         var titles = {
             approve: 'Approve this company?',
             reject: 'Reject this company?',
             suspend: 'Suspend this company?',
-            activate: 'Activate this company?',
+            activate: 'Unsuspend this company?',
             delete: 'Delete this company?'
         };
         var messages = {
-            approve: 'Approve "' + currentDetail.name + '"? The owner will be able to sign in and manage the company immediately.',
-            reject: 'Reject "' + currentDetail.name + '"? The owner will lose access permanently and login stays blocked.',
-            suspend: 'Suspend "' + currentDetail.name + '"? Trips and data are kept, but the owner will not be able to sign in.',
-            activate: 'Reactivate "' + currentDetail.name + '"? The owner will be able to sign in again.',
+            approve: 'Approve "' + currentDetail.name + '"? The owner will be able to sign in and manage the company immediately. The listing stays as it is until you turn it on.',
+            reject: 'Reject "' + currentDetail.name + '"? The owner will lose access and the company will be hidden from public areas. This cannot be undone.',
+            suspend: 'Suspend "' + currentDetail.name + '"? The owner loses access immediately, the company is hidden, but all trips, bookings and records are kept.',
+            activate: 'Unsuspend "' + currentDetail.name + '"? The owner will be able to sign in again and the previous listing state is restored.',
             delete: 'Delete "' + currentDetail.name + '"? This permanently removes the company, its owner account, fleet, trips and reviews. This cannot be undone.'
         };
+
+        if (reason) {
+            var actionWord = action === 'suspend' ? 'Suspension' : 'Rejection';
+            messages[action] = (messages[action] || '') + ' ' + actionWord + ' reason: "' + reason + '"';
+        }
 
         setText('ad-modal-title', titles[action] || 'Confirm action');
         setText('ad-modal-message', messages[action] || 'Continue with this action?');
@@ -554,7 +649,7 @@ function renderDetail(c) {
             confirmBtn.textContent = action === 'delete' ? 'Delete' : 'Confirm';
         }
 
-        pendingMutation = { action: action, companyId: currentDetail.id };
+        pendingMutation = { action: action, companyId: currentDetail.id, reason: reason || null };
         show(byId('ad-modal'));
     }
 
@@ -563,12 +658,15 @@ function renderDetail(c) {
         hide(byId('ad-modal'));
     }
 
-    function runMutation(action, companyId) {
+    function runMutation(action, companyId, reason) {
         var confirmBtn = byId('ad-modal-confirm');
         if (confirmBtn) {
             confirmBtn.disabled = true;
             confirmBtn.textContent = 'Working\u2026';
         }
+
+        var payload = { company_id: companyId };
+        if (reason) { payload.reason = reason; }
 
         fetch('api/admin.php?action=company_' + action, {
             method: 'POST',
@@ -577,7 +675,7 @@ function renderDetail(c) {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ company_id: companyId })
+            body: JSON.stringify(payload)
         })
             .then(parseJson)
             .then(function (result) {
@@ -598,6 +696,7 @@ function renderDetail(c) {
                 }
 
                 if (action === 'delete') {
+                    closeDetail();
                     closeManage();
                 } else if (data.company) {
                     currentDetail = data.company;
@@ -628,6 +727,122 @@ function renderDetail(c) {
     function closeDetail() {
         currentDetail = null;
         hide(byId('section-detail'));
+    }
+
+    /* ---------- Reason modal (Reject / Suspend require a reason) ---------- */
+    function openReasonModal(action) {
+        if (!currentDetail) { return; }
+        pendingReasonData = { action: action, companyId: currentDetail.id };
+        selectedReasonChip = null;
+
+        var actionLabel = action === 'suspend' ? 'Suspend' : 'Reject';
+        setText('ad-reason-title', actionLabel + ' ' + currentDetail.name);
+        setText('ad-reason-sub', '@' + (currentDetail.slug || '') + ' \u00b7 current status: ' + (companyBucket(currentDetail) || '-'));
+
+        var desc = byId('ad-reason-desc');
+        if (desc) {
+            desc.textContent = action === 'suspend'
+                ? 'The owner will immediately lose access and the company will be hidden from the public directory. Provide a clear reason \u2014 it is shown to the owner and kept in the audit history. Re-suspending later records a new reason while preserving the old one.'
+                : 'The owner will lose access and the company will be hidden from the public directory. Provide a clear reason \u2014 it is shown to the owner and kept in the audit history.';
+        }
+
+        var chipsBox = byId('ad-reason-chips');
+        if (chipsBox) {
+            chipsBox.innerHTML = '';
+            REASON_SUGGESTIONS.forEach(function (text) {
+                var chip = document.createElement('button');
+                chip.type = 'button';
+                chip.className = 'ad-reason-chip';
+                chip.textContent = text;
+                chip.addEventListener('click', function () {
+                    selectReasonChip(text);
+                });
+                chipsBox.appendChild(chip);
+            });
+        }
+
+        var reasonText = byId('ad-reason-text');
+        if (reasonText) {
+            reasonText.value = '';
+            reasonText.focus();
+        }
+
+        var err = byId('ad-reason-error');
+        if (err) { err.hidden = true; err.textContent = ''; }
+
+        syncReasonState();
+        show(byId('ad-reason-modal'));
+    }
+
+    function selectReasonChip(text) {
+        var reasonText = byId('ad-reason-text');
+        if (!reasonText) { return; }
+
+        selectedReasonChip = text;
+        var allChips = document.querySelectorAll('#ad-reason-chips .ad-reason-chip');
+        for (var i = 0; i < allChips.length; i++) {
+            allChips[i].classList.toggle('is-selected', allChips[i].textContent === text);
+        }
+
+        /* "Other" asks for a custom explanation — leave the field empty and focused. */
+        if (text === 'Other') {
+            reasonText.value = '';
+        } else {
+            reasonText.value = text;
+        }
+        reasonText.focus();
+
+        var err = byId('ad-reason-error');
+        if (err) { err.hidden = true; err.textContent = ''; }
+        syncReasonState();
+    }
+
+    function syncReasonState() {
+        var reasonText = byId('ad-reason-text');
+        var confirmBtn = byId('btn-reason-confirm');
+        if (!reasonText || !confirmBtn) { return; }
+
+        var value = reasonText.value.trim();
+
+        /* A chip that no longer matches the text means the admin edited it —
+           keep it editable, just drop the highlight. */
+        if (selectedReasonChip && value !== selectedReasonChip) {
+            selectedReasonChip = null;
+            var allChips = document.querySelectorAll('#ad-reason-chips .ad-reason-chip');
+            for (var i = 0; i < allChips.length; i++) {
+                allChips[i].classList.remove('is-selected');
+            }
+        }
+
+        confirmBtn.disabled = value === '';
+    }
+
+    function closeReasonModal() {
+        pendingReasonData = null;
+        selectedReasonChip = null;
+        hide(byId('ad-reason-modal'));
+    }
+
+    function submitReason() {
+        if (!pendingReasonData) { return; }
+        var reasonText = byId('ad-reason-text');
+        var err = byId('ad-reason-error');
+        if (!reasonText || !err) { return; }
+
+        var reason = reasonText.value.trim();
+        if (reason === '') {
+            err.textContent = 'A reason is required to ' + (pendingReasonData.action === 'suspend' ? 'suspend' : 'reject') + ' this company.';
+            err.hidden = false;
+            reasonText.focus();
+            return;
+        }
+
+        var action = pendingReasonData.action;
+        var companyId = pendingReasonData.companyId;
+        closeReasonModal();
+        var match = currentCompanies.filter(function (c) { return c.id === companyId; })[0];
+        if (match) { currentDetail = match; }
+        askConfirmation(action, reason);
     }
 
  /* ---------- read-only operational oversight ---------- */
@@ -1221,7 +1436,25 @@ function renderDetail(c) {
                 var m = pendingMutation;
                 if (!m) { return; }
                 pendingMutation = null;
-                runMutation(m.action, m.companyId);
+                runMutation(m.action, m.companyId, m.reason);
+            });
+        }
+
+        /* Reason modal wiring (Reject / Suspend). */
+        var reasonClose = byId('btn-reason-close');
+        if (reasonClose) { reasonClose.addEventListener('click', closeReasonModal); }
+        var reasonCancel = byId('btn-reason-cancel');
+        if (reasonCancel) { reasonCancel.addEventListener('click', closeReasonModal); }
+        var reasonConfirm = byId('btn-reason-confirm');
+        if (reasonConfirm) { reasonConfirm.addEventListener('click', submitReason); }
+        var reasonTextarea = byId('ad-reason-text');
+        if (reasonTextarea) {
+            reasonTextarea.addEventListener('input', syncReasonState);
+        }
+        var reasonModal = byId('ad-reason-modal');
+        if (reasonModal) {
+            reasonModal.addEventListener('click', function (e) {
+                if (e.target === reasonModal) { closeReasonModal(); }
             });
         }
 
@@ -1270,6 +1503,7 @@ function renderDetail(c) {
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
                 closeModal();
+                closeReasonModal();
                 closeManifest();
                 closeAddCompany();
                 closeManage();

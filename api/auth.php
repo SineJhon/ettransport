@@ -64,6 +64,7 @@ function user_payload(array $user): array
         'role' => $user['role'],
         'status' => $user['status'],
         'companyStatus' => $user['company_status'] ?? null,
+        'companyListed' => isset($user['company_listed']) ? (int) $user['company_listed'] : null,
     ];
 }
 
@@ -156,7 +157,7 @@ function handle_register(): void
             }
         }
 
-        $status = $role === 'company' ? 'pending' : 'active';
+        $status = 'active';
         $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
         $insertUser = $pdo->prepare(
@@ -180,8 +181,8 @@ function handle_register(): void
             $slug = unique_company_slug($pdo, $baseSlug);
 
             $insertCompany = $pdo->prepare(
-                'INSERT INTO companies (user_id, name, slug, description, phone, email, address, status)
-                 VALUES (:user_id, :name, :slug, :description, :phone, :email, :address, :status)'
+                'INSERT INTO companies (user_id, name, slug, description, phone, email, address, status, listed)
+                 VALUES (:user_id, :name, :slug, :description, :phone, :email, :address, :status, :listed)'
             );
 
             $insertCompany->execute([
@@ -193,6 +194,7 @@ function handle_register(): void
                 ':email' => $email,
                 ':address' => $companyAddress,
                 ':status' => 'pending',
+                ':listed' => 0,
             ]);
         }
 
@@ -207,7 +209,7 @@ function handle_register(): void
                     'name' => $name,
                     'email' => $email,
                     'role' => 'company',
-                    'status' => 'pending',
+                    'status' => 'active',
                 ],
             ]);
         }
@@ -243,7 +245,7 @@ function handle_login(): void
         auth_response(422, ['success' => false, 'message' => 'Email and password are required.']);
     }
 
-    $sql = 'SELECT u.id, u.name, u.email, u.phone, u.password_hash, u.role, u.status, c.status AS company_status
+    $sql = 'SELECT u.id, u.name, u.email, u.phone, u.password_hash, u.role, u.status, c.status AS company_status, c.listed AS company_listed, c.id AS company_record_id
             FROM users u
             LEFT JOIN companies c ON c.user_id = u.id
             WHERE u.email = :email
@@ -260,29 +262,38 @@ function handle_login(): void
     $role = $row['role'];
     $status = $row['status'];
 
-    if ($status === 'suspended') {
-        auth_response(403, ['success' => false, 'message' => 'Your account is suspended. Please contact support.']);
-    }
-    if ($status === 'rejected') {
-        auth_response(403, ['success' => false, 'message' => 'Your account has been rejected.']);
-    }
-
     if ($role === 'company') {
-        $companyStatus = $row['company_status'] ?? 'pending';
+        $companyStatus = $row['company_status'] ?? null;
+        $companyRecordId = (int) ($row['company_record_id'] ?? 0);
+        $pdo = db();
 
-        if ($status === 'pending' || $companyStatus === 'pending') {
+        /* approval_status = 'pending' (registration not reviewed yet). */
+        if ($companyStatus === 'pending') {
             auth_response(403, [
                 'success' => false,
-                'message' => 'Your company account is awaiting admin approval.',
+                'message' => 'Your company registration is still waiting for admin approval.',
             ]);
         }
 
-        if ($companyStatus === 'suspended') {
-            auth_response(403, ['success' => false, 'message' => 'Your company account is suspended.']);
+        /* approval_status = 'rejected'. */
+        if ($companyStatus === 'rejected') {
+            $reason = latest_company_reason($pdo, $companyRecordId, 'rejected');
+            $message = 'Your company registration request was rejected.';
+            if ($reason !== null && $reason !== '') {
+                $message .= ' Reason: ' . $reason;
+            }
+            auth_response(403, ['success' => false, 'message' => $message]);
         }
 
-        if ($companyStatus === 'rejected') {
-            auth_response(403, ['success' => false, 'message' => 'Your company account was rejected.']);
+        /* Suspended: account_status = 'suspended'. Legacy rows may also carry
+           companies.status = 'suspended' — both are treated the same. */
+        if ($companyStatus === 'suspended' || $status === 'suspended') {
+            $reason = latest_company_reason($pdo, $companyRecordId, 'suspended');
+            $message = 'Your company account has been suspended.';
+            if ($reason !== null && $reason !== '') {
+                $message .= ' Reason: ' . $reason;
+            }
+            auth_response(403, ['success' => false, 'message' => $message]);
         }
 
         if ($companyStatus !== 'approved') {
@@ -293,6 +304,12 @@ function handle_login(): void
             auth_response(403, ['success' => false, 'message' => 'Your account is not active.']);
         }
     } else {
+        if ($status === 'suspended') {
+            auth_response(403, ['success' => false, 'message' => 'Your account is suspended. Please contact support.']);
+        }
+        if ($status === 'rejected') {
+            auth_response(403, ['success' => false, 'message' => 'Your account has been rejected.']);
+        }
         if ($status !== 'active') {
             auth_response(403, ['success' => false, 'message' => 'Your account is not active.']);
         }

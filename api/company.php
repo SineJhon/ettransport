@@ -224,6 +224,10 @@ function fetch_company_buses(PDO $pdo, int $companyId): array
 /**
  * Resolve the authenticated session user's company profile, or stop with a
  * generic 404 so another company's searchability stays private.
+ *
+ * Operator access requires approval_status='approved' AND account_status=
+ * 'active'. A suspended company that still holds a session is blocked here,
+ * so backend endpoints can never be reached by a suspended account.
  */
 function require_company_scope(PDO $pdo, int $userId): array
 {
@@ -232,6 +236,17 @@ function require_company_scope(PDO $pdo, int $userId): array
         auth_response(404, [
             'success' => false,
             'message' => 'No linked company profile was found for this account.',
+        ]);
+    }
+
+    $accountStmt = $pdo->prepare('SELECT status FROM users WHERE id = :user_id LIMIT 1');
+    $accountStmt->execute([':user_id' => $userId]);
+    $accountStatus = (string) ($accountStmt->fetchColumn() ?: '');
+
+    if ($company['status'] !== 'approved' || $accountStatus !== 'active') {
+        auth_response(403, [
+            'success' => false,
+            'message' => 'Your company account is not approved or is not active.',
         ]);
     }
 
@@ -535,8 +550,10 @@ function company_profile_rows(PDO $pdo, ?string $slug = null): array
             COALESCE((SELECT AVG(rv.rating) FROM reviews rv WHERE rv.company_id = c.id AND rv.status = \'approved\'), 0) AS rating,
             (SELECT COUNT(*) FROM reviews rv WHERE rv.company_id = c.id AND rv.status = \'approved\') AS review_count
         FROM companies c
+        JOIN users u ON u.id = c.user_id
         WHERE c.status = \'approved\'
-          AND c.listed = 1';
+          AND c.listed = 1
+          AND u.status = \'active\'';
 
     $params = [];
     if ($slug !== null) {
@@ -3845,14 +3862,7 @@ try {
 
     if ($action === 'overview') {
         $user = requireRole('company');
-        $company = resolve_company_by_user($pdo, (int) $user['id']);
-
-        if ($company === null) {
-            auth_response(404, [
-                'success' => false,
-                'message' => 'No linked company profile was found for this account.',
-            ]);
-        }
+        $company = require_company_scope($pdo, (int) $user['id']);
 
         auth_response(200, [
             'success' => true,

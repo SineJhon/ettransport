@@ -101,6 +101,7 @@ try {
             COALESCE(rev.review_count, 0)    AS review_count
         FROM trips t
         JOIN companies c ON c.id = t.company_id AND c.status = \'approved\' AND c.listed = 1
+        JOIN users u ON u.id = c.user_id AND u.status = \'active\'
         JOIN routes r ON r.id = t.route_id
         JOIN buses b ON b.id = t.bus_id
         LEFT JOIN (

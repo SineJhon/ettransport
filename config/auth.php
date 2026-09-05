@@ -41,12 +41,13 @@ function normalize_user_row(array $row): array
         'role' => $row['role'],
         'status' => $row['status'],
         'company_status' => $row['company_status'] ?? null,
+        'company_listed' => isset($row['company_listed']) ? (int) $row['company_listed'] : null,
     ];
 }
 
 function fetch_user_by_id(int $userId): ?array
 {
-    $sql = 'SELECT u.id, u.name, u.email, u.phone, u.role, u.status, c.status AS company_status
+    $sql = 'SELECT u.id, u.name, u.email, u.phone, u.role, u.status, c.status AS company_status, c.listed AS company_listed
             FROM users u
             LEFT JOIN companies c ON c.user_id = u.id
             WHERE u.id = :id
@@ -182,4 +183,33 @@ function roleHome(string $role): string
     }
 
     return 'passenger.html';
+}
+
+/**
+ * Latest stored reason for a company moderation action ('rejected' or
+ * 'suspended'), newest first, or null when none has been recorded yet.
+ *
+ * Used by the login gate to surface a safe, user-visible reason and by
+ * the admin dashboard to display the company's current review state.
+ * Never throws: a missing/hidden table only yields null.
+ */
+function latest_company_reason(PDO $pdo, int $companyId, string $actionType): ?string
+{
+    try {
+        $stmt = $pdo->prepare(
+            'SELECT reason
+             FROM company_reason_history
+             WHERE company_id = :company_id AND action_type = :action_type
+             ORDER BY id DESC
+             LIMIT 1'
+        );
+        $stmt->execute([
+            ':company_id' => $companyId,
+            ':action_type' => $actionType === 'suspended' ? 'suspended' : 'rejected',
+        ]);
+        $value = $stmt->fetchColumn();
+        return $value === false ? null : (string) $value;
+    } catch (Throwable $e) {
+        return null;
+    }
 }

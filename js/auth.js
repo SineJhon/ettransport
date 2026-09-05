@@ -446,7 +446,7 @@
             }
 
             if (requiresApprovedCompany) {
-                if (user.role !== 'company' || user.companyStatus !== 'approved') {
+                if (user.role !== 'company' || user.companyStatus !== 'approved' || user.status !== 'active') {
                     window.location.href = 'login.html';
                 }
             }

@@ -108,6 +108,32 @@ function admin_company_id_or_error(mixed $raw, string $message = 'A valid compan
 
     return $value;
 }
+
+/**
+ * Validate a required rejection / suspension reason. Rejections and
+ * suspensions MUST carry a non-empty reason the company owner can see.
+ * Returns the trimmed final text (the admin's actual submitted reason).
+ */
+function admin_reason_or_error(mixed $raw): string
+{
+    $reason = trim((string) $raw);
+    if ($reason === '') {
+        auth_response(422, [
+            'success' => false,
+            'message' => 'A reason is required to reject or suspend a company.',
+        ]);
+    }
+
+    $length = function_exists('mb_strlen') ? mb_strlen($reason) : strlen($reason);
+    if ($length > 500) {
+        auth_response(422, [
+            'success' => false,
+            'message' => 'The reason must be at most 500 characters.',
+        ]);
+    }
+
+    return $reason;
+}
 /**
  * Shape one company row into the admin-facing payload. Passwords, hashes,
  * sessions, reset tokens and authentication internals are NEVER included.
@@ -129,6 +155,9 @@ function admin_company_payload(array $row): array
         'status' => $row['status'],
         'listed' => (int) ($row['listed'] ?? 1),
         'account_status' => $row['account_status'],
+        'current_reason' => $row['current_reason'] ?? null,
+        'current_action' => $row['current_action'] ?? null,
+        'current_action_at' => $row['current_action_at'] ?? null,
         'owner_name' => $row['owner_name'],
         'owner_email' => $row['owner_email'],
         'owner_phone' => $row['owner_phone'],
@@ -194,7 +223,16 @@ function admin_company_select_sql(): string
                         JOIN bookings bk ON bk.id = p.booking_id
                         JOIN trips t ON t.id = bk.trip_id
                        WHERE t.company_id = c.id
-                         AND p.status = \'paid\'), 0) AS total_paid_revenue
+                         AND p.status = \'paid\'), 0) AS total_paid_revenue,
+            (SELECT rh.reason FROM company_reason_history rh
+              WHERE rh.company_id = c.id
+              ORDER BY rh.id DESC LIMIT 1) AS current_reason,
+            (SELECT rh.action_type FROM company_reason_history rh
+              WHERE rh.company_id = c.id
+              ORDER BY rh.id DESC LIMIT 1) AS current_action,
+            (SELECT rh.created_at FROM company_reason_history rh
+              WHERE rh.company_id = c.id
+              ORDER BY rh.id DESC LIMIT 1) AS current_action_at
         FROM companies c
         JOIN users u ON u.id = c.user_id
     ';
@@ -231,9 +269,14 @@ function handle_admin_overview(PDO $pdo): void
         SELECT
             (SELECT COUNT(*) FROM companies) AS total_companies,
             (SELECT COUNT(*) FROM companies WHERE status = \'pending\') AS pending_companies,
-            (SELECT COUNT(*) FROM companies WHERE status = \'approved\') AS approved_companies,
+            (SELECT COUNT(*) FROM companies c
+               JOIN users u ON u.id = c.user_id
+              WHERE c.status = \'approved\' AND u.status = \'active\') AS approved_companies,
             (SELECT COUNT(*) FROM companies WHERE status = \'rejected\') AS rejected_companies,
-            (SELECT COUNT(*) FROM companies WHERE status = \'suspended\') AS suspended_companies,
+            (SELECT COUNT(*) FROM companies c
+               JOIN users u ON u.id = c.user_id
+              WHERE (c.status = \'approved\' AND u.status = \'suspended\')
+                 OR c.status = \'suspended\') AS suspended_companies,
             (SELECT COUNT(*) FROM users WHERE role = \'company\') AS total_company_users,
             (SELECT COUNT(*) FROM buses) AS total_buses,
             (SELECT COUNT(*) FROM trips) AS total_trips,
@@ -649,40 +692,73 @@ function handle_admin_manifest(PDO $pdo): void
 /**
  * POST /api/admin.php?action=company_* — one atomic lifecycle transition.
  *
- * Both companies.status and the linked users.status must be in the exact
- * pre-state for the requested transition; otherwise the mutation responds
- * with a 409 conflict and changes nothing. 'rejected' is final in this
- * application's model (schema comment "pending -> approved -> suspended |
- * rejected"), so there is no way out of it here.
+ * Approval lifecycle is carried by companies.status (pending | approved |
+ * rejected), account lifecycle by users.status (active | suspended), and
+ * public visibility by companies.listed. Each mutation checks the exact
+ * pre-state, otherwise responds 409 and changes nothing.
+ *
+ * - approval admits a pending company (or a rejected company being reviewed
+ *   again) and sets account_status='active'.
+ * - rejection requires a non-empty reason, sets approval_status='rejected',
+ *   account_status='active' and listing_status='off'.
+ * - suspension requires a non-empty reason, keeps approval_status='approved',
+ *   sets account_status='suspended' and listing_status='off'. The prior
+ *   listing value is recorded in company_reason_history so an unsuspension
+ *   can restore it.
+ * - activation (unsuspension) restores account_status='active' and the exact
+ *   listing recorded at suspension time — it never forces a hidden company
+ *   public again.
  */
-function apply_company_status(PDO $pdo, array $input, string $action): void
+function apply_company_status(PDO $pdo, array $input, string $action, int $adminUserId): void
 {
+    $requiresReason = ($action === 'company_reject' || $action === 'company_suspend');
+    $reason = null;
+    if ($requiresReason) {
+        $reason = admin_reason_or_error($input['reason'] ?? null);
+    }
+
     switch ($action) {
         case 'company_approve':
             $newCompanyStatus = 'approved';
             $newAccountStatus = 'active';
-            $allowedStates = [['pending', 'pending']];
+            $allowedStates = [
+                ['pending', 'pending'],
+                ['pending', 'active'],
+                ['rejected', 'active'],
+                ['rejected', 'rejected'],
+                ['rejected', 'suspended'],
+            ];
             $message = 'Company approved. The owner account is now active.';
             break;
 
         case 'company_reject':
             $newCompanyStatus = 'rejected';
-            $newAccountStatus = 'rejected';
-            $allowedStates = [['pending', 'pending'], ['approved', 'active']];
-            $message = 'Company rejected. The owner account is now rejected and login remains blocked.';
+            $newAccountStatus = 'active';
+            $allowedStates = [
+                ['pending', 'pending'],
+                ['pending', 'active'],
+                ['approved', 'active'],
+            ];
+            $message = 'Company rejected. Listing turned off and login remains blocked.';
             break;
 
         case 'company_suspend':
-            $newCompanyStatus = 'suspended';
+            $newCompanyStatus = 'approved';
             $newAccountStatus = 'suspended';
-            $allowedStates = [['approved', 'active']];
+            $allowedStates = [
+                ['approved', 'active'],
+            ];
             $message = 'Company suspended. The owner account is suspended and login is blocked.';
             break;
 
         case 'company_activate':
             $newCompanyStatus = 'approved';
             $newAccountStatus = 'active';
-            $allowedStates = [['suspended', 'suspended']];
+            $allowedStates = [
+                ['approved', 'suspended'],
+                ['suspended', 'suspended'],
+                ['suspended', 'active'],
+            ];
             $message = 'Company reactivated. The owner account is active again.';
             break;
 
@@ -698,7 +774,7 @@ function apply_company_status(PDO $pdo, array $input, string $action): void
         /* The admin is the only writer here, but FOR UPDATE still serializes
            against any concurrent process and anchors the guarded updates. */
         $sel = $pdo->prepare('
-            SELECT c.id, c.user_id, c.name, c.status AS company_status, u.status AS account_status
+            SELECT c.id, c.user_id, c.name, c.status AS company_status, c.listed, u.status AS account_status
             FROM companies c
             JOIN users u ON u.id = c.user_id
             WHERE c.id = :company_id
@@ -718,6 +794,7 @@ function apply_company_status(PDO $pdo, array $input, string $action): void
 
         $companyStatus = $row['company_status'];
         $accountStatus = $row['account_status'];
+        $currentListed = (int) ($row['listed'] ?? 1);
 
         $stateOk = false;
         foreach ($allowedStates as $pair) {
@@ -734,50 +811,124 @@ function apply_company_status(PDO $pdo, array $input, string $action): void
                 'message' => 'This company cannot be changed to the requested state.',
             ]);
         }
-$updCompany = $pdo->prepare('
-            UPDATE companies
-            SET status = :new_status
-            WHERE id = :company_id AND status = :current_status
-        ');
-        $updCompany->execute([
-            ':new_status' => $newCompanyStatus,
-            ':company_id' => $companyId,
-            ':current_status' => $companyStatus,
-        ]);
-
-        $updUser = $pdo->prepare('
-            UPDATE users
-            SET status = :new_status
-            WHERE id = :user_id AND status = :current_status
-        ');
-        $updUser->execute([
-            ':new_status' => $newAccountStatus,
-            ':user_id' => (int) $row['user_id'],
-            ':current_status' => $accountStatus,
-        ]);
-
-        if ($updCompany->rowCount() === 0 || $updUser->rowCount() === 0) {
-            $pdo->rollBack();
-            auth_response(409, [
-                'success' => false,
-                'message' => 'This company cannot be changed to the requested state.',
+/* Approval status update (only when it actually changes — suspension
+           keeps approval_status='approved'). */
+        if ($newCompanyStatus !== $companyStatus) {
+            $updCompany = $pdo->prepare('
+                UPDATE companies
+                SET status = :new_status
+                WHERE id = :company_id AND status = :current_status
+            ');
+            $updCompany->execute([
+                ':new_status' => $newCompanyStatus,
+                ':company_id' => $companyId,
+                ':current_status' => $companyStatus,
             ]);
+
+            if ($updCompany->rowCount() === 0) {
+                $pdo->rollBack();
+                auth_response(409, [
+                    'success' => false,
+                    'message' => 'This company cannot be changed to the requested state.',
+                ]);
+            }
         }
 
-        /* Optional in-app notification for the affected company owner, using
-           the existing notification helper inside the same transaction. The
+        /* Account status update (only when it actually changes). */
+        if ($newAccountStatus !== $accountStatus) {
+            $updUser = $pdo->prepare('
+                UPDATE users
+                SET status = :new_status
+                WHERE id = :user_id AND status = :current_status
+            ');
+            $updUser->execute([
+                ':new_status' => $newAccountStatus,
+                ':user_id' => (int) $row['user_id'],
+                ':current_status' => $accountStatus,
+            ]);
+
+            if ($updUser->rowCount() === 0) {
+                $pdo->rollBack();
+                auth_response(409, [
+                    'success' => false,
+                    'message' => 'This company cannot be changed to the requested state.',
+                ]);
+            }
+        }
+
+        /* Rejection / suspension always unlists the company and appends the
+           reason to the audit history. The suspension row also remembers the
+           listing that existed immediately before the suspension so that an
+           unsuspension can restore it exactly. */
+        if ($requiresReason) {
+            $updList = $pdo->prepare('UPDATE companies SET listed = 0 WHERE id = :company_id');
+            $updList->execute([':company_id' => $companyId]);
+
+            if ($action === 'company_suspend') {
+                $historyStmt = $pdo->prepare('
+                    INSERT INTO company_reason_history
+                        (company_id, action_type, reason, admin_user_id, listed_before)
+                    VALUES
+                        (:company_id, \'suspended\', :reason, :admin_user_id, :listed_before)
+                ');
+                $historyStmt->execute([
+                    ':company_id' => $companyId,
+                    ':reason' => $reason,
+                    ':admin_user_id' => $adminUserId,
+                    ':listed_before' => $currentListed,
+                ]);
+            } else {
+                $historyStmt = $pdo->prepare('
+                    INSERT INTO company_reason_history
+                        (company_id, action_type, reason, admin_user_id)
+                    VALUES
+                        (:company_id, \'rejected\', :reason, :admin_user_id)
+                ');
+                $historyStmt->execute([
+                    ':company_id' => $companyId,
+                    ':reason' => $reason,
+                    ':admin_user_id' => $adminUserId,
+                ]);
+            }
+        }
+
+        /* Unsuspension restores the exact listing recorded at suspension
+           time, so it never makes a previously-hidden company public. */
+        if ($action === 'company_activate') {
+            $restore = $pdo->prepare('
+                SELECT listed_before
+                FROM company_reason_history
+                WHERE company_id = :company_id AND action_type = \'suspended\'
+                ORDER BY id DESC
+                LIMIT 1
+            ');
+            $restore->execute([':company_id' => $companyId]);
+            $listedBefore = $restore->fetchColumn();
+            if ($listedBefore !== false && $listedBefore !== null) {
+                $updList = $pdo->prepare('UPDATE companies SET listed = :listed WHERE id = :company_id');
+                $updList->execute([':listed' => (int) $listedBefore, ':company_id' => $companyId]);
+            }
+        }
+
+        /* In-app notification for the affected company owner, using the
+           existing notification helper inside the same transaction. The
            recipient is the company's real user (server-resolved), never a
            browser value. No email/SMS/Telegram is ever sent. */
         $label = $action === 'company_approve' ? 'approved'
             : ($action === 'company_reject' ? 'rejected'
             : ($action === 'company_suspend' ? 'suspended' : 'activated'));
 
+        $notificationBody = 'Your company "' . $row['name'] . '" was ' . $label . ' by the platform admin.';
+        if ($requiresReason) {
+            $notificationBody .= ' Reason: ' . $reason;
+        }
+
         createNotification(
             $pdo,
             (int) $row['user_id'],
             'general',
             'Company ' . $label,
-            'Your company "' . $row['name'] . '" was ' . $label . ' by the platform admin.',
+            $notificationBody,
             'admin-' . $action . '-' . $companyId
         );
 
@@ -805,7 +956,10 @@ $updCompany = $pdo->prepare('
  * 'listed' only controls public visibility (the passenger-facing Companies
  * page, company profile and search). It never touches the approval lifecycle:
  * an approved-but-unlisted company still signs in and operates normally.
- * Unlisted also does not block the admin overview/companies views.
+ *
+ * Listing may ONLY be toggled for companies that are approval_status='approved'
+ * AND account_status='active'. Suspended, rejected, and pending companies stay
+ * hidden regardless of the flag.
  */
 function update_company_listing(PDO $pdo, array $input, string $action): void
 {
@@ -815,13 +969,18 @@ function update_company_listing(PDO $pdo, array $input, string $action): void
     try {
         $pdo->beginTransaction();
 
-        $upd = $pdo->prepare('UPDATE companies SET listed = :listed WHERE id = :company_id');
-        $upd->execute([
-            ':listed' => $listed,
-            ':company_id' => $companyId,
-        ]);
+        $sel = $pdo->prepare('
+            SELECT c.id, c.name, c.status, c.listed, u.status AS account_status
+            FROM companies c
+            JOIN users u ON u.id = c.user_id
+            WHERE c.id = :company_id
+            LIMIT 1
+            FOR UPDATE
+        ');
+        $sel->execute([':company_id' => $companyId]);
+        $row = $sel->fetch();
 
-        if ($upd->rowCount() === 0) {
+        if ($row === false) {
             $pdo->rollBack();
             auth_response(404, [
                 'success' => false,
@@ -829,9 +988,21 @@ function update_company_listing(PDO $pdo, array $input, string $action): void
             ]);
         }
 
-        $name = $pdo->prepare('SELECT name FROM companies WHERE id = :company_id LIMIT 1');
-        $name->execute([':company_id' => $companyId]);
-        $companyName = (string) ($name->fetchColumn() ?: 'Company');
+        if ($row['status'] !== 'approved' || $row['account_status'] !== 'active') {
+            $pdo->rollBack();
+            auth_response(409, [
+                'success' => false,
+                'message' => 'Listing can only be changed for approved active companies.',
+            ]);
+        }
+
+        $upd = $pdo->prepare('UPDATE companies SET listed = :listed WHERE id = :company_id');
+        $upd->execute([
+            ':listed' => $listed,
+            ':company_id' => $companyId,
+        ]);
+
+        $companyName = (string) $row['name'];
 
         $pdo->commit();
     } catch (Throwable $e) {
@@ -856,11 +1027,15 @@ function update_company_listing(PDO $pdo, array $input, string $action): void
  * POST /api/admin.php?action=company_delete — permanently remove a company
  * and its owner account.
  *
- * Deleting a company cascades to its buses, routes, company_branches, trips,
- * reviews and booking_passengers/payments (via the bookings/trips chain in
- * schema.sql). The bookings table RESTRICTs on trips, so a company that has
- * any passenger booking rows cannot be deleted — this is the deliberate
- * safety valve that prevents destroying paid passenger history.
+ * The company's own rows (buses, routes, company_branches, trips, reviews,
+ * review_likes, notifications, company_reason_history) are deleted in FK-safe
+ * order inside one transaction. Trips are removed FIRST because schema.sql
+ * RESTRICTs trips.bus_id/trips.route_id, so a direct cascade from
+ * companies would be blocked as long as those trips still reference a bus or
+ * route. Passenger bookings are the deliberate safety valve: bookings table
+ * RESTRICTs on trips (and passengers), so a company that has any passenger
+ * booking rows cannot be deleted — this prevents destroying paid passenger
+ * history.
  */
 function delete_company(PDO $pdo, array $input): void
 {
@@ -896,6 +1071,20 @@ function delete_company(PDO $pdo, array $input): void
             ]);
         }
 
+        /* FK-safe child order: trips first (they RESTRICT bus/route deletes),
+           then buses/routes/branches, then the company, then the owner. */
+        $delTrips = $pdo->prepare('DELETE FROM trips WHERE company_id = :company_id');
+        $delTrips->execute([':company_id' => $companyId]);
+
+        $delBuses = $pdo->prepare('DELETE FROM buses WHERE company_id = :company_id');
+        $delBuses->execute([':company_id' => $companyId]);
+
+        $delRoutes = $pdo->prepare('DELETE FROM routes WHERE company_id = :company_id');
+        $delRoutes->execute([':company_id' => $companyId]);
+
+        $delBranches = $pdo->prepare('DELETE FROM company_branches WHERE company_id = :company_id');
+        $delBranches->execute([':company_id' => $companyId]);
+
         $delCompany = $pdo->prepare('DELETE FROM companies WHERE id = :company_id');
         $delCompany->execute([':company_id' => $companyId]);
 
@@ -927,9 +1116,9 @@ function require_admin_mutation(PDO $pdo, string $action): void
 {
     require_admin_post();
     $user = requireRole('admin');
-    unset($user);
+    $adminUserId = (int) $user['id'];
 
-    apply_company_status($pdo, admin_input(), $action);
+    apply_company_status($pdo, admin_input(), $action, $adminUserId);
 }
 try {
     $pdo = db();

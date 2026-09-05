@@ -141,7 +141,15 @@ function handle_list(): void
 
     $pdo = db();
 
-    $companyStmt = $pdo->prepare('SELECT id FROM companies WHERE id = :id LIMIT 1');
+    $companyStmt = $pdo->prepare('
+        SELECT c.id
+        FROM companies c
+        JOIN users u ON u.id = c.user_id
+        WHERE c.id = :id
+          AND c.status = \'approved\'
+          AND c.listed = 1
+          AND u.status = \'active\'
+        LIMIT 1');
     $companyStmt->execute([':id' => $companyId]);
     if ($companyStmt->fetch() === false) {
         auth_response(404, [
