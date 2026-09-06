@@ -1030,9 +1030,6 @@ function renderDetail(c) {
     function currentPassengersQuery() {
         var p = [];
         var q = byId('ad-passenger-search'); if (q && q.value.trim()) { p.push('q=' + encodeURIComponent(q.value.trim())); }
-        var st = byId('ad-passenger-status'); if (st && st.value) { p.push('status=' + encodeURIComponent(st.value)); }
-        var df = byId('ad-passenger-date-from'); if (df && df.value) { p.push('date_from=' + encodeURIComponent(df.value)); }
-        var dt = byId('ad-passenger-date-to'); if (dt && dt.value) { p.push('date_to=' + encodeURIComponent(dt.value)); }
         return p.length ? '&' + p.join('&') : '';
     }
 
@@ -1702,8 +1699,7 @@ function renderDetail(c) {
 
         var applyTrips = byId('btn-apply-trips'); if (applyTrips) { applyTrips.addEventListener('click', loadTrips); }
         var refreshTrips = byId('btn-refresh-trips'); if (refreshTrips) { refreshTrips.addEventListener('click', loadTrips); }
-        var applyPass = byId('btn-apply-passengers'); if (applyPass) { applyPass.addEventListener('click', loadPassengers); }
-        var refreshPass = byId('btn-refresh-passengers'); if (refreshPass) { refreshPass.addEventListener('click', loadPassengers); }
+        var searchPass = byId('btn-search-passengers'); if (searchPass) { searchPass.addEventListener('click', loadPassengers); }
 
         var manClose = byId('ad-manifest-close'); if (manClose) { manClose.addEventListener('click', closeManifest); }
         var manModal = byId('ad-manifest-modal');

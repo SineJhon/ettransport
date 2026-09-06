@@ -403,32 +403,13 @@
                         <label for="ad-passenger-search">Search</label>
                         <input type="search" id="ad-passenger-search" placeholder="Name, email or phone">
                     </div>
-                    <div class="ad-filter-field">
-                        <label for="ad-passenger-status">Account Status</label>
-                        <select id="ad-passenger-status">
-                            <option value="">All</option>
-                            <option value="active">Active</option>
-                            <option value="pending">Pending</option>
-                            <option value="suspended">Suspended</option>
-                            <option value="rejected">Rejected</option>
-                        </select>
-                    </div>
-                    <div class="ad-filter-field">
-                        <label for="ad-passenger-date-from">From</label>
-                        <input type="date" id="ad-passenger-date-from">
-                    </div>
-                    <div class="ad-filter-field">
-                        <label for="ad-passenger-date-to">To</label>
-                        <input type="date" id="ad-passenger-date-to">
-                    </div>
-                    <button type="button" id="btn-apply-passengers" class="btn btn-secondary btn-sm">Apply</button>
-                    <button type="button" id="btn-refresh-passengers" class="btn btn-secondary btn-sm">Refresh</button>
+                    <button type="button" id="btn-search-passengers" class="btn btn-secondary btn-sm">Search</button>
                 </div>
             </div>
 
             <p id="ad-passengers-loading" class="auth-identity" hidden>Loading registered passengers&hellip;</p>
             <div id="ad-passengers-error" class="auth-message" hidden></div>
-            <div id="ad-passengers-empty" class="ad-empty" hidden>No passengers match the current filter.</div>
+            <div id="ad-passengers-empty" class="ad-empty" hidden>No passengers found.</div>
 
             <div class="ad-table-wrap">
                 <table class="ad-table" id="ad-passengers-table">
