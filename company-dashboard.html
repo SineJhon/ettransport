@@ -231,10 +231,6 @@
         .cd-revenue-head h2 { font-size: 1.2rem; color: var(--color-dark); margin: 0; }
         .cd-revenue-msg { color: var(--color-muted); font-size: 0.9rem; }
         .cd-revenue-error { margin-top: 0.5rem; }
-        .cd-revenue-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-sm); margin-top: var(--space-sm); }
-        .cd-rev-stat { padding: 0.85rem 1rem; border: 1px solid #e5e7eb; border-radius: 10px; text-align: center; }
-        .cd-rev-value { display: block; font-size: 1.4rem; font-weight: 800; color: var(--color-dark); }
-        .cd-rev-label { display: block; font-size: 0.7rem; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.04em; }
         .cd-revenue-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin-top: var(--space-sm); }
         .cd-revenue-filters label { font-size: 0.8rem; font-weight: 600; color: var(--color-dark); }
         .cd-revenue-filters select, .cd-revenue-filters input { padding: 0.4rem 0.6rem; font-size: 0.85rem; border: 1px solid #cbd5e1; border-radius: 6px; }
@@ -253,8 +249,6 @@
         .cd-payment-badge.pending { background: #d97706; }
         .cd-payment-badge.failed { background: #dc2626; }
         .cd-payment-badge.refunded { background: #6b7280; }
-        @media (max-width: 768px) { .cd-revenue-summary { grid-template-columns: repeat(2, 1fr); } }
-
         /* ===== Revenue overview modal (migrated from the admin Revenue detail) ===== */
         .cd-revenue-head-actions { display: flex; align-items: center; gap: 0.5rem; }
         .cd-revenue-overview-modal { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.55); z-index: 106; padding: 1rem; }
@@ -484,12 +478,12 @@
         .cd-pane .cd-banner { margin: 0 0 1.2rem; padding: 1rem; background: linear-gradient(110deg, #eef8f2, #f9fcfa); border: 1px solid #dcece3; border-radius: 14px; }
         .cd-pane .cd-name { font: 700 1.4rem/1.1 Georgia, 'Times New Roman', serif; color: #173b34; }
         .cd-pane .cd-logo { border-radius: 12px; border-color: #d6e5dc; }
-        .cd-pane .cd-stats { grid-template-columns: repeat(5, minmax(0,1fr)); gap: .75rem; margin-top: 0; }.cd-pane .cd-revenue-summary { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .75rem; margin-top: 0; }
-        .cd-pane .cd-stat, .cd-pane .cd-rev-stat { position: relative; overflow: hidden; padding: 1rem; border: 1px solid #e0eae4; border-radius: 12px; background: #fff; text-align: left; }
+        .cd-pane .cd-stats { grid-template-columns: repeat(5, minmax(0,1fr)); gap: .75rem; margin-top: 0; }
+        .cd-pane .cd-stat { position: relative; overflow: hidden; padding: 1rem; border: 1px solid #e0eae4; border-radius: 12px; background: #fff; text-align: left; }
         .cd-pane .cd-stat::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: #31a476; }
         .cd-pane .cd-stat:nth-child(2)::before { background: #e3a73a; }.cd-pane .cd-stat:nth-child(3)::before { background: #3a82c5; }.cd-pane .cd-stat:nth-child(4)::before { background: #9b6dcc; }.cd-pane .cd-stat:nth-child(5)::before { background: #df785f; }
-        .cd-pane .cd-stat-value, .cd-pane .cd-rev-value { font: 700 1.45rem/1.1 Georgia, 'Times New Roman', serif; color: #183d35; }
-        .cd-pane .cd-stat-label, .cd-pane .cd-rev-label { margin-top: .36rem; font-size: .65rem; color: #6a7d75; }
+        .cd-pane .cd-stat-value { font: 700 1.45rem/1.1 Georgia, 'Times New Roman', serif; color: #183d35; }
+        .cd-pane .cd-stat-label { margin-top: .36rem; font-size: .65rem; color: #6a7d75; }
         .cd-quick-actions { display: grid; grid-template-columns: repeat(4,1fr); gap: .75rem; margin-top: 1.2rem; }
         .cd-quick-action { display: flex; align-items: center; gap: .75rem; padding: .9rem; color: #1b473e; background: #f7faf8; border: 1px solid #e1ebe5; border-radius: 12px; cursor: pointer; text-align: left; }
         .cd-quick-action:hover { background: #eef8f2; border-color: #b8dbca; }.cd-quick-action span { display: block; font-weight: 700; }.cd-quick-action small { display: block; margin-top: .18rem; color: #70817a; }
@@ -500,13 +494,13 @@
         .cd-pane .cd-bus-card:hover, .cd-pane .cd-trip-card:hover, .cd-pane .cd-booking-card:hover, .cd-pane .cd-payment-card:hover, .cd-pane .cd-route-card:hover { transform: translateY(-2px); box-shadow: 0 9px 20px rgba(19,63,51,.08); }
         .cd-pane .btn-primary { background: #177550; border-color: #177550; }.cd-pane .btn-primary:hover { background: #105c3e; border-color: #105c3e; }
         .cd-pane input, .cd-pane select, .cd-pane textarea { border-color: #ccdcd3; border-radius: 8px; }.cd-pane input:focus, .cd-pane select:focus, .cd-pane textarea:focus { outline: 3px solid rgba(49,164,118,.16); border-color: #31a476; }
-        @media (max-width: 900px) { .cd-layout { grid-template-columns: 1fr; }.cd-sidebar { position: static; }.cd-nav { grid-template-columns: repeat(7, minmax(9rem,1fr)); overflow-x: auto; }.cd-nav button { white-space: nowrap; }.cd-pane .cd-stats, .cd-pane .cd-revenue-summary { grid-template-columns: repeat(3, 1fr); } }
-        @media (max-width: 600px) { .cd-page { padding: 1.15rem 0 2rem; }.cd-workspace-head { align-items: flex-start; flex-direction: column; gap: .75rem; }.cd-workspace-head h1 { font-size: 2rem; }.cd-live { padding: .4rem .65rem; border-radius: 99px; background: #e7f4ec; }.cd-sidebar, .cd-pane { border-radius: 14px; }.cd-nav { grid-template-columns: repeat(7, max-content); }.cd-nav button { padding: .66rem; }.cd-nav button span { display: none; }.cd-pane { padding: 1rem; }.cd-pane .cd-stats, .cd-pane .cd-revenue-summary, .cd-quick-actions { grid-template-columns: repeat(2, 1fr); }.cd-quick-action { align-items: flex-start; }.cd-pane .cd-stat-value, .cd-pane .cd-rev-value { font-size: 1.2rem; } }
+        @media (max-width: 900px) { .cd-layout { grid-template-columns: 1fr; }.cd-sidebar { position: static; }.cd-nav { grid-template-columns: repeat(7, minmax(9rem,1fr)); overflow-x: auto; }.cd-nav button { white-space: nowrap; }.cd-pane .cd-stats { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 600px) { .cd-page { padding: 1.15rem 0 2rem; }.cd-workspace-head { align-items: flex-start; flex-direction: column; gap: .75rem; }.cd-workspace-head h1 { font-size: 2rem; }.cd-live { padding: .4rem .65rem; border-radius: 99px; background: #e7f4ec; }.cd-sidebar, .cd-pane { border-radius: 14px; }.cd-nav { grid-template-columns: repeat(7, max-content); }.cd-nav button { padding: .66rem; }.cd-nav button span { display: none; }.cd-pane { padding: 1rem; }.cd-pane .cd-stats, .cd-quick-actions { grid-template-columns: repeat(2, 1fr); }.cd-quick-action { align-items: flex-start; }.cd-pane .cd-stat-value { font-size: 1.2rem; } }
 
         /* ===== Operational records refresh: strong sans-serif system ===== */
         .cd-workspace, .cd-workspace * { font-family: 'DM Sans', 'Segoe UI', sans-serif; }
-        .cd-workspace-head h1, .cd-pane-title h2, .cd-pane .cd-name, .cd-pane .cd-fleet-head h2, .cd-pane .cd-trips-head h2, .cd-pane .cd-bookings-head h2, .cd-pane .cd-revenue-head h2, .cd-pane .cd-profile-head h2, .cd-pane .cd-routes-head h2, .cd-pane .cd-stat-value, .cd-pane .cd-rev-value { font-family: 'Outfit', 'Segoe UI', sans-serif; font-weight: 800; letter-spacing: -.035em; }
-        .cd-pane .cd-stat-value, .cd-pane .cd-rev-value { font-size: 1.55rem; }
+        .cd-workspace-head h1, .cd-pane-title h2, .cd-pane .cd-name, .cd-pane .cd-fleet-head h2, .cd-pane .cd-trips-head h2, .cd-pane .cd-bookings-head h2, .cd-pane .cd-revenue-head h2, .cd-pane .cd-profile-head h2, .cd-pane .cd-routes-head h2, .cd-pane .cd-stat-value { font-family: 'Outfit', 'Segoe UI', sans-serif; font-weight: 800; letter-spacing: -.035em; }
+        .cd-pane .cd-stat-value { font-size: 1.55rem; }
         .cd-record-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: .45rem; margin: .9rem 0; }.cd-record-meta span { display: block; min-width: 0; padding: .55rem .6rem; color: #547067; background: #f4f8f6; border-radius: 8px; font-size: .73rem; font-weight: 700; }.cd-record-meta b { display: block; overflow: hidden; color: #1d483d; font-size: .84rem; text-overflow: ellipsis; white-space: nowrap; }
         .cd-pane .cd-bus-list, .cd-pane .cd-trip-list { grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 1rem; }.cd-pane .cd-bus-card, .cd-pane .cd-trip-card { padding: 1.1rem; border-top: 4px solid #3aa377; }.cd-pane .cd-trip-card { border-top-color: #4f82b6; }.cd-pane .cd-bus-name, .cd-pane .cd-trip-route { color: #153a31; font-size: 1rem; font-weight: 800; letter-spacing: -.01em; }.cd-pane .cd-bus-actions, .cd-pane .cd-trip-actions { padding-top: .75rem; border-top: 1px solid #e8efeb; }.cd-pane .cd-bus-actions select { flex: 1; min-width: 8.5rem; }
         .cd-trips { border: 0 !important; margin: 0 !important; padding: 0 !important; }.cd-bookings { padding-top: 1.5rem !important; margin-top: 1.5rem !important; }
@@ -1188,42 +1182,6 @@
             <p id="revenue-loading" class="cd-revenue-msg" hidden>Loading your revenue&hellip;</p>
             <div id="revenue-error" class="cd-revenue-error auth-message" hidden></div>
 
-            <!-- A. Revenue summary cards -->
-            <section id="revenue-summary" class="cd-revenue-summary" hidden>
-                <div class="cd-rev-stat">
-                    <span class="cd-rev-value" id="rev-grossPaidRevenue">0</span>
-                    <span class="cd-rev-label">Gross Paid (ETB)</span>
-                </div>
-                <div class="cd-rev-stat">
-                    <span class="cd-rev-value" id="rev-refundsPaid">0</span>
-                    <span class="cd-rev-label">Refunds Paid (ETB)</span>
-                </div>
-                <div class="cd-rev-stat">
-                    <span class="cd-rev-value" id="rev-netRevenue">0</span>
-                    <span class="cd-rev-label">Net Revenue (ETB)</span>
-                </div>
-                <div class="cd-rev-stat">
-                    <span class="cd-rev-value" id="rev-paidPayments">0</span>
-                    <span class="cd-rev-label">Paid Payments</span>
-                </div>
-                <div class="cd-rev-stat">
-                    <span class="cd-rev-value" id="rev-refundedPayments">0</span>
-                    <span class="cd-rev-label">Refunded Payments</span>
-                </div>
-                <div class="cd-rev-stat">
-                    <span class="cd-rev-value" id="rev-noRefundCancellations">0</span>
-                    <span class="cd-rev-label">No-refund Cancellations</span>
-                </div>
-                <div class="cd-rev-stat">
-                    <span class="cd-rev-value" id="rev-halfRefunds">0</span>
-                    <span class="cd-rev-label">Half Refunds</span>
-                </div>
-                <div class="cd-rev-stat">
-                    <span class="cd-rev-value" id="rev-fullRefunds">0</span>
-                    <span class="cd-rev-label">Full Refunds</span>
-                </div>
-            </section>
-
             <div class="cd-passenger-filter cd-revenue-filter" aria-label="Filter revenue payments">
                 <div class="cd-day-picker">
                     <div class="cd-date-head"><strong>Departure date</strong><p id="revenue-date-label" class="cd-selected-date">All upcoming departure dates</p></div>
@@ -1622,6 +1580,6 @@
 
     <script src="js/main.js"></script>
     <script src="js/auth.js"></script>
-    <script src="js/company-dashboard.js?v=20260906-revenue-overview"></script>
+    <script src="js/company-dashboard.js?v=20260907-no-summary-cards"></script>
 </body>
 </html>

@@ -1640,7 +1640,6 @@
                    stat card, the Revenue / Payments tab and the booking list. */
                 loadTrips();
                 loadBookings();
-                loadRevenueSummary();
                 loadPayments();
                 loadOverview();
             })
@@ -2136,7 +2135,6 @@
                 }
                 closeCancelBookingModal();
                 loadBookings();
-                loadRevenueSummary();
                 var notice = data.message || 'Booking cancelled successfully.';
                 var info = byId('booking-error');
                 if (info) {
@@ -2767,7 +2765,6 @@
                 }
                 closeWalkInBookingForm();
                 loadBookings();
-                loadRevenueSummary();
                 loadPayments();
                 var notice = data.message || 'Office booking created.';
                 var info = byId('booking-error');
@@ -2988,20 +2985,6 @@
         if (el) { el.textContent = value; }
     }
 
-    function renderRevenueSummary(rev) {
-        rev = rev || {};
-        setRevStat('rev-grossPaidRevenue', formatMoney(rev.gross_paid_revenue));
-        setRevStat('rev-refundsPaid', formatMoney(rev.refunds_paid));
-        setRevStat('rev-netRevenue', formatMoney(rev.net_revenue));
-        setRevStat('rev-paidPayments', rev.paid_payment_count == null ? 0 : rev.paid_payment_count);
-        setRevStat('rev-refundedPayments', rev.refunded_payment_count == null ? 0 : rev.refunded_payment_count);
-        setRevStat('rev-noRefundCancellations', rev.no_refund_cancellation_count == null ? 0 : rev.no_refund_cancellation_count);
-        setRevStat('rev-halfRefunds', rev.half_refund_count == null ? 0 : rev.half_refund_count);
-        setRevStat('rev-fullRefunds', rev.full_refund_count == null ? 0 : rev.full_refund_count);
-        var box = byId('revenue-summary');
-        if (box) { box.hidden = false; }
-    }
-
     function renderPayments(payments) {
         var loading = byId('payment-loading'); if (loading) { loading.hidden = true; }
         var error = byId('revenue-error'); if (error) { error.hidden = true; }
@@ -3094,37 +3077,6 @@
         function paymentsFilterUrl() {
         var url = 'api/company.php?action=payments';
         return url;
-    }
-
-    var revenueRequestId = 0;   // discards responses from superseded revenue requests
-
-    function loadRevenueSummary() {
-        var rid = ++revenueRequestId;
-        fetch('api/company.php?action=revenue', {
-            method: 'GET',
-            credentials: 'same-origin',
-            headers: { 'Accept': 'application/json' }
-        })
-            .then(function (res) {
-                return res.json().catch(function () {
-                    return { success: false, message: 'Invalid server response.' };
-                }).then(function (json) {
-                    return { ok: res.ok, status: res.status, data: json };
-                });
-            })
-            .then(function (result) {
-                if (rid !== revenueRequestId) { return; }
-                var data = result.data || {};
-                if (!result.ok || result.status !== 200 || !data.success) {
-                    showRevenueError(data.message || 'Unable to load your revenue summary.');
-                    return;
-                }
-                renderRevenueSummary(data.revenue);
-            })
-            .catch(function () {
-                if (rid !== revenueRequestId) { return; }
-                showRevenueError('Network error while loading your revenue.');
-            });
     }
 
     /* ---------- Revenue overview modal (migrated from the admin Revenue detail) ---------- */
@@ -4054,7 +4006,6 @@ function submitBranchForm() {
     }
 
     function refreshRevenue() {
-        loadRevenueSummary();
         loadRevenueTripOptions();
         loadPayments();
     }
@@ -4067,7 +4018,6 @@ function submitBranchForm() {
         loadTrips();
         loadBookingTripOptions();
         loadBookings();
-        loadRevenueSummary();
         loadRevenueTripOptions();
         populateRevenueOverviewYears();
         loadPayments();
