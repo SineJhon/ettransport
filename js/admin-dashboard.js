@@ -1039,7 +1039,6 @@ function renderDetail(c) {
         var rid = ++adPassengersRequestId;
         show(byId('ad-passengers-loading'));
         hide(byId('ad-passengers-error'));
-        hide(byId('ad-passengers-empty'));
         fetch('api/admin.php?action=passengers' + currentPassengersQuery(), {
             method: 'GET',
             credentials: 'same-origin',
@@ -1069,9 +1068,10 @@ function renderDetail(c) {
 
     function renderPassengers(passengers) {
         var body = byId('ad-passengers-rows');
-        var empty = byId('ad-passengers-empty');
-        if (!passengers.length) { body.innerHTML = ''; show(empty); return; }
-        hide(empty);
+        if (!passengers.length) {
+            body.innerHTML = '<tr><td colspan="7" class="ad-muted">No passengers found.</td></tr>';
+            return;
+        }
         var html = '';
         passengers.forEach(function (p) {
             html += '<tr data-passenger-id="' + p.id + '">' +
