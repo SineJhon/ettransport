@@ -689,6 +689,320 @@ function handle_admin_manifest(PDO $pdo): void
         'passengers' => $passengers,
     ]);
 }
+/* GET /api/admin.php?action=passengers — registered website passenger accounts
+   (admin only). Office / walk-in booking accounts (synthetic walkin-*@ettransport.local
+   users auto-created by api/company.php) are excluded — this list is for
+   website-registered passenger owners only. Neither password hashes nor any
+   authentication internals are ever included. */
+function handle_admin_passengers(PDO $pdo): void
+{
+    if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
+        auth_response(405, ['success' => false, 'message' => 'Method not allowed.']);
+    }
+
+    requireRole('admin');
+
+    $search = trim((string) ($_GET['q'] ?? ''));
+    if (strlen($search) > 120) {
+        auth_response(422, ['success' => false, 'message' => 'Search text must be at most 120 characters.']);
+    }
+    $status = admin_filter_enum($_GET['status'] ?? null, ['active', 'pending', 'suspended', 'rejected'], 'A valid passenger account status is required.');
+    $dateFrom = admin_filter_date($_GET['date_from'] ?? null, 'A valid date_from (YYYY-MM-DD) is required.');
+    $dateTo = admin_filter_date($_GET['date_to'] ?? null, 'A valid date_to (YYYY-MM-DD) is required.');
+
+    if ($dateFrom !== null && $dateTo !== null && strcmp($dateFrom, $dateTo) > 0) {
+        auth_response(422, ['success' => false, 'message' => 'date_from must not be after date_to.']);
+    }
+
+    $sql = '
+        SELECT
+            u.id,
+            u.name,
+            u.email,
+            u.phone,
+            u.role,
+            u.status,
+            u.created_at,
+            u.updated_at,
+            (SELECT COUNT(*) FROM bookings bk WHERE bk.passenger_id = u.id) AS booking_count,
+            (SELECT COUNT(*) FROM reviews rv WHERE rv.passenger_id = u.id) AS review_count,
+            COALESCE((SELECT SUM(bk2.total_amount)
+                        FROM bookings bk2
+                       WHERE bk2.passenger_id = u.id
+                         AND bk2.payment_status = \'paid\'), 0) AS total_spent
+        FROM users u
+        WHERE u.role = \'passenger\'
+          AND u.email NOT LIKE \'walkin-%@ettransport.local\'
+    ';
+    $params = [];
+
+    if ($search !== '') {
+        $sql .= ' AND (u.name LIKE :search1 OR u.email LIKE :search2 OR u.phone LIKE :search3)';
+        $params[':search1'] = '%' . $search . '%';
+        $params[':search2'] = '%' . $search . '%';
+        $params[':search3'] = '%' . $search . '%';
+    }
+    if ($status !== null) { $sql .= ' AND u.status = :status'; $params[':status'] = $status; }
+    if ($dateFrom !== null) { $sql .= ' AND u.created_at >= :date_from'; $params[':date_from'] = $dateFrom . ' 00:00:00'; }
+    if ($dateTo !== null) {
+        $sql .= ' AND u.created_at < :date_to_excl';
+        $params[':date_to_excl'] = date('Y-m-d', strtotime($dateTo . ' +1 day')) . ' 00:00:00';
+    }
+    $sql .= ' ORDER BY u.created_at DESC, u.id DESC';
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+
+    $passengers = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $passengers[] = [
+            'id' => (int) $row['id'],
+            'name' => $row['name'],
+            'email' => $row['email'],
+            'phone' => $row['phone'],
+            'role' => $row['role'],
+            'status' => $row['status'],
+            'booking_count' => (int) $row['booking_count'],
+            'review_count' => (int) $row['review_count'],
+            'total_spent' => round((float) $row['total_spent'], 2),
+            'created_at' => $row['created_at'],
+            'updated_at' => $row['updated_at'],
+        ];
+    }
+
+    auth_response(200, [
+        'success' => true,
+        'passengers' => $passengers,
+    ]);
+}
+
+/* GET /api/admin.php?action=passenger&id=N — one passenger's admin detail
+   (admin only). Same website-registered-user rule as the list: office /
+   walk-in synthetic accounts are excluded with a 404. The detail bundles
+   account info, bookings, reviews, refunds and liked companies so the admin
+   popup can render them in one round trip. */
+function handle_admin_passenger(PDO $pdo): void
+{
+    if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
+        auth_response(405, ['success' => false, 'message' => 'Method not allowed.']);
+    }
+
+    requireRole('admin');
+
+    $userId = admin_company_id_or_error($_GET['id'] ?? null, 'A valid passenger id is required.');
+
+    $stmt = $pdo->prepare('
+        SELECT u.id, u.name, u.email, u.phone, u.role, u.status, u.created_at, u.updated_at
+        FROM users u
+        WHERE u.id = :id
+          AND u.role = :role
+          AND u.email NOT LIKE \'walkin-%@ettransport.local\'
+        LIMIT 1
+    ');
+    $stmt->execute([':id' => $userId, ':role' => 'passenger']);
+    $user = $stmt->fetch();
+
+    if ($user === false) {
+        auth_response(404, ['success' => false, 'message' => 'Passenger not found.']);
+    }
+
+    $ids = [':id1' => $userId, ':id2' => $userId, ':id3' => $userId, ':id4' => $userId, ':id5' => $userId, ':id6' => $userId];
+    $pid = [':passenger_id' => $userId];
+
+    /* Aggregate counters. */
+    $agg = $pdo->prepare('
+        SELECT
+            (SELECT COUNT(*) FROM bookings bk WHERE bk.passenger_id = :id1) AS booking_count,
+            (SELECT COUNT(*) FROM reviews rv WHERE rv.passenger_id = :id2) AS review_count,
+            (SELECT COUNT(*) FROM bookings bk WHERE bk.passenger_id = :id3 AND bk.refund_type <> \'none\') AS refund_count,
+            COALESCE((SELECT SUM(bk2.refunded_amount)
+                        FROM bookings bk2
+                       WHERE bk2.passenger_id = :id4
+                         AND bk2.refund_type <> \'none\'), 0) AS refund_total,
+            (SELECT COUNT(DISTINCT r2.company_id)
+               FROM review_likes rl2
+               JOIN reviews r2 ON r2.id = rl2.review_id
+              WHERE rl2.user_id = :id5) AS liked_company_count,
+            COALESCE((SELECT SUM(bk3.total_amount)
+                        FROM bookings bk3
+                       WHERE bk3.passenger_id = :id6
+                         AND bk3.payment_status = \'paid\'), 0) AS total_spent
+    ');
+    $agg->execute($ids);
+    $a = $agg->fetch();
+
+    /* Recent bookings (newest first). The manifest modal reuses the same
+       booking id the rest of the platform uses. */
+    $bs = $pdo->prepare('
+        SELECT
+            b.id,
+            b.booking_reference,
+            t.company_id,
+            c.name             AS company_name,
+            r.from_city        AS route_from,
+            r.to_city          AS route_to,
+            t.departure_date,
+            t.departure_time,
+            b.booking_status,
+            b.payment_status,
+            b.total_amount,
+            b.refund_type,
+            b.refunded_amount,
+            b.created_at
+        FROM bookings b
+        JOIN trips t     ON t.id = b.trip_id
+        JOIN companies c ON c.id = t.company_id
+        JOIN routes r    ON r.id = t.route_id
+        WHERE b.passenger_id = :passenger_id
+        ORDER BY b.created_at DESC, b.id DESC
+        LIMIT 60
+    ');
+    $bs->execute($pid);
+    $bookings = [];
+    foreach ($bs->fetchAll() as $b) {
+        $bookings[] = [
+            'id' => (int) $b['id'],
+            'booking_reference' => $b['booking_reference'],
+            'company_id' => (int) $b['company_id'],
+            'company_name' => $b['company_name'],
+            'route_from' => $b['route_from'],
+            'route_to' => $b['route_to'],
+            'departure_date' => $b['departure_date'],
+            'departure_time' => $b['departure_time'],
+            'booking_status' => $b['booking_status'],
+            'payment_status' => $b['payment_status'],
+            'total_amount' => (float) $b['total_amount'],
+            'refund_type' => $b['refund_type'],
+            'refunded_amount' => $b['refunded_amount'] !== null ? (float) $b['refunded_amount'] : null,
+            'created_at' => $b['created_at'],
+        ];
+    }
+
+    /* Reviews written by this passenger. */
+    $rs = $pdo->prepare('
+        SELECT
+            rv.id,
+            rv.company_id,
+            c.name          AS company_name,
+            rv.rating,
+            rv.comment,
+            rv.status,
+            rv.likes,
+            rv.reply,
+            rv.created_at
+        FROM reviews rv
+        JOIN companies c ON c.id = rv.company_id
+        WHERE rv.passenger_id = :passenger_id
+        ORDER BY rv.created_at DESC, rv.id DESC
+    ');
+    $rs->execute($pid);
+    $reviews = [];
+    foreach ($rs->fetchAll() as $r) {
+        $reviews[] = [
+            'id' => (int) $r['id'],
+            'company_id' => (int) $r['company_id'],
+            'company_name' => $r['company_name'],
+            'rating' => (int) $r['rating'],
+            'comment' => $r['comment'],
+            'status' => $r['status'],
+            'likes' => (int) $r['likes'],
+            'reply' => $r['reply'],
+            'created_at' => $r['created_at'],
+        ];
+    }
+
+    /* Refunded bookings (derived from the bookings the passenger owns). */
+    $fs = $pdo->prepare('
+        SELECT
+            b.id,
+            b.booking_reference,
+            b.refund_type,
+            b.refunded_amount,
+            b.booking_status,
+            b.payment_status,
+            c.name             AS company_name,
+            r.from_city        AS route_from,
+            r.to_city          AS route_to,
+            b.created_at
+        FROM bookings b
+        JOIN trips t     ON t.id = b.trip_id
+        JOIN companies c ON c.id = t.company_id
+        JOIN routes r    ON r.id = t.route_id
+        WHERE b.passenger_id = :passenger_id
+          AND b.refund_type <> \'none\'
+        ORDER BY b.created_at DESC, b.id DESC
+    ');
+    $fs->execute($pid);
+    $refunds = [];
+    foreach ($fs->fetchAll() as $f) {
+        $refunds[] = [
+            'id' => (int) $f['id'],
+            'booking_reference' => $f['booking_reference'],
+            'refund_type' => $f['refund_type'],
+            'refunded_amount' => $f['refunded_amount'] !== null ? (float) $f['refunded_amount'] : null,
+            'booking_status' => $f['booking_status'],
+            'payment_status' => $f['payment_status'],
+            'company_name' => $f['company_name'],
+            'route_from' => $f['route_from'],
+            'route_to' => $f['route_to'],
+            'created_at' => $f['created_at'],
+        ];
+    }
+
+    /* Companies the passenger liked (through their liked reviews) — one row per company. */
+    $ls = $pdo->prepare('
+        SELECT
+            c.id,
+            c.name,
+            c.slug,
+            c.logo,
+            MAX(rl.created_at)                    AS liked_at,
+            COUNT(rl.id)                          AS liked_review_count
+        FROM review_likes rl
+        JOIN reviews r2   ON r2.id = rl.review_id
+        JOIN companies c  ON c.id = r2.company_id
+        WHERE rl.user_id = :passenger_id
+        GROUP BY c.id, c.name, c.slug, c.logo
+        ORDER BY liked_at DESC, c.name ASC
+    ');
+    $ls->execute($pid);
+    $likedCompanies = [];
+    foreach ($ls->fetchAll() as $l) {
+        $likedCompanies[] = [
+            'id' => (int) $l['id'],
+            'name' => $l['name'],
+            'slug' => $l['slug'],
+            'logo' => $l['logo'],
+            'liked_at' => $l['liked_at'],
+            'liked_review_count' => (int) $l['liked_review_count'],
+        ];
+    }
+
+    auth_response(200, [
+        'success' => true,
+        'passenger' => [
+            'id' => (int) $user['id'],
+            'name' => $user['name'],
+            'email' => $user['email'],
+            'phone' => $user['phone'],
+            'role' => $user['role'],
+            'status' => $user['status'],
+            'booking_count' => (int) ($a['booking_count'] ?? 0),
+            'review_count' => (int) ($a['review_count'] ?? 0),
+            'refund_count' => (int) ($a['refund_count'] ?? 0),
+            'refund_total' => round((float) ($a['refund_total'] ?? 0), 2),
+            'liked_company_count' => (int) ($a['liked_company_count'] ?? 0),
+            'total_spent' => round((float) ($a['total_spent'] ?? 0), 2),
+            'created_at' => $user['created_at'],
+            'updated_at' => $user['updated_at'],
+        ],
+        'bookings' => $bookings,
+        'reviews' => $reviews,
+        'refunds' => $refunds,
+        'liked_companies' => $likedCompanies,
+    ]);
+}
+
 /**
  * POST /api/admin.php?action=company_* — one atomic lifecycle transition.
  *
@@ -1161,6 +1475,14 @@ try {
         handle_admin_bookings($pdo);
     }
 
+    if ($action === 'passengers') {
+        handle_admin_passengers($pdo);
+    }
+
+    if ($action === 'passenger') {
+        handle_admin_passenger($pdo);
+    }
+
     if ($action === 'manifest') {
         handle_admin_manifest($pdo);
     }
@@ -1199,7 +1521,7 @@ try {
 
     auth_response(400, [
         'success' => false,
-        'message' => 'Unsupported action. Use action=overview, action=companies, action=company, action=trips, action=bookings, action=manifest, action=company_approve, action=company_reject, action=company_suspend, action=company_activate, action=company_list, action=company_unlist or action=company_delete.',
+        'message' => 'Unsupported action. Use action=overview, action=companies, action=company, action=trips, action=bookings, action=passengers, action=passenger, action=manifest, action=company_approve, action=company_reject, action=company_suspend, action=company_activate, action=company_list, action=company_unlist or action=company_delete.',
     ]);
 } catch (Throwable $e) {
     auth_response(500, [

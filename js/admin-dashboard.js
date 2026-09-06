@@ -753,7 +753,7 @@ function renderDetail(c) {
         hide(byId('section-detail'));
 
         /* If this leaves no main section visible, fall back to Companies. */
-        var anyVisible = ['section-overview', 'section-companies', 'section-trips', 'section-bookings', 'section-reviews'].some(function (id) {
+        var anyVisible = ['section-overview', 'section-companies', 'section-trips', 'section-passengers', 'section-reviews'].some(function (id) {
             var el = byId(id);
             return el && !el.hidden;
         });
@@ -882,7 +882,7 @@ function renderDetail(c) {
     var sectionMap = {
         overview: ['section-overview'],
         companies: ['section-companies'],
-        passengers: ['section-bookings'],
+        passengers: ['section-passengers'],
         revenue: ['section-trips'],
         reviews: ['section-reviews']
     };
@@ -898,7 +898,7 @@ function renderDetail(c) {
 
     function switchSection(name) {
         var map = sectionMap[name] || ['section-overview', 'section-companies'];
-        var all = ['section-overview', 'section-companies', 'section-detail', 'section-trips', 'section-bookings', 'section-reviews'];
+        var all = ['section-overview', 'section-companies', 'section-detail', 'section-trips', 'section-passengers', 'section-reviews'];
         for (var i = 0; i < all.length; i++) {
             hide(byId(all[i]));
         }
@@ -921,7 +921,7 @@ function renderDetail(c) {
         }
 
         if (name === 'revenue') { loadTrips(); }
-        if (name === 'passengers') { loadBookings(); }
+        if (name === 'passengers') { loadPassengers(); }
         if (name === 'reviews') { renderReviews(); }
     }
 
@@ -946,7 +946,7 @@ function renderDetail(c) {
         }).then(parseJson).then(function (result) {
             var data = result.data || {};
             var list = data.companies || [];
-            ['ad-trip-company', 'ad-booking-company'].forEach(function (id) {
+            ['ad-trip-company'].forEach(function (id) {
                 var sel = byId(id);
                 if (!sel) { return; }
                 sel.innerHTML = '<option value="">All companies</option>';
@@ -1027,73 +1027,242 @@ function renderDetail(c) {
         body.innerHTML = html;
     }
 
-    function currentBookingsQuery() {
+    function currentPassengersQuery() {
         var p = [];
-        var co = byId('ad-booking-company'); if (co && co.value) { p.push('company_id=' + encodeURIComponent(co.value)); }
-        var tr = byId('ad-booking-trip'); if (tr && tr.value) { p.push('trip_id=' + encodeURIComponent(tr.value)); }
-        var bs = byId('ad-booking-status'); if (bs && bs.value) { p.push('booking_status=' + encodeURIComponent(bs.value)); }
-        var ps = byId('ad-payment-status'); if (ps && ps.value) { p.push('payment_status=' + encodeURIComponent(ps.value)); }
-        var df = byId('ad-booking-date-from'); if (df && df.value) { p.push('date_from=' + encodeURIComponent(df.value)); }
-        var dt = byId('ad-booking-date-to'); if (dt && dt.value) { p.push('date_to=' + encodeURIComponent(dt.value)); }
+        var q = byId('ad-passenger-search'); if (q && q.value.trim()) { p.push('q=' + encodeURIComponent(q.value.trim())); }
+        var st = byId('ad-passenger-status'); if (st && st.value) { p.push('status=' + encodeURIComponent(st.value)); }
+        var df = byId('ad-passenger-date-from'); if (df && df.value) { p.push('date_from=' + encodeURIComponent(df.value)); }
+        var dt = byId('ad-passenger-date-to'); if (dt && dt.value) { p.push('date_to=' + encodeURIComponent(dt.value)); }
         return p.length ? '&' + p.join('&') : '';
     }
 
-    var adBookingsRequestId = 0;   // discards responses from superseded booking requests
+    var adPassengersRequestId = 0;   // discards responses from superseded passenger requests
 
-    function loadBookings() {
-        var rid = ++adBookingsRequestId;
-        show(byId('ad-bookings-loading'));
-        hide(byId('ad-bookings-error'));
-        hide(byId('ad-bookings-empty'));
-        fetch('api/admin.php?action=bookings' + currentBookingsQuery(), {
+    function loadPassengers() {
+        var rid = ++adPassengersRequestId;
+        show(byId('ad-passengers-loading'));
+        hide(byId('ad-passengers-error'));
+        hide(byId('ad-passengers-empty'));
+        fetch('api/admin.php?action=passengers' + currentPassengersQuery(), {
             method: 'GET',
             credentials: 'same-origin',
             headers: { 'Accept': 'application/json' }
         }).then(parseJson).then(function (result) {
-            hide(byId('ad-bookings-loading'));
-            if (rid !== adBookingsRequestId) { return; }
+            hide(byId('ad-passengers-loading'));
+            if (rid !== adPassengersRequestId) { return; }
             var data = result.data || {};
             if (!result.ok || result.status !== 200 || !data.success) {
-                setError(byId('ad-bookings-error'), data.message || 'Unable to load bookings.');
+                setError(byId('ad-passengers-error'), data.message || 'Unable to load passengers.');
                 return;
             }
-            renderBookings(data.bookings || []);
+            renderPassengers(data.passengers || []);
         }).catch(function () {
-            if (rid !== adBookingsRequestId) { return; }
-            hide(byId('ad-bookings-loading'));
-            setError(byId('ad-bookings-error'), 'Network error while loading bookings.');
+            if (rid !== adPassengersRequestId) { return; }
+            hide(byId('ad-passengers-loading'));
+            setError(byId('ad-passengers-error'), 'Network error while loading passengers.');
         });
     }
 
-        function renderBookings(bookings) {
-        var body = byId('ad-bookings-rows');
-        var empty = byId('ad-bookings-empty');
+        function avatarInitials(name) {
+        var initials = String(name || '?').trim().split(/\s+/).filter(function (w) { return w; });
+        if (!initials.length) { return '?'; }
+        if (initials.length === 1) { return (initials[0].charAt(0) || '?').toUpperCase(); }
+        return (initials[0].charAt(0) + initials[initials.length - 1].charAt(0)).toUpperCase();
+    }
+
+    function renderPassengers(passengers) {
+        var body = byId('ad-passengers-rows');
+        var empty = byId('ad-passengers-empty');
+        if (!passengers.length) { body.innerHTML = ''; show(empty); return; }
+        hide(empty);
+        var html = '';
+        passengers.forEach(function (p) {
+            html += '<tr data-passenger-id="' + p.id + '">' +
+                '<td><span class="ad-passenger-cell"><span class="ad-passenger-avatar">' + escHtml(avatarInitials(p.name)) + '</span><span class="ad-passenger-copy"><strong>' + escHtml(p.name) + '</strong><span>' + escHtml(p.email) + '</span><span>' + escHtml(p.phone || '\u2014') + '</span></span></span></td>' +
+                '<td><span class="ad-badge ' + badgeClass(p.status) + '">' + escHtml(p.status || '') + '</span></td>' +
+                '<td>' + p.booking_count + '</td>' +
+                '<td>' + p.review_count + '</td>' +
+                '<td>' + formatMoney(p.total_spent) + '</td>' +
+                '<td>' + formatDate(p.created_at) + '</td>' +
+                '<td><button type="button" class="btn btn-secondary btn-sm" data-passenger-detail="' + p.id + '">Details</button></td>' +
+                '</tr>';
+        });
+        body.innerHTML = html;
+        var buttons = body.querySelectorAll('button[data-passenger-detail]');
+        for (var i = 0; i < buttons.length; i++) {
+            buttons[i].addEventListener('click', function () {
+                var id = parseInt(this.getAttribute('data-passenger-detail'), 10);
+                if (id > 0) { openPassengerDetail(id); }
+            });
+        }
+    }
+
+    /* ---------- Passenger detail modal ---------- */
+    function openPassengerDetail(id) {
+        var modal = byId('ad-passenger-modal');
+        var content = byId('ad-passenger-content');
+        if (modal) { modal.hidden = false; }
+        show(byId('ad-passenger-loading'));
+        hide(byId('ad-passenger-error'));
+        hide(content);
+        fetch('api/admin.php?action=passenger&id=' + encodeURIComponent(id), {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        }).then(parseJson).then(function (result) {
+            hide(byId('ad-passenger-loading'));
+            var data = result.data || {};
+            if (!result.ok || result.status !== 200 || !data.success) {
+                hide(content);
+                setError(byId('ad-passenger-error'), data.message || 'Unable to load the passenger.');
+                return;
+            }
+            renderPassengerDetail(data);
+        }).catch(function () {
+            hide(byId('ad-passenger-loading'));
+            hide(content);
+            setError(byId('ad-passenger-error'), 'Network error while loading the passenger.');
+        });
+    }
+
+    function renderPassengerDetail(data) {
+        var p = data.passenger || {};
+        var bookings = data.bookings || [];
+        var reviews = data.reviews || [];
+        var refunds = data.refunds || [];
+        var liked = data.liked_companies || [];
+
+        setText('ad-passenger-title', 'Passenger Detail \u2014 ' + p.name);
+        setText('ad-passenger-sub', (p.email || '') + ' \u00b7 account #' + p.id);
+        setText('ad-passenger-avatar', avatarInitials(p.name));
+        setText('ad-passenger-name', p.name);
+        setText('ad-passenger-email', p.email || '\u2014');
+        setText('ad-passenger-phone', p.phone || '\u2014');
+        setText('ad-passenger-stat-bookings', String(p.booking_count || 0));
+        setText('ad-passenger-stat-reviews', String(p.review_count || 0));
+        setText('ad-passenger-stat-refunds', String(p.refund_count || 0));
+        setText('ad-passenger-stat-liked', String(p.liked_company_count || 0));
+        setText('ad-passenger-stat-spent', formatMoney(p.total_spent));
+
+        var st = byId('ad-passenger-status-badge');
+        if (st) {
+            st.className = badgeClass(p.status);
+            st.textContent = p.status ? p.status.toUpperCase() : '';
+        }
+        setText('ad-passenger-created', formatDate(p.created_at));
+        setText('ad-passenger-updated', formatDate(p.updated_at));
+
+        renderPassengerBookings(bookings);
+        renderPassengerReviews(reviews);
+        renderPassengerRefunds(refunds);
+        renderPassengerLiked(liked);
+
+        setPassengerTab('bookings');
+        show(byId('ad-passenger-content'));
+    }
+
+    function setPassengerTab(name) {
+        var tabs = document.querySelectorAll('.ad-passenger-tab[data-p-tab]');
+        for (var i = 0; i < tabs.length; i++) {
+            var match = tabs[i].getAttribute('data-p-tab') === name;
+            tabs[i].className = 'ad-passenger-tab' + (match ? ' is-active' : '');
+            tabs[i].setAttribute('aria-selected', match ? 'true' : 'false');
+        }
+        ['bookings', 'reviews', 'refunds', 'liked'].forEach(function (paneName) {
+            var pane = byId('ad-passenger-pane-' + paneName);
+            if (pane) { pane.className = 'ad-passenger-pane' + (paneName === name ? ' is-active' : ''); }
+        });
+    }
+
+    function closePassengerModal() {
+        var modal = byId('ad-passenger-modal');
+        if (modal) { modal.hidden = true; }
+    }
+
+    function renderPassengerBookings(bookings) {
+        var body = byId('ad-passenger-bookings-rows');
+        var empty = byId('ad-passenger-bookings-empty');
         if (!bookings.length) { body.innerHTML = ''; show(empty); return; }
         hide(empty);
         var html = '';
         bookings.forEach(function (b) {
-            html += '<tr data-booking-id="' + b.id + '">' +
+            html += '<tr data-pbooking-id="' + b.id + '">' +
                 '<td>' + escHtml(b.booking_reference) + '</td>' +
-                '<td><span class="ad-co-name">' + escHtml(b.company_name) + '</span><span class="ad-sub">#' + b.company_id + '</span></td>' +
                 '<td><span class="ad-route">' + escHtml(b.route_from) + ' \u2192 ' + escHtml(b.route_to) + '</span></td>' +
+                '<td><span class="ad-co-name">' + escHtml(b.company_name) + '</span></td>' +
                 '<td>' + formatDate(b.departure_date) + '<span class="ad-sub">' + String(b.departure_time || '').slice(0, 5) + '</span></td>' +
-                '<td>' + escHtml(b.bus_name || '\u2014') + '<span class="ad-sub">' + escHtml(b.bus_registration || '') + '</span></td>' +
-                '<td>' + b.passenger_count + '</td>' +
-                '<td>' + formatMoney(b.total_amount) + '</td>' +
                 '<td><span class="ad-badge ' + badgeClass(b.booking_status) + '">' + escHtml(b.booking_status || '') + '</span></td>' +
                 '<td><span class="ad-badge ' + badgeClass(b.payment_status) + '">' + escHtml(b.payment_status || '') + '</span></td>' +
+                '<td>' + formatMoney(b.total_amount) + '</td>' +
                 '<td>' + formatDate(b.created_at) + '</td>' +
-                '<td><button type="button" class="btn btn-secondary btn-sm" data-manifest="' + b.id + '">View Manifest</button></td>' +
+                '<td><button type="button" class="btn btn-secondary btn-sm" data-pmanifest="' + b.id + '">Manifest</button></td>' +
                 '</tr>';
         });
         body.innerHTML = html;
-        var buttons = body.querySelectorAll('button[data-manifest]');
+        var buttons = body.querySelectorAll('button[data-pmanifest]');
         for (var i = 0; i < buttons.length; i++) {
             buttons[i].addEventListener('click', function () {
-                var id = parseInt(this.getAttribute('data-manifest'), 10);
+                var id = parseInt(this.getAttribute('data-pmanifest'), 10);
                 if (id > 0) { openManifest(id); }
             });
         }
+    }
+
+    function renderPassengerReviews(reviews) {
+        var list = byId('ad-passenger-reviews-list');
+        var empty = byId('ad-passenger-reviews-empty');
+        if (!reviews.length) { list.innerHTML = ''; show(empty); return; }
+        hide(empty);
+        var html = '';
+        reviews.forEach(function (r) {
+            var rating = Math.max(0, Math.min(5, Number(r.rating) || 0));
+            var stars = '';
+            for (var s = 0; s < 5; s++) { stars += s < rating ? '\u2605' : '\u2606'; }
+            html += '<article class="ad-passenger-review"><h4>' + escHtml(r.company_name) + '</h4>' +
+                '<p class="ad-stars" aria-label="' + rating + ' out of 5 stars">' + stars + '</p>' +
+                (r.comment ? '<p class="ad-passenger-review-quote">' + escHtml(r.comment) + '</p>' : '') +
+                '<p><span class="ad-badge ' + badgeClass(r.status) + '">' + escHtml(r.status || 'pending') + '</span> \u00b7 ' + formatDate(r.created_at) + ' \u00b7 ' + r.likes + ' like' + (Number(r.likes) === 1 ? '' : 's') + '</p>' +
+                '</article>';
+        });
+        list.innerHTML = html;
+    }
+
+    function renderPassengerRefunds(refunds) {
+        var body = byId('ad-passenger-refunds-rows');
+        var empty = byId('ad-passenger-refunds-empty');
+        if (!refunds.length) { body.innerHTML = ''; show(empty); return; }
+        hide(empty);
+        var html = '';
+        refunds.forEach(function (f) {
+            html += '<tr>' +
+                '<td>' + escHtml(f.booking_reference) + '</td>' +
+                '<td>' + escHtml(f.company_name) + '</td>' +
+                '<td><span class="ad-route">' + escHtml(f.route_from) + ' \u2192 ' + escHtml(f.route_to) + '</span></td>' +
+                '<td><span class="ad-badge ' + badgeClass(f.refund_type) + '">' + escHtml(f.refund_type || '') + '</span></td>' +
+                '<td>' + formatMoney(f.refunded_amount) + '</td>' +
+                '<td><span class="ad-badge ' + badgeClass(f.booking_status) + '">' + escHtml(f.booking_status || '') + '</span></td>' +
+                '<td><span class="ad-badge ' + badgeClass(f.payment_status) + '">' + escHtml(f.payment_status || '') + '</span></td>' +
+                '<td>' + formatDate(f.created_at) + '</td>' +
+                '</tr>';
+        });
+        body.innerHTML = html;
+    }
+
+    function renderPassengerLiked(liked) {
+        var list = byId('ad-passenger-liked-list');
+        var empty = byId('ad-passenger-liked-empty');
+        if (!liked.length) { list.innerHTML = ''; show(empty); return; }
+        hide(empty);
+        var html = '';
+        liked.forEach(function (co) {
+            var logo = co.logo
+                ? '<img src="' + escHtml(co.logo) + '" alt="">'
+                : '<span class="ad-passenger-avatar" style="width:32px;height:32px;font-size:0.85rem;">' + escHtml(avatarInitials(co.name)) + '</span>';
+            html += '<div class="ad-passenger-liked-item">' + logo +
+                '<span class="ad-passenger-copy"><a href="company.html?company=' + encodeURIComponent(co.slug || '') + '" target="_blank" rel="noopener">' + escHtml(co.name) + '</a>' +
+                '<span>Liked ' + co.liked_review_count + ' review' + (Number(co.liked_review_count) === 1 ? '' : 's') + ' \u00b7 ' + formatDate(co.liked_at) + '</span></span></div>';
+        });
+        list.innerHTML = html;
     }
 
     function manifestField(k, v) {
@@ -1407,7 +1576,7 @@ function renderDetail(c) {
            an empty flash while the first fetch resolves. The sections stay
            hidden until clicked (switchSection toggles visibility). */
         loadTrips();
-        loadBookings();
+        loadPassengers();
 
         /* Status pill buttons (All / Pending / Approved / Suspended / Rejected). */
         var statusBtns = document.querySelectorAll('.ad-status-filter[data-status-filter]');
@@ -1531,14 +1700,38 @@ function renderDetail(c) {
 
         var applyTrips = byId('btn-apply-trips'); if (applyTrips) { applyTrips.addEventListener('click', loadTrips); }
         var refreshTrips = byId('btn-refresh-trips'); if (refreshTrips) { refreshTrips.addEventListener('click', loadTrips); }
-        var applyBook = byId('btn-apply-bookings'); if (applyBook) { applyBook.addEventListener('click', loadBookings); }
-        var refreshBook = byId('btn-refresh-bookings'); if (refreshBook) { refreshBook.addEventListener('click', loadBookings); }
+        var applyPass = byId('btn-apply-passengers'); if (applyPass) { applyPass.addEventListener('click', loadPassengers); }
+        var refreshPass = byId('btn-refresh-passengers'); if (refreshPass) { refreshPass.addEventListener('click', loadPassengers); }
 
         var manClose = byId('ad-manifest-close'); if (manClose) { manClose.addEventListener('click', closeManifest); }
         var manModal = byId('ad-manifest-modal');
         if (manModal) {
             manModal.addEventListener('click', function (e) {
                 if (e.target === manModal) { closeManifest(); }
+            });
+        }
+
+        /* Passenger detail modal wiring. */
+        var passClose = byId('ad-passenger-close');
+        if (passClose) { passClose.addEventListener('click', closePassengerModal); }
+        var passModal = byId('ad-passenger-modal');
+        if (passModal) {
+            passModal.addEventListener('click', function (e) {
+                if (e.target === passModal) { closePassengerModal(); }
+            });
+        }
+        var passTabs = document.querySelectorAll('.ad-passenger-tab[data-p-tab]');
+        for (var pi = 0; pi < passTabs.length; pi++) {
+            passTabs[pi].addEventListener('click', function () {
+                setPassengerTab(this.getAttribute('data-p-tab'));
+            });
+        }
+
+        /* Search input applies on Enter (same as the trip/booking filters). */
+        var passSearch = byId('ad-passenger-search');
+        if (passSearch) {
+            passSearch.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') { loadPassengers(); }
             });
         }
 
@@ -1572,6 +1765,7 @@ function renderDetail(c) {
                 closeModal();
                 closeReasonModal();
                 closeManifest();
+                closePassengerModal();
                 closeAddCompany();
                 closeManage();
             }
