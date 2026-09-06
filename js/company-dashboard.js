@@ -370,10 +370,12 @@
         var html = buses.map(function (b) {
             var badge = b.status === 'maintenance' ? 'maintenance' : (b.status === 'inactive' ? 'inactive' : '');
             var reg = b.registration_number ? escHtml(b.registration_number) : '\u2014';
+            /* Platform policy: every bus is a standard 51-seat coach. */
+            var busClass = (b.bus_type === 'standard' || !b.bus_type) ? 'Standard' : escHtml(b.bus_type);
             return '<div class="cd-bus-card" data-bus-id="' + b.id + '">' +
                 '<span class="cd-bus-name">' + escHtml(b.name) + '</span>' +
                 '<span class="cd-bus-badge ' + badge + '">' + escHtml(b.status) + '</span>' +
-                '<div class="cd-record-meta"><span>Registration<b>' + reg + '</b></span><span>Class<b>' + escHtml(b.bus_type) + '</b></span><span>Capacity<b>' + b.seat_count + ' seats</b></span></div>' +
+                '<div class="cd-record-meta"><span>Registration<b>' + reg + '</b></span><span>Class<b>' + busClass + '</b></span><span>Capacity<b>' + b.seat_count + ' seats</b></span></div>' +
                 '<div class="cd-bus-actions">' +
                     '<button type="button" class="btn btn-secondary btn-sm" data-edit="' + b.id + '">Edit</button>' +
                     '<select data-status="' + b.id + '" aria-label="Change status">' +
@@ -450,8 +452,6 @@
         byId('bus-name').value = '';
         byId('bus-model').value = '';
         byId('bus-reg').value = '';
-        byId('bus-type').value = 'standard';
-        byId('bus-seats').value = '';
         byId('bus-status').value = 'active';
         byId('bus-form-title').textContent = 'Add Bus';
         byId('bus-form-submit').textContent = 'Save Bus';
@@ -472,8 +472,6 @@
         byId('bus-name').value = bus.name || '';
         byId('bus-model').value = bus.model || '';
         byId('bus-reg').value = bus.registration_number || '';
-        byId('bus-type').value = bus.bus_type || 'standard';
-        byId('bus-seats').value = bus.seat_count;
         byId('bus-status').value = bus.status || 'active';
         byId('bus-form-title').textContent = 'Edit Bus';
         byId('bus-form-submit').textContent = 'Update Bus';
@@ -491,8 +489,9 @@
             name: byId('bus-name').value.trim(),
             model: byId('bus-model').value.trim(),
             registration_number: byId('bus-reg').value.trim(),
-            bus_type: byId('bus-type').value,
-            seat_count: byId('bus-seats').value,
+            /* Platform policy: every bus is a standard 51-seat coach. */
+            bus_type: 'standard',
+            seat_count: 51,
             status: byId('bus-status').value
         };
         if (id) { payload.bus_id = id; }

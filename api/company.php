@@ -107,10 +107,11 @@ function require_company_post(): void
     }
 }
 
-/** True when the value is one of the schema's bus_type ENUM values. */
+/** True when the value is one of the schema's bus_type ENUM values.
+ *  Platform policy: every bus is a STANDARD coach (no luxury / vip class). */
 function valid_bus_type(string $value): bool
 {
-    return in_array($value, ['standard', 'luxury', 'vip'], true);
+    return in_array($value, ['standard'], true);
 }
 
 /** True when the value is one of the schema's bus status ENUM values. */
@@ -256,39 +257,13 @@ function require_company_scope(PDO $pdo, int $userId): array
 }
 
 /**
- * Validate and normalise a seat count. Stops with 422 unless the submitted
- * value is a plain positive whole number within a sensible coach-size range.
+ * Bus capacity is FIXED by platform policy at 51 seats per coach — every
+ * bus on ET Transport is a standard 51-seat coach, so the submitted value
+ * is ignored and 51 is always stored. This keeps the whole site consistent.
  */
 function bus_seat_count_or_error(array $input): int
 {
-    $raw = $input['seat_count'] ?? 45;
-
-    if (is_int($raw)) {
-        $value = $raw;
-    } elseif (is_string($raw) && preg_match('/^\d+$/', trim($raw)) === 1) {
-        $value = (int) trim($raw);
-    } else {
-        auth_response(422, [
-            'success' => false,
-            'message' => 'Seat count must be a positive whole number.',
-        ]);
-    }
-
-    if ($value < 1) {
-        auth_response(422, [
-            'success' => false,
-            'message' => 'Seat count must be a positive integer.',
-        ]);
-    }
-
-    if ($value > 200) {
-        auth_response(422, [
-            'success' => false,
-            'message' => 'Seat count is unreasonably large.',
-        ]);
-    }
-
-    return $value;
+    return 51;
 }
 
 /** GET /api/company.php?action=buses — this company's own fleet. */
@@ -346,7 +321,7 @@ function handle_bus_create(PDO $pdo): void
     if (!valid_bus_type($busType)) {
         auth_response(422, [
             'success' => false,
-            'message' => 'Invalid bus type. Use standard, luxury or vip.',
+            'message' => 'Invalid bus type. Every bus on ET Transport is a standard coach.',
         ]);
     }
     if (!valid_bus_status($status)) {
@@ -356,6 +331,7 @@ function handle_bus_create(PDO $pdo): void
         ]);
     }
     $seatCount = bus_seat_count_or_error($input);
+    $busType = 'standard';
 
     try {
         $ins = $pdo->prepare('
@@ -454,9 +430,10 @@ function handle_bus_update(PDO $pdo): void
         if (!valid_bus_type($busType)) {
             auth_response(422, [
                 'success' => false,
-                'message' => 'Invalid bus type. Use standard, luxury or vip.',
+                'message' => 'Invalid bus type. Every bus on ET Transport is a standard coach.',
             ]);
         }
+        $busType = 'standard';
     }
     if ($hasSeatCount) {
         $seatCount = bus_seat_count_or_error($input);

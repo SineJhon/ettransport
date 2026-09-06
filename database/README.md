@@ -159,6 +159,10 @@ Key points:
 - **No seat counter on trips.** Available seats are derived by counting
   `booking_passengers` rows for the trip against the bus `seat_count`, so the
   database has one source of truth.
+- **Every bus is a Standard 51-seat coach.** There is no luxury / VIP class on
+  ET Transport — `buses.bus_type` is a single-value `ENUM('standard')` and
+  `buses.seat_count` is locked to `51`. Every coach includes A/C, seat chargers
+  and the standard onboard amenities (see the bus add/edit form).
 - **Booking references are unique** (`bookings.booking_reference`).
 - **Foreign keys** enforce the relationships; delete behavior is set per
   relationship (e.g. deleting a user removes their companies/notifications,

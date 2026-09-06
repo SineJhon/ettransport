@@ -80,21 +80,21 @@
     var ET_TRIPS = (window.ETTransportData && Array.isArray(window.ETTransportData.companyTrips))
         ? window.ETTransportData.companyTrips.slice()
         : [
-        { id: 1001, company: 'Selam Bus', from: 'Addis Ababa', to: 'Bahir Dar', depart: '06:30', arrive: '15:30', minutes: 540, price: 900, rating: 4.8, type: 'Luxury', seats: 18, busType: 'Scania Touring', offsetDays: 2 },
-        { id: 1002, company: 'Selam Bus', from: 'Addis Ababa', to: 'Mekelle', depart: '05:30', arrive: '18:00', minutes: 750, price: 1200, rating: 4.9, type: 'VIP', seats: 9, busType: 'MAN Lion\u2019s Coach', offsetDays: 4 },
+        { id: 1001, company: 'Selam Bus', from: 'Addis Ababa', to: 'Bahir Dar', depart: '06:30', arrive: '15:30', minutes: 540, price: 900, rating: 4.8, type: 'Standard', seats: 18, busType: 'Scania Touring', offsetDays: 2 },
+        { id: 1002, company: 'Selam Bus', from: 'Addis Ababa', to: 'Mekelle', depart: '05:30', arrive: '18:00', minutes: 750, price: 1200, rating: 4.9, type: 'Standard', seats: 9, busType: 'MAN Lion\u2019s Coach', offsetDays: 4 },
         { id: 1011, company: 'Sky Bus', from: 'Addis Ababa', to: 'Hawassa', depart: '07:00', arrive: '12:15', minutes: 315, price: 500, rating: 4.5, type: 'Standard', seats: 22, busType: 'Yutong ZK6107H', offsetDays: 1 },
-        { id: 1012, company: 'Sky Bus', from: 'Addis Ababa', to: 'Arba Minch', depart: '08:00', arrive: '16:30', minutes: 510, price: 700, rating: 4.6, type: 'Luxury', seats: 12, busType: 'Higer A90', offsetDays: 5 },
+        { id: 1012, company: 'Sky Bus', from: 'Addis Ababa', to: 'Arba Minch', depart: '08:00', arrive: '16:30', minutes: 510, price: 700, rating: 4.6, type: 'Standard', seats: 12, busType: 'Higer A90', offsetDays: 5 },
         { id: 1021, company: 'Yegna Bus', from: 'Addis Ababa', to: 'Bahir Dar', depart: '10:30', arrive: '19:30', minutes: 540, price: 850, rating: 4.4, type: 'Standard', seats: 25, busType: 'MAN Lion\u2019s Coach', offsetDays: 3 },
-        { id: 1022, company: 'Yegna Bus', from: 'Addis Ababa', to: 'Gondar', depart: '06:00', arrive: '18:30', minutes: 750, price: 1050, rating: 4.5, type: 'Luxury', seats: 8, busType: 'Golden Dragon XML6125', offsetDays: 6 },
+        { id: 1022, company: 'Yegna Bus', from: 'Addis Ababa', to: 'Gondar', depart: '06:00', arrive: '18:30', minutes: 750, price: 1050, rating: 4.5, type: 'Standard', seats: 8, busType: 'Golden Dragon XML6125', offsetDays: 6 },
         { id: 1031, company: 'Golden Bus', from: 'Addis Ababa', to: 'Dessie', depart: '08:30', arrive: '15:00', minutes: 390, price: 600, rating: 4.3, type: 'Standard', seats: 20, busType: 'Yutong ZK6107H', offsetDays: 2 },
         { id: 1032, company: 'Golden Bus', from: 'Addis Ababa', to: 'Adama', depart: '09:00', arrive: '10:40', minutes: 100, price: 220, rating: 4.2, type: 'Standard', seats: 30, busType: 'King Long XMQ6898', offsetDays: 1 },
-        { id: 1041, company: 'Zemen Bus', from: 'Addis Ababa', to: 'Dire Dawa', depart: '06:45', arrive: '15:15', minutes: 510, price: 820, rating: 4.6, type: 'Luxury', seats: 14, busType: 'Neoplan Skyliner', offsetDays: 3 },
-        { id: 1042, company: 'Zemen Bus', from: 'Addis Ababa', to: 'Jijiga', depart: '05:45', arrive: '18:00', minutes: 735, price: 1100, rating: 4.7, type: 'VIP', seats: 6, busType: 'Mercedes-Benz Tourismo', offsetDays: 5 },
-        { id: 1051, company: 'ODAA Bus', from: 'Addis Ababa', to: 'Jimma', depart: '07:30', arrive: '15:30', minutes: 480, price: 700, rating: 4.4, type: 'Luxury', seats: 11, busType: 'Yutong ZK6122H9', offsetDays: 2 },
+        { id: 1041, company: 'Zemen Bus', from: 'Addis Ababa', to: 'Dire Dawa', depart: '06:45', arrive: '15:15', minutes: 510, price: 820, rating: 4.6, type: 'Standard', seats: 14, busType: 'Neoplan Skyliner', offsetDays: 3 },
+        { id: 1042, company: 'Zemen Bus', from: 'Addis Ababa', to: 'Jijiga', depart: '05:45', arrive: '18:00', minutes: 735, price: 1100, rating: 4.7, type: 'Standard', seats: 6, busType: 'Mercedes-Benz Tourismo', offsetDays: 5 },
+        { id: 1051, company: 'ODAA Bus', from: 'Addis Ababa', to: 'Jimma', depart: '07:30', arrive: '15:30', minutes: 480, price: 700, rating: 4.4, type: 'Standard', seats: 11, busType: 'Yutong ZK6122H9', offsetDays: 2 },
         { id: 1052, company: 'ODAA Bus', from: 'Addis Ababa', to: 'Hawassa', depart: '13:00', arrive: '18:10', minutes: 310, price: 480, rating: 4.3, type: 'Standard', seats: 27, busType: 'Foton AUV BJ6129', offsetDays: 4 },
         { id: 1061, company: 'Abay Bus', from: 'Addis Ababa', to: 'Bahir Dar', depart: '07:00', arrive: '16:00', minutes: 540, price: 880, rating: 4.2, type: 'Standard', seats: 19, busType: 'Yutong ZK6107H', offsetDays: 3 },
         { id: 1071, company: 'Ethio Bus', from: 'Addis Ababa', to: 'Hawassa', depart: '06:15', arrive: '11:20', minutes: 305, price: 480, rating: 4.1, type: 'Standard', seats: 31, busType: 'King Long XMQ6898', offsetDays: 2 },
-        { id: 1081, company: 'Liyu Bus', from: 'Addis Ababa', to: 'Mekelle', depart: '20:00', arrive: '06:30', minutes: 630, price: 1350, rating: 4.6, type: 'VIP', seats: 7, busType: 'Neoplan Skyliner', offsetDays: 3 }
+        { id: 1081, company: 'Liyu Bus', from: 'Addis Ababa', to: 'Mekelle', depart: '20:00', arrive: '06:30', minutes: 630, price: 1350, rating: 4.6, type: 'Standard', seats: 7, busType: 'Neoplan Skyliner', offsetDays: 3 }
     ];
 
     /* ---------- Mock company profiles (illustrative sample data) ---------- */
@@ -121,9 +121,9 @@
             amenities: ['Air Conditioning', 'Reclining Seats', 'Charging', 'Wi-Fi', 'Luggage', 'Entertainment'],
             busCount: 28,
             fleet: [
-                { model: 'Scania Touring', type: 'Luxury', seats: 51, image: 'assets/images/buses/bus-luxury.svg', amenities: ['A/C', 'Charging', 'Reclining Seats'], description: 'Flagship coach with wide recliners and onboard media screens.' },
-                { model: 'MAN Lion\u2019s Coach', type: 'VIP', seats: 45, image: 'assets/images/buses/bus-vip.svg', amenities: ['A/C', 'Wi-Fi', 'Charging', 'Meals'], description: 'Priority service with fewer seats, extra legroom and a host on board.' },
-                { model: 'Yutong ZK6122H9', type: 'Standard', seats: 49, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Luggage', 'Charging'], description: 'Reliable workhorse used for secondary departures during peak days.' }
+                { model: 'Scania Touring', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Charging', 'Reclining Seats'], description: 'Flagship coach with wide recliners and onboard media screens.' },
+                { model: 'MAN Lion\u2019s Coach', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Wi-Fi', 'Charging', 'Meals'], description: 'Priority service with fewer seats, extra legroom and a host on board.' },
+                { model: 'Yutong ZK6122H9', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Luggage', 'Charging'], description: 'Reliable workhorse used for secondary departures during peak days.' }
             ],
             popularRoutes: [
                 { from: 'Addis Ababa', to: 'Mekelle', price: 1200, minutes: 750 },
@@ -161,8 +161,8 @@
             amenities: ['Air Conditioning', 'Reclining Seats', 'Charging', 'Luggage', 'Meals'],
             busCount: 21,
             fleet: [
-                { model: 'Higer A90', type: 'Luxury', seats: 47, image: 'assets/images/buses/bus-luxury.svg', amenities: ['A/C', 'Reclining Seats', 'Luggage'], description: 'Soft recliners and generous legroom for the longer southern hops.' },
-                { model: 'Yutong ZK6107H', type: 'Standard', seats: 43, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Luggage', 'Charging'], description: 'The everyday workhorse of the Hawassa corridor.' }
+                { model: 'Higer A90', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Reclining Seats', 'Luggage'], description: 'Soft recliners and generous legroom for the longer southern hops.' },
+                { model: 'Yutong ZK6107H', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Luggage', 'Charging'], description: 'The everyday workhorse of the Hawassa corridor.' }
             ],
             popularRoutes: [
                 { from: 'Addis Ababa', to: 'Hawassa', price: 500, minutes: 315 },
@@ -200,9 +200,9 @@
             amenities: ['Air Conditioning', 'Charging', 'Luggage', 'Entertainment'],
             busCount: 16,
             fleet: [
-                { model: 'MAN Lion\u2019s Coach', type: 'Standard', seats: 49, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Luggage', 'Charging'], description: 'Everyday coach with a comfortable seat pitch and plenty of luggage space.' },
-                { model: 'Yutong ZK6122H9', type: 'Standard', seats: 49, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Luggage'], description: 'Dependable coach used on the busy Bahir Dar departures.' },
-                { model: 'Golden Dragon XML6125', type: 'Luxury', seats: 46, image: 'assets/images/buses/bus-luxury.svg', amenities: ['A/C', 'Reclining Seats', 'Entertainment'], description: 'Premium option for longer runs towards Gondar.' }
+                { model: 'MAN Lion\u2019s Coach', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Luggage', 'Charging'], description: 'Everyday coach with a comfortable seat pitch and plenty of luggage space.' },
+                { model: 'Yutong ZK6122H9', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Luggage'], description: 'Dependable coach used on the busy Bahir Dar departures.' },
+                { model: 'Golden Dragon XML6125', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Reclining Seats', 'Entertainment'], description: 'Premium option for longer runs towards Gondar.' }
             ],
             popularRoutes: [
                 { from: 'Addis Ababa', to: 'Bahir Dar', price: 850, minutes: 540 },
@@ -239,8 +239,8 @@
             amenities: ['Air Conditioning', 'Luggage', 'Charging', 'Reclining Seats'],
             busCount: 14,
             fleet: [
-                { model: 'Yutong ZK6107H', type: 'Standard', seats: 43, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Luggage', 'Charging'], description: 'Compact coach well suited to the Adama commute.' },
-                { model: 'King Long XMQ6898', type: 'Standard', seats: 33, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Luggage'], description: 'Medium coach used on lighter eastern departures.' }
+                { model: 'Yutong ZK6107H', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Luggage', 'Charging'], description: 'Compact coach well suited to the Adama commute.' },
+                { model: 'King Long XMQ6898', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Luggage'], description: 'Medium coach used on lighter eastern departures.' }
             ],
             popularRoutes: [
                 { from: 'Addis Ababa', to: 'Adama', price: 220, minutes: 100 },
@@ -277,8 +277,8 @@
             amenities: ['Air Conditioning', 'Reclining Seats', 'Wi-Fi', 'Charging', 'Luggage', 'Meals'],
             busCount: 19,
             fleet: [
-                { model: 'Mercedes-Benz Tourismo', type: 'VIP', seats: 44, image: 'assets/images/buses/bus-vip.svg', amenities: ['A/C', 'Wi-Fi', 'Charging', 'Meals'], description: 'Top-tier coach with aboard catering on the Dire Dawa route.' },
-                { model: 'Neoplan Skyliner', type: 'Luxury', seats: 52, image: 'assets/images/buses/bus-luxury.svg', amenities: ['A/C', 'Reclining Seats', 'Luggage'], description: 'Double-deck style comfort for the long run to Jijiga.' }
+                { model: 'Mercedes-Benz Tourismo', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Wi-Fi', 'Charging', 'Meals'], description: 'Top-tier coach with aboard catering on the Dire Dawa route.' },
+                { model: 'Neoplan Skyliner', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Reclining Seats', 'Luggage'], description: 'Double-deck style comfort for the long run to Jijiga.' }
             ],
             popularRoutes: [
                 { from: 'Addis Ababa', to: 'Dire Dawa', price: 820, minutes: 510 },
@@ -291,7 +291,7 @@
                 { city: 'Dire Dawa', address: 'Dire Dawa Main Terminal', phone: '+251 25 111 2290', email: 'diredawa@zemenbus.example.com' }
             ],
             reviews: [
-                { name: 'Kidist B.', rating: 5, when: '1 week ago', verified: true, text: 'The VIP coach to Dire Dawa was spotless. Very comfortable seats and excellent crew.' },
+                { name: 'Kidist B.', rating: 5, when: '1 week ago', verified: true, text: 'The coach to Dire Dawa was spotless. Very comfortable seats and excellent crew.' },
                 { name: 'Meron T.', rating: 5, when: '1 month ago', verified: true, text: 'Booked easily for my family trip to Harar. Everything was on time and stress-free.' }
             ]
         },
@@ -315,8 +315,8 @@
             amenities: ['Air Conditioning', 'Reclining Seats', 'Charging', 'Luggage'],
             busCount: 12,
             fleet: [
-                { model: 'Yutong ZK6122H9', type: 'Luxury', seats: 51, image: 'assets/images/buses/bus-luxury.svg', amenities: ['A/C', 'Reclining Seats', 'Charging'], description: 'Flagship coach for the longer Jimma and Mizan departures.' },
-                { model: 'Foton AUV BJ6129', type: 'Standard', seats: 47, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Luggage'], description: 'Solid everyday coach on the Wolkite and Hawassa lines.' }
+                { model: 'Yutong ZK6122H9', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Reclining Seats', 'Charging'], description: 'Flagship coach for the longer Jimma and Mizan departures.' },
+                { model: 'Foton AUV BJ6129', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Luggage'], description: 'Solid everyday coach on the Wolkite and Hawassa lines.' }
             ],
             popularRoutes: [
                 { from: 'Addis Ababa', to: 'Jimma', price: 700, minutes: 480 },
@@ -353,8 +353,8 @@
             amenities: ['Air Conditioning', 'Luggage', 'Charging'],
             busCount: 9,
             fleet: [
-                { model: 'Yutong ZK6107H', type: 'Standard', seats: 43, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Luggage', 'Charging'], description: 'Dependable coach on the Bahir Dar and western departures.' },
-                { model: 'Golden Dragon XML6125', type: 'Standard', seats: 46, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Luggage'], description: 'Spacious coach used on the longer Gondar runs.' }
+                { model: 'Yutong ZK6107H', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Luggage', 'Charging'], description: 'Dependable coach on the Bahir Dar and western departures.' },
+                { model: 'Golden Dragon XML6125', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Luggage'], description: 'Spacious coach used on the longer Gondar runs.' }
             ],
             popularRoutes: [
                 { from: 'Addis Ababa', to: 'Bahir Dar', price: 880, minutes: 540 },
@@ -390,8 +390,8 @@
             amenities: ['Air Conditioning', 'Luggage'],
             busCount: 7,
             fleet: [
-                { model: 'King Long XMQ6898', type: 'Standard', seats: 33, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Luggage'], description: 'Compact coach for the Adama and Debre Zeit commute.' },
-                { model: 'Yutong ZK6609', type: 'Minibus', seats: 19, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C'], description: 'Lighter van used on more frequent short departures.' }
+                { model: 'King Long XMQ6898', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Luggage'], description: 'Compact coach for the Adama and Debre Zeit commute.' },
+                { model: 'Yutong ZK6609', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C'], description: 'Lighter van used on more frequent short departures.' }
             ],
             popularRoutes: [
                 { from: 'Addis Ababa', to: 'Adama', price: 200, minutes: 95 },
@@ -414,8 +414,8 @@
             logo: 'assets/images/companies/liyu-bus-logo.svg',
             coverImage: 'assets/images/companies/cover-liyu-bus.svg',
             verified: true,
-            tagline: 'Premium overnight and express VIP travel.',
-            description: 'Liyu Bus focuses on premium and overnight express services, with modern VIP coaches and fewer seats so that every passenger travels with extra comfort and space.',
+            tagline: 'Comfortable overnight and express travel.',
+            description: 'Liyu Bus focuses on premium and overnight express services, with modern coaches and generous comfort so every passenger travels relaxed.',
             rating: 4.5,
             reviewCount: 522,
             founded: 2017,
@@ -427,9 +427,9 @@
             amenities: ['Air Conditioning', 'Reclining Seats', 'Wi-Fi', 'Charging', 'Meals', 'Entertainment'],
             busCount: 11,
             fleet: [
-                { model: 'Neoplan Skyliner', type: 'VIP', seats: 44, image: 'assets/images/buses/bus-vip.svg', amenities: ['A/C', 'Wi-Fi', 'Charging', 'Meals'], description: 'Signature VIP coach for overnight routes.' },
-                { model: 'Mercedes-Benz Tourismo', type: 'VIP', seats: 44, image: 'assets/images/buses/bus-vip.svg', amenities: ['A/C', 'Reclining Seats', 'Entertainment'], description: 'Quiet, premium coach with full relaxation seating.' },
-                { model: 'Higer A90', type: 'Luxury', seats: 49, image: 'assets/images/buses/bus-luxury.svg', amenities: ['A/C', 'Charging', 'Luggage'], description: 'Comfortable luxury option on daytime express runs.' }
+                { model: 'Neoplan Skyliner', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Wi-Fi', 'Charging', 'Meals'], description: 'Signature coach for overnight routes.' },
+                { model: 'Mercedes-Benz Tourismo', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Reclining Seats', 'Entertainment'], description: 'Quiet, premium coach with full relaxation seating.' },
+                { model: 'Higer A90', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Charging', 'Luggage'], description: 'Comfortable coach on daytime express runs.' }
             ],
             popularRoutes: [
                 { from: 'Addis Ababa', to: 'Mekelle', price: 1350, minutes: 630 },
@@ -1067,14 +1067,14 @@
         var fleetRaw = bag.fleet || [];
         for (var fi = 0; fi < fleetRaw.length; fi++) {
             var b = fleetRaw[fi];
-            var btype = String(b.bus_type || 'standard').toLowerCase();
+            /* Platform policy: every bus is a standard 51-seat coach. */
             fleet.push({
                 name: b.model || 'Coach',
                 model: b.model || 'Coach',
-                type: ucfirst(btype),
-                seats: b.seat_count || 0,
-                image: 'assets/images/buses/bus-' + (btype === 'vip' ? 'vip' : btype === 'luxury' ? 'luxury' : 'standard') + '.svg',
-                amenities: [],
+                type: 'Standard',
+                seats: 51,
+                image: 'assets/images/buses/bus-standard.svg',
+                amenities: ['A/C', 'Charging', 'Luggage'],
                 description: (b.model || 'Coach') + ' \\u2014 ' + (b.registration_number || 'Active bus')
             });
         }

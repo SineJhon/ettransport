@@ -162,8 +162,12 @@ CREATE TABLE IF NOT EXISTS buses (
   company_id BIGINT UNSIGNED NOT NULL,
   name VARCHAR(120) NOT NULL,
   model VARCHAR(120) DEFAULT NULL,
-  bus_type ENUM('standard', 'luxury', 'vip') NOT NULL DEFAULT 'standard',
-  seat_count INT UNSIGNED NOT NULL DEFAULT 45,
+  -- Platform policy: every bus on ET Transport is a STANDARD 51-seat coach.
+  -- There is no luxury/vip class; every coach has A/C, seat chargers and
+  -- the standard onboard amenities.
+  bus_type ENUM('standard') NOT NULL DEFAULT 'standard',
+  seat_count INT UNSIGNED NOT NULL DEFAULT 51
+    CONSTRAINT chk_buses_seat_count CHECK (seat_count = 51),
   registration_number VARCHAR(50) DEFAULT NULL,
   status ENUM('active', 'maintenance', 'inactive') NOT NULL DEFAULT 'active',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

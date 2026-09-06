@@ -126,6 +126,49 @@ function ensure_schema_columns(PDO $pdo): void
                   WHERE u.email LIKE 'walkin-%@ettransport.local'"
             );
         }
+
+        /* Platform policy: every bus is ONLY a STANDARD 51-seat coach — there is
+           no luxury/vip class and no other capacity. Normalize any rows created
+           before this policy (demo seed or manual), then lock the columns so
+           nothing else can ever be stored. All steps are guarded by schema /
+           data checks so they are cheap no-ops once the upgrade has run. */
+        $stmt = $pdo->prepare(
+            "SELECT COUNT(*)
+               FROM buses
+              WHERE bus_type <> 'standard' OR seat_count <> 51"
+        );
+        $stmt->execute();
+        if ((int) $stmt->fetchColumn() > 0) {
+            $pdo->exec("UPDATE buses SET bus_type = 'standard', seat_count = 51");
+        }
+
+        $stmt = $pdo->prepare(
+            "SELECT COUNT(*)
+               FROM information_schema.columns
+              WHERE table_schema = DATABASE()
+                AND table_name = 'buses'
+                AND column_name = 'bus_type'
+                AND column_type <> 'enum(''standard'')'"
+        );
+        $stmt->execute();
+        if ((int) $stmt->fetchColumn() > 0) {
+            $pdo->exec("ALTER TABLE buses MODIFY bus_type ENUM('standard') NOT NULL DEFAULT 'standard'");
+            $pdo->exec("ALTER TABLE buses MODIFY seat_count INT UNSIGNED NOT NULL DEFAULT 51");
+        }
+
+        /* DB-level guard so a 51-seat capacity can never be written directly. */
+        $stmt = $pdo->prepare(
+            "SELECT COUNT(*)
+               FROM information_schema.TABLE_CONSTRAINTS
+              WHERE table_schema = DATABASE()
+                AND table_name = 'buses'
+                AND constraint_type = 'CHECK'
+                AND constraint_name = 'chk_buses_seat_count'"
+        );
+        $stmt->execute();
+        if ((int) $stmt->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE buses ADD CONSTRAINT chk_buses_seat_count CHECK (seat_count = 51)");
+        }
     } catch (Throwable $e) {
         /* Non-fatal on upgrade path — surfaces only if the app cannot query the schema. */
     }

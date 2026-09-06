@@ -212,10 +212,7 @@ function normalize_payment_method(?string $value): ?string
 
 function bus_type_label(string $type): string
 {
-    if ($type === 'vip') {
-        return 'VIP';
-    }
-
+    /* Platform policy: every bus is a standard coach — no luxury / vip class. */
     return ucfirst($type);
 }
 

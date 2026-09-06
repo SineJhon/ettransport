@@ -116,14 +116,14 @@
     var COMPANY_TRIPS = [];
 
     var LEGACY_TRIPS = [
-        { id: 1, company: 'Selam Express',    from: 'Addis Ababa', to: 'Arba Minch', depart: '06:30', arrive: '14:45', minutes: 495, price: 720,  rating: 4.8, type: 'Luxury',   seats: 14, amenities: ['AC', 'Wi-Fi', 'Charging', 'Luggage'] },
-        { id: 2, company: 'Dashen Motors',    from: 'Addis Ababa', to: 'Arba Minch', depart: '07:45', arrive: '15:30', minutes: 465, price: 740,  rating: 4.4, type: 'Luxury',   seats: 17, amenities: ['AC', 'Wi-Fi', 'Charging'] },
+        { id: 1, company: 'Selam Express',    from: 'Addis Ababa', to: 'Arba Minch', depart: '06:30', arrive: '14:45', minutes: 495, price: 720,  rating: 4.8, type: 'Standard',   seats: 14, amenities: ['AC', 'Wi-Fi', 'Charging', 'Luggage'] },
+        { id: 2, company: 'Dashen Motors',    from: 'Addis Ababa', to: 'Arba Minch', depart: '07:45', arrive: '15:30', minutes: 465, price: 740,  rating: 4.4, type: 'Standard',   seats: 17, amenities: ['AC', 'Wi-Fi', 'Charging'] },
         { id: 3, company: 'Ethio Abay Lines', from: 'Addis Ababa', to: 'Arba Minch', depart: '08:00', arrive: '16:30', minutes: 510, price: 650,  rating: 4.5, type: 'Standard', seats: 24, amenities: ['AC', 'Luggage'] },
         { id: 4, company: 'SkyLink Coaches',  from: 'Addis Ababa', to: 'Arba Minch', depart: '10:15', arrive: '18:45', minutes: 510, price: 480,  rating: 4.2, type: 'Standard', seats: 8,  amenities: ['Luggage'] },
-        { id: 5, company: 'Lion Express',     from: 'Addis Ababa', to: 'Arba Minch', depart: '13:00', arrive: '21:00', minutes: 480, price: 850,  rating: 4.6, type: 'VIP',      seats: 6,  amenities: ['AC', 'Wi-Fi', 'Charging', 'Luggage'] },
-        { id: 6, company: 'GreenLion Travel', from: 'Addis Ababa', to: 'Arba Minch', depart: '15:30', arrive: '23:45', minutes: 495, price: 1100, rating: 4.9, type: 'VIP',      seats: 4,  amenities: ['AC', 'Wi-Fi', 'Charging'] },
-        { id: 7, company: 'Abay River Bus',   from: 'Addis Ababa', to: 'Arba Minch', depart: '18:00', arrive: '02:45', minutes: 525, price: 950,  rating: 4.3, type: 'Luxury',   seats: 11, amenities: ['AC', 'Charging', 'Luggage'] },
-        { id: 8, company: 'Yeha Coaches',     from: 'Addis Ababa', to: 'Arba Minch', depart: '19:30', arrive: '04:00', minutes: 510, price: 1250, rating: 4.7, type: 'VIP',      seats: 3,  amenities: ['AC', 'Wi-Fi', 'Luggage'] }
+        { id: 5, company: 'Lion Express',     from: 'Addis Ababa', to: 'Arba Minch', depart: '13:00', arrive: '21:00', minutes: 480, price: 850,  rating: 4.6, type: 'Standard',      seats: 6,  amenities: ['AC', 'Wi-Fi', 'Charging', 'Luggage'] },
+        { id: 6, company: 'GreenLion Travel', from: 'Addis Ababa', to: 'Arba Minch', depart: '15:30', arrive: '23:45', minutes: 495, price: 1100, rating: 4.9, type: 'Standard',      seats: 4,  amenities: ['AC', 'Wi-Fi', 'Charging'] },
+        { id: 7, company: 'Abay River Bus',   from: 'Addis Ababa', to: 'Arba Minch', depart: '18:00', arrive: '02:45', minutes: 525, price: 950,  rating: 4.3, type: 'Standard',   seats: 11, amenities: ['AC', 'Charging', 'Luggage'] },
+        { id: 8, company: 'Yeha Coaches',     from: 'Addis Ababa', to: 'Arba Minch', depart: '19:30', arrive: '04:00', minutes: 510, price: 1250, rating: 4.7, type: 'Standard',      seats: 3,  amenities: ['AC', 'Wi-Fi', 'Luggage'] }
     ];
 
 
@@ -161,7 +161,6 @@
     }
 
     function normalizeApiTrip(apiTrip) {
-        var busType = String(apiTrip.bus_type || '').toLowerCase();
         return {
             id: parseInt(apiTrip.id, 10) || 0,
             company: apiTrip.company_name || '',
@@ -175,7 +174,8 @@
             minutes: parseInt(apiTrip.duration_minutes, 10) || 0,
             price: Number(apiTrip.price) || 0,
             rating: Number(apiTrip.rating) || 0,
-            type: titleCase(busType),
+            /* Platform policy: every bus is a standard coach. */
+            type: 'Standard',
             seats: Number(apiTrip.available_seats) || 0,
             busType: apiTrip.bus_model || '',
             amenities: Array.isArray(apiTrip.amenities) ? apiTrip.amenities.slice() : [],
@@ -350,7 +350,7 @@
     var active = {
         depart: [],  // morning | afternoon | evening
         price: [],   // price bucket ids
-        type: [],    // Standard | Luxury | VIP
+        type: [],    // Standard (every bus on ET Transport is Standard)
         company: [], // company slugs
         amenity: []  // canonical amenity names
     };
@@ -446,14 +446,17 @@
         }
         html += '</div>';
 
-        /* Bus type */
+        /* Bus type — only shown when the dataset really distinguishes classes.
+           Platform policy: every bus is Standard, so this stays hidden. */
         var types = uniqueSorted(routeTrips.map(function (t) { return t.type; }));
-        html += '<div class="filter-group" role="group" aria-label="Bus type">';
-        html += '<h4>Bus Type</h4>';
-        for (var ty = 0; ty < types.length; ty++) {
-            html += checkboxRow('type', types[ty], types[ty]);
+        if (types.length > 1) {
+            html += '<div class="filter-group" role="group" aria-label="Bus type">';
+            html += '<h4>Bus Type</h4>';
+            for (var ty = 0; ty < types.length; ty++) {
+                html += checkboxRow('type', types[ty], types[ty]);
+            }
+            html += '</div>';
         }
-        html += '</div>';
 
         /* Company (only interactive when no active ?company= param) */
         var companyDisabled = !!(companySlug && companyMetaBySlug(companySlug));

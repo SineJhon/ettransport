@@ -116,7 +116,7 @@
                 seats: [12], seatLabel: '12', passengerCount: 1,
                 passengerNames: ['Amanuel Passenger'],
                 total: 1300, paymentMethod: 'Telebirr',
-                busType: 'Higer A90', tripType: 'Luxury',
+                busType: 'Higer A90', tripType: 'Standard',
                 status: 'confirmed', demo: true
             },
             {
@@ -138,7 +138,7 @@
                 seats: [8], seatLabel: '8', passengerCount: 1,
                 passengerNames: ['Amanuel Passenger'],
                 total: 820, paymentMethod: 'M-Pesa',
-                busType: 'Neoplan Skyliner', tripType: 'Luxury',
+                busType: 'Neoplan Skyliner', tripType: 'Standard',
                 status: 'cancelled', demo: true
             }
         ];
