@@ -48,8 +48,6 @@
         .cd-bus-form label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem; }
         .cd-bus-form input, .cd-bus-form select { width: 100%; padding: 0.6rem 0.7rem; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 6px; }
         .cd-bus-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
-        .cd-bus-form-note { margin: var(--space-sm) 0 0; padding: 0.65rem 0.8rem; font-size: 0.84rem; line-height: 1.5; color: #385148; background: #f1f8f3; border: 1px solid #d7eade; border-radius: 8px; }
-        .cd-bus-form-note strong { font-weight: 700; }
         .cd-bus-form-error { min-height: 1.1rem; font-size: 0.82rem; color: #b91c1c; }
         .cd-bus-form-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
         @media (max-width: 768px) { .cd-bus-list { grid-template-columns: 1fr; } .cd-bus-form-row { grid-template-columns: 1fr; } }
@@ -643,10 +641,6 @@
                             <input type="text" id="bus-reg" maxlength="50" placeholder="e.g. ET-SELA04">
                         </div>
                     </div>
-                    <p class="cd-bus-form-note">
-                        Every bus on ET Transport is a <strong>Standard</strong> coach with
-                        <strong>51 seats</strong>, A/C, seat chargers and onboard amenities.
-                    </p>
                     <div>
                         <label for="bus-status">Operational Status</label>
                         <select id="bus-status">
