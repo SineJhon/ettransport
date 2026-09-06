@@ -73,6 +73,8 @@
         .ad-route { font-weight: 600; color: var(--color-dark); }
         .ad-sub { display: block; font-size: 0.74rem; color: var(--color-muted); }
         .ad-muted { color: var(--color-muted); }
+        /* Empty-state rows inside admin tables — centered under the column headers. */
+        .ad-table td.ad-muted, .ad-manifest-table td.ad-muted { text-align: center; padding: 1.25rem 0.6rem; }
         .ad-manifest { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.55); z-index: 101; }
         .ad-manifest[hidden] { display: none; }
         .ad-manifest-box { width: min(640px, 92vw); max-height: 88vh; overflow-y: auto; background: var(--color-white); border-radius: 12px; padding: 1.25rem 1.4rem; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28); }
@@ -698,7 +700,6 @@
                 </nav>
 
                 <div id="ad-passenger-pane-bookings" class="ad-passenger-pane is-active">
-                    <div id="ad-passenger-bookings-empty" class="ad-empty" hidden>No bookings yet.</div>
                     <div class="ad-table-wrap"><table class="ad-table"><thead><tr><th>Reference</th><th>Route</th><th>Company</th><th>Departure</th><th>Booking</th><th>Payment</th><th>Amount</th><th>Booked</th><th></th></tr></thead><tbody id="ad-passenger-bookings-rows"></tbody></table></div>
                 </div>
 
@@ -708,7 +709,6 @@
                 </div>
 
                 <div id="ad-passenger-pane-refunds" class="ad-passenger-pane">
-                    <div id="ad-passenger-refunds-empty" class="ad-empty" hidden>No refunds recorded.</div>
                     <div class="ad-table-wrap"><table class="ad-table"><thead><tr><th>Reference</th><th>Company</th><th>Route</th><th>Refund</th><th>Amount</th><th>Booking</th><th>Payment</th><th>When</th></tr></thead><tbody id="ad-passenger-refunds-rows"></tbody></table></div>
                 </div>
 

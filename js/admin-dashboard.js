@@ -1181,9 +1181,10 @@ function renderDetail(c) {
 
     function renderPassengerBookings(bookings) {
         var body = byId('ad-passenger-bookings-rows');
-        var empty = byId('ad-passenger-bookings-empty');
-        if (!bookings.length) { body.innerHTML = ''; show(empty); return; }
-        hide(empty);
+        if (!bookings.length) {
+            body.innerHTML = '<tr><td colspan="9" class="ad-muted">No bookings yet.</td></tr>';
+            return;
+        }
         var html = '';
         bookings.forEach(function (b) {
             html += '<tr data-pbooking-id="' + b.id + '">' +
@@ -1229,9 +1230,10 @@ function renderDetail(c) {
 
     function renderPassengerRefunds(refunds) {
         var body = byId('ad-passenger-refunds-rows');
-        var empty = byId('ad-passenger-refunds-empty');
-        if (!refunds.length) { body.innerHTML = ''; show(empty); return; }
-        hide(empty);
+        if (!refunds.length) {
+            body.innerHTML = '<tr><td colspan="8" class="ad-muted">No refunds recorded.</td></tr>';
+            return;
+        }
         var html = '';
         refunds.forEach(function (f) {
             html += '<tr>' +
