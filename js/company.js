@@ -71,6 +71,22 @@
         });
     }
 
+    /* ---------- Company helper ---------- */
+    /* Return every public phone number for a company (new multi-phone
+       `phones` array when present, otherwise a single-item fallback so old
+       records without the array still render). */
+    function companyPhones(c) {
+        var list = (c && Array.isArray(c.phones) && c.phones.length)
+            ? c.phones.slice()
+            : (c && c.phone ? [c.phone] : []);
+        var out = [];
+        for (var i = 0; i < list.length; i++) {
+            var p = String(list[i] == null ? '' : list[i]).trim();
+            if (p && out.indexOf(p) === -1) { out.push(p); }
+        }
+        return out;
+    }
+
     /* ---------- Canonical company trips ----------
        These trip IDs (1001+) are ALSO appended to the mock trip
        datasets in booking.js / passenger.js / payment.js /
@@ -601,6 +617,26 @@
         if (text) { text.textContent = c.description; }
     }
 
+    /* ---------- Founded ---------- */
+    function renderFounded(c) {
+        var el = document.getElementById('founded-block');
+        if (!el) { return; }
+        var year = Number(c.founded) || 0;
+        if (!year) {
+            el.innerHTML = '<p class="founded-none">This company has not shared its founding year yet.</p>';
+            return;
+        }
+        var years = Math.max(0, new Date().getFullYear() - year);
+        el.innerHTML =
+            '<div class="founded-year" aria-hidden="true">' + year + '</div>' +
+            '<div class="founded-text">' +
+                '<span class="founded-years">' + years + ' year' + (years === 1 ? '' : 's') + ' of service</span>' +
+                '<p>' + esc(c.name) + ' has been moving passengers since its first departure in ' + year + '. ' +
+                'With a fleet built for comfort and a schedule that keeps travellers moving, the founding year ' +
+                'reflects decades—or at least many seasons—of reliable intercity service.</p>' +
+            '</div>';
+    }
+
     /* ---------- Services / amenities ---------- */
     function renderAmenities(c) {
         var el = document.getElementById('amenity-grid');
@@ -852,15 +888,24 @@
         for (var i = 0; i < c.destinations.length; i++) {
             tags += '<span class="dest-tag">' + c.destinations[i] + '</span>';
         }
+        /* Every public phone number — mobile and landline (+251 1xx…). */
+        var phones = companyPhones(c);
+        var phoneHtml = '';
+        for (var p = 0; p < phones.length; p++) {
+            phoneHtml += '<span class="info-phone">' +
+                '<a href="tel:' + phones[p].replace(/\s+/g, '') + '">' + esc(phones[p]) + '</a>' +
+            '</span>';
+        }
+        if (!phoneHtml) { phoneHtml = '&mdash;'; }
         el.innerHTML =
             '<li class="info-item"><span class="info-icon" aria-hidden="true">&#128197;</span>' +
-                '<div class="info-body"><span class="info-label">Founded</span><span class="info-value">' + (c.founded || '\\u2014') + '</span></div></li>' +
+                '<div class="info-body"><span class="info-label">Founded</span><span class="info-value">' + (c.founded || '&mdash;') + '</span></div></li>' +
             '<li class="info-item"><span class="info-icon" aria-hidden="true">&#127960;</span>' +
-                '<div class="info-body"><span class="info-label">Head Office</span><span class="info-value">' + c.headOffice + '</span></div></li>' +
+                '<div class="info-body"><span class="info-label">Head Office</span><span class="info-value">' + esc(c.headOffice || '') + '</span></div></li>' +
             '<li class="info-item"><span class="info-icon" aria-hidden="true">&#128222;</span>' +
-                '<div class="info-body"><span class="info-label">Phone</span><span class="info-value">' + c.phone + '</span></div></li>' +
+                '<div class="info-body"><span class="info-label">Phone</span><span class="info-value info-phones">' + phoneHtml + '</span></div></li>' +
             '<li class="info-item"><span class="info-icon" aria-hidden="true">&#9993;</span>' +
-                '<div class="info-body"><span class="info-label">Email</span><span class="info-value">' + c.email + '</span></div></li>' +
+                '<div class="info-body"><span class="info-label">Email</span><span class="info-value">' + esc(c.email || '') + '</span></div></li>' +
             (c.website ? '<li class="info-item"><span class="info-icon" aria-hidden="true">&#127760;</span>' +
                 '<div class="info-body"><span class="info-label">Website</span>' +
                 '<span class="info-value"><a href="' + c.website + '" target="_blank" rel="noopener noreferrer">' +
@@ -993,6 +1038,7 @@
         renderBreadcrumb(c);
         renderStats(c);
         renderAbout(c);
+        renderFounded(c);
         renderAmenities(c);
         renderRoutes(c);
         renderFleet(c);
@@ -1156,6 +1202,14 @@
                 email: bag.email || ''
             }];
 
+        /* Multi-phone support: prefer the phones[] from the live API, fall back
+           to the single legacy phone field so old payloads keep rendering. */
+        var phonesList = (Array.isArray(bag.phones) && bag.phones.length)
+            ? bag.phones.map(function (p) { return String(p === null || p === undefined ? '' : p); })
+            : (bag.phone ? [bag.phone] : []);
+        /* Live companies may store an explicit founding year (companies.founded). */
+        var foundedYear = Number(bag.founded) || 0;
+
         return {
             id: bag.id !== undefined ? bag.id : null,
             slug: bag.slug || '',
@@ -1167,9 +1221,10 @@
             description: about,
             rating: Number(bag.rating) || 0,
             reviewCount: Number(bag.review_count) || 0,
-            founded: createdYear,
+            founded: foundedYear || createdYear,
             headOffice: bag.head_office || bag.address || '',
-            phone: bag.phone || '',
+            phone: bag.phone || (phonesList[0] || ''),
+            phones: phonesList,
             email: bag.email || '',
             website: bag.website || '',
             destinations: bag.destinations || [],

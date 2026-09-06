@@ -169,7 +169,7 @@
     }
 
     function validLocal(digits) {
-        return /^9[0-9]{8}$/.test(digits);
+        return /^[1-9][0-9]{8}$/.test(digits);
     }
 
     /* ---------- Payment method selection ---------- */

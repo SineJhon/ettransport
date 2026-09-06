@@ -108,6 +108,9 @@ CREATE TABLE IF NOT EXISTS companies (
   address VARCHAR(255) DEFAULT NULL,
   website VARCHAR(255) DEFAULT NULL,
   head_office VARCHAR(255) DEFAULT NULL,
+  -- Year the bus company was founded (public profile "Founded" section).
+  -- NULL means the company has not set it yet.
+  founded SMALLINT UNSIGNED DEFAULT NULL,
   status ENUM('pending', 'approved', 'suspended', 'rejected') NOT NULL DEFAULT 'pending',
   listed TINYINT(1) NOT NULL DEFAULT 1,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -149,6 +152,35 @@ CREATE TABLE IF NOT EXISTS company_branches (
   PRIMARY KEY (id),
   KEY idx_company_branches_company (company_id),
   CONSTRAINT fk_company_branches_company
+    FOREIGN KEY (company_id) REFERENCES companies(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- company_phones — one company can have several public contact
+-- phone numbers (mobile AND landline, e.g. +251 91x xxx xxx or
+-- +251 1xx xxx xxx). Shown on the passenger-facing profile and
+-- managed from the company dashboard. companies.phone remains
+-- the primary/first number so existing logins, lookups and the
+-- admin list keep working unchanged.
+--
+-- NOTE: for an EXISTING database created before this table was
+-- added, config/database.php's ensure_schema_columns() creates it
+-- automatically (idempotent). Fresh installs get it from here.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS company_phones (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  company_id BIGINT UNSIGNED NOT NULL,
+  phone VARCHAR(30) NOT NULL,
+  label VARCHAR(60) DEFAULT NULL,
+  is_default TINYINT(1) NOT NULL DEFAULT 0,
+  sort_order SMALLINT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_company_phones_company (company_id),
+  CONSTRAINT fk_company_phones_company
     FOREIGN KEY (company_id) REFERENCES companies(id)
     ON DELETE CASCADE
     ON UPDATE CASCADE

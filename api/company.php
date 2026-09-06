@@ -34,9 +34,11 @@ declare(strict_types=1);
  *   GET  api/company.php?action=payments            -> { success, company_id, payments }
  *                                                     (read-only payment list, company role only)
  *   GET  api/company.php?action=profile             -> { success, company }
- *                                                     (authenticated company role only; full editable profile)
+ *                                                     (authenticated company role only; full editable profile,
+ *                                                      includes founded + phones[])
  *   POST api/company.php?action=profile_update      -> { success, message, company }
- *                                                     (authenticated company role only; updates own profile)
+ *                                                     (authenticated company role only; updates own profile,
+ *                                                      accepts founded + phones[])
  *   GET  api/company.php?action=branches             -> { success, branches }
  *                                                     (authenticated company role only; this company's own branches)
  *   POST api/company.php?action=branch_create        -> { success, message, branch }
@@ -523,6 +525,7 @@ function company_profile_rows(PDO $pdo, ?string $slug = null): array
             c.address,
             c.website,
             c.head_office,
+            c.founded,
             c.status,
             c.created_at,
             (SELECT COUNT(*) FROM buses b WHERE b.company_id = c.id) AS bus_count,
@@ -570,6 +573,54 @@ function fetch_company_destinations(PDO $pdo): array
     }
 
     return $out;
+}
+
+/**
+ * All public contact phone numbers for one company, primary number first.
+ *
+ * company_phones is the multi-phone source of truth; companies.phone stays in
+ * sync with the first entry so existing account lookups, auth and the admin
+ * list keep working unchanged.
+ *
+ * @return array<int, string>
+ */
+function fetch_company_phones(PDO $pdo, int $companyId): array
+{
+    $stmt = $pdo->prepare('
+        SELECT phone
+        FROM company_phones
+        WHERE company_id = :company_id
+        ORDER BY is_default DESC, sort_order ASC, id ASC
+    ');
+    $stmt->execute([':company_id' => $companyId]);
+
+    $out = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $out[] = $row['phone'];
+    }
+
+    return $out;
+}
+
+/**
+ * Phone-number map for every company in one query (used by action=list).
+ *
+ * @return array<int, array<int, string>>
+ */
+function fetch_company_phones_map(PDO $pdo): array
+{
+    $stmt = $pdo->query('
+        SELECT company_id, phone
+        FROM company_phones
+        ORDER BY company_id ASC, is_default DESC, sort_order ASC, id ASC
+    ');
+
+    $map = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $map[(int) $row['company_id']][] = $row['phone'];
+    }
+
+    return $map;
 }
 
 /**
@@ -629,8 +680,11 @@ function fetch_popular_routes(PDO $pdo, int $companyId): array
 
 /**
  * Normalize one raw company row into the public payload shape.
+ *
+ * @param array<int, string> $destinations
+ * @param array<int, string> $phones
  */
-function company_payload(array $row, array $destinations): array
+function company_payload(array $row, array $destinations, array $phones = []): array
 {
     $rating = round((float) $row['rating'], 1);
     $reviewCount = (int) $row['review_count'];
@@ -643,10 +697,12 @@ function company_payload(array $row, array $destinations): array
         'logo' => $row['logo'],
         'cover_image' => $row['cover_image'],
         'phone' => $row['phone'],
+        'phones' => $phones,
         'email' => $row['email'],
         'address' => $row['address'],
         'website' => $row['website'],
         'head_office' => $row['head_office'],
+        'founded' => $row['founded'] !== null ? (int) $row['founded'] : null,
         'status' => $row['status'],
         'verified' => $row['status'] === 'approved',
         'rating' => $rating,
@@ -3417,7 +3473,7 @@ function handle_payments(PDO $pdo): void
 function fetch_company_profile_row(PDO $pdo, int $companyId): ?array
 {
     $stmt = $pdo->prepare('
-        SELECT id, name, slug, description, logo, cover_image, phone, email, address, website, head_office, status
+        SELECT id, name, slug, description, logo, cover_image, phone, email, address, website, head_office, founded, status
         FROM companies
         WHERE id = :id
         LIMIT 1
@@ -3440,9 +3496,11 @@ function company_profile_payload(array $row): array
         'description' => $row['description'],
         'email' => $row['email'],
         'phone' => $row['phone'],
+        'phones' => !empty($row['phones']) ? $row['phones'] : (!empty($row['phone']) ? [$row['phone']] : []),
         'address' => $row['address'],
         'website' => $row['website'],
         'head_office' => $row['head_office'],
+        'founded' => $row['founded'] !== null ? (int) $row['founded'] : null,
         'logo' => $row['logo'],
         'cover_image' => $row['cover_image'],
         'status' => $row['status'],
@@ -3555,11 +3613,55 @@ function handle_company_profile(PDO $pdo): void
     $user = requireRole('company');
     $company = require_company_scope($pdo, (int) $user['id']);
     $profile = fetch_company_profile_row($pdo, (int) $company['id']);
+    $profile['phones'] = fetch_company_phones($pdo, (int) $company['id']);
 
     auth_response(200, [
         'success' => true,
         'company' => company_profile_payload($profile),
     ]);
+}
+
+/**
+ * Validate ONE company contact phone number (422 on invalid input).
+ *
+ * Ethiopia uses the +251 country code. Both mobile numbers (starting 7 or 9)
+ * and landline numbers (starting 1, e.g. Addis Ababa 011) are 9 national
+ * digits after +251, so any leading digit 1-9 of the right length is
+ * accepted. Empty values are allowed (contact phones are optional) and
+ * return null so callers can skip blank rows. A stored value is normalized
+ * to the canonical "+251 <9 digits>" display form used across the UI.
+ */
+function company_phone_or_error(mixed $raw): ?string
+{
+    $phone = trim((string) $raw);
+    if ($phone === '') {
+        return null;
+    }
+
+    if (mb_strlen($phone) > 30) {
+        auth_response(422, [
+            'success' => false,
+            'message' => 'Phone must be at most 30 characters.',
+        ]);
+    }
+
+    $digits = preg_replace('/[^0-9]/', '', $phone);
+    if (str_starts_with($digits, '251')) {
+        $national = substr($digits, 3);
+    } elseif (strlen($digits) === 10 && $digits[0] === '0') {
+        $national = substr($digits, 1);      // 09X... -> 9X...
+    } else {
+        $national = $digits;
+    }
+
+    if (preg_match('/^[1-9][0-9]{8}$/', $national) !== 1) {
+        auth_response(422, [
+            'success' => false,
+            'message' => 'Please enter a valid Ethiopian phone number: +251 followed by 9 digits (mobile or landline).',
+        ]);
+    }
+
+    return '+251 ' . substr($national, 0, 2) . ' ' . substr($national, 2, 3) . ' ' . substr($national, 5);
 }
 
 /**
@@ -3582,7 +3684,6 @@ function handle_company_profile_update(PDO $pdo): void
     $name = trim((string) ($input['name'] ?? ''));
     $description = trim((string) ($input['description'] ?? ''));
     $email = strtolower(trim((string) ($input['email'] ?? '')));
-    $phone = trim((string) ($input['phone'] ?? ''));
     $address = trim((string) ($input['address'] ?? ''));
     $website = trim((string) ($input['website'] ?? ''));
     $headOffice = trim((string) ($input['head_office'] ?? ''));
@@ -3590,6 +3691,39 @@ function handle_company_profile_update(PDO $pdo): void
     $uploadedCover = company_uploaded_image_or_error($_FILES['cover_file'] ?? null, $companyId, 'cover');
     $logo = $uploadedLogo ?? ((string) ($input['remove_logo'] ?? '') === '1' ? null : ($existing['logo'] ?? null));
     $coverImage = $uploadedCover ?? ((string) ($input['remove_cover'] ?? '') === '1' ? null : ($existing['cover_image'] ?? null));
+
+    /* Founding year — companies.founded. Empty clears it. */
+    $foundedRaw = trim((string) ($input['founded'] ?? ''));
+    if ($foundedRaw === '') {
+        $founded = null;
+    } else {
+        $founded = (int) $foundedRaw;
+        if ((string) $founded !== $foundedRaw || $founded < 1900 || $founded > (int) date('Y') + 1) {
+            auth_response(422, [
+                'success' => false,
+                'message' => 'Please enter a valid founding year (e.g. 2005).',
+            ]);
+        }
+    }
+
+    /* Contact phones — Accept phones[] (multipart form) or phones (JSON).
+       The first listed number stays the company's primary phone. Empty rows
+       are skipped; duplicates are collapsed. If nothing is submitted the
+       existing primary number is kept so clearing a row can never silently
+       drop the account's public contact phone. */
+    $phonesRaw = isset($input['phones']) && is_array($input['phones']) ? array_values($input['phones']) : [];
+    if ($phonesRaw === [] && ($input['phone'] ?? '') !== '') {
+        $phonesRaw = [$input['phone']];
+    }
+    $phones = [];
+    foreach ($phonesRaw as $oneRaw) {
+        $one = company_phone_or_error($oneRaw);
+        if ($one === null || in_array($one, $phones, true)) {
+            continue;
+        }
+        $phones[] = $one;
+    }
+    $phone = $phones[0] ?? ($existing['phone'] ?? null);
 
     if ($name === '') {
         auth_response(422, [
@@ -3621,13 +3755,7 @@ function handle_company_profile_update(PDO $pdo): void
             'message' => 'Email must be at most 190 characters.',
         ]);
     }
-    if ($phone !== '' && preg_match('/^[+0-9][0-9\-\s]{6,20}$/', $phone) !== 1) {
-        auth_response(422, [
-            'success' => false,
-            'message' => 'Please enter a valid phone number.',
-        ]);
-    }
-    if (mb_strlen($phone) > 30) {
+    if ($phone !== null && mb_strlen($phone) > 30) {
         auth_response(422, [
             'success' => false,
             'message' => 'Phone must be at most 30 characters.',
@@ -3663,33 +3791,67 @@ function handle_company_profile_update(PDO $pdo): void
         ]);
     }
 
-    $stmt = $pdo->prepare('
-        UPDATE companies
-        SET name = :name,
-            description = :description,
-            email = :email,
-            phone = :phone,
-            address = :address,
-            website = :website,
-            head_office = :head_office,
-            logo = :logo,
-            cover_image = :cover_image
-        WHERE id = :id
-    ');
-    $stmt->execute([
-        ':name' => $name,
-        ':description' => $description !== '' ? $description : null,
-        ':email' => $email !== '' ? $email : null,
-        ':phone' => $phone !== '' ? $phone : null,
-        ':address' => $address !== '' ? $address : null,
-        ':website' => $website !== '' ? $website : null,
-        ':head_office' => $headOffice !== '' ? $headOffice : null,
-        ':logo' => $logo,
-        ':cover_image' => $coverImage,
-        ':id' => $companyId,
-    ]);
+    /* Apply the profile row and the full phone list together so a partial
+       failure can never leave companies.phone and company_phones out of
+       sync. */
+    $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare('
+            UPDATE companies
+            SET name = :name,
+                description = :description,
+                email = :email,
+                phone = :phone,
+                address = :address,
+                website = :website,
+                head_office = :head_office,
+                founded = :founded,
+                logo = :logo,
+                cover_image = :cover_image
+            WHERE id = :id
+        ');
+        $stmt->execute([
+            ':name' => $name,
+            ':description' => $description !== '' ? $description : null,
+            ':email' => $email !== '' ? $email : null,
+            ':phone' => $phone !== '' ? $phone : null,
+            ':address' => $address !== '' ? $address : null,
+            ':website' => $website !== '' ? $website : null,
+            ':head_office' => $headOffice !== '' ? $headOffice : null,
+            ':founded' => $founded,
+            ':logo' => $logo,
+            ':cover_image' => $coverImage,
+            ':id' => $companyId,
+        ]);
+
+        /* Replace the whole contact-phone list with the submitted order. */
+        $clear = $pdo->prepare('DELETE FROM company_phones WHERE company_id = :company_id');
+        $clear->execute([':company_id' => $companyId]);
+
+        $insertPhone = $pdo->prepare('
+            INSERT INTO company_phones (company_id, phone, is_default, sort_order)
+            VALUES (:company_id, :phone, :is_default, :sort_order)
+        ');
+        foreach ($phones as $index => $one) {
+            $insertPhone->execute([
+                ':company_id' => $companyId,
+                ':phone' => $one,
+                ':is_default' => $index === 0 ? 1 : 0,
+                ':sort_order' => $index,
+            ]);
+        }
+
+        $pdo->commit();
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        auth_response(500, [
+            'success' => false,
+            'message' => 'Unable to save the profile. Please try again.',
+        ]);
+    }
 
     $updated = fetch_company_profile_row($pdo, $companyId);
+    $updated['phones'] = fetch_company_phones($pdo, $companyId);
 
     auth_response(200, [
         'success' => true,
@@ -3953,9 +4115,11 @@ try {
             $destMap[$d['company_id']][] = $d['to_city'];
         }
 
+        $phonesMap = fetch_company_phones_map($pdo);
+
         $companies = [];
         foreach (company_profile_rows($pdo) as $row) {
-            $companies[] = company_payload($row, $destMap[(int) $row['id']] ?? []);
+            $companies[] = company_payload($row, $destMap[(int) $row['id']] ?? [], $phonesMap[(int) $row['id']] ?? []);
         }
 
         auth_response(200, ['success' => true, 'companies' => $companies]);
@@ -3988,6 +4152,7 @@ try {
         $companyId = (int) $row['id'];
 
         $company = company_payload($row, $destMap[$companyId] ?? []);
+        $company['phones'] = fetch_company_phones($pdo, $companyId);
         $company['fleet'] = fetch_fleet($pdo, $companyId);
         $company['reviews'] = fetch_reviews($pdo, $companyId);
         $company['trips'] = fetch_company_trips($pdo, $companyId);

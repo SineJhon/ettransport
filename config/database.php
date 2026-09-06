@@ -79,6 +79,59 @@ function ensure_schema_columns(PDO $pdo): void
             $pdo->exec("ALTER TABLE companies ADD COLUMN listed TINYINT(1) NOT NULL DEFAULT 1 AFTER status");
         }
 
+        /* companies.founded — founding year shown in the public profile's
+           "Founded" section and editable from the company dashboard. Fresh
+           installs already get the column from schema.sql; this adds it to
+           databases created before it existed. */
+        $stmt = $pdo->prepare(
+            "SELECT COUNT(*)
+               FROM information_schema.columns
+              WHERE table_schema = DATABASE()
+                AND table_name = 'companies'
+                AND column_name = 'founded'"
+        );
+        $stmt->execute();
+        if ((int) $stmt->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE companies ADD COLUMN founded SMALLINT UNSIGNED DEFAULT NULL AFTER head_office");
+        }
+
+        /* company_phones — multiple public contact phone numbers per company
+           (mobile AND landline, e.g. +251 91x xxx xxx or +251 1xx xxx xxx).
+           Idempotent, same pattern as company_reason_history below. */
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS company_phones (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                company_id BIGINT UNSIGNED NOT NULL,
+                phone VARCHAR(30) NOT NULL,
+                label VARCHAR(60) DEFAULT NULL,
+                is_default TINYINT(1) NOT NULL DEFAULT 0,
+                sort_order SMALLINT NOT NULL DEFAULT 0,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY idx_company_phones_company (company_id),
+                CONSTRAINT fk_company_phones_company
+                    FOREIGN KEY (company_id) REFERENCES companies(id)
+                    ON DELETE CASCADE
+                    ON UPDATE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+
+        /* Back-fill the phones table from companies.phone for companies that
+           predate multi-phone support, so every company has at least its
+           primary number in the new table without duplicating rows. */
+        $pdo->exec(
+            "INSERT INTO company_phones (company_id, phone, is_default, sort_order)
+             SELECT c.id, c.phone, 1, 0
+               FROM companies c
+              WHERE c.phone IS NOT NULL
+                AND c.phone <> ''
+                AND NOT EXISTS (
+                    SELECT 1 FROM company_phones cp
+                     WHERE cp.company_id = c.id AND cp.phone = c.phone
+                )"
+        );
+
         /* company_reason_history — rejection/suspension audit trail (idempotent). */
         $pdo->exec(
             "CREATE TABLE IF NOT EXISTS company_reason_history (

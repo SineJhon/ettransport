@@ -230,9 +230,10 @@
         return digits;
     }
 
-    /* A valid local Ethiopian mobile number: 9 + 8 digits (9XXXXXXXX) */
+    /* A valid local Ethiopian number is 9 digits: mobiles start 9/7
+       (9XXXXXXXX) and landlines start with the area code 1-6 (11XXXXXXX). */
     function validLocal(digits) {
-        return /^9[0-9]{8}$/.test(digits);
+        return /^[1-9][0-9]{8}$/.test(digits);
     }
 
     function validEmail(value) {

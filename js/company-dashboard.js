@@ -2522,8 +2522,8 @@
             showWalkInError('walkin-passenger-name-error', 'Passenger full name is required.', 'walkin-passenger-name');
             return null;
         }
-        if (!/^[79][0-9]{8}$/.test(phoneDigits)) {
-            showWalkInError('walkin-passenger-phone-error', 'Enter a valid Ethiopian phone number: +251 followed by 9 digits starting with 7 or 9.', 'walkin-passenger-phone');
+        if (!/^[1-9][0-9]{8}$/.test(phoneDigits)) {
+            showWalkInError('walkin-passenger-phone-error', 'Enter a valid Ethiopian phone number: +251 followed by 9 digits (mobile 9X / 7X or landline 1X…).', 'walkin-passenger-phone');
             return null;
         }
         if (phoneInput) { phoneInput.value = phoneDigits; }
@@ -3315,6 +3315,62 @@
         return digits ? ('+251' + digits) : '';
     }
 
+    /* ---------- Multiple phone numbers ---------- */
+    /* One editable +251 phone row used inside the profile edit form. The
+       country code is appended automatically on save; the input holds only
+       the local national digits (mobile 9X/7X or landline 1X…). */
+    function profilePhoneRowHtml(value) {
+        var local = localPhoneValue(value);
+        return '<div class="cd-phone-row">' +
+            '<div class="phone-field">' +
+                '<span class="phone-prefix" aria-hidden="true">+251</span>' +
+                '<input type="tel" class="field-input cd-phone-input" name="phones[]" maxlength="12" placeholder="9XX XXX XXXX" inputmode="numeric" autocomplete="tel-national" value="' + escHtml(local) + '">' +
+            '</div>' +
+            '<button type="button" class="btn btn-ghost cd-phone-remove" aria-label="Remove this phone number">&times;</button>' +
+        '</div>';
+    }
+
+    function addProfilePhoneRow(value) {
+        var list = byId('profile-phone-list');
+        if (!list) { return; }
+        var holder = document.createElement('div');
+        holder.innerHTML = profilePhoneRowHtml(value);
+        list.appendChild(holder.firstChild);
+        var input = list.lastElementChild ? list.lastElementChild.querySelector('.cd-phone-input') : null;
+        if (input) { input.focus(); }
+    }
+
+    function removeProfilePhoneRow(btn) {
+        var row = btn.closest ? btn.closest('.cd-phone-row') : null;
+        if (row && row.parentNode) { row.parentNode.removeChild(row); }
+        /* Always keep at least one editable phone row. */
+        var list = byId('profile-phone-list');
+        if (list && !list.querySelector('.cd-phone-row')) { addProfilePhoneRow(''); }
+    }
+
+    /* Fill the phone rows from the loaded company profile. */
+    function populateProfilePhoneList(company) {
+        var list = byId('profile-phone-list');
+        if (!list) { return; }
+        list.innerHTML = '';
+        var numbers = (company.phones && company.phones.length)
+            ? company.phones
+            : (company.phone ? [company.phone] : ['']);
+        for (var i = 0; i < numbers.length; i++) { addProfilePhoneRow(numbers[i]); }
+    }
+
+    /* Normalize every visible phone row to its full +251 value. Duplicates and
+       empty rows are dropped so the saved list stays clean. */
+    function collectProfilePhoneInputs() {
+        var out = [];
+        var rows = document.querySelectorAll('#profile-phone-list .cd-phone-input');
+        for (var i = 0; i < rows.length; i++) {
+            var full = fullPhoneValue(rows[i].value);
+            if (full && out.indexOf(full) === -1) { out.push(full); }
+        }
+        return out;
+    }
+
     function setProfileLink(el, value) {
         if (!el) { return; }
         if (value) {
@@ -3615,7 +3671,11 @@ var reviewEditingReplyId = null;
         byId('profile-name').textContent = profileValue(company.name);
         byId('profile-slug').textContent = company.slug ? '#' + company.slug : '\u2014';
         byId('profile-email').textContent = profileValue(company.email);
-        byId('profile-phone').textContent = profileValue(company.phone);
+        var phonesShown = (company.phones && company.phones.length)
+            ? company.phones
+            : (company.phone ? [company.phone] : []);
+        byId('profile-phone').textContent = profileValue(phonesShown.join(' \u00b7 '));
+        byId('profile-founded').textContent = profileValue(company.founded);
         byId('profile-address').textContent = profileValue(company.address);
         byId('profile-head-office').textContent = profileValue(company.head_office);
         byId('profile-website').textContent = profileValue(company.website);
@@ -3636,8 +3696,9 @@ var reviewEditingReplyId = null;
         if (nameInput) { nameInput.value = company.name || ''; }
         var emailInput = byId('profile-input-email');
         if (emailInput) { emailInput.value = company.email || ''; }
-        var phoneInput = byId('profile-input-phone');
-        if (phoneInput) { phoneInput.value = localPhoneValue(company.phone); }
+        populateProfilePhoneList(company);
+        var foundedInput = byId('profile-input-founded');
+        if (foundedInput) { foundedInput.value = company.founded || ''; }
         var addressInput = byId('profile-input-address');
         if (addressInput) { addressInput.value = company.address || ''; }
         var websiteInput = byId('profile-input-website');
@@ -3714,10 +3775,17 @@ var reviewEditingReplyId = null;
         var original = saveBtn ? saveBtn.textContent : '';
         if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving\u2026'; }
 
-        var phoneInput = byId('profile-input-phone');
-        if (phoneInput) { phoneInput.value = fullPhoneValue(phoneInput.value); }
+        var phones = collectProfilePhoneInputs();
 
         var payload = new FormData(form);
+        /* The inline phone inputs carry only the local national digits; replace
+           them with the normalized full +251 values below (delete() clears every
+           raw row in one call). */
+        payload.delete('phone');
+        if (payload.getAll) { payload.delete('phones[]'); }
+        for (var pi = 0; pi < phones.length; pi++) {
+            payload.append('phones[]', phones[pi]);
+        }
 
         fetch('api/company.php?action=profile_update', {
             method: 'POST',
@@ -4643,6 +4711,19 @@ function submitBranchForm() {
             profileForm.addEventListener('submit', function (ev) {
                 ev.preventDefault();
                 submitProfileForm();
+            });
+        }
+
+        /* Add / remove phone rows in the profile form. */
+        var addPhoneBtn = byId('btn-add-phone');
+        if (addPhoneBtn) {
+            addPhoneBtn.addEventListener('click', function () { addProfilePhoneRow(''); });
+        }
+        var phoneList = byId('profile-phone-list');
+        if (phoneList) {
+            phoneList.addEventListener('click', function (ev) {
+                var btn = ev.target.closest ? ev.target.closest('.cd-phone-remove') : null;
+                if (btn) { removeProfilePhoneRow(btn); }
             });
         }
     });

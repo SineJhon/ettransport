@@ -2099,6 +2099,57 @@ input:focus-visible {
     max-width: 820px;
 }
 
+/* ---------- Founded section ---------- */
+.founded-block {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin-top: var(--space-md);
+    background: linear-gradient(135deg, #1e3a5f, #16324a);
+    color: #fff;
+    border-radius: 14px;
+    padding: 1.75rem 2rem;
+    max-width: 900px;
+}
+.founded-year {
+    font-size: 3.2rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: #fbbf24;
+    flex: 0 0 auto;
+}
+.founded-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+.founded-years {
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #93c5fd;
+}
+.founded-text p {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.55;
+    color: rgba(255, 255, 255, 0.92);
+}
+.founded-none {
+    margin-top: var(--space-md);
+    padding: 1rem 1.2rem;
+    border: 1px dashed #cbd5e1;
+    border-radius: 10px;
+    color: var(--color-muted);
+    font-size: 0.92rem;
+    max-width: 860px;
+}
+@media (max-width: 560px) {
+    .founded-block { flex-direction: column; align-items: flex-start; gap: 0.9rem; padding: 1.4rem 1.4rem; }
+    .founded-year { font-size: 2.6rem; }
+}
 /* ---------- 1. Company Hero ---------- */
 .company-hero {
     position: relative;
@@ -2832,6 +2883,20 @@ input:focus-visible {
     color: var(--color-primary);
 }
 
+/* Multiple phone numbers in the Company Information grid. */
+.info-phones {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+.info-phone a {
+    color: var(--color-dark);
+    text-decoration: none;
+}
+.info-phone a:hover {
+    color: var(--color-primary);
+    text-decoration: underline;
+}
 /* ---------- 10. Branches / Contact ---------- */
 .branch-head-badge {
     display: inline-block;

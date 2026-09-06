@@ -1323,7 +1323,7 @@ function closeTicket() {
         else if (digits.indexOf('251') === 0 && digits.length === 12) { digits = digits.slice(3); }
         return digits;
     }
-    function validLocalPhone(digits) { return /^9[0-9]{8}$/.test(digits); }
+    function validLocalPhone(digits) { return /^[1-9][0-9]{8}$/.test(digits); }
 
     function formatPhoneDisplay(p) {
         var digits = normalizeLocalPhone(p);
@@ -1940,7 +1940,7 @@ function closeTicket() {
             if (!name) { setFieldError('p-full-name', 'Full name is required.'); ok = false; }
             else { clearFieldError('p-full-name'); }
 
-            if (!validLocalPhone(digits)) { setFieldError('p-phone-input', 'Please enter a valid Ethiopian phone number (09XXXXXXXX or +2519XXXXXXXX).'); ok = false; }
+            if (!validLocalPhone(digits)) { setFieldError('p-phone-input', 'Please enter a valid Ethiopian phone number (09XXXXXXXX / +2519XXXXXXXX, or a landline such as 11XXXXXXX).'); ok = false; }
             else { clearFieldError('p-phone-input'); }
 
             if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setFieldError('p-email-input', 'Please enter a valid email address.'); ok = false; }

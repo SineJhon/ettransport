@@ -1932,8 +1932,8 @@ function renderDetail(c) {
         }
         case 'add-company-phone': {
             var digits = byId(fieldId).value.replace(/\D/g, '');
-            if (!/^[79][0-9]{8}$/.test(digits)) {
-                showAddFieldError(fieldId, 'Enter a valid Ethiopian phone: +251 followed by 9 digits starting with 7 or 9.');
+            if (!/^[1-9][0-9]{8}$/.test(digits)) {
+                showAddFieldError(fieldId, 'Enter a valid Ethiopian phone: +251 followed by 9 digits (mobile 9X / 7X or landline 1X…).');
                 return false;
             }
             clearAddFieldError(fieldId);

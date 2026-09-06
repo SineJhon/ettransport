@@ -402,6 +402,15 @@
         .cd-profile-form input, .cd-profile-form textarea { width: 100%; padding: 0.6rem 0.7rem; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 6px; font-family: inherit; }
         .cd-profile-form textarea { min-height: 90px; resize: vertical; }
         .cd-profile-form .phone-field input { width: auto; flex: 1 1 auto; min-width: 0; }
+        /* Multiple phone numbers — one +251 row each. */
+        .cd-phone-list-col { min-width: 0; }
+        .cd-phone-rows { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.55rem; }
+        .cd-phone-row { display: flex; align-items: stretch; gap: 0.5rem; }
+        .cd-phone-row .phone-field { flex: 1 1 auto; min-width: 0; }
+        .cd-phone-row .phone-field input { width: auto; flex: 1 1 auto; min-width: 0; }
+        .cd-phone-remove { flex: 0 0 auto; align-self: center; font-size: 1.15rem; line-height: 1; padding: 0.5rem 0.75rem; color: #b91c1c; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; cursor: pointer; }
+        .cd-phone-remove:hover { background: #fee2e2; }
+        #btn-add-phone { margin-bottom: 0.35rem; }
         .cd-profile-branches { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid #e5e7eb; }
         .cd-profile-branches-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
         .cd-profile-branches-head h3 { margin: 0; font-size: 1.05rem; color: var(--color-dark); }
@@ -1320,6 +1329,7 @@
                 </div>
                 <div class="cd-profile-grid">
                     <div class="cd-profile-field"><span class="k">Head Office</span><span class="v" id="profile-head-office"></span></div>
+                    <div class="cd-profile-field"><span class="k">Founded</span><span class="v" id="profile-founded"></span></div>
                     <div class="cd-profile-field"><span class="k">Contact Email</span><span class="v" id="profile-email"></span></div>
                     <div class="cd-profile-field"><span class="k">Phone</span><span class="v" id="profile-phone"></span></div>
                     <div class="cd-profile-field"><span class="k">Website</span><span class="v" id="profile-website"></span></div>
@@ -1341,16 +1351,16 @@
                 </div>
                 <div class="cd-profile-form-row">
                     <div>
-                        <label for="profile-input-phone">Phone</label>
-                        <div class="phone-field">
-                            <span class="phone-prefix" aria-hidden="true">+251</span>
-                            <input id="profile-input-phone" name="phone" type="tel" class="field-input" maxlength="12" placeholder="9XX XXX XXXX" inputmode="numeric" autocomplete="tel-national">
-                        </div>
+                        <label for="btn-add-phone">Phone Numbers</label>
+                        <div id="profile-phone-list" class="cd-phone-rows"></div>
+                        <button type="button" id="btn-add-phone" class="btn btn-secondary btn-sm">&#43; Add another phone number</button>
+                        <span class="cd-profile-form-hint">The +251 country code is added automatically. Landline numbers (e.g. 11 667 8022) are supported too.</span>
                     </div>
                     <div>
                         <label for="profile-input-address">Address</label>
                         <input id="profile-input-address" name="address" type="text" maxlength="255">
                     </div>
+                </div>
                 <div class="cd-profile-form-row">
                     <div>
                         <label for="profile-input-website">Website</label>
@@ -1363,6 +1373,12 @@
                         <span class="cd-profile-form-hint">Where passengers can find your main office.</span>
                     </div>
                 </div>
+                <div class="cd-profile-form-row">
+                    <div>
+                        <label for="profile-input-founded">Founded Year</label>
+                        <input id="profile-input-founded" name="founded" type="number" min="1900" max="2100" inputmode="numeric" placeholder="e.g. 2005">
+                        <span class="cd-profile-form-hint">Shown in the &#8220;Founded&#8221; section on your passenger-facing company page.</span>
+                    </div>
                 </div>
                 <div class="cd-profile-form-row">
                     <div>
