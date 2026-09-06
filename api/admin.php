@@ -354,6 +354,87 @@ function handle_admin_company(PDO $pdo): void
         'company' => admin_company_payload($rows[0]),
     ]);
 }
+
+/**
+ * GET /api/admin.php?action=reviews — every company review across the
+ * platform (admin only).
+ *
+ * This is the admin-facing twin of the company dashboard's review list
+ * (api/review.php?action=list). Instead of one company it aggregates ALL
+ * approved reviews, newest first, and annotates each row with the company
+ * the review was written for — so the admin can read every passenger's
+ * feedback and reply through api/review.php?action=reply.
+ */
+function handle_admin_reviews(PDO $pdo): void
+{
+    if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
+        auth_response(405, ['success' => false, 'message' => 'Method not allowed.']);
+    }
+
+    $user = requireRole('admin');
+
+    /* Platform-wide average + count over approved reviews only (matches the
+       sentiment numbers shown on the public company pages). */
+    $aggStmt = $pdo->prepare('
+        SELECT COUNT(*) AS cnt, COALESCE(AVG(rating), 0) AS avg_rating
+        FROM reviews
+        WHERE status = \'approved\'');
+    $aggStmt->execute();
+    $agg = $aggStmt->fetch();
+
+    /* Every review, newest first, annotated with the company it describes.
+       liked_by_viewer lets the admin see + toggle their own hearts. */
+    $viewerId = (int) ($user['id'] ?? 0);
+    $listStmt = $pdo->prepare('
+        SELECT
+            r.id,
+            r.company_id,
+            c.name           AS company_name,
+            c.slug           AS company_slug,
+            r.rating,
+            r.comment,
+            r.created_at,
+            r.booking_id,
+            r.likes,
+            r.reply,
+            r.reply_at,
+            r.status,
+            u.name           AS passenger_name,
+            (SELECT 1 FROM review_likes rl WHERE rl.review_id = r.id AND rl.user_id = :viewer) AS liked_by_viewer
+        FROM reviews r
+        JOIN companies c ON c.id = r.company_id
+        JOIN users u     ON u.id = r.passenger_id
+        ORDER BY r.created_at DESC, r.id DESC
+        LIMIT 500');
+    $listStmt->execute([':viewer' => $viewerId]);
+
+    $reviews = [];
+    foreach ($listStmt->fetchAll() as $row) {
+        $reviews[] = [
+            'id' => (int) $row['id'],
+            'company_id' => (int) $row['company_id'],
+            'company_name' => $row['company_name'],
+            'company_slug' => $row['company_slug'],
+            'name' => $row['passenger_name'],
+            'rating' => (int) $row['rating'],
+            'comment' => $row['comment'] !== null && $row['comment'] !== '' ? $row['comment'] : null,
+            'created_at' => $row['created_at'] ?? '',
+            'verified' => ($row['booking_id'] ?? null) !== null,
+            'likes' => (int) ($row['likes'] ?? 0),
+            'liked' => (int) ($row['liked_by_viewer'] ?? 0) === 1,
+            'reply' => $row['reply'] !== null && $row['reply'] !== '' ? $row['reply'] : null,
+            'reply_at' => $row['reply_at'] ?? null,
+            'status' => $row['status'],
+        ];
+    }
+
+    auth_response(200, [
+        'success' => true,
+        'rating' => round((float) ($agg['avg_rating'] ?? 0), 1),
+        'reviewCount' => (int) ($agg['cnt'] ?? 0),
+        'reviews' => $reviews,
+    ]);
+}
 /* ============================================================
  Admin operational oversight (READ-ONLY)
    ------------------------------------------------------------
@@ -1696,6 +1777,10 @@ try {
         handle_admin_passenger($pdo);
     }
 
+    if ($action === 'reviews') {
+        handle_admin_reviews($pdo);
+    }
+
     if ($action === 'manifest') {
         handle_admin_manifest($pdo);
     }
@@ -1734,7 +1819,7 @@ try {
 
     auth_response(400, [
         'success' => false,
-        'message' => 'Unsupported action. Use action=overview, action=companies, action=company, action=trips, action=revenue, action=company_revenue, action=bookings, action=passengers, action=passenger, action=manifest, action=company_approve, action=company_reject, action=company_suspend, action=company_activate, action=company_list, action=company_unlist or action=company_delete.',
+        'message' => 'Unsupported action. Use action=overview, action=companies, action=company, action=reviews, action=trips, action=revenue, action=company_revenue, action=bookings, action=passengers, action=passenger, action=manifest, action=company_approve, action=company_reject, action=company_suspend, action=company_activate, action=company_list, action=company_unlist or action=company_delete.',
     ]);
 } catch (Throwable $e) {
     auth_response(500, [

@@ -391,14 +391,20 @@ function handle_like(): void
 }
 
 /**
- * A company replies to a review left for its own company. The review row's
- * company_id (from MySQL, never the browser) must match the session
- * company's id. Sending an empty reply removes the reply.
+ * A company replies to a review left for its own company, or a platform
+ * admin replies to ANY review. The review row's company_id (from MySQL,
+ * never the browser) must match the session company's id for company
+ * operators; admins may reply everywhere (used by the admin Reviews tab).
+ * Sending an empty reply removes the reply.
  */
 function handle_reply(): void
 {
     require_review_post();
-    $user = requireRole('company');
+    $user = requireLogin();
+    $role = strtolower((string) ($user['role'] ?? ''));
+    if ($role !== 'company' && $role !== 'admin') {
+        auth_response(403, ['success' => false, 'message' => 'Only company operators or platform admins can reply to reviews.']);
+    }
     if (($user['status'] ?? '') !== 'active') {
         auth_response(403, ['success' => false, 'message' => 'Your account is not active.']);
     }
@@ -416,9 +422,15 @@ function handle_reply(): void
     }
 
     $pdo = db();
-    $company = review_company_by_user($pdo, (int) $user['id']);
-    if ($company === null) {
-        auth_response(404, ['success' => false, 'message' => 'No linked company profile was found for this account.']);
+
+    /* A company reply must target the operator's own company. The platform
+       admin may reply to any review, so the ownership gate is skipped. */
+    $company = null;
+    if ($role === 'company') {
+        $company = review_company_by_user($pdo, (int) $user['id']);
+        if ($company === null) {
+            auth_response(404, ['success' => false, 'message' => 'No linked company profile was found for this account.']);
+        }
     }
 
     $selStmt = $pdo->prepare('
@@ -432,7 +444,7 @@ function handle_reply(): void
     if ($review === false) {
         auth_response(404, ['success' => false, 'message' => 'Review not found.']);
     }
-    if ((int) $review['company_id'] !== (int) $company['id']) {
+    if ($role === 'company' && (int) $review['company_id'] !== (int) $company['id']) {
         auth_response(403, ['success' => false, 'message' => 'You can only reply to reviews for your own company.']);
     }
 

@@ -173,10 +173,10 @@
         currentCompanies = Array.isArray(companies) ? companies : [];
         applyFilter();
 
-        /* Keep the Reviews grid fresh when it is the active section. */
+        /* Keep the Reviews section fresh when it is the active tab. */
         var reviewsSection = byId('section-reviews');
         if (reviewsSection && !reviewsSection.hidden) {
-            renderReviews();
+            loadReviews();
         }
     }
 
@@ -945,20 +945,299 @@ function renderDetail(c) {
 
         if (name === 'revenue') { loadRevenue(); }
         if (name === 'passengers') { loadPassengers(); }
-        if (name === 'reviews') { renderReviews(); }
+        if (name === 'reviews') { loadReviews(); }
     }
 
-    function renderReviews() {
-        var grid = byId('ad-review-grid');
+    /* ---------- Reviews: platform sentiment studio (migrated from company dashboard) ---------- */
+    var currentReviews = [];
+    var reviewFilter = null;
+    var reviewEditingReplyId = null;
+    var reviewsRequestId = 0;
+
+    function reviewStarsHtml(rating) {
+        var filled = Math.round(Number(rating) || 0);
+        var s = '';
+        for (var i = 0; i < 5; i++) { s += (i < filled) ? '\u2605' : '\u2606'; }
+        return s;
+    }
+
+    function formatReviewDate(value) {
+        if (!value) { return ''; }
+        var iso = String(value);
+        if (iso.indexOf(' ') > 0) { iso = iso.replace(' ', 'T'); }
+        var d = new Date(iso);
+        if (isNaN(d.getTime())) { return String(value).slice(0, 10); }
+        try {
+            return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+        } catch (e) { return String(value).slice(0, 10); }
+    }
+
+    /* One mock platform review — a demo review about ET Transport itself so the
+       admin always has an illustrative card, even before real reviews exist. */
+    function mockPlatformReview() {
+        return {
+            id: -1,
+            isMock: true,
+            isPlatform: true,
+            name: 'Hanna Bekele',
+            rating: 5,
+            comment: 'Booking a ticket was quick and clear, and my wallet top-up went straight through. ET Transport made my trip from Addis Ababa to Arba Minch completely hassle-free!',
+            created_at: '2026-08-18 10:24:00',
+            verified: false,
+            likes: 12,
+            liked: false,
+            reply: 'Thank you for the kind words! We work every day to make booking buses across Ethiopia simpler. \u2014 ET Transport team',
+            reply_at: '2026-08-19 14:05:00',
+            company_name: 'ET Transport',
+            company_slug: 'platform',
+            status: 'approved'
+        };
+    }
+
+    function reviewLikeButtonHtml(r) {
+        var liked = !!r.liked;
+        return '<button type="button" class="ad-review-like' + (liked ? ' is-liked' : '') + '" data-review-id="' + r.id + '" aria-pressed="' + (liked ? 'true' : 'false') + '" aria-label="' + (liked ? 'Unlike this review' : 'Like this review') + '">' +
+            (liked ? '\u2665' : '\u2661') + ' <span class="ad-review-like-count">' + (Number(r.likes) || 0) + '</span>' +
+        '</button>';
+    }
+
+    function reviewReplyBlockHtml(r) {
+        if (!r.reply) { return ''; }
+        return '<div class="ad-review-reply" data-review-id="' + r.id + '">' +
+            '<span class="ad-review-reply-label">' + (r.isPlatform ? 'Platform reply' : 'Company reply') + '</span>' +
+            '<p>' + escHtml(r.reply) + '</p>' +
+            '<span class="ad-review-reply-meta">Published ' + (formatReviewDate(r.reply_at) || '') + '</span>' +
+        '</div>';
+    }
+
+    function reviewReplyEditorHtml(r) {
+        return '<div class="ad-review-reply-editor">' +
+            '<div class="ad-review-reply-editor-head"><span>Public response</span><small data-review-reply-count>' + String(r.reply || '').length + ' / 1000</small></div>' +
+            '<textarea class="ad-review-reply-input" maxlength="1000" placeholder="Write an official reply to this passenger...">' + escHtml(r.reply || '') + '</textarea>' +
+            '<div class="ad-review-reply-editor-actions">' +
+                '<button type="button" class="btn btn-sm btn-secondary ad-review-reply-cancel" data-review-id="' + r.id + '">Cancel</button>' +
+                '<button type="button" class="btn btn-sm btn-primary ad-review-reply-save" data-review-id="' + r.id + '">' + (r.reply ? 'Save reply' : 'Post reply') + '</button>' +
+            '</div>' +
+        '</div>';
+    }
+
+    function reviewCardHtml(r) {
+        var editing = Number(reviewEditingReplyId) === Number(r.id);
+        var initial = String(r.name || 'P').trim().charAt(0).toUpperCase() || 'P';
+        return '<article class="ad-review-card' + (editing ? ' is-editing' : '') + (r.isMock ? ' is-mock' : '') + '" data-review-id="' + r.id + '">' +
+            '<div class="ad-review-card-head">' +
+                '<span class="ad-review-avatar" aria-hidden="true">' + escHtml(initial) + '</span>' +
+                '<div class="ad-review-person"><strong>' + escHtml(r.name || 'Passenger') + '</strong><span class="ad-review-meta">' + (formatReviewDate(r.created_at) || 'Recent review') + '</span></div>' +
+                (r.verified ? '<span class="ad-review-badge">Verified</span>' : '') +
+                (r.isPlatform ? '<span class="ad-review-badge ad-review-company">Platform review</span>' : '<span class="ad-review-badge ad-review-company">' + escHtml(r.company_name || 'Company') + '</span>') +
+                (r.status && r.status !== 'approved' ? '<span class="ad-review-badge ad-review-mock">' + escHtml(r.status) + '</span>' : '') +
+                (r.isMock ? '<span class="ad-review-badge ad-review-mock">Example</span>' : '') +
+                '<span class="ad-review-rating" aria-label="Rated ' + r.rating + ' out of 5"><span aria-hidden="true">★</span> ' + Number(r.rating || 0).toFixed(1) + '</span>' +
+            '</div>' +
+            (r.comment ? '<p class="ad-review-text">' + escHtml(r.comment) + '</p>' : '<p class="ad-review-text ad-review-no-comment">No written comment.</p>') +
+            (!r.isMock ? '<div class="ad-review-actions">' + reviewLikeButtonHtml(r) +
+                (!editing ? '<button type="button" class="ad-review-reply-btn" data-review-id="' + r.id + '">' + (r.reply ? 'Edit response' : 'Respond') + '</button>' : '') +
+            '</div>' : '') +
+            (!r.isMock && editing ? reviewReplyEditorHtml(r) : reviewReplyBlockHtml(r)) +
+        '</article>';
+    }
+
+    function countReviewsForFilter(val) {
+        var count = 0;
+        for (var k = 0; k < currentReviews.length; k++) {
+            var r = currentReviews[k];
+            if (r.isMock) { continue; }
+            if (val === null || Number(r.rating) === val) { count++; }
+        }
+        return count;
+    }
+
+    function renderReviewFilterBar() {
+        var bar = byId('ad-reviews-filterbar');
+        if (!bar) { return; }
+        if (!currentReviews.length) { bar.hidden = true; bar.innerHTML = ''; return; }
+        var options = [[null, 'All feedback'], [5, '5 stars'], [4, '4 stars'], [3, '3 stars'], [2, '2 stars'], [1, '1 star']];
+        var html = '';
+        for (var i = 0; i < options.length; i++) {
+            var val = options[i][0]; var label = options[i][1];
+            var active = val === reviewFilter;
+            html += '<button type="button" class="ad-review-filter' + (active ? ' is-active' : '') + '" data-review-filter="' + (val === null ? '' : val) + '" aria-pressed="' + (active ? 'true' : 'false') + '">' + label + ' <span class="ad-review-filter-count">' + countReviewsForFilter(val) + '</span></button>';
+        }
+        bar.innerHTML = html;
+        bar.hidden = false;
+    }
+
+    function renderReviewCards() {
+        var list = byId('ad-reviews-list');
         var empty = byId('ad-reviews-empty');
-        if (!grid) { return; }
-        var reviewed = currentCompanies.filter(function (company) { return Number(company.review_count) > 0; });
-        if (!reviewed.length) { grid.innerHTML = ''; show(empty); return; }
-        hide(empty);
-        grid.innerHTML = reviewed.map(function (company) {
-            var rating = Math.max(0, Math.min(5, Math.round(Number(company.avg_rating) || 0)));
-            return '<article class="ad-review-card"><h3>' + escHtml(company.name) + '</h3><p class="ad-stars" aria-label="' + rating + ' out of 5 stars">' + '★'.repeat(rating) + '☆'.repeat(5 - rating) + '</p><p>' + escHtml(company.avg_rating) + ' average from ' + escHtml(company.review_count) + ' approved review' + (Number(company.review_count) === 1 ? '' : 's') + '.</p></article>';
-        }).join('');
+        var filtered = (reviewFilter === null) ? currentReviews : currentReviews.filter(function (x) { return Number(x.rating) === reviewFilter; });
+        if (filtered.length) {
+            var html = filtered.map(reviewCardHtml).join('');
+            if (list) { list.innerHTML = html; list.hidden = false; }
+            if (empty) { empty.hidden = true; }
+        } else {
+            if (list) { list.innerHTML = ''; list.hidden = true; }
+            if (empty) {
+                empty.hidden = false;
+                empty.textContent = reviewFilter === null ? 'No reviews yet.' : 'No reviews match this rating yet.';
+            }
+        }
+    }
+
+    function renderReviews(data) {
+        var loading = byId('ad-reviews-loading'); if (loading) { loading.hidden = true; }
+        var error = byId('ad-reviews-error'); if (error) { error.hidden = true; }
+
+        var summary = byId('ad-reviews-summary');
+        if (summary) {
+            var rating = Number(data.rating) || 0;
+            var reviews = Array.isArray(data.reviews) ? data.reviews : [];
+            var realReviews = [];
+            for (var i = 0; i < reviews.length; i++) { if (!reviews[i].isMock) { realReviews.push(reviews[i]); } }
+            var ratingCounts = [0, 0, 0, 0, 0, 0];
+            for (var j = 0; j < realReviews.length; j++) {
+                var reviewRating = Math.round(Number(realReviews[j].rating) || 0);
+                if (reviewRating >= 1 && reviewRating <= 5) { ratingCounts[reviewRating]++; }
+            }
+            var totalReviews = Number(data.reviewCount) || realReviews.length;
+            var distribution = '';
+            for (var star = 5; star >= 1; star--) {
+                var count = ratingCounts[star];
+                var width = totalReviews ? Math.round((count / totalReviews) * 100) : 0;
+                distribution += '<div class="ad-review-distribution-row"><b>' + star + ' ★</b><span class="ad-review-distribution-track"><i class="ad-review-distribution-fill" style="width:' + width + '%"></i></span><span>' + count + '</span></div>';
+            }
+            summary.hidden = false;
+            summary.innerHTML =
+                '<div class="ad-review-score-panel"><p class="ad-review-kicker">Platform sentiment</p><span class="ad-review-score">' + rating.toFixed(1) + '</span><span class="ad-review-stars" role="img" aria-label="Rated ' + rating.toFixed(1) + ' out of 5">' + reviewStarsHtml(rating) + '</span><span class="ad-review-count">' + totalReviews.toLocaleString() + ' review' + (totalReviews === 1 ? '' : 's') + '</span></div>' +
+                '<div class="ad-review-distribution" aria-label="Rating distribution">' + distribution + '</div>';
+        }
+
+        currentReviews = Array.isArray(data.reviews) ? data.reviews.slice() : [];
+        currentReviews.unshift(mockPlatformReview());
+        reviewFilter = null;
+        renderReviewFilterBar();
+        renderReviewCards();
+    }
+
+    function showReviewsError(message) {
+        var loading = byId('ad-reviews-loading'); if (loading) { loading.hidden = true; }
+        var list = byId('ad-reviews-list'); if (list) { list.innerHTML = ''; list.hidden = true; }
+        var empty = byId('ad-reviews-empty'); if (empty) { empty.hidden = true; }
+        var summary = byId('ad-reviews-summary'); if (summary) { summary.hidden = true; }
+        var filterbar = byId('ad-reviews-filterbar'); if (filterbar) { filterbar.hidden = true; }
+        var error = byId('ad-reviews-error');
+        if (error) {
+            error.hidden = false;
+            error.textContent = message || 'Unable to load reviews. Please try again later.';
+        }
+    }
+
+    function loadReviews() {
+        var loading = byId('ad-reviews-loading'); if (loading) { loading.hidden = false; }
+        var error = byId('ad-reviews-error'); if (error) { error.hidden = true; }
+        var empty = byId('ad-reviews-empty'); if (empty) { empty.hidden = true; }
+        var list = byId('ad-reviews-list'); if (list) { list.innerHTML = ''; list.hidden = true; }
+        var summary = byId('ad-reviews-summary'); if (summary) { summary.hidden = true; }
+        var filterbar = byId('ad-reviews-filterbar'); if (filterbar) { filterbar.hidden = true; }
+
+        var rid = ++reviewsRequestId;
+        fetch('api/admin.php?action=reviews', {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(parseJson)
+            .then(function (result) {
+                if (rid !== reviewsRequestId) { return; }
+                var data = result.data || {};
+                if (!result.ok || result.status !== 200 || !data.success) {
+                    showReviewsError(data.message || 'Unable to load reviews.');
+                    return;
+                }
+                renderReviews(data);
+            })
+            .catch(function () {
+                if (rid !== reviewsRequestId) { return; }
+                showReviewsError('Network error while loading reviews.');
+            });
+    }
+
+    function currentReviewById(id) {
+        for (var i = 0; i < currentReviews.length; i++) {
+            if (currentReviews[i].id === Number(id)) { return currentReviews[i]; }
+        }
+        return null;
+    }
+
+    function showReviewActionMessage(message) {
+        var error = byId('ad-reviews-error');
+        if (!error || !message) { return; }
+        error.textContent = message;
+        error.hidden = false;
+        setTimeout(function () { if (error.textContent === message) { error.hidden = true; } }, 4000);
+    }
+
+    function toggleReviewLike(id) {
+        if (!id || Number(id) < 0) { return; }
+        fetch('api/review.php?action=like', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'Accept': 'application/json' },
+            body: 'review_id=' + encodeURIComponent(id)
+        })
+            .then(parseJson)
+            .then(function (result) {
+                var json = result.data;
+                if (!result.ok || !json || json.success !== true) {
+                    showReviewActionMessage((json && json.message) || 'Unable to update the like.');
+                    return;
+                }
+                var review = currentReviewById(id);
+                if (review) { review.likes = json.likes; review.liked = !!json.liked; }
+                renderReviewCards();
+            })
+            .catch(function () { showReviewActionMessage('Network error while updating the like.'); });
+    }
+
+    function beginReviewReply(id) {
+        reviewEditingReplyId = Number(id) || null;
+        renderReviewCards();
+        setTimeout(function () {
+            var editor = document.querySelector('.ad-review-card.is-editing .ad-review-reply-input');
+            if (editor) { editor.focus(); }
+        }, 0);
+    }
+
+    function cancelReviewReply() {
+        reviewEditingReplyId = null;
+        renderReviewCards();
+    }
+
+    function submitReviewReply(id, reply) {
+        if (!id || Number(id) < 0) { return; }
+        fetch('api/review.php?action=reply', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'Accept': 'application/json' },
+            body: 'review_id=' + encodeURIComponent(id) + '&reply=' + encodeURIComponent(reply)
+        })
+            .then(parseJson)
+            .then(function (result) {
+                var json = result.data;
+                if (!result.ok || !json || json.success !== true) {
+                    showReviewActionMessage((json && json.message) || 'Unable to save the reply.');
+                    return;
+                }
+                var review = currentReviewById(id);
+                if (review && json.review) {
+                    review.reply = json.review.reply || null;
+                    review.reply_at = json.review.reply_at || null;
+                }
+                reviewEditingReplyId = null;
+                renderReviewCards();
+                showReviewActionMessage('Reply saved. It now appears on the passenger-facing company page.');
+            })
+            .catch(function () { showReviewActionMessage('Network error while saving the reply.'); });
     }
 
     /* ---------- Revenue section (per-company list + detail modal) ---------- */
@@ -1797,10 +2076,42 @@ function renderDetail(c) {
         }
 
         var refreshReviews = byId('btn-refresh-reviews');
-        if (refreshReviews) {
-            refreshReviews.addEventListener('click', function () {
-                loadCompanies();
-                window.setTimeout(renderReviews, 300);
+        if (refreshReviews) { refreshReviews.addEventListener('click', loadReviews); }
+
+        var reviewsFilterBar = byId('ad-reviews-filterbar');
+        if (reviewsFilterBar) {
+            reviewsFilterBar.addEventListener('click', function (ev) {
+                var btn = ev.target.closest ? ev.target.closest('.ad-review-filter') : null;
+                if (!btn) { return; }
+                var raw = btn.getAttribute('data-review-filter');
+                reviewFilter = raw === '' ? null : Number(raw);
+                renderReviewFilterBar();
+                renderReviewCards();
+            });
+        }
+
+        var reviewsListEl = byId('ad-reviews-list');
+        if (reviewsListEl) {
+            reviewsListEl.addEventListener('input', function (ev) {
+                var input = ev.target;
+                if (!input || !input.classList || !input.classList.contains('ad-review-reply-input')) { return; }
+                var card = input.closest ? input.closest('.ad-review-card') : null;
+                var count = card ? card.querySelector('[data-review-reply-count]') : null;
+                if (count) { count.textContent = input.value.length + ' / 1000'; }
+            });
+            reviewsListEl.addEventListener('click', function (ev) {
+                var target = ev.target.closest ? ev.target.closest('.ad-review-like, .ad-review-reply-btn, .ad-review-reply-save, .ad-review-reply-cancel') : null;
+                if (!target) { return; }
+                var id = target.getAttribute('data-review-id');
+                if (!id) { return; }
+                if (target.classList.contains('ad-review-like')) { toggleReviewLike(id); return; }
+                if (target.classList.contains('ad-review-reply-btn')) { beginReviewReply(id); return; }
+                if (target.classList.contains('ad-review-reply-cancel')) { cancelReviewReply(); return; }
+                if (target.classList.contains('ad-review-reply-save')) {
+                    var card = target.closest ? target.closest('.ad-review-card') : null;
+                    var input = card ? card.querySelector('.ad-review-reply-input') : null;
+                    submitReviewReply(id, input ? input.value : '');
+                }
             });
         }
 
