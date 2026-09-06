@@ -66,10 +66,6 @@
         .ad-tabs { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; }
         .ad-tab { padding: 0.45rem 0.9rem; border: 1px solid #cbd5e1; background: var(--color-white); border-radius: 8px; font-size: 0.85rem; font-weight: 600; color: var(--color-dark); cursor: pointer; }
         .ad-tab.active { background: var(--color-dark); color: var(--color-white); border-color: var(--color-dark); }
-        .ad-filter-row { display: flex; align-items: flex-end; gap: 0.6rem; flex-wrap: wrap; }
-        .ad-filter-field { display: flex; flex-direction: column; gap: 0.2rem; }
-        .ad-filter-field label { font-size: 0.72rem; font-weight: 700; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.04em; }
-        .ad-filter-field select, .ad-filter-field input { padding: 0.4rem 0.6rem; font-size: 0.85rem; border: 1px solid #cbd5e1; border-radius: 6px; }
         .ad-route { font-weight: 600; color: var(--color-dark); }
         .ad-sub { display: block; font-size: 0.74rem; color: var(--color-muted); }
         .ad-muted { color: var(--color-muted); }
@@ -218,10 +214,6 @@
         .ad-revenue-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; padding-bottom: 0.9rem; margin-bottom: 0.8rem; border-bottom: 1px solid #e7eeea; }
         .ad-revenue-head h3 { margin: 0; font-size: 1.15rem; color: #163a33; }
         .ad-revenue-sub { margin: 0.25rem 0 0; color: #687d75; font-size: 0.85rem; }
-        .ad-revenue-filters { display: flex; align-items: flex-end; gap: 0.6rem; flex-wrap: wrap; padding: 0.3rem 0 0.9rem; }
-        .ad-revenue-filters .ad-filter-field { display: grid; gap: 0.25rem; }
-        .ad-revenue-filters label { font-size: 0.72rem; font-weight: 700; color: #5c6d67; text-transform: uppercase; letter-spacing: 0.04em; }
-        .ad-revenue-filters select { padding: 0.45rem 0.6rem; font-size: 0.85rem; color: var(--color-dark); background: #fff; border: 1px solid #cbd5e1; border-radius: 7px; }
         .ad-revenue-period-label { margin-left: auto; color: #38635a; font-size: 0.78rem; font-weight: 800; padding-bottom: 0.4rem; white-space: nowrap; }
         .ad-revenue-stats { display: flex; gap: 0.55rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
         .ad-revenue-stat { flex: 1 1 140px; min-width: 120px; padding: 0.6rem 0.7rem; background: #f2f7f4; border: 1px solid #dce9e1; border-radius: 10px; text-align: center; }
@@ -229,6 +221,74 @@
         .ad-revenue-stat strong { display: block; margin-top: 0.2rem; color: #163a33; font-size: 1.05rem; }
         .ad-revenue-breakdown th:not(:first-child), .ad-revenue-breakdown td:not(:first-child) { text-align: right; }
         .ad-revenue-breakdown tbody tr.ad-rev-total td { font-weight: 800; color: #163a33; border-top: 2px solid #dce9e1; background: #f2f7f4; }
+
+        /* ============================================================
+           Admin UI/UX refresh — layout, nav, filter bars, tables
+           and dropdown polish. Scoped to .ad-* (pure additive).
+           =========================================================== */
+        body { background:#f4f7f5; }
+
+        /* Section card headers — title + description left, actions right. */
+        .ad-content .ad-card-head { align-items:flex-start; gap:.6rem .9rem; }
+        .ad-content .ad-card-head h2 { margin:0; color:#102c27; font-size:1.28rem; letter-spacing:-.015em; }
+        .ad-card-desc { margin:.28rem 0 0; color:#5c6d67; font-size:.82rem; line-height:1.45; max-width:520px; }
+        .ad-content .ad-card-head .btn { flex:0 0 auto; }
+
+        /* Sidebar navigation — icon chips + labels. */
+        .ad-nav .ad-tab { display:flex; align-items:center; gap:.65rem; padding:.6rem .75rem; border-radius:10px; transition:color .15s ease, background .15s ease; }
+        .ad-tab-ic { flex:0 0 auto; width:1.7rem; height:1.7rem; display:grid; place-items:center; border-radius:8px; color:#d9e6e0; background:rgba(255,255,255,.08); }
+        .ad-nav .ad-tab:hover .ad-tab-ic { background:rgba(255,255,255,.16); }
+        .ad-nav .ad-tab.active .ad-tab-ic { color:#102c27; background:#d4ecdf; }
+        .ad-tab-label { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+        /* Shared filter bar — Companies / Revenue / Passengers. */
+        .ad-filter-bar { display:flex; align-items:flex-end; gap:.7rem .9rem; flex-wrap:wrap; padding:.85rem 1rem; margin:0 0 1.05rem; background:#f5faf7; border:1px solid #dbe8e1; border-radius:14px; }
+        .ad-filter-bar .ad-field { display:grid; gap:.3rem; min-width:160px; }
+        .ad-filter-bar .ad-field label { font-size:.7rem; font-weight:800; color:#38635a; text-transform:uppercase; letter-spacing:.05em; }
+        .ad-filter-bar .ad-grow { flex:1 1 260px; }
+        .ad-filter-bar input[type="search"],
+        .ad-filter-bar input[type="text"],
+        .ad-select { font-family:inherit; font-size:.88rem; color:#16333a; background-color:#fff; border:1px solid #cbdcd3; border-radius:10px; padding:.55rem .75rem; transition:border-color .15s ease, box-shadow .15s ease; }
+        .ad-filter-bar input:focus, .ad-select:focus { outline:none; border-color:#31a476; box-shadow:0 0 0 3px rgba(49,164,118,.16); }
+        .ad-filter-bar .btn { align-self:flex-end; }
+        /* Custom chevron on every drop-down — replaces the native arrow. */
+        .ad-select {
+            appearance: none; -webkit-appearance: none; -moz-appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2368746f' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat; background-position: right .65rem center; background-size: .8rem;
+            padding-right: 2.05rem;
+        }
+        .ad-search { position: relative; }
+        .ad-search svg { position: absolute; left:.72rem; top:50%; transform: translateY(-50%); width:1rem; height:1rem; color:#7d938a; pointer-events:none; }
+        .ad-search input { width:100%; padding-left:2.3rem !important; }
+        /* Result-count pill badge. */
+        .ad-count { display:inline-flex; align-items:center; align-self:flex-end; gap:.35rem; padding:.32rem .72rem; border-radius:999px; background:#e2f3e9; color:#187653; font-size:.74rem; font-weight:800; white-space:nowrap; }
+
+        /* Status pills — softer, fully rounded. */
+        .ad-status-toolbar { gap:.4rem; padding:0 0 .5rem; }
+        .ad-status-filter { padding:.5rem .8rem; border-radius:999px; font-size:.74rem; }
+        .ad-status-filter.is-active { box-shadow:0 3px 8px rgba(24,118,83,.22); }
+
+        /* Overview stat cards — accent bar per metric. */
+        .ad-content .ad-stat { padding:1.05rem 1.15rem; border:1px solid #e1e9e5; border-radius:14px; background:#fff; box-shadow:0 2px 10px rgba(20,56,47,.04); }
+        .ad-content .ad-stat::before { height:4px; }
+        .ad-content .ad-stat[data-accent="navy"]::before { background:#4475c9; }
+        .ad-content .ad-stat[data-accent="green"]::before { background:#31a476; }
+        .ad-content .ad-stat[data-accent="amber"]::before { background:#d9a52c; }
+        .ad-content .ad-stat[data-accent="red"]::before { background:#d9656b; }
+        .ad-content .ad-stat[data-accent="purple"]::before { background:#8256d9; }
+        .ad-stat-value { color:#102c27; font-size:1.55rem; letter-spacing:-.02em; }
+        .ad-stat-label { color:#5c6d67; }
+
+        /* Tables — tinted header, hover rows, breathing room. */
+        .ad-table th { padding:.62rem .75rem; color:#38635a; background:#f2f7f4; border-bottom:1px solid #dfe9e3; }
+        .ad-table td { padding:.72rem .75rem; border-bottom:1px solid #eef3f0; }
+        .ad-table tbody tr { transition:background .12s ease; }
+        .ad-table tbody tr:hover { background:#f7fbf9; }
+        .ad-table tbody tr:last-child td { border-bottom:0; }
+
+        /* Empty states — roomier and centered. */
+        .ad-empty { padding:2.1rem 1rem; border-style:dashed; background:#fbfdfc; color:#5c6d67; font-size:.85rem; border-radius:12px; }
     </style>
 </head>
 <body data-auth-required="1" data-auth-role="admin">
@@ -259,30 +319,53 @@
             </div>
             <div class="ad-live"><i></i> Live platform data</div>
         </div>
-        <div class="ad-layout"><aside class="ad-sidebar"><div class="ad-admin-mini"><strong>Platform control</strong><small>Administrator workspace</small></div><nav class="ad-nav" id="ad-tabs" role="tablist" aria-label="Admin dashboard sections"><button type="button" class="ad-tab active" data-section="overview" aria-selected="true">Overview</button><button type="button" class="ad-tab" data-section="companies" aria-selected="false">Companies</button><button type="button" class="ad-tab" data-section="passengers" aria-selected="false">Passenger List</button><button type="button" class="ad-tab" data-section="revenue" aria-selected="false">Revenue</button><button type="button" class="ad-tab" data-section="reviews" aria-selected="false">Reviews</button></nav></aside><div class="ad-content">
+        <div class="ad-layout"><aside class="ad-sidebar"><div class="ad-admin-mini"><strong>Platform control</strong><small>Administrator workspace</small></div><nav class="ad-nav" id="ad-tabs" role="tablist" aria-label="Admin dashboard sections">
+                <button type="button" class="ad-tab active" data-section="overview" aria-selected="true"><span class="ad-tab-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></span><span class="ad-tab-label">Overview</span></button>
+                <button type="button" class="ad-tab" data-section="companies" aria-selected="false"><span class="ad-tab-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V4.6a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1V21"/><path d="M14 9.6h6V21"/><path d="M7 8h3M7 12h3M7 16h3"/></svg></span><span class="ad-tab-label">Companies</span></button>
+                <button type="button" class="ad-tab" data-section="passengers" aria-selected="false"><span class="ad-tab-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20c.8-3.5 2.8-5.5 6-5.5s5.2 2 6 5.5"/><path d="M16.5 5.5a2.9 2.9 0 0 1 0 5"/><path d="M18.6 14.6c1.4.9 2.2 2.5 2.4 4.9"/></svg></span><span class="ad-tab-label">Passenger List</span></button>
+                <button type="button" class="ad-tab" data-section="revenue" aria-selected="false"><span class="ad-tab-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5"/><path d="M4 19h16"/><path d="m7 15 4-4 3 2 4-6"/></svg></span><span class="ad-tab-label">Revenue</span></button>
+                <button type="button" class="ad-tab" data-section="reviews" aria-selected="false"><span class="ad-tab-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3.5 2.6 5.6 6.1.9-4.4 4.3 1 6.1-5.3-2.9-5.3 2.9 1-6.1L3.3 10l6.1-.9Z"/></svg></span><span class="ad-tab-label">Reviews</span></button>
+            </nav></aside><div class="ad-content">
 
         <section id="section-overview" class="ad-card" hidden>
             <div class="ad-card-head">
-                <h2>Platform Overview</h2>
+                <div>
+                    <h2>Platform Overview</h2>
+                    <p class="ad-card-desc">A snapshot of the whole platform &mdash; companies, operations and money collected.</p>
+                </div>
                 <button type="button" id="btn-refresh-overview" class="btn btn-secondary btn-sm">Refresh</button>
             </div>
             <div class="ad-stats">
-                <div class="ad-stat search-card"><span class="ad-stat-value" id="ad-stat-totalCompanies">0</span><span class="ad-stat-label">Companies</span></div>
-                <div class="ad-stat search-card"><span class="ad-stat-value" id="ad-stat-pendingCompanies">0</span><span class="ad-stat-label">Pending</span></div>
-                <div class="ad-stat search-card"><span class="ad-stat-value" id="ad-stat-approvedCompanies">0</span><span class="ad-stat-label">Approved</span></div>
-                <div class="ad-stat search-card"><span class="ad-stat-value" id="ad-stat-suspendedCompanies">0</span><span class="ad-stat-label">Suspended</span></div>
-                <div class="ad-stat search-card"><span class="ad-stat-value" id="ad-stat-rejectedCompanies">0</span><span class="ad-stat-label">Rejected</span></div>
-                <div class="ad-stat search-card"><span class="ad-stat-value" id="ad-stat-totalCompanyUsers">0</span><span class="ad-stat-label">Company Users</span></div>
-                <div class="ad-stat search-card"><span class="ad-stat-value" id="ad-stat-totalBuses">0</span><span class="ad-stat-label">Buses</span></div>
-                <div class="ad-stat search-card"><span class="ad-stat-value" id="ad-stat-totalTrips">0</span><span class="ad-stat-label">Trips</span></div>
-                <div class="ad-stat search-card"><span class="ad-stat-value" id="ad-stat-totalBookings">0</span><span class="ad-stat-label">Bookings</span></div>
-                <div class="ad-stat search-card"><span class="ad-stat-value" id="ad-stat-totalPaidRevenue">0</span><span class="ad-stat-label">Paid Revenue (ETB)</span></div>
+                <div class="ad-stat search-card" data-accent="navy"><span class="ad-stat-value" id="ad-stat-totalCompanies">0</span><span class="ad-stat-label">Companies</span></div>
+                <div class="ad-stat search-card" data-accent="amber"><span class="ad-stat-value" id="ad-stat-pendingCompanies">0</span><span class="ad-stat-label">Pending</span></div>
+                <div class="ad-stat search-card" data-accent="green"><span class="ad-stat-value" id="ad-stat-approvedCompanies">0</span><span class="ad-stat-label">Approved</span></div>
+                <div class="ad-stat search-card" data-accent="red"><span class="ad-stat-value" id="ad-stat-suspendedCompanies">0</span><span class="ad-stat-label">Suspended</span></div>
+                <div class="ad-stat search-card" data-accent="purple"><span class="ad-stat-value" id="ad-stat-rejectedCompanies">0</span><span class="ad-stat-label">Rejected</span></div>
+                <div class="ad-stat search-card" data-accent="navy"><span class="ad-stat-value" id="ad-stat-totalCompanyUsers">0</span><span class="ad-stat-label">Company Users</span></div>
+                <div class="ad-stat search-card" data-accent="purple"><span class="ad-stat-value" id="ad-stat-totalBuses">0</span><span class="ad-stat-label">Buses</span></div>
+                <div class="ad-stat search-card" data-accent="navy"><span class="ad-stat-value" id="ad-stat-totalTrips">0</span><span class="ad-stat-label">Trips</span></div>
+                <div class="ad-stat search-card" data-accent="amber"><span class="ad-stat-value" id="ad-stat-totalBookings">0</span><span class="ad-stat-label">Bookings</span></div>
+                <div class="ad-stat search-card" data-accent="green"><span class="ad-stat-value" id="ad-stat-totalPaidRevenue">0</span><span class="ad-stat-label">Paid Revenue (ETB)</span></div>
             </div>
         </section>
 <section id="section-companies" class="ad-card" hidden>
             <div class="ad-card-head">
-                <h2>Company Applications</h2>
+                <div>
+                    <h2>Company Applications</h2>
+                    <p class="ad-card-desc">Review, approve and manage every operator account on the platform.</p>
+                </div>
                 <button type="button" id="btn-add-company" class="btn btn-primary btn-sm">Add Company</button>
+            </div>
+
+            <div class="ad-filter-bar">
+                <div class="ad-field ad-grow">
+                    <label for="ad-company-search">Search companies</label>
+                    <div class="ad-search">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                        <input type="search" id="ad-company-search" placeholder="Name, slug or email">
+                    </div>
+                </div>
+                <span class="ad-count" id="ad-company-count">0 companies</span>
             </div>
 
             <div class="ad-status-toolbar" role="group" aria-label="Filter companies by status">
@@ -360,9 +443,38 @@
             <div class="ad-card-head">
                 <div>
                     <h2>Company Revenue</h2>
-                    <p style="margin:0.2rem 0 0;color:var(--color-muted);font-size:0.8rem;">Open a company's details for a monthly / yearly online vs office revenue breakdown.</p>
+                    <p class="ad-card-desc">Open a company's details for a monthly / yearly online vs office revenue breakdown.</p>
                 </div>
                 <button type="button" id="btn-refresh-revenue" class="btn btn-secondary btn-sm">Refresh</button>
+            </div>
+
+            <div class="ad-filter-bar">
+                <div class="ad-field ad-grow">
+                    <label for="ad-rev-search">Search company</label>
+                    <div class="ad-search">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                        <input type="search" id="ad-rev-search" placeholder="Name or slug">
+                    </div>
+                </div>
+                <div class="ad-field">
+                    <label for="ad-rev-status">Status</label>
+                    <select id="ad-rev-status" class="ad-select">
+                        <option value="">All statuses</option>
+                        <option value="approved">Approved</option>
+                        <option value="pending">Pending</option>
+                        <option value="suspended">Suspended</option>
+                        <option value="rejected">Rejected</option>
+                    </select>
+                </div>
+                <div class="ad-field">
+                    <label for="ad-rev-sort">Sort by</label>
+                    <select id="ad-rev-sort" class="ad-select">
+                        <option value="revenue-desc">Revenue: high to low</option>
+                        <option value="revenue-asc">Revenue: low to high</option>
+                        <option value="name">Company name</option>
+                    </select>
+                </div>
+                <span class="ad-count" id="ad-rev-count">0 companies</span>
             </div>
 
             <p id="ad-revenue-loading" class="auth-identity" hidden>Loading company revenue&hellip;</p>
@@ -388,14 +500,22 @@
 
         <section id="section-passengers" class="ad-card" hidden>
             <div class="ad-card-head">
-                <h2>Passenger List</h2>
-                <div class="ad-filter-row">
-                    <div class="ad-filter-field">
-                        <label for="ad-passenger-search">Search</label>
+                <div>
+                    <h2>Passenger List</h2>
+                    <p class="ad-card-desc">Registered website passengers, their activity and money spent on the platform.</p>
+                </div>
+            </div>
+
+            <div class="ad-filter-bar">
+                <div class="ad-field ad-grow">
+                    <label for="ad-passenger-search">Search passengers</label>
+                    <div class="ad-search">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
                         <input type="search" id="ad-passenger-search" placeholder="Name, email or phone">
                     </div>
-                    <button type="button" id="btn-search-passengers" class="btn btn-secondary btn-sm">Search</button>
                 </div>
+                <button type="button" id="btn-search-passengers" class="btn btn-secondary">Search</button>
+                <span class="ad-count" id="ad-passengers-count">0 passengers</span>
             </div>
 
             <p id="ad-passengers-loading" class="auth-identity" hidden>Loading registered passengers&hellip;</p>
@@ -419,7 +539,7 @@
             </div>
         </section>
         <section id="section-reviews" class="ad-card" hidden>
-            <div class="ad-card-head"><div><h2>Reviews</h2><p>Company satisfaction signals across the platform.</p></div><button type="button" id="btn-refresh-reviews" class="btn btn-secondary btn-sm">Refresh</button></div>
+            <div class="ad-card-head"><div><h2>Reviews</h2><p class="ad-card-desc">Company satisfaction signals across the platform.</p></div><button type="button" id="btn-refresh-reviews" class="btn btn-secondary btn-sm">Refresh</button></div>
             <div id="ad-reviews-empty" class="ad-empty" hidden>No company reviews have been received yet.</div><div id="ad-review-grid" class="ad-review-grid"></div>
         </section>
         </div></div>
@@ -700,10 +820,10 @@
                 <button type="button" id="ad-revenue-close" class="btn btn-secondary btn-sm">Close</button>
             </div>
 
-            <div class="ad-revenue-filters" id="ad-revenue-period">
-                <div class="ad-filter-field">
+            <div class="ad-filter-bar" id="ad-revenue-period">
+                <div class="ad-field">
                     <label for="ad-revenue-month">Month</label>
-                    <select id="ad-revenue-month">
+                    <select id="ad-revenue-month" class="ad-select">
                         <option value="">All months</option>
                         <option value="1">January</option>
                         <option value="2">February</option>
@@ -719,11 +839,11 @@
                         <option value="12">December</option>
                     </select>
                 </div>
-                <div class="ad-filter-field">
+                <div class="ad-field">
                     <label for="ad-revenue-year">Year</label>
-                    <select id="ad-revenue-year"></select>
+                    <select id="ad-revenue-year" class="ad-select"></select>
                 </div>
-                <button type="button" id="btn-apply-revenue" class="btn btn-secondary btn-sm">Apply</button>
+                <button type="button" id="btn-apply-revenue" class="btn btn-secondary">Apply</button>
                 <span id="ad-revenue-period-label" class="ad-revenue-period-label"></span>
             </div>
 

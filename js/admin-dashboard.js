@@ -16,6 +16,19 @@
         return document.getElementById(id);
     }
 
+    function debounce(fn, wait) {
+        var t = null;
+        return function () {
+            var context = this;
+            var args = arguments;
+            if (t) { clearTimeout(t); }
+            t = setTimeout(function () {
+                t = null;
+                fn.apply(context, args);
+            }, wait);
+        };
+    }
+
     function hide(el) {
         if (el) { el.hidden = true; }
     }
@@ -95,6 +108,7 @@
     var currentDetail = null;
     var pendingMutation = null;
     var selectedCompanyStatus = '';   // active status filter button value ('' = All)
+    var selectedCompanySearch = '';   // live company name/slug/email search term
 
     /* ---------- Admin identity ---------- */
     function loadIdentity() {
@@ -183,10 +197,19 @@
         if (!tbody) { return; }
 
         var filter = selectedCompanyStatus;
+        var term = selectedCompanySearch.toLowerCase();
 
         var filtered = currentCompanies.filter(function (c) {
-            return filter === '' || companyBucket(c) === filter;
+            if (filter !== '' && companyBucket(c) !== filter) { return false; }
+            if (term) {
+                var hay = ((c.name || '') + ' ' + (c.slug || '') + ' ' + (c.email || '') + ' ' + (c.owner_name || '') + ' ' + (c.owner_email || '')).toLowerCase();
+                if (hay.indexOf(term) === -1) { return false; }
+            }
+            return true;
         });
+
+        var cnt = byId('ad-company-count');
+        if (cnt) { cnt.textContent = filtered.length + ' compan' + (filtered.length === 1 ? 'y' : 'ies'); }
 
         hide(byId('ad-list-loading'));
         hide(byId('ad-list-error'));
@@ -975,10 +998,36 @@ function renderDetail(c) {
         var body = byId('ad-revenue-rows');
         var empty = byId('ad-revenue-empty');
         if (!body) { return; }
-        if (!currentRevenueCompanies.length) { body.innerHTML = ''; show(empty); return; }
+
+        var term = String(byId('ad-rev-search') ? byId('ad-rev-search').value : '').trim().toLowerCase();
+        var status = byId('ad-rev-status') ? byId('ad-rev-status').value : '';
+        var sort = byId('ad-rev-sort') ? byId('ad-rev-sort').value : 'revenue-desc';
+
+        var list = currentRevenueCompanies.filter(function (c) {
+            if (status && c.status !== status) { return false; }
+            if (term) {
+                var hay = ((c.name || '') + ' ' + (c.slug || '')).toLowerCase();
+                if (hay.indexOf(term) === -1) { return false; }
+            }
+            return true;
+        });
+
+        list.sort(function (a, b) {
+            if (sort === 'name') {
+                return String(a.name || '').localeCompare(String(b.name || ''));
+            }
+            var ar = Number(a.collected_revenue) || 0;
+            var br = Number(b.collected_revenue) || 0;
+            return sort === 'revenue-asc' ? ar - br : br - ar;
+        });
+
+        var cnt = byId('ad-rev-count');
+        if (cnt) { cnt.textContent = list.length + ' compan' + (list.length === 1 ? 'y' : 'ies'); }
+
+        if (!list.length) { body.innerHTML = ''; show(empty); return; }
         hide(empty);
         var html = '';
-        currentRevenueCompanies.forEach(function (c) {
+        list.forEach(function (c) {
             var logo = c.logo ? '<img class="ad-co-logo" src="' + escHtml(c.logo) + '" alt="">' : '';
             html += '<tr>' +
                 '<td><span class="ad-co-name">' + logo + escHtml(c.name) + '</span><span class="ad-co-slug">@' + escHtml(c.slug || '') + '</span></td>' +
@@ -990,6 +1039,10 @@ function renderDetail(c) {
                 '</tr>';
         });
         body.innerHTML = html;
+    }
+
+    function applyRevenueFilters() {
+        renderRevenue(currentRevenueCompanies);
     }
 
     function showRevenuePeriodLabel(label) {
@@ -1145,6 +1198,8 @@ function renderDetail(c) {
 
     function renderPassengers(passengers) {
         var body = byId('ad-passengers-rows');
+        var cnt = byId('ad-passengers-count');
+        if (cnt) { cnt.textContent = passengers.length + (passengers.length === 1 ? ' passenger' : ' passengers'); }
         if (!passengers.length) {
             body.innerHTML = '<tr><td colspan="7" class="ad-muted">No passengers found.</td></tr>';
             return;
@@ -1662,6 +1717,34 @@ function renderDetail(c) {
                     setCompanyStatusFilter(btn.getAttribute('data-status-filter') || '');
                 });
             })(statusBtns[si]);
+        }
+
+        /* Company list — live search input (name / slug / email). */
+        var compSearch = byId('ad-company-search');
+        if (compSearch) {
+            compSearch.addEventListener('input', debounce(function () {
+                selectedCompanySearch = compSearch.value.trim();
+                applyFilter();
+            }, 200));
+            compSearch.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    selectedCompanySearch = compSearch.value.trim();
+                    applyFilter();
+                }
+            });
+        }
+
+        /* Revenue section — search + status + sort controls. */
+        var revStatus = byId('ad-rev-status');
+        if (revStatus) { revStatus.addEventListener('change', applyRevenueFilters); }
+        var revSort = byId('ad-rev-sort');
+        if (revSort) { revSort.addEventListener('change', applyRevenueFilters); }
+        var revSearch = byId('ad-rev-search');
+        if (revSearch) {
+            revSearch.addEventListener('input', debounce(applyRevenueFilters, 250));
+            revSearch.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') { applyRevenueFilters(); }
+            });
         }
 
         var refreshOverview = byId('btn-refresh-overview');
