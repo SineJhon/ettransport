@@ -356,14 +356,16 @@ function handle_admin_company(PDO $pdo): void
 }
 
 /**
- * GET /api/admin.php?action=reviews — every company review across the
- * platform (admin only).
+ * GET /api/admin.php?action=reviews — platform reviews (admin only).
  *
- * This is the admin-facing twin of the company dashboard's review list
- * (api/review.php?action=list). Instead of one company it aggregates ALL
- * approved reviews, newest first, and annotates each row with the company
- * the review was written for — so the admin can read every passenger's
- * feedback and reply through api/review.php?action=reply.
+ * The admin Reviews tab is for feedback ABOUT the ET Transport platform
+ * itself — never about an individual company (company reviews are owned and
+ * replied to by each company operator from their own dashboard).
+ *
+ * There is no platform-review storage table yet, so the demo media serves
+ * one client-side mock platform review. This endpoint keeps the platform-only
+ * contract (an empty, non-company feed) so real platform reviews can plug in
+ * later without the admin UI changing.
  */
 function handle_admin_reviews(PDO $pdo): void
 {
@@ -371,68 +373,14 @@ function handle_admin_reviews(PDO $pdo): void
         auth_response(405, ['success' => false, 'message' => 'Method not allowed.']);
     }
 
-    $user = requireRole('admin');
-
-    /* Platform-wide average + count over approved reviews only (matches the
-       sentiment numbers shown on the public company pages). */
-    $aggStmt = $pdo->prepare('
-        SELECT COUNT(*) AS cnt, COALESCE(AVG(rating), 0) AS avg_rating
-        FROM reviews
-        WHERE status = \'approved\'');
-    $aggStmt->execute();
-    $agg = $aggStmt->fetch();
-
-    /* Every review, newest first, annotated with the company it describes.
-       liked_by_viewer lets the admin see + toggle their own hearts. */
-    $viewerId = (int) ($user['id'] ?? 0);
-    $listStmt = $pdo->prepare('
-        SELECT
-            r.id,
-            r.company_id,
-            c.name           AS company_name,
-            c.slug           AS company_slug,
-            r.rating,
-            r.comment,
-            r.created_at,
-            r.booking_id,
-            r.likes,
-            r.reply,
-            r.reply_at,
-            r.status,
-            u.name           AS passenger_name,
-            (SELECT 1 FROM review_likes rl WHERE rl.review_id = r.id AND rl.user_id = :viewer) AS liked_by_viewer
-        FROM reviews r
-        JOIN companies c ON c.id = r.company_id
-        JOIN users u     ON u.id = r.passenger_id
-        ORDER BY r.created_at DESC, r.id DESC
-        LIMIT 500');
-    $listStmt->execute([':viewer' => $viewerId]);
-
-    $reviews = [];
-    foreach ($listStmt->fetchAll() as $row) {
-        $reviews[] = [
-            'id' => (int) $row['id'],
-            'company_id' => (int) $row['company_id'],
-            'company_name' => $row['company_name'],
-            'company_slug' => $row['company_slug'],
-            'name' => $row['passenger_name'],
-            'rating' => (int) $row['rating'],
-            'comment' => $row['comment'] !== null && $row['comment'] !== '' ? $row['comment'] : null,
-            'created_at' => $row['created_at'] ?? '',
-            'verified' => ($row['booking_id'] ?? null) !== null,
-            'likes' => (int) ($row['likes'] ?? 0),
-            'liked' => (int) ($row['liked_by_viewer'] ?? 0) === 1,
-            'reply' => $row['reply'] !== null && $row['reply'] !== '' ? $row['reply'] : null,
-            'reply_at' => $row['reply_at'] ?? null,
-            'status' => $row['status'],
-        ];
-    }
+    requireRole('admin');
 
     auth_response(200, [
         'success' => true,
-        'rating' => round((float) ($agg['avg_rating'] ?? 0), 1),
-        'reviewCount' => (int) ($agg['cnt'] ?? 0),
-        'reviews' => $reviews,
+        'platformOnly' => true,
+        'rating' => 0,
+        'reviewCount' => 0,
+        'reviews' => [],
     ]);
 }
 /* ============================================================

@@ -325,8 +325,6 @@
         .ad-review-card { position:relative; padding:1.1rem; display:flex; flex-direction:column; gap:.8rem; border:1px solid #dfeae4; border-radius:14px; background:#fff; box-shadow:0 1px 0 rgba(17,61,45,.02); transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
         .ad-review-card:hover { border-color:#b8d8c5; box-shadow:0 12px 24px rgba(25,71,54,.08); transform:translateY(-2px); }
         .ad-review-card.is-editing { grid-column:span 2; border-color:#82b89a; background:#fbfefc; box-shadow:0 12px 30px rgba(25,71,54,.1); }
-        .ad-review-card.is-mock { border-color:#d8e2ea; background:#fbfcfe; box-shadow:none; }
-        .ad-review-card.is-mock:hover { transform:none; border-color:#c5d3df; }
         .ad-review-card-head { display:flex; align-items:center; gap:.65rem; flex-wrap:wrap; }
         .ad-review-avatar { display:grid; place-items:center; flex:0 0 auto; width:2.1rem; height:2.1rem; border-radius:50%; color:#245d49; background:#e2f3e9; border:1px solid #cce5d7; font:800 .82rem/1 var(--font-sans); text-transform:uppercase; }
         .ad-review-person { display:grid; gap:.1rem; min-width:0; }
@@ -609,7 +607,7 @@
             <div class="ad-card-head">
                 <div>
                     <h2>Reviews</h2>
-                    <p class="ad-card-desc">Passenger feedback for every company on the platform — read, filter, like and reply to reviews.</p>
+                    <p class="ad-card-desc">Reviews about the ET Transport platform — read, filter, like and reply as the platform team.</p>
                 </div>
                 <button type="button" id="btn-refresh-reviews" class="btn btn-secondary btn-sm">Refresh</button>
             </div>
@@ -951,6 +949,6 @@
 
     <script src="js/main.js"></script>
     <script src="js/auth.js?v=20260904-password-toggle"></script>
-    <script src="js/admin-dashboard.js?v=20260906-platform-reviews"></script>
+    <script src="js/admin-dashboard.js?v=20260907-platform-reviews"></script>
 </body>
 </html>

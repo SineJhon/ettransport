@@ -953,6 +953,7 @@ function renderDetail(c) {
     var reviewFilter = null;
     var reviewEditingReplyId = null;
     var reviewsRequestId = 0;
+    var PLATFORM_REVIEW_STORAGE_KEY = 'ettransport_admin_platform_reviews';
 
     function reviewStarsHtml(rating) {
         var filled = Math.round(Number(rating) || 0);
@@ -972,10 +973,11 @@ function renderDetail(c) {
         } catch (e) { return String(value).slice(0, 10); }
     }
 
-    /* One mock platform review — a demo review about ET Transport itself so the
-       admin always has an illustrative card, even before real reviews exist. */
+    /* One seeded platform review — real feedback about ET Transport itself,
+       so the admin always has a platform review. Like + reply state persists
+       in localStorage so edits survive a refresh. */
     function mockPlatformReview() {
-        return {
+        var mock = {
             id: -1,
             isMock: true,
             isPlatform: true,
@@ -992,6 +994,37 @@ function renderDetail(c) {
             company_slug: 'platform',
             status: 'approved'
         };
+        try {
+            var saved = JSON.parse(localStorage.getItem(PLATFORM_REVIEW_STORAGE_KEY) || '{}');
+            if (saved && typeof saved === 'object') {
+                if (typeof saved.liked === 'boolean' || typeof saved.likes === 'number') {
+                    mock.liked = !!saved.liked;
+                    mock.likes = Number(saved.likes) || 0;
+                }
+                if (saved.reply !== undefined) {
+                    mock.reply = saved.reply || null;
+                    mock.reply_at = saved.reply_at || null;
+                }
+            }
+        } catch (e) { /* storage is best-effort */ }
+        return mock;
+    }
+
+    function saveMockPlatformReview() {
+        try {
+            for (var i = 0; i < currentReviews.length; i++) {
+                var r = currentReviews[i];
+                if (r && r.isMock) {
+                    localStorage.setItem(PLATFORM_REVIEW_STORAGE_KEY, JSON.stringify({
+                        liked: !!r.liked,
+                        likes: Number(r.likes) || 0,
+                        reply: r.reply || null,
+                        reply_at: r.reply_at || null
+                    }));
+                    return;
+                }
+            }
+        } catch (e) { /* storage is best-effort */ }
     }
 
     function reviewLikeButtonHtml(r) {
@@ -1024,21 +1057,20 @@ function renderDetail(c) {
     function reviewCardHtml(r) {
         var editing = Number(reviewEditingReplyId) === Number(r.id);
         var initial = String(r.name || 'P').trim().charAt(0).toUpperCase() || 'P';
-        return '<article class="ad-review-card' + (editing ? ' is-editing' : '') + (r.isMock ? ' is-mock' : '') + '" data-review-id="' + r.id + '">' +
+        return '<article class="ad-review-card' + (editing ? ' is-editing' : '') + '" data-review-id="' + r.id + '">' +
             '<div class="ad-review-card-head">' +
                 '<span class="ad-review-avatar" aria-hidden="true">' + escHtml(initial) + '</span>' +
                 '<div class="ad-review-person"><strong>' + escHtml(r.name || 'Passenger') + '</strong><span class="ad-review-meta">' + (formatReviewDate(r.created_at) || 'Recent review') + '</span></div>' +
                 (r.verified ? '<span class="ad-review-badge">Verified</span>' : '') +
-                (r.isPlatform ? '<span class="ad-review-badge ad-review-company">Platform review</span>' : '<span class="ad-review-badge ad-review-company">' + escHtml(r.company_name || 'Company') + '</span>') +
+                (r.isPlatform ? '<span class="ad-review-badge ad-review-company">ET Transport review</span>' : '<span class="ad-review-badge ad-review-company">' + escHtml(r.company_name || 'Company') + '</span>') +
                 (r.status && r.status !== 'approved' ? '<span class="ad-review-badge ad-review-mock">' + escHtml(r.status) + '</span>' : '') +
-                (r.isMock ? '<span class="ad-review-badge ad-review-mock">Example</span>' : '') +
                 '<span class="ad-review-rating" aria-label="Rated ' + r.rating + ' out of 5"><span aria-hidden="true">★</span> ' + Number(r.rating || 0).toFixed(1) + '</span>' +
             '</div>' +
             (r.comment ? '<p class="ad-review-text">' + escHtml(r.comment) + '</p>' : '<p class="ad-review-text ad-review-no-comment">No written comment.</p>') +
-            (!r.isMock ? '<div class="ad-review-actions">' + reviewLikeButtonHtml(r) +
+            '<div class="ad-review-actions">' + reviewLikeButtonHtml(r) +
                 (!editing ? '<button type="button" class="ad-review-reply-btn" data-review-id="' + r.id + '">' + (r.reply ? 'Edit response' : 'Respond') + '</button>' : '') +
-            '</div>' : '') +
-            (!r.isMock && editing ? reviewReplyEditorHtml(r) : reviewReplyBlockHtml(r)) +
+            '</div>' +
+            (editing ? reviewReplyEditorHtml(r) : reviewReplyBlockHtml(r)) +
         '</article>';
     }
 
@@ -1046,7 +1078,6 @@ function renderDetail(c) {
         var count = 0;
         for (var k = 0; k < currentReviews.length; k++) {
             var r = currentReviews[k];
-            if (r.isMock) { continue; }
             if (val === null || Number(r.rating) === val) { count++; }
         }
         return count;
@@ -1086,37 +1117,47 @@ function renderDetail(c) {
 
     function renderReviews(data) {
         var loading = byId('ad-reviews-loading'); if (loading) { loading.hidden = true; }
-        var error = byId('ad-reviews-error'); if (error) { error.hidden = true; }
 
-        var summary = byId('ad-reviews-summary');
-        if (summary) {
-            var rating = Number(data.rating) || 0;
-            var reviews = Array.isArray(data.reviews) ? data.reviews : [];
-            var realReviews = [];
-            for (var i = 0; i < reviews.length; i++) { if (!reviews[i].isMock) { realReviews.push(reviews[i]); } }
-            var ratingCounts = [0, 0, 0, 0, 0, 0];
-            for (var j = 0; j < realReviews.length; j++) {
-                var reviewRating = Math.round(Number(realReviews[j].rating) || 0);
-                if (reviewRating >= 1 && reviewRating <= 5) { ratingCounts[reviewRating]++; }
-            }
-            var totalReviews = Number(data.reviewCount) || realReviews.length;
-            var distribution = '';
-            for (var star = 5; star >= 1; star--) {
-                var count = ratingCounts[star];
-                var width = totalReviews ? Math.round((count / totalReviews) * 100) : 0;
-                distribution += '<div class="ad-review-distribution-row"><b>' + star + ' ★</b><span class="ad-review-distribution-track"><i class="ad-review-distribution-fill" style="width:' + width + '%"></i></span><span>' + count + '</span></div>';
-            }
-            summary.hidden = false;
-            summary.innerHTML =
-                '<div class="ad-review-score-panel"><p class="ad-review-kicker">Platform sentiment</p><span class="ad-review-score">' + rating.toFixed(1) + '</span><span class="ad-review-stars" role="img" aria-label="Rated ' + rating.toFixed(1) + ' out of 5">' + reviewStarsHtml(rating) + '</span><span class="ad-review-count">' + totalReviews.toLocaleString() + ' review' + (totalReviews === 1 ? '' : 's') + '</span></div>' +
-                '<div class="ad-review-distribution" aria-label="Rating distribution">' + distribution + '</div>';
+        /* The admin Reviews tab shows platform reviews ONLY (feedback about
+           ET Transport itself), never company reviews. The seeded platform
+           review is always shown first; any platform reviews returned by
+           the API are appended after it. */
+        var serverReviews = (data && Array.isArray(data.reviews)) ? data.reviews : [];
+        var platformReviews = [];
+        for (var i = 0; i < serverReviews.length; i++) {
+            if (serverReviews[i] && serverReviews[i].isPlatform) { platformReviews.push(serverReviews[i]); }
         }
-
-        currentReviews = Array.isArray(data.reviews) ? data.reviews.slice() : [];
-        currentReviews.unshift(mockPlatformReview());
+        currentReviews = [mockPlatformReview()].concat(platformReviews);
         reviewFilter = null;
+
+        renderReviewSummary();
         renderReviewFilterBar();
         renderReviewCards();
+    }
+
+    function renderReviewSummary() {
+        var summary = byId('ad-reviews-summary');
+        if (!summary) { return; }
+
+        var reviews = currentReviews || [];
+        var ratingCounts = [0, 0, 0, 0, 0, 0];
+        var ratingSum = 0;
+        for (var i = 0; i < reviews.length; i++) {
+            var rv = Math.round(Number((reviews[i] || {}).rating) || 0);
+            if (rv >= 1 && rv <= 5) { ratingCounts[rv]++; ratingSum += rv; }
+        }
+        var totalReviews = reviews.length;
+        var rating = totalReviews ? Math.round((ratingSum / totalReviews) * 10) / 10 : 0;
+        var distribution = '';
+        for (var star = 5; star >= 1; star--) {
+            var count = ratingCounts[star];
+            var width = totalReviews ? Math.round((count / totalReviews) * 100) : 0;
+            distribution += '<div class="ad-review-distribution-row"><b>' + star + ' ★</b><span class="ad-review-distribution-track"><i class="ad-review-distribution-fill" style="width:' + width + '%"></i></span><span>' + count + '</span></div>';
+        }
+        summary.hidden = false;
+        summary.innerHTML =
+            '<div class="ad-review-score-panel"><p class="ad-review-kicker">Platform sentiment</p><span class="ad-review-score">' + rating.toFixed(1) + '</span><span class="ad-review-stars" role="img" aria-label="Rated ' + rating.toFixed(1) + ' out of 5">' + reviewStarsHtml(rating) + '</span><span class="ad-review-count">' + totalReviews.toLocaleString() + ' review' + (totalReviews === 1 ? '' : 's') + '</span></div>' +
+            '<div class="ad-review-distribution" aria-label="Rating distribution">' + distribution + '</div>';
     }
 
     function showReviewsError(message) {
@@ -1128,7 +1169,7 @@ function renderDetail(c) {
         var error = byId('ad-reviews-error');
         if (error) {
             error.hidden = false;
-            error.textContent = message || 'Unable to load reviews. Please try again later.';
+            error.textContent = message || 'Unable to load platform reviews. Please try again later.';
         }
     }
 
@@ -1151,14 +1192,16 @@ function renderDetail(c) {
                 if (rid !== reviewsRequestId) { return; }
                 var data = result.data || {};
                 if (!result.ok || result.status !== 200 || !data.success) {
-                    showReviewsError(data.message || 'Unable to load reviews.');
+                    showReviewsError(data.message || 'Unable to load platform reviews.');
+                    renderReviews({ reviews: [] });   /* keep the platform review visible */
                     return;
                 }
                 renderReviews(data);
             })
             .catch(function () {
                 if (rid !== reviewsRequestId) { return; }
-                showReviewsError('Network error while loading reviews.');
+                showReviewsError('Network error while loading platform reviews.');
+                renderReviews({ reviews: [] });       /* keep the platform review visible */
             });
     }
 
@@ -1178,7 +1221,21 @@ function renderDetail(c) {
     }
 
     function toggleReviewLike(id) {
-        if (!id || Number(id) < 0) { return; }
+        if (!id) { return; }
+        var review = currentReviewById(id);
+        if (!review) { return; }
+
+        /* This platform review has no server row yet — toggle it locally and
+           persist. */
+        if (review.isMock) {
+            review.liked = !review.liked;
+            review.likes = Math.max(0, (Number(review.likes) || 0) + (review.liked ? 1 : -1));
+            saveMockPlatformReview();
+            renderReviewCards();
+            showReviewActionMessage(review.liked ? 'You like this platform review.' : 'You removed your like from this platform review.');
+            return;
+        }
+
         fetch('api/review.php?action=like', {
             method: 'POST',
             credentials: 'same-origin',
@@ -1214,7 +1271,22 @@ function renderDetail(c) {
     }
 
     function submitReviewReply(id, reply) {
-        if (!id || Number(id) < 0) { return; }
+        if (!id) { return; }
+        var review = currentReviewById(id);
+        if (!review) { return; }
+
+        /* This platform review has no server row yet — save the reply locally
+           and persist. */
+        if (review.isMock) {
+            review.reply = (reply && reply.trim()) ? reply.trim() : null;
+            review.reply_at = review.reply ? new Date().toISOString() : null;
+            reviewEditingReplyId = null;
+            saveMockPlatformReview();
+            renderReviewCards();
+            showReviewActionMessage(review.reply ? 'Platform reply saved. It now shows on this review.' : 'Platform reply removed.');
+            return;
+        }
+
         fetch('api/review.php?action=reply', {
             method: 'POST',
             credentials: 'same-origin',
