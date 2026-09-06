@@ -3127,6 +3127,125 @@
             });
     }
 
+    /* ---------- Revenue overview modal (migrated from the admin Revenue detail) ---------- */
+    var revenueOverviewRequestId = 0;   // discards responses from superseded overview requests
+
+    function populateRevenueOverviewYears() {
+        var sel = byId('cd-revenue-overview-year');
+        if (!sel) { return; }
+        var current = new Date().getFullYear();
+        var html = '<option value="">All years</option>';
+        for (var y = current; y >= current - 5; y--) {
+            html += '<option value="' + y + '">' + y + '</option>';
+        }
+        sel.innerHTML = html;
+    }
+
+    function showRevenueOverviewError(message) {
+        var loading = byId('revenue-overview-loading'); if (loading) { loading.hidden = true; }
+        var box = byId('revenue-overview-detail'); if (box) { box.hidden = true; }
+        var error = byId('revenue-overview-error');
+        if (error) {
+            error.hidden = false;
+            error.className = 'cd-revenue-error auth-message error';
+            error.textContent = message || 'Unable to load your revenue overview. Please try again later.';
+        }
+    }
+
+    function renderRevenueOverview(data) {
+        var loading = byId('revenue-overview-loading'); if (loading) { loading.hidden = true; }
+        var bd = (data && data.breakdown) || {};
+        var total = bd.total || { bookings: 0, paid: 0, refunds: 0, net: 0 };
+        var online = bd.online || {};
+        var office = bd.office || {};
+
+        setRevStat('cd-rev-ov-bookings', String(total.bookings == null ? 0 : total.bookings));
+        setRevStat('cd-rev-ov-online', String(online.bookings == null ? 0 : online.bookings));
+        setRevStat('cd-rev-ov-office', String(office.bookings == null ? 0 : office.bookings));
+        setRevStat('cd-rev-ov-paid', formatMoney(total.paid));
+        setRevStat('cd-rev-ov-refunds', formatMoney(total.refunds));
+        setRevStat('cd-rev-ov-net', formatMoney(total.net));
+
+        var label = byId('cd-revenue-overview-period-label');
+        if (label) { label.textContent = (data.period && data.period.label) || 'All time'; }
+
+        var body = byId('cd-revenue-overview-rows');
+        if (!body) { return; }
+        var rows = [
+            ['Online bookings', online],
+            ['Office bookings', office],
+            ['Total', total]
+        ];
+        var html = '';
+        for (var i = 0; i < rows.length; i++) {
+            var row = rows[i][1] || {};
+            var cls = i === rows.length - 1 ? ' class="cd-revenue-overview-total"' : '';
+            html += '<tr' + cls + '>' +
+                '<td>' + rows[i][0] + '</td>' +
+                '<td>' + (row.bookings == null ? 0 : row.bookings) + '</td>' +
+                '<td>' + formatMoney(row.paid) + '</td>' +
+                '<td>' + formatMoney(row.refunds) + '</td>' +
+                '<td>' + formatMoney(row.net) + '</td>' +
+                '</tr>';
+        }
+        body.innerHTML = html;
+    }
+
+    function loadRevenueOverview() {
+        var rid = ++revenueOverviewRequestId;
+        var loading = byId('revenue-overview-loading'); if (loading) { loading.hidden = false; }
+        var error = byId('revenue-overview-error'); if (error) { error.hidden = true; }
+        var box = byId('revenue-overview-detail'); if (box) { box.hidden = true; }
+
+        var p = [];
+        var month = byId('cd-revenue-overview-month');
+        if (month && month.value) { p.push('month=' + encodeURIComponent(month.value)); }
+        var year = byId('cd-revenue-overview-year');
+        if (year && year.value) { p.push('year=' + encodeURIComponent(year.value)); }
+        var q = p.length ? '&' + p.join('&') : '';
+
+        fetch('api/company.php?action=revenue_breakdown' + q, {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(function (res) {
+                return res.json().catch(function () {
+                    return { success: false, message: 'Invalid server response.' };
+                }).then(function (json) {
+                    return { ok: res.ok, status: res.status, data: json };
+                });
+            })
+            .then(function (result) {
+                if (rid !== revenueOverviewRequestId) { return; }
+                var data = result.data || {};
+                if (!result.ok || result.status !== 200 || !data.success) {
+                    showRevenueOverviewError(data.message || 'Unable to load your revenue overview.');
+                    return;
+                }
+                renderRevenueOverview(data);
+                var boxAgain = byId('revenue-overview-detail'); if (boxAgain) { boxAgain.hidden = false; }
+            })
+            .catch(function () {
+                if (rid !== revenueOverviewRequestId) { return; }
+                showRevenueOverviewError('Network error while loading your revenue overview.');
+            });
+    }
+
+    function openRevenueOverview() {
+        var modal = byId('cd-revenue-overview-modal');
+        if (!modal) { return; }
+        var detail = byId('revenue-overview-detail'); if (detail) { detail.hidden = true; }
+        var error = byId('revenue-overview-error'); if (error) { error.hidden = true; }
+        modal.hidden = false;
+        loadRevenueOverview();
+    }
+
+    function closeRevenueOverview() {
+        var modal = byId('cd-revenue-overview-modal');
+        if (modal) { modal.hidden = true; }
+    }
+
     var paymentsRequestId = 0;   // discards responses from superseded payment requests
 
     function loadPayments() {
@@ -3950,6 +4069,7 @@ function submitBranchForm() {
         loadBookings();
         loadRevenueSummary();
         loadRevenueTripOptions();
+        populateRevenueOverviewYears();
         loadPayments();
         loadProfile();
         loadBranches();
@@ -4422,11 +4542,28 @@ function submitBranchForm() {
                 if (bfModal && !bfModal.hidden) { closeBranchForm(); }
                 var bdModal = byId('branch-delete-modal');
                 if (bdModal && !bdModal.hidden) { closeBranchDeleteModal(); }
+                var roModal = byId('cd-revenue-overview-modal');
+                if (roModal && !roModal.hidden) { closeRevenueOverview(); }
             }
         });
 
         var revRefresh = byId('btn-refresh-revenue');
         if (revRefresh) { revRefresh.addEventListener('click', refreshRevenue); }
+
+        var revOverviewBtn = byId('btn-revenue-overview');
+        if (revOverviewBtn) { revOverviewBtn.addEventListener('click', openRevenueOverview); }
+
+        var revApplyOverview = byId('btn-apply-revenue-overview');
+        if (revApplyOverview) { revApplyOverview.addEventListener('click', loadRevenueOverview); }
+
+        var revOverviewModal = byId('cd-revenue-overview-modal');
+        if (revOverviewModal) {
+            revOverviewModal.addEventListener('click', function (ev) {
+                if (ev.target === revOverviewModal) { closeRevenueOverview(); }
+            });
+        }
+        var revOverviewClose = byId('cd-revenue-overview-close');
+        if (revOverviewClose) { revOverviewClose.addEventListener('click', closeRevenueOverview); }
 
         var revSearch = byId('btn-search-revenue');
         if (revSearch) { revSearch.addEventListener('click', refreshRevenue); }

@@ -29,6 +29,8 @@ declare(strict_types=1);
  *                                                     (authenticated company role only)
  *   GET  api/company.php?action=revenue             -> { success, company_id, revenue }
  *                                                     (read-only revenue summary, company role only)
+ *   GET  api/company.php?action=revenue_breakdown   -> { success, company_id, period, breakdown }
+ *                                                     (online/office revenue breakdown, company role only)
  *   GET  api/company.php?action=payments            -> { success, company_id, payments }
  *                                                     (read-only payment list, company role only)
  *   GET  api/company.php?action=profile             -> { success, company }
@@ -2970,8 +2972,10 @@ function handle_manifest(PDO $pdo): void
    a nonexistent object, so cross-company data can never leak.
 
    Supported actions (GET):
-       action=revenue   -> aggregate revenue summary (company scope)
-       action=payments  -> payment rows for the company's bookings
+       action=revenue            -> aggregate revenue summary (company scope)
+       action=revenue_breakdown  -> online/office paid, refund and net revenue
+                                    breakdown for a month / year (company scope)
+       action=payments           -> payment rows for the company's bookings
    ============================================================ */
 
 /** Payment status ENUM values defined by the schema. */
@@ -3033,6 +3037,38 @@ function company_payment_filters(PDO $pdo, int $companyId): array
     }
 
     return [$tripId, $status, $fromDate, $toDate];
+}
+
+/**
+ * Validate optional revenue period filters. month: 1-12, year: 1970-2200.
+ * Empty or missing -> null (no restriction). Malformed -> 422. Mirrors the
+ * admin dashboard's admin_filter_period so both views accept the same input.
+ */
+function company_filter_period(mixed $monthRaw, mixed $yearRaw): array
+{
+    $month = null;
+    if ($monthRaw !== null && trim((string) $monthRaw) !== '') {
+        $month = (int) trim((string) $monthRaw);
+        if ($month < 1 || $month > 12) {
+            auth_response(422, [
+                'success' => false,
+                'message' => 'A valid month (1-12) is required.',
+            ]);
+        }
+    }
+
+    $year = null;
+    if ($yearRaw !== null && trim((string) $yearRaw) !== '') {
+        $year = (int) trim((string) $yearRaw);
+        if ($year < 1970 || $year > 2200) {
+            auth_response(422, [
+                'success' => false,
+                'message' => 'A valid year (e.g. 2026) is required.',
+            ]);
+        }
+    }
+
+    return [$month, $year];
 }
 
 /**
@@ -3241,6 +3277,134 @@ function handle_revenue(PDO $pdo): void
         'success' => true,
         'company_id' => $companyId,
         'revenue' => company_revenue_summary($pdo, $companyId, $tripId, $status, $fromDate, $toDate),
+    ]);
+}
+
+/**
+ * Online / office revenue breakdown for one company, scoped through
+ * bookings -> trips.company_id. Mirrors the admin company-revenue detail
+ * exactly, so every number a company sees here matches what the admin sees:
+ *   - paid      every payment row (paid + refunded) that collected money
+ *   - refunds   refunded_amount recorded per booking on half / full refunds
+ *   - net       paid minus refunds
+ * Optional month / year filters apply to the booking creation date (same
+ * convention as the admin report). Returns ['online', 'office', 'total'].
+ */
+function company_revenue_breakdown(PDO $pdo, int $companyId, ?int $month, ?int $year): array
+{
+    $periodSql = '';
+    $periodParams = [];
+    if ($year !== null) {
+        $periodSql .= ' AND YEAR(b.created_at) = :year';
+        $periodParams[':year'] = $year;
+    }
+    if ($month !== null) {
+        $periodSql .= ' AND MONTH(b.created_at) = :month';
+        $periodParams[':month'] = $month;
+    }
+
+    $breakdown = [
+        'online' => ['bookings' => 0, 'paid' => 0.0, 'refunds' => 0.0, 'net' => 0.0],
+        'office' => ['bookings' => 0, 'paid' => 0.0, 'refunds' => 0.0, 'net' => 0.0],
+    ];
+    foreach (['online', 'office'] as $source) {
+        $paidStmt = $pdo->prepare('
+            SELECT
+                COUNT(DISTINCT b.id) AS bookings,
+                COALESCE(SUM(p.amount), 0) AS paid_amount
+            FROM bookings b
+            JOIN trips t ON t.id = b.trip_id
+            LEFT JOIN payments p ON p.booking_id = b.id AND p.status IN (\'paid\', \'refunded\')
+            WHERE t.company_id = :company_id
+              AND b.booking_source = :source
+              ' . $periodSql . '
+        ');
+        $paidStmt->execute(array_merge(
+            [':company_id' => $companyId, ':source' => $source],
+            $periodParams
+        ));
+        $paidRow = $paidStmt->fetch() ?: [];
+
+        /* Refunds live on bookings (a half refund is not representable by the
+           payment status alone). Aggregated once per booking so the same
+           refund can never be counted twice. */
+        $refundStmt = $pdo->prepare('
+            SELECT COALESCE(SUM(
+                CASE WHEN b.refund_type IN (\'half\', \'full\')
+                     THEN COALESCE(b.refunded_amount, 0)
+                     ELSE 0 END), 0) AS refunded_amount
+            FROM bookings b
+            JOIN trips t ON t.id = b.trip_id
+            WHERE t.company_id = :company_id
+              AND b.booking_source = :source
+              ' . $periodSql . '
+        ');
+        $refundStmt->execute(array_merge(
+            [':company_id' => $companyId, ':source' => $source],
+            $periodParams
+        ));
+        $refundRow = $refundStmt->fetch() ?: [];
+
+        $paid = round((float) ($paidRow['paid_amount'] ?? 0), 2);
+        $refunds = round((float) ($refundRow['refunded_amount'] ?? 0), 2);
+        $breakdown[$source] = [
+            'bookings' => (int) ($paidRow['bookings'] ?? 0),
+            'paid' => $paid,
+            'refunds' => $refunds,
+            'net' => round($paid - $refunds, 2),
+        ];
+    }
+
+    $total = [
+        'bookings' => $breakdown['online']['bookings'] + $breakdown['office']['bookings'],
+        'paid' => round($breakdown['online']['paid'] + $breakdown['office']['paid'], 2),
+        'refunds' => round($breakdown['online']['refunds'] + $breakdown['office']['refunds'], 2),
+        'net' => 0.0,
+    ];
+    $total['net'] = round($total['paid'] - $total['refunds'], 2);
+
+    return [
+        'online' => $breakdown['online'],
+        'office' => $breakdown['office'],
+        'total' => $total,
+    ];
+}
+
+/** GET /api/company.php?action=revenue_breakdown[&month=M][&year=Y] — this
+ *  company's online / office (paid, refund, net) revenue breakdown. Scoped
+ *  to the session company — a browser-supplied company_id is never trusted.
+ *  Mirrors the admin company-revenue detail report for an operator. */
+function handle_revenue_breakdown(PDO $pdo): void
+{
+    if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
+        auth_response(405, [
+            'success' => false,
+            'message' => 'Method not allowed.',
+        ]);
+    }
+
+    $user = requireRole('company');
+    $company = require_company_scope($pdo, (int) $user['id']);
+    $companyId = (int) $company['id'];
+
+    [$month, $year] = company_filter_period($_GET['month'] ?? null, $_GET['year'] ?? null);
+
+    $label = 'All time';
+    if ($year !== null && $month !== null) {
+        $label = DateTime::createFromFormat('!m', (string) $month)->format('F') . ' ' . $year;
+    } elseif ($year !== null) {
+        $label = (string) $year;
+    }
+
+    auth_response(200, [
+        'success' => true,
+        'company_id' => $companyId,
+        'period' => [
+            'month' => $month,
+            'year' => $year,
+            'label' => $label,
+        ],
+        'breakdown' => company_revenue_breakdown($pdo, $companyId, $month, $year),
     ]);
 }
 
@@ -3916,6 +4080,9 @@ try {
     if ($action === 'revenue') {
         handle_revenue($pdo);
     }
+    if ($action === 'revenue_breakdown') {
+        handle_revenue_breakdown($pdo);
+    }
     if ($action === 'payments') {
         handle_payments($pdo);
     }
@@ -3952,7 +4119,7 @@ try {
 
     auth_response(400, [
         'success' => false,
-        'message' => 'Unsupported action. Use action=list, action=get, action=overview, action=buses, action=bus_create, action=bus_update, action=trips, action=trip_create, action=trip_update, action=trip_status, action=trip_delete, action=bookings, action=booking_create, action=booking_cancel, action=manifest, action=revenue, action=payments, action=profile, action=profile_update, action=branches, action=branch_create, action=branch_update, action=branch_delete, action=routes, action=route_create, action=route_update or action=route_delete.',
+        'message' => 'Unsupported action. Use action=list, action=get, action=overview, action=buses, action=bus_create, action=bus_update, action=trips, action=trip_create, action=trip_update, action=trip_status, action=trip_delete, action=bookings, action=booking_create, action=booking_cancel, action=manifest, action=revenue, action=revenue_breakdown, action=payments, action=profile, action=profile_update, action=branches, action=branch_create, action=branch_update, action=branch_delete, action=routes, action=route_create, action=route_update or action=route_delete.',
     ]);
 } catch (Throwable $e) {
     auth_response(500, [

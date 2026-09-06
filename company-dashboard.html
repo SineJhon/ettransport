@@ -255,6 +255,32 @@
         .cd-payment-badge.refunded { background: #6b7280; }
         @media (max-width: 768px) { .cd-revenue-summary { grid-template-columns: repeat(2, 1fr); } }
 
+        /* ===== Revenue overview modal (migrated from the admin Revenue detail) ===== */
+        .cd-revenue-head-actions { display: flex; align-items: center; gap: 0.5rem; }
+        .cd-revenue-overview-modal { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.55); z-index: 106; padding: 1rem; }
+        .cd-revenue-overview-modal[hidden] { display: none; }
+        .cd-revenue-overview-box { width: min(780px, 94vw); max-height: 90vh; overflow-y: auto; background: #fff; border-radius: 14px; padding: 1.25rem 1.4rem; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28); }
+        .cd-revenue-overview-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; padding-bottom: 0.9rem; margin-bottom: 0.8rem; border-bottom: 1px solid #e7eeea; }
+        .cd-revenue-overview-head h3 { margin: 0; font-size: 1.15rem; color: #163a33; }
+        .cd-revenue-overview-sub { margin: 0.25rem 0 0; color: #687d75; font-size: 0.85rem; }
+        .cd-revenue-overview-period { display: flex; flex-wrap: wrap; align-items: end; gap: 0.65rem 0.75rem; padding-bottom: 0.85rem; margin-bottom: 0.8rem; border-bottom: 1px solid #e7eeea; }
+        .cd-revenue-overview-period .cd-ov-field { display: flex; flex-direction: column; gap: 0.3rem; min-width: 8.5rem; }
+        .cd-revenue-overview-period .cd-ov-field label { margin: 0; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: #5c6d67; }
+        .cd-revenue-overview-period select { width: 100%; min-width: 0; min-height: 2.5rem; margin: 0; padding: 0.4rem 0.6rem; font-size: 0.85rem; background: #fff; border: 1px solid #ccdcd3; border-radius: 8px; font-weight: 700; }
+        .cd-revenue-overview-period .btn { margin: 0; }
+        .cd-revenue-overview-period-label { margin-left: auto; align-self: center; color: #38635a; font-size: 0.78rem; font-weight: 800; white-space: nowrap; }
+        .cd-revenue-overview-stats { display: flex; gap: 0.55rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+        .cd-revenue-overview-stat { flex: 1 1 140px; min-width: 120px; padding: 0.6rem 0.7rem; background: #f2f7f4; border: 1px solid #dce9e1; border-radius: 10px; text-align: center; }
+        .cd-revenue-overview-stat span { display: block; color: #5c6d67; font-size: 0.66rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
+        .cd-revenue-overview-stat strong { display: block; margin-top: 0.2rem; color: #163a33; font-size: 1.05rem; }
+        .cd-revenue-overview-wrap { overflow-x: auto; }
+        .cd-revenue-overview-table { width: 100%; border-collapse: collapse; }
+        .cd-revenue-overview-table th, .cd-revenue-overview-table td { padding: 0.65rem 0.85rem; border-bottom: 1px solid #e7eeea; text-align: right; white-space: nowrap; }
+        .cd-revenue-overview-table th:first-child, .cd-revenue-overview-table td:first-child { text-align: left; }
+        .cd-revenue-overview-table th { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: #5c6d67; background: #f4f9f6; }
+        .cd-revenue-overview-table tbody tr.cd-revenue-overview-total td { font-weight: 800; color: #163a33; border-top: 2px solid #dce9e1; background: #f2f7f4; }
+        @media (max-width: 600px) { .cd-revenue-overview-period-label { margin-left: 0; width: 100%; } }
+
  /* ===== Company reviews (additive, scoped to .cd-*) ===== */
         .cd-reviews { margin-top: var(--space-md); }
         .cd-reviews-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
@@ -1147,7 +1173,10 @@
         <section id="company-revenue" class="cd-revenue" hidden>
             <div class="cd-revenue-head">
                 <h2>Revenue / Payments</h2>
-                <button type="button" id="btn-refresh-revenue" class="btn btn-secondary btn-sm">Refresh</button>
+                <div class="cd-revenue-head-actions">
+                    <button type="button" id="btn-revenue-overview" class="btn btn-secondary btn-sm">Revenue Overview</button>
+                    <button type="button" id="btn-refresh-revenue" class="btn btn-secondary btn-sm">Refresh</button>
+                </div>
             </div>
 
             <div class="cd-payment-toolbar" role="group" aria-label="Filter payments by status">
@@ -1525,8 +1554,74 @@
 
     <div id="dash-toast" class="dash-toast" role="status" hidden></div>
 
+    <!-- ===== Revenue overview modal (migrated from the admin Revenue detail) ===== -->
+    <div id="cd-revenue-overview-modal" class="cd-revenue-overview-modal" hidden role="dialog" aria-modal="true" aria-labelledby="cd-revenue-overview-title">
+        <div class="cd-revenue-overview-box">
+            <div class="cd-revenue-overview-head">
+                <div>
+                    <h3 id="cd-revenue-overview-title">Revenue Overview</h3>
+                    <p id="cd-revenue-overview-sub" class="cd-revenue-overview-sub">Monthly / yearly online vs office revenue breakdown for your company.</p>
+                </div>
+                <button type="button" id="cd-revenue-overview-close" class="btn btn-secondary btn-sm">Close</button>
+            </div>
+
+            <div class="cd-revenue-overview-period" aria-label="Filter revenue overview period">
+                <div class="cd-ov-field">
+                    <label for="cd-revenue-overview-month">Month</label>
+                    <select id="cd-revenue-overview-month">
+                        <option value="">All months</option>
+                        <option value="1">January</option>
+                        <option value="2">February</option>
+                        <option value="3">March</option>
+                        <option value="4">April</option>
+                        <option value="5">May</option>
+                        <option value="6">June</option>
+                        <option value="7">July</option>
+                        <option value="8">August</option>
+                        <option value="9">September</option>
+                        <option value="10">October</option>
+                        <option value="11">November</option>
+                        <option value="12">December</option>
+                    </select>
+                </div>
+                <div class="cd-ov-field">
+                    <label for="cd-revenue-overview-year">Year</label>
+                    <select id="cd-revenue-overview-year"></select>
+                </div>
+                <div class="cd-ov-field">
+                    <label>&nbsp;</label>
+                    <button type="button" id="btn-apply-revenue-overview" class="btn btn-secondary">Apply</button>
+                </div>
+                <span id="cd-revenue-overview-period-label" class="cd-revenue-overview-period-label">All time</span>
+            </div>
+
+            <p id="revenue-overview-loading" class="cd-revenue-msg" hidden>Loading revenue overview&hellip;</p>
+            <div id="revenue-overview-error" class="cd-revenue-error auth-message" hidden></div>
+
+            <div id="revenue-overview-detail" hidden>
+                <div class="cd-revenue-overview-stats">
+                    <div class="cd-revenue-overview-stat"><span>Total Bookings</span><strong id="cd-rev-ov-bookings">0</strong></div>
+                    <div class="cd-revenue-overview-stat"><span>Online</span><strong id="cd-rev-ov-online">0</strong></div>
+                    <div class="cd-revenue-overview-stat"><span>Office</span><strong id="cd-rev-ov-office">0</strong></div>
+                    <div class="cd-revenue-overview-stat"><span>Paid (ETB)</span><strong id="cd-rev-ov-paid">0</strong></div>
+                    <div class="cd-revenue-overview-stat"><span>Refunds (ETB)</span><strong id="cd-rev-ov-refunds">0</strong></div>
+                    <div class="cd-revenue-overview-stat"><span>Net (ETB)</span><strong id="cd-rev-ov-net">0</strong></div>
+                </div>
+
+                <div class="cd-revenue-overview-wrap">
+                    <table class="cd-revenue-overview-table">
+                        <thead>
+                            <tr><th>Channel</th><th>Bookings</th><th>Paid (ETB)</th><th>Refunds (ETB)</th><th>Net Revenue (ETB)</th></tr>
+                        </thead>
+                        <tbody id="cd-revenue-overview-rows"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="js/main.js"></script>
     <script src="js/auth.js"></script>
-    <script src="js/company-dashboard.js?v=20260904-branches"></script>
+    <script src="js/company-dashboard.js?v=20260906-revenue-overview"></script>
 </body>
 </html>
