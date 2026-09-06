@@ -102,6 +102,30 @@ function ensure_schema_columns(PDO $pdo): void
                     ON UPDATE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
         );
+
+        /* bookings.booking_source — 'online' vs 'office' sales channel used by
+           the admin revenue breakdown. Fresh installs already get the column
+           from schema.sql; this adds it to databases created before it existed.
+           Existing rows are backfilled ONCE: office/walk-in bookings were
+           created for synthetic passengers with a 'walkin-...@ettransport.local'
+           email, everything else defaults to 'online'. */
+        $stmt = $pdo->prepare(
+            "SELECT COUNT(*)
+               FROM information_schema.columns
+              WHERE table_schema = DATABASE()
+                AND table_name = 'bookings'
+                AND column_name = 'booking_source'"
+        );
+        $stmt->execute();
+        if ((int) $stmt->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE bookings ADD COLUMN booking_source ENUM('online', 'office') NOT NULL DEFAULT 'online' AFTER payment_method");
+            $pdo->exec(
+                "UPDATE bookings b
+                    JOIN users u ON u.id = b.passenger_id
+                    SET b.booking_source = 'office'
+                  WHERE u.email LIKE 'walkin-%@ettransport.local'"
+            );
+        }
     } catch (Throwable $e) {
         /* Non-fatal on upgrade path — surfaces only if the app cannot query the schema. */
     }

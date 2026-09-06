@@ -17,6 +17,9 @@ declare(strict_types=1);
  * Adds READ-ONLY operational oversight on top of the admin lifecycle:
  *
  *   GET ?action=trips                     -> platform trip oversight (admin only)
+ *   GET ?action=revenue                   -> per-company revenue overview (admin only)
+ *   GET ?action=company_revenue           -> one company's online/office revenue breakdown
+ *                                                           (company_id, month, year) (admin only)
  *   GET ?action=bookings                  -> platform-wide bookings (admin only)
  *   GET ?action=manifest&booking_id=N     -> admin-wide booking manifest
  *
@@ -402,6 +405,32 @@ function admin_filter_date(mixed $value, string $message): ?string
     }
     return $normalized;
 }
+
+/**
+ * Validate optional revenue period filters. month: 1-12, year: 1970-2200.
+ * Empty or missing -> null (no restriction). Malformed -> 422.
+ */
+function admin_filter_period(mixed $monthRaw, mixed $yearRaw): array
+{
+    $month = null;
+    if ($monthRaw !== null && trim((string) $monthRaw) !== '') {
+        $month = (int) trim((string) $monthRaw);
+        if ($month < 1 || $month > 12) {
+            auth_response(422, ['success' => false, 'message' => 'A valid month (1-12) is required.']);
+        }
+    }
+
+    $year = null;
+    if ($yearRaw !== null && trim((string) $yearRaw) !== '') {
+        $year = (int) trim((string) $yearRaw);
+        if ($year < 1970 || $year > 2200) {
+            auth_response(422, ['success' => false, 'message' => 'A valid year (e.g. 2026) is required.']);
+        }
+    }
+
+    return [$month, $year];
+}
+
 /* GET /api/admin.php?action=trips — platform trip oversight (admin only). */
 function handle_admin_trips(PDO $pdo): void
 {
@@ -508,6 +537,182 @@ function handle_admin_trips(PDO $pdo): void
         'trips' => $trips,
     ]);
 }
+
+/** GET /api/admin.php?action=revenue — per-company revenue overview (admin only). */
+function handle_admin_revenue(PDO $pdo): void
+{
+    if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
+        auth_response(405, ['success' => false, 'message' => 'Method not allowed.']);
+    }
+
+    requireRole('admin');
+
+    $stmt = $pdo->query('
+        SELECT
+            c.id,
+            c.name,
+            c.slug,
+            c.logo,
+            c.status,
+            (SELECT COUNT(*) FROM trips t WHERE t.company_id = c.id) AS trip_count,
+            COALESCE((SELECT COUNT(*)
+                       FROM bookings bk
+                       JOIN trips t ON t.id = bk.trip_id
+                      WHERE t.company_id = c.id), 0) AS booking_count,
+            COALESCE((SELECT SUM(p.amount)
+                       FROM payments p
+                       JOIN bookings bk ON bk.id = p.booking_id
+                       JOIN trips t ON t.id = bk.trip_id
+                      WHERE t.company_id = c.id
+                        AND p.status IN (\'paid\', \'refunded\')), 0) AS collected_revenue
+        FROM companies c
+        ORDER BY collected_revenue DESC, c.name ASC
+    ');
+
+    $companies = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $companies[] = [
+            'id' => (int) $row['id'],
+            'name' => $row['name'],
+            'slug' => $row['slug'],
+            'logo' => $row['logo'],
+            'status' => $row['status'],
+            'trip_count' => (int) $row['trip_count'],
+            'booking_count' => (int) $row['booking_count'],
+            'collected_revenue' => round((float) ($row['collected_revenue'] ?? 0), 2),
+        ];
+    }
+
+    auth_response(200, [
+        'success' => true,
+        'companies' => $companies,
+    ]);
+}
+
+/* GET /api/admin.php?action=company_revenue&company_id=N[&month=M][&year=Y] — one
+   company's online / office (paid, refund, net) revenue breakdown (admin only).
+   Missing month/year returns all time; year alone returns the whole year. The
+   numbers reuse the platform revenue convention from the company dashboard:
+   paid = every payment row that ever collected money for the company (paid +
+   refunded), refunds = refunded_amount recorded per booking on half/full refunds,
+   net = paid - refunds. Period filters apply to the booking creation date. */
+function handle_admin_company_revenue(PDO $pdo): void
+{
+    if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
+        auth_response(405, ['success' => false, 'message' => 'Method not allowed.']);
+    }
+
+    requireRole('admin');
+
+    $companyId = admin_company_id_or_error($_GET['company_id'] ?? null, 'A valid company id is required.');
+    [$month, $year] = admin_filter_period($_GET['month'] ?? null, $_GET['year'] ?? null);
+
+    $companyStmt = $pdo->prepare('SELECT id, name, slug, logo FROM companies WHERE id = :company_id LIMIT 1');
+    $companyStmt->execute([':company_id' => $companyId]);
+    $company = $companyStmt->fetch();
+    if ($company === false) {
+        auth_response(404, ['success' => false, 'message' => 'Company not found.']);
+    }
+
+    $periodSql = '';
+    $periodParams = [];
+    if ($year !== null) {
+        $periodSql .= ' AND YEAR(b.created_at) = :year';
+        $periodParams[':year'] = $year;
+    }
+    if ($month !== null) {
+        $periodSql .= ' AND MONTH(b.created_at) = :month';
+        $periodParams[':month'] = $month;
+    }
+
+    $breakdown = [
+        'online' => ['bookings' => 0, 'paid' => 0.0, 'refunds' => 0.0, 'net' => 0.0],
+        'office' => ['bookings' => 0, 'paid' => 0.0, 'refunds' => 0.0, 'net' => 0.0],
+    ];
+    foreach (['online', 'office'] as $source) {
+        $paidStmt = $pdo->prepare('
+            SELECT
+                COUNT(DISTINCT b.id) AS bookings,
+                COALESCE(SUM(p.amount), 0) AS paid_amount
+            FROM bookings b
+            JOIN trips t ON t.id = b.trip_id
+            LEFT JOIN payments p ON p.booking_id = b.id AND p.status IN (\'paid\', \'refunded\')
+            WHERE t.company_id = :company_id
+              AND b.booking_source = :source
+              ' . $periodSql . '
+        ');
+        $paidStmt->execute(array_merge(
+            [':company_id' => $companyId, ':source' => $source],
+            $periodParams
+        ));
+        $paidRow = $paidStmt->fetch() ?: [];
+
+        /* Refunds live on bookings (a half refund is not representable by the
+           payment status alone). Aggregated once per booking so the same
+           refund can never be counted twice. */
+        $refundStmt = $pdo->prepare('
+            SELECT COALESCE(SUM(
+                CASE WHEN b.refund_type IN (\'half\', \'full\')
+                     THEN COALESCE(b.refunded_amount, 0)
+                     ELSE 0 END), 0) AS refunded_amount
+            FROM bookings b
+            JOIN trips t ON t.id = b.trip_id
+            WHERE t.company_id = :company_id
+              AND b.booking_source = :source
+              ' . $periodSql . '
+        ');
+        $refundStmt->execute(array_merge(
+            [':company_id' => $companyId, ':source' => $source],
+            $periodParams
+        ));
+        $refundRow = $refundStmt->fetch() ?: [];
+
+        $paid = round((float) ($paidRow['paid_amount'] ?? 0), 2);
+        $refunds = round((float) ($refundRow['refunded_amount'] ?? 0), 2);
+        $breakdown[$source] = [
+            'bookings' => (int) ($paidRow['bookings'] ?? 0),
+            'paid' => $paid,
+            'refunds' => $refunds,
+            'net' => round($paid - $refunds, 2),
+        ];
+    }
+
+    $total = [
+        'bookings' => $breakdown['online']['bookings'] + $breakdown['office']['bookings'],
+        'paid' => round($breakdown['online']['paid'] + $breakdown['office']['paid'], 2),
+        'refunds' => round($breakdown['online']['refunds'] + $breakdown['office']['refunds'], 2),
+        'net' => 0.0,
+    ];
+    $total['net'] = round($total['paid'] - $total['refunds'], 2);
+
+    $label = 'All time';
+    if ($year !== null && $month !== null) {
+        $label = DateTime::createFromFormat('!m', (string) $month)->format('F') . ' ' . $year;
+    } elseif ($year !== null) {
+        $label = (string) $year;
+    }
+
+    auth_response(200, [
+        'success' => true,
+        'company' => [
+            'id' => (int) $company['id'],
+            'name' => $company['name'],
+            'slug' => $company['slug'],
+            'logo' => $company['logo'],
+        ],
+        'period' => [
+            'month' => $month,
+            'year' => $year,
+            'label' => $label,
+        ],
+        'breakdown' => [
+            'online' => $breakdown['online'],
+            'office' => $breakdown['office'],
+            'total' => $total,
+        ],
+    ]);
+}
+
 /* GET /api/admin.php?action=bookings — platform-wide bookings (admin only). */
 function handle_admin_bookings(PDO $pdo): void
 {
@@ -1471,6 +1676,14 @@ try {
         handle_admin_trips($pdo);
     }
 
+    if ($action === 'revenue') {
+        handle_admin_revenue($pdo);
+    }
+
+    if ($action === 'company_revenue') {
+        handle_admin_company_revenue($pdo);
+    }
+
     if ($action === 'bookings') {
         handle_admin_bookings($pdo);
     }
@@ -1521,7 +1734,7 @@ try {
 
     auth_response(400, [
         'success' => false,
-        'message' => 'Unsupported action. Use action=overview, action=companies, action=company, action=trips, action=bookings, action=passengers, action=passenger, action=manifest, action=company_approve, action=company_reject, action=company_suspend, action=company_activate, action=company_list, action=company_unlist or action=company_delete.',
+        'message' => 'Unsupported action. Use action=overview, action=companies, action=company, action=trips, action=revenue, action=company_revenue, action=bookings, action=passengers, action=passenger, action=manifest, action=company_approve, action=company_reject, action=company_suspend, action=company_activate, action=company_list, action=company_unlist or action=company_delete.',
     ]);
 } catch (Throwable $e) {
     auth_response(500, [

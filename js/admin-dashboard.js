@@ -753,7 +753,7 @@ function renderDetail(c) {
         hide(byId('section-detail'));
 
         /* If this leaves no main section visible, fall back to Companies. */
-        var anyVisible = ['section-overview', 'section-companies', 'section-trips', 'section-passengers', 'section-reviews'].some(function (id) {
+        var anyVisible = ['section-overview', 'section-companies', 'section-revenue', 'section-passengers', 'section-reviews'].some(function (id) {
             var el = byId(id);
             return el && !el.hidden;
         });
@@ -883,7 +883,7 @@ function renderDetail(c) {
         overview: ['section-overview'],
         companies: ['section-companies'],
         passengers: ['section-passengers'],
-        revenue: ['section-trips'],
+        revenue: ['section-revenue'],
         reviews: ['section-reviews']
     };
 
@@ -898,7 +898,7 @@ function renderDetail(c) {
 
     function switchSection(name) {
         var map = sectionMap[name] || ['section-overview', 'section-companies'];
-        var all = ['section-overview', 'section-companies', 'section-detail', 'section-trips', 'section-passengers', 'section-reviews'];
+        var all = ['section-overview', 'section-companies', 'section-detail', 'section-revenue', 'section-passengers', 'section-reviews'];
         for (var i = 0; i < all.length; i++) {
             hide(byId(all[i]));
         }
@@ -920,7 +920,7 @@ function renderDetail(c) {
             } catch (e) { /* hash update is best-effort only */ }
         }
 
-        if (name === 'revenue') { loadTrips(); }
+        if (name === 'revenue') { loadRevenue(); }
         if (name === 'passengers') { loadPassengers(); }
         if (name === 'reviews') { renderReviews(); }
     }
@@ -938,93 +938,170 @@ function renderDetail(c) {
         }).join('');
     }
 
-    function populateCompanyFilters() {
-        fetch('api/admin.php?action=companies', {
+    /* ---------- Revenue section (per-company list + detail modal) ---------- */
+    var currentRevenueCompanies = [];
+    var currentRevenueCompanyId = null;
+    var revenueRequestId = 0;          // discards responses from superseded revenue list requests
+    var companyRevenueRequestId = 0;   // discards responses from superseded breakdown requests
+
+    function loadRevenue() {
+        var rid = ++revenueRequestId;
+        show(byId('ad-revenue-loading'));
+        hide(byId('ad-revenue-error'));
+        hide(byId('ad-revenue-empty'));
+
+        fetch('api/admin.php?action=revenue', {
             method: 'GET',
             credentials: 'same-origin',
             headers: { 'Accept': 'application/json' }
         }).then(parseJson).then(function (result) {
-            var data = result.data || {};
-            var list = data.companies || [];
-            ['ad-trip-company'].forEach(function (id) {
-                var sel = byId(id);
-                if (!sel) { return; }
-                sel.innerHTML = '<option value="">All companies</option>';
-                list.forEach(function (c) {
-                    var o = document.createElement('option');
-                    o.value = c.id;
-                    o.textContent = c.name;
-                    sel.appendChild(o);
-                });
-            });
-        }).catch(function () { /* non-fatal */ });
-    }
-
-    function currentTripsQuery() {
-        var p = [];
-        var co = byId('ad-trip-company'); if (co && co.value) { p.push('company_id=' + encodeURIComponent(co.value)); }
-        var st = byId('ad-trip-status'); if (st && st.value) { p.push('status=' + encodeURIComponent(st.value)); }
-        var df = byId('ad-trip-date-from'); if (df && df.value) { p.push('date_from=' + encodeURIComponent(df.value)); }
-        var dt = byId('ad-trip-date-to'); if (dt && dt.value) { p.push('date_to=' + encodeURIComponent(dt.value)); }
-        return p.length ? '&' + p.join('&') : '';
-    }
-
-    var adTripsRequestId = 0;   // discards responses from superseded trip requests
-
-    function loadTrips() {
-        var rid = ++adTripsRequestId;
-        show(byId('ad-trips-loading'));
-        hide(byId('ad-trips-error'));
-        hide(byId('ad-trips-empty'));
-        fetch('api/admin.php?action=trips' + currentTripsQuery(), {
-            method: 'GET',
-            credentials: 'same-origin',
-            headers: { 'Accept': 'application/json' }
-        }).then(parseJson).then(function (result) {
-            hide(byId('ad-trips-loading'));
-            if (rid !== adTripsRequestId) { return; }
+            hide(byId('ad-revenue-loading'));
+            if (rid !== revenueRequestId) { return; }
             var data = result.data || {};
             if (!result.ok || result.status !== 200 || !data.success) {
-                setError(byId('ad-trips-error'), data.message || 'Unable to load trips.');
+                setError(byId('ad-revenue-error'), data.message || 'Unable to load revenue.');
                 return;
             }
-            renderTrips(data.trips || []);
+            renderRevenue(data.companies || []);
         }).catch(function () {
-            if (rid !== adTripsRequestId) { return; }
-            hide(byId('ad-trips-loading'));
-            setError(byId('ad-trips-error'), 'Network error while loading trips.');
+            if (rid !== revenueRequestId) { return; }
+            hide(byId('ad-revenue-loading'));
+            setError(byId('ad-revenue-error'), 'Network error while loading revenue.');
         });
     }
 
-        function renderTrips(trips) {
-        var body = byId('ad-trips-rows');
-        var empty = byId('ad-trips-empty');
-        if (!trips.length) { body.innerHTML = ''; show(empty); return; }
+    function renderRevenue(companies) {
+        currentRevenueCompanies = Array.isArray(companies) ? companies : [];
+        var body = byId('ad-revenue-rows');
+        var empty = byId('ad-revenue-empty');
+        if (!body) { return; }
+        if (!currentRevenueCompanies.length) { body.innerHTML = ''; show(empty); return; }
         hide(empty);
         var html = '';
-        trips.forEach(function (t) {
-            var cancelledNote = '';
-            var affectedCount = parseInt(t.affected_booking_count, 10) || 0;
-            if (t.status === 'cancelled' && affectedCount > 0) {
-                var refundCount = parseInt(t.refund_required, 10) || 0;
-                cancelledNote = affectedCount + ' cancelled booking(s)' +
-                    (refundCount > 0 ? ' &middot; ' + refundCount + ' refund required' : '');
-            }
+        currentRevenueCompanies.forEach(function (c) {
+            var logo = c.logo ? '<img class="ad-co-logo" src="' + escHtml(c.logo) + '" alt="">' : '';
             html += '<tr>' +
-                '<td><span class="ad-co-name">' + escHtml(t.company_name) + '</span><span class="ad-sub">#' + t.company_id + '</span></td>' +
-                '<td><span class="ad-route">' + escHtml(t.from_city) + ' \u2192 ' + escHtml(t.to_city) + '</span><span class="ad-sub">' + (t.route_duration != null ? t.route_duration + ' min' : '\u2014') + '</span></td>' +
-                '<td>' + escHtml(t.bus_name || '\u2014') + '<span class="ad-sub">' + escHtml(t.bus_registration || '') + ' \u00b7 ' + escHtml(t.bus_type || '') + '</span></td>' +
-                '<td>' + formatDate(t.departure_date) + '<span class="ad-sub">' + String(t.departure_time || '').slice(0, 5) + '</span></td>' +
-                '<td>' + (t.arrival_time ? String(t.arrival_time).slice(0, 5) : '\u2014') + '</td>' +
-                '<td>' + formatMoney(t.price) + '</td>' +
-                '<td>' + t.seat_capacity + '</td>' +
-                '<td>' + t.booked_seats + '</td>' +
-                '<td>' + t.available_seats + '</td>' +
-                (cancelledNote ? '<td class="ad-cancelled-note">' + cancelledNote + '</td>' : '<td></td>') +
-                '<td><span class="ad-badge ' + badgeClass(t.status) + '">' + escHtml(t.status || '') + '</span></td>' +
+                '<td><span class="ad-co-name">' + logo + escHtml(c.name) + '</span><span class="ad-co-slug">@' + escHtml(c.slug || '') + '</span></td>' +
+                '<td><span class="ad-badge ' + badgeClass(c.status) + '">' + escHtml(c.status || '') + '</span></td>' +
+                '<td>' + (c.trip_count || 0) + '</td>' +
+                '<td>' + (c.booking_count || 0) + '</td>' +
+                '<td>' + formatMoney(c.collected_revenue) + '</td>' +
+                '<td><button type="button" class="btn btn-secondary btn-sm" data-revenue-detail="' + c.id + '">Details</button></td>' +
                 '</tr>';
         });
         body.innerHTML = html;
+    }
+
+    function showRevenuePeriodLabel(label) {
+        var el = byId('ad-revenue-period-label');
+        if (el) { el.textContent = label || 'All time'; }
+    }
+
+    function loadCompanyRevenue() {
+        if (!currentRevenueCompanyId) { return; }
+        var rid = ++companyRevenueRequestId;
+        show(byId('ad-revenue-detail-loading'));
+        hide(byId('ad-revenue-detail-error'));
+        hide(byId('ad-revenue-detail'));
+
+        var p = [];
+        var month = byId('ad-revenue-month');
+        if (month && month.value) { p.push('month=' + encodeURIComponent(month.value)); }
+        var year = byId('ad-revenue-year');
+        if (year && year.value) { p.push('year=' + encodeURIComponent(year.value)); }
+        var q = p.length ? '&' + p.join('&') : '';
+
+        fetch('api/admin.php?action=company_revenue&company_id=' + encodeURIComponent(currentRevenueCompanyId) + q, {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        }).then(parseJson).then(function (result) {
+            if (rid !== companyRevenueRequestId) { return; }
+            hide(byId('ad-revenue-detail-loading'));
+            var data = result.data || {};
+            if (!result.ok || result.status !== 200 || !data.success) {
+                setError(byId('ad-revenue-detail-error'), data.message || 'Unable to load revenue.');
+                return;
+            }
+            renderCompanyRevenue(data);
+            show(byId('ad-revenue-detail'));
+        }).catch(function () {
+            if (rid !== companyRevenueRequestId) { return; }
+            hide(byId('ad-revenue-detail-loading'));
+            setError(byId('ad-revenue-detail-error'), 'Network error while loading revenue.');
+        });
+    }
+
+    function renderCompanyRevenue(data) {
+        var bd = data.breakdown || {};
+        var total = bd.total || { bookings: 0, paid: 0, refunds: 0, net: 0 };
+        var online = bd.online || {};
+        var office = bd.office || {};
+
+        setText('ad-rev-stat-bookings', String(total.bookings == null ? 0 : total.bookings));
+        setText('ad-rev-stat-online', String(online.bookings == null ? 0 : online.bookings));
+        setText('ad-rev-stat-office', String(office.bookings == null ? 0 : office.bookings));
+        setText('ad-rev-stat-paid', formatMoney(total.paid));
+        setText('ad-rev-stat-refunds', formatMoney(total.refunds));
+        setText('ad-rev-stat-net', formatMoney(total.net));
+        showRevenuePeriodLabel(data.period && data.period.label ? data.period.label : 'All time');
+
+        var body = byId('ad-revenue-breakdown-rows');
+        if (!body) { return; }
+        var rows = [
+            ['Online bookings', online],
+            ['Office bookings', office],
+            ['Total', total]
+        ];
+        var html = '';
+        rows.forEach(function (r, i) {
+            var row = r[1] || {};
+            var cls = i === rows.length - 1 ? ' class="ad-rev-total"' : '';
+            html += '<tr' + cls + '>' +
+                '<td>' + r[0] + '</td>' +
+                '<td>' + (row.bookings == null ? 0 : row.bookings) + '</td>' +
+                '<td>' + formatMoney(row.paid) + '</td>' +
+                '<td>' + formatMoney(row.refunds) + '</td>' +
+                '<td>' + formatMoney(row.net) + '</td>' +
+                '</tr>';
+        });
+        body.innerHTML = html;
+    }
+
+    function openRevenueModal(companyId) {
+        var id = parseInt(companyId, 10);
+        if (!id) { return; }
+        var match = currentRevenueCompanies.filter(function (c) { return c.id === id; })[0];
+        if (match) {
+            setText('ad-revenue-title', match.name + ' \u2014 Revenue');
+            setText('ad-revenue-sub', '@' + (match.slug || '') + (match.status ? ' \u00b7 ' + match.status : ''));
+        } else {
+            setText('ad-revenue-title', 'Revenue Detail');
+            setText('ad-revenue-sub', '');
+        }
+        currentRevenueCompanyId = id;
+        var modal = byId('ad-revenue-modal');
+        if (!modal) { return; }
+        hide(byId('ad-revenue-detail'));
+        hide(byId('ad-revenue-detail-error'));
+        modal.hidden = false;
+        loadCompanyRevenue();
+    }
+
+    function closeRevenueModal() {
+        currentRevenueCompanyId = null;
+        hide(byId('ad-revenue-modal'));
+    }
+
+    function populateRevenueYears() {
+        var sel = byId('ad-revenue-year');
+        if (!sel) { return; }
+        var current = new Date().getFullYear();
+        var html = '<option value="">All years</option>';
+        for (var y = current; y >= current - 5; y--) {
+            html += '<option value="' + y + '">' + y + '</option>';
+        }
+        sel.innerHTML = html;
     }
 
     function currentPassengersQuery() {
@@ -1570,11 +1647,11 @@ function renderDetail(c) {
 
         loadOverview();
         loadCompanies();
-        /* Pre-load trips/bookings into their hidden tables so the tbody is
-           already populated when an operator opens the section. This avoids
+        /* Pre-load revenue + passengers into their hidden tables so the tbody
+           is already populated when an operator opens the section. This avoids
            an empty flash while the first fetch resolves. The sections stay
            hidden until clicked (switchSection toggles visibility). */
-        loadTrips();
+        loadRevenue();
         loadPassengers();
 
         /* Status pill buttons (All / Pending / Approved / Suspended / Rejected). */
@@ -1697,8 +1774,8 @@ function renderDetail(c) {
             });
         }
 
-        var applyTrips = byId('btn-apply-trips'); if (applyTrips) { applyTrips.addEventListener('click', loadTrips); }
-        var refreshTrips = byId('btn-refresh-trips'); if (refreshTrips) { refreshTrips.addEventListener('click', loadTrips); }
+        var refreshRevenue = byId('btn-refresh-revenue'); if (refreshRevenue) { refreshRevenue.addEventListener('click', loadRevenue); }
+        var applyRevenue = byId('btn-apply-revenue'); if (applyRevenue) { applyRevenue.addEventListener('click', loadCompanyRevenue); }
         var searchPass = byId('btn-search-passengers'); if (searchPass) { searchPass.addEventListener('click', loadPassengers); }
 
         var manClose = byId('ad-manifest-close'); if (manClose) { manClose.addEventListener('click', closeManifest); }
@@ -1733,6 +1810,30 @@ function renderDetail(c) {
             });
         }
 
+        /* Revenue section wiring. */
+        var revRows = byId('ad-revenue-rows');
+        if (revRows) {
+            revRows.addEventListener('click', function (e) {
+                var target = e.target;
+                while (target && target !== revRows) {
+                    if (target.getAttribute && target.getAttribute('data-revenue-detail')) {
+                        openRevenueModal(target.getAttribute('data-revenue-detail'));
+                        break;
+                    }
+                    target = target.parentNode;
+                }
+            });
+        }
+        var revClose = byId('ad-revenue-close');
+        if (revClose) { revClose.addEventListener('click', closeRevenueModal); }
+        var revModal = byId('ad-revenue-modal');
+        if (revModal) {
+            revModal.addEventListener('click', function (e) {
+                if (e.target === revModal) { closeRevenueModal(); }
+            });
+        }
+        populateRevenueYears();
+
         /* Manage-company modal wiring. */
         var manageClose = byId('btn-manage-close');
         if (manageClose) { manageClose.addEventListener('click', closeManage); }
@@ -1766,10 +1867,9 @@ function renderDetail(c) {
                 closePassengerModal();
                 closeAddCompany();
                 closeManage();
+                closeRevenueModal();
             }
         });
-
-        populateCompanyFilters();
     }
 
     if (document.readyState === 'loading') {

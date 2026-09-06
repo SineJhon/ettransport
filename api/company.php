@@ -2547,8 +2547,8 @@ function handle_company_booking_create(PDO $pdo): void
         $total = round((float) $trip['price'], 2);
 
         $bookingStmt = $pdo->prepare('
-            INSERT INTO bookings (passenger_id, trip_id, booking_reference, total_amount, payment_method, payment_status, booking_status, refund_account_name, refund_account_number, refund_bank)
-            VALUES (:passenger_id, :trip_id, :reference, :total_amount, :payment_method, :payment_status, :booking_status, :refund_account_name, :refund_account_number, :refund_bank)
+            INSERT INTO bookings (passenger_id, trip_id, booking_reference, total_amount, payment_method, booking_source, payment_status, booking_status, refund_account_name, refund_account_number, refund_bank)
+            VALUES (:passenger_id, :trip_id, :reference, :total_amount, :payment_method, \'office\', :payment_status, :booking_status, :refund_account_name, :refund_account_number, :refund_bank)
         ');
         $bookingStmt->execute([
             ':passenger_id' => $passengerUserId,

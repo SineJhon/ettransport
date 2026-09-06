@@ -211,6 +211,24 @@
         .ad-passenger-liked-item .ad-passenger-copy a:hover { text-decoration: underline; }
         .ad-passenger-liked-item .ad-passenger-copy span { font-size: 0.74rem; }
         @media (max-width: 700px) { .ad-passenger-stats { margin-left: 0; } .ad-passenger-summary { align-items: flex-start; } }
+        /* ---------- Revenue section + company revenue detail modal ---------- */
+        .ad-revenue-modal { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.55); z-index: 102; padding: 1rem; }
+        .ad-revenue-modal[hidden] { display: none; }
+        .ad-revenue-box { width: min(780px, 94vw); max-height: 90vh; overflow-y: auto; background: var(--color-white); border-radius: 14px; padding: 1.25rem 1.4rem; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28); }
+        .ad-revenue-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; padding-bottom: 0.9rem; margin-bottom: 0.8rem; border-bottom: 1px solid #e7eeea; }
+        .ad-revenue-head h3 { margin: 0; font-size: 1.15rem; color: #163a33; }
+        .ad-revenue-sub { margin: 0.25rem 0 0; color: #687d75; font-size: 0.85rem; }
+        .ad-revenue-filters { display: flex; align-items: flex-end; gap: 0.6rem; flex-wrap: wrap; padding: 0.3rem 0 0.9rem; }
+        .ad-revenue-filters .ad-filter-field { display: grid; gap: 0.25rem; }
+        .ad-revenue-filters label { font-size: 0.72rem; font-weight: 700; color: #5c6d67; text-transform: uppercase; letter-spacing: 0.04em; }
+        .ad-revenue-filters select { padding: 0.45rem 0.6rem; font-size: 0.85rem; color: var(--color-dark); background: #fff; border: 1px solid #cbd5e1; border-radius: 7px; }
+        .ad-revenue-period-label { margin-left: auto; color: #38635a; font-size: 0.78rem; font-weight: 800; padding-bottom: 0.4rem; white-space: nowrap; }
+        .ad-revenue-stats { display: flex; gap: 0.55rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+        .ad-revenue-stat { flex: 1 1 140px; min-width: 120px; padding: 0.6rem 0.7rem; background: #f2f7f4; border: 1px solid #dce9e1; border-radius: 10px; text-align: center; }
+        .ad-revenue-stat span { display: block; color: #5c6d67; font-size: 0.66rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
+        .ad-revenue-stat strong { display: block; margin-top: 0.2rem; color: #163a33; font-size: 1.05rem; }
+        .ad-revenue-breakdown th:not(:first-child), .ad-revenue-breakdown td:not(:first-child) { text-align: right; }
+        .ad-revenue-breakdown tbody tr.ad-rev-total td { font-weight: 800; color: #163a33; border-top: 2px solid #dce9e1; background: #f2f7f4; }
     </style>
 </head>
 <body data-auth-required="1" data-auth-role="admin">
@@ -338,59 +356,32 @@
             </div>
         </section>
 
-        <section id="section-trips" class="ad-card" hidden>
+        <section id="section-revenue" class="ad-card" hidden>
             <div class="ad-card-head">
-                <h2>Revenue</h2>
-                <div class="ad-filter-row">
-                    <div class="ad-filter-field">
-                        <label for="ad-trip-company">Company</label>
-                        <select id="ad-trip-company"><option value="">All companies</option></select>
-                    </div>
-                    <div class="ad-filter-field">
-                        <label for="ad-trip-status">Status</label>
-                        <select id="ad-trip-status">
-                            <option value="">All statuses</option>
-                            <option value="scheduled">Scheduled</option>
-                            <option value="departed">Departed</option>
-                            <option value="completed">Completed</option>
-                            <option value="cancelled">Cancelled</option>
-                        </select>
-                    </div>
-                    <div class="ad-filter-field">
-                        <label for="ad-trip-date-from">From</label>
-                        <input type="date" id="ad-trip-date-from">
-                    </div>
-                    <div class="ad-filter-field">
-                        <label for="ad-trip-date-to">To</label>
-                        <input type="date" id="ad-trip-date-to">
-                    </div>
-                    <button type="button" id="btn-apply-trips" class="btn btn-secondary btn-sm">Apply</button>
-                    <button type="button" id="btn-refresh-trips" class="btn btn-secondary btn-sm">Refresh</button>
+                <div>
+                    <h2>Company Revenue</h2>
+                    <p style="margin:0.2rem 0 0;color:var(--color-muted);font-size:0.8rem;">Open a company's details for a monthly / yearly online vs office revenue breakdown.</p>
                 </div>
+                <button type="button" id="btn-refresh-revenue" class="btn btn-secondary btn-sm">Refresh</button>
             </div>
 
-            <p id="ad-trips-loading" class="auth-identity" hidden>Loading trips&hellip;</p>
-            <div id="ad-trips-error" class="auth-message" hidden></div>
-            <div id="ad-trips-empty" class="ad-empty" hidden>No trips match the current filter.</div>
+            <p id="ad-revenue-loading" class="auth-identity" hidden>Loading company revenue&hellip;</p>
+            <div id="ad-revenue-error" class="auth-message" hidden></div>
+            <div id="ad-revenue-empty" class="ad-empty" hidden>No companies have revenue data yet.</div>
 
             <div class="ad-table-wrap">
-                <table class="ad-table" id="ad-trips-table">
+                <table class="ad-table" id="ad-revenue-table">
                     <thead>
                         <tr>
                             <th>Company</th>
-                            <th>Route</th>
-                            <th>Bus</th>
-                            <th>Departure</th>
-                            <th>Arrival</th>
-                            <th>Price</th>
-                            <th>Capacity</th>
-                            <th>Booked</th>
-                            <th>Available</th>
-                            <th>Cancelled bookings</th>
                             <th>Status</th>
+                            <th>Trips</th>
+                            <th>Bookings</th>
+                            <th>Paid Revenue (ETB)</th>
+                            <th></th>
                         </tr>
                     </thead>
-                    <tbody id="ad-trips-rows"></tbody>
+                    <tbody id="ad-revenue-rows"></tbody>
                 </table>
             </div>
         </section>
@@ -695,6 +686,66 @@
                 <div id="ad-passenger-pane-liked" class="ad-passenger-pane">
                     <div id="ad-passenger-liked-empty" class="ad-empty" hidden>No liked companies yet.</div>
                     <div id="ad-passenger-liked-list" class="ad-passenger-liked"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+<div id="ad-revenue-modal" class="ad-revenue-modal" hidden role="dialog" aria-modal="true" aria-labelledby="ad-revenue-title">
+        <div class="ad-revenue-box">
+            <div class="ad-revenue-head">
+                <div>
+                    <h3 id="ad-revenue-title">Revenue Detail</h3>
+                    <p id="ad-revenue-sub" class="ad-revenue-sub"></p>
+                </div>
+                <button type="button" id="ad-revenue-close" class="btn btn-secondary btn-sm">Close</button>
+            </div>
+
+            <div class="ad-revenue-filters" id="ad-revenue-period">
+                <div class="ad-filter-field">
+                    <label for="ad-revenue-month">Month</label>
+                    <select id="ad-revenue-month">
+                        <option value="">All months</option>
+                        <option value="1">January</option>
+                        <option value="2">February</option>
+                        <option value="3">March</option>
+                        <option value="4">April</option>
+                        <option value="5">May</option>
+                        <option value="6">June</option>
+                        <option value="7">July</option>
+                        <option value="8">August</option>
+                        <option value="9">September</option>
+                        <option value="10">October</option>
+                        <option value="11">November</option>
+                        <option value="12">December</option>
+                    </select>
+                </div>
+                <div class="ad-filter-field">
+                    <label for="ad-revenue-year">Year</label>
+                    <select id="ad-revenue-year"></select>
+                </div>
+                <button type="button" id="btn-apply-revenue" class="btn btn-secondary btn-sm">Apply</button>
+                <span id="ad-revenue-period-label" class="ad-revenue-period-label"></span>
+            </div>
+
+            <p id="ad-revenue-detail-loading" class="auth-identity" hidden>Loading revenue&hellip;</p>
+            <div id="ad-revenue-detail-error" class="auth-message" hidden></div>
+            <div id="ad-revenue-detail" hidden>
+                <div class="ad-revenue-stats">
+                    <div class="ad-revenue-stat"><span>Total Bookings</span><strong id="ad-rev-stat-bookings">0</strong></div>
+                    <div class="ad-revenue-stat"><span>Online</span><strong id="ad-rev-stat-online">0</strong></div>
+                    <div class="ad-revenue-stat"><span>Office</span><strong id="ad-rev-stat-office">0</strong></div>
+                    <div class="ad-revenue-stat"><span>Paid (ETB)</span><strong id="ad-rev-stat-paid">0</strong></div>
+                    <div class="ad-revenue-stat"><span>Refunds (ETB)</span><strong id="ad-rev-stat-refunds">0</strong></div>
+                    <div class="ad-revenue-stat"><span>Net (ETB)</span><strong id="ad-rev-stat-net">0</strong></div>
+                </div>
+
+                <div class="ad-table-wrap">
+                    <table class="ad-table ad-revenue-breakdown">
+                        <thead>
+                            <tr><th>Channel</th><th>Bookings</th><th>Paid (ETB)</th><th>Refunds (ETB)</th><th>Net Revenue (ETB)</th></tr>
+                        </thead>
+                        <tbody id="ad-revenue-breakdown-rows"></tbody>
+                    </table>
                 </div>
             </div>
         </div>

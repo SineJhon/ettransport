@@ -691,8 +691,8 @@ function handle_create(): void
         $reference = generate_booking_reference($pdo);
 
         $insertBooking = $pdo->prepare('
-            INSERT INTO bookings (passenger_id, trip_id, booking_reference, total_amount, payment_method, payment_status, booking_status, refund_account_name, refund_account_number, refund_bank)
-            VALUES (:uid, :trip, :ref, :total, :method, \'pending\', \'pending\', :refund_account_name, :refund_account_number, :refund_bank)');
+            INSERT INTO bookings (passenger_id, trip_id, booking_reference, total_amount, payment_method, booking_source, payment_status, booking_status, refund_account_name, refund_account_number, refund_bank)
+            VALUES (:uid, :trip, :ref, :total, :method, \'online\', \'pending\', \'pending\', :refund_account_name, :refund_account_number, :refund_bank)');
         $insertBooking->execute([
             ':uid'                 => (int) $user['id'],
             ':trip'                => $tripId,

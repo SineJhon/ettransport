@@ -261,6 +261,10 @@ CREATE TABLE IF NOT EXISTS bookings (
   booking_reference VARCHAR(30) NOT NULL,
   total_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
   payment_method VARCHAR(30) NOT NULL DEFAULT 'cash',
+  -- Booking channel: 'online' (passenger books via the website) or 'office'
+  -- (company staff books for a walk-in / phone passenger). Used by the admin
+  -- revenue breakdown to separate the two sales channels.
+  booking_source ENUM('online', 'office') NOT NULL DEFAULT 'online',
   payment_status ENUM('pending', 'paid', 'failed', 'refunded') NOT NULL DEFAULT 'pending',
   booking_status ENUM('pending', 'confirmed', 'cancelled', 'completed') NOT NULL DEFAULT 'pending',
   -- Operator cancellation record: who cancelled (via api/company.php
