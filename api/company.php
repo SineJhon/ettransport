@@ -38,7 +38,7 @@ declare(strict_types=1);
  *                                                      includes founded + phones[])
  *   POST api/company.php?action=profile_update      -> { success, message, company }
  *                                                     (authenticated company role only; updates own profile,
- *                                                      accepts founded + phones[])
+ *                                                      accepts founded + phones[] + amenities[])
  *   GET  api/company.php?action=branches             -> { success, branches }
  *                                                     (authenticated company role only; this company's own branches)
  *   POST api/company.php?action=branch_create        -> { success, message, branch }
@@ -624,6 +624,50 @@ function fetch_company_phones_map(PDO $pdo): array
 }
 
 /**
+ * All onboard amenities for one company, in saved order.
+ *
+ * @return array<int, string>
+ */
+function fetch_company_amenities(PDO $pdo, int $companyId): array
+{
+    $stmt = $pdo->prepare('
+        SELECT amenity
+        FROM company_amenities
+        WHERE company_id = :company_id
+        ORDER BY sort_order ASC, id ASC
+    ');
+    $stmt->execute([':company_id' => $companyId]);
+
+    $out = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $out[] = $row['amenity'];
+    }
+
+    return $out;
+}
+
+/**
+ * Amenity map for every company in one query (used by action=list).
+ *
+ * @return array<int, array<int, string>>
+ */
+function fetch_company_amenities_map(PDO $pdo): array
+{
+    $stmt = $pdo->query('
+        SELECT company_id, amenity
+        FROM company_amenities
+        ORDER BY company_id ASC, sort_order ASC, id ASC
+    ');
+
+    $map = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $map[(int) $row['company_id']][] = $row['amenity'];
+    }
+
+    return $map;
+}
+
+/**
  * Popular routes for one company's public profile.
  *
  * Only routes with status = 'active' are published. Turning a route off in
@@ -683,8 +727,9 @@ function fetch_popular_routes(PDO $pdo, int $companyId): array
  *
  * @param array<int, string> $destinations
  * @param array<int, string> $phones
+ * @param array<int, string> $amenities
  */
-function company_payload(array $row, array $destinations, array $phones = []): array
+function company_payload(array $row, array $destinations, array $phones = [], array $amenities = []): array
 {
     $rating = round((float) $row['rating'], 1);
     $reviewCount = (int) $row['review_count'];
@@ -698,6 +743,7 @@ function company_payload(array $row, array $destinations, array $phones = []): a
         'cover_image' => $row['cover_image'],
         'phone' => $row['phone'],
         'phones' => $phones,
+        'amenities' => $amenities,
         'email' => $row['email'],
         'address' => $row['address'],
         'website' => $row['website'],
@@ -3497,6 +3543,7 @@ function company_profile_payload(array $row): array
         'email' => $row['email'],
         'phone' => $row['phone'],
         'phones' => !empty($row['phones']) ? $row['phones'] : (!empty($row['phone']) ? [$row['phone']] : []),
+        'amenities' => !empty($row['amenities']) ? $row['amenities'] : [],
         'address' => $row['address'],
         'website' => $row['website'],
         'head_office' => $row['head_office'],
@@ -3614,6 +3661,7 @@ function handle_company_profile(PDO $pdo): void
     $company = require_company_scope($pdo, (int) $user['id']);
     $profile = fetch_company_profile_row($pdo, (int) $company['id']);
     $profile['phones'] = fetch_company_phones($pdo, (int) $company['id']);
+    $profile['amenities'] = fetch_company_amenities($pdo, (int) $company['id']);
 
     auth_response(200, [
         'success' => true,
@@ -3662,6 +3710,31 @@ function company_phone_or_error(mixed $raw): ?string
     }
 
     return '+251 ' . substr($national, 0, 2) . ' ' . substr($national, 2, 3) . ' ' . substr($national, 5);
+}
+
+/**
+ * Validate ONE onboard amenity label (422 on invalid input).
+ *
+ * Empty values are allowed (optional rows are skipped) and return null. The
+ * dashboard offers the catalog: Reclining Seats, Headrests, Arm Support, AC,
+ * Entertainment, Snacks, Water — but any short, unique label is accepted so
+ * the catalog can grow without an API/schema change.
+ */
+function company_amenity_or_error(mixed $raw): ?string
+{
+    $amenity = trim((string) $raw);
+    if ($amenity === '') {
+        return null;
+    }
+
+    if (mb_strlen($amenity) > 80) {
+        auth_response(422, [
+            'success' => false,
+            'message' => 'Each amenity must be at most 80 characters.',
+        ]);
+    }
+
+    return $amenity;
 }
 
 /**
@@ -3724,6 +3797,21 @@ function handle_company_profile_update(PDO $pdo): void
         $phones[] = $one;
     }
     $phone = $phones[0] ?? ($existing['phone'] ?? null);
+
+    /* Onboard amenities — preset list chosen with the dashboard picker. Empty
+       rows are skipped, duplicates are collapsed, and an empty submission
+       clears the whole list. */
+    $amenitiesRaw = isset($input['amenities']) && is_array($input['amenities'])
+        ? array_values($input['amenities'])
+        : [];
+    $amenities = [];
+    foreach ($amenitiesRaw as $oneRaw) {
+        $one = company_amenity_or_error($oneRaw);
+        if ($one === null || in_array($one, $amenities, true)) {
+            continue;
+        }
+        $amenities[] = $one;
+    }
 
     if ($name === '') {
         auth_response(422, [
@@ -3841,6 +3929,22 @@ function handle_company_profile_update(PDO $pdo): void
             ]);
         }
 
+        /* Replace the whole onboard-amenities list with the submitted order. */
+        $clearAmenities = $pdo->prepare('DELETE FROM company_amenities WHERE company_id = :company_id');
+        $clearAmenities->execute([':company_id' => $companyId]);
+
+        $insertAmenity = $pdo->prepare('
+            INSERT INTO company_amenities (company_id, amenity, sort_order)
+            VALUES (:company_id, :amenity, :sort_order)
+        ');
+        foreach ($amenities as $index => $one) {
+            $insertAmenity->execute([
+                ':company_id' => $companyId,
+                ':amenity' => $one,
+                ':sort_order' => $index,
+            ]);
+        }
+
         $pdo->commit();
     } catch (Throwable $e) {
         $pdo->rollBack();
@@ -3852,6 +3956,7 @@ function handle_company_profile_update(PDO $pdo): void
 
     $updated = fetch_company_profile_row($pdo, $companyId);
     $updated['phones'] = fetch_company_phones($pdo, $companyId);
+    $updated['amenities'] = fetch_company_amenities($pdo, $companyId);
 
     auth_response(200, [
         'success' => true,
@@ -4116,10 +4221,11 @@ try {
         }
 
         $phonesMap = fetch_company_phones_map($pdo);
+        $amenitiesMap = fetch_company_amenities_map($pdo);
 
         $companies = [];
         foreach (company_profile_rows($pdo) as $row) {
-            $companies[] = company_payload($row, $destMap[(int) $row['id']] ?? [], $phonesMap[(int) $row['id']] ?? []);
+            $companies[] = company_payload($row, $destMap[(int) $row['id']] ?? [], $phonesMap[(int) $row['id']] ?? [], $amenitiesMap[(int) $row['id']] ?? []);
         }
 
         auth_response(200, ['success' => true, 'companies' => $companies]);
@@ -4153,6 +4259,7 @@ try {
 
         $company = company_payload($row, $destMap[$companyId] ?? []);
         $company['phones'] = fetch_company_phones($pdo, $companyId);
+        $company['amenities'] = fetch_company_amenities($pdo, $companyId);
         $company['fleet'] = fetch_fleet($pdo, $companyId);
         $company['reviews'] = fetch_reviews($pdo, $companyId);
         $company['trips'] = fetch_company_trips($pdo, $companyId);

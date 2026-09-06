@@ -87,6 +87,26 @@
         return out;
     }
 
+    /* ---------- Amenity icons ---------- */
+    /* Same 7-item catalog the company-dashboard picker offers. Only the icon
+       lives here; the text name is what appears on screen. Falls back to a
+       plain check mark for any other / older amenity labels. */
+    var AMENITY_ICONS = {
+        'Reclining Seats': '\uD83D\uDECB',
+        'Headrests': '\uD83E\uDE91',
+        'Arm Support': '\uD83D\uDCAA',
+        'AC': '\u2744\uFE0F',
+        'Entertainment': '\uD83C\uDEAC',
+        'Snacks': '\uD83C\uDF7F',
+        'Water': '\uD83D\uDCA7',
+        'Wi-Fi': '\uD83D\uDCF6',
+        'Luggage Space': '\uD83E\uDDF3',
+        'Multiple Pickup': '\uD83D\uDE8F'
+    };
+    function amenityIcon(name) {
+        return AMENITY_ICONS[name] || '\u2713';
+    }
+
     /* ---------- Canonical company trips ----------
        These trip IDs (1001+) are ALSO appended to the mock trip
        datasets in booking.js / passenger.js / payment.js /
@@ -134,7 +154,7 @@
             email: 'info@selambus.example.com',
             website: 'https://selambus.example.com',
             destinations: ['Mekelle', 'Bahir Dar', 'Gondar', 'Dessie', 'Axum', 'Adama'],
-            amenities: ['Air Conditioning', 'Reclining Seats', 'Charging', 'Wi-Fi', 'Luggage', 'Entertainment'],
+            amenities: ['Reclining Seats', 'Headrests', 'Arm Support', 'AC', 'Entertainment', 'Snacks', 'Wi-Fi', 'Luggage Space', 'Multiple Pickup'],
             busCount: 28,
             fleet: [
                 { model: 'Scania Touring', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Charging', 'Reclining Seats'], description: 'Flagship coach with wide recliners and onboard media screens.' },
@@ -174,7 +194,7 @@
             email: 'info@skybus.example.com',
             website: 'https://skybus.example.com',
             destinations: ['Hawassa', 'Arba Minch', 'Shashamane', 'Dilla', 'Jinka', 'Adama'],
-            amenities: ['Air Conditioning', 'Reclining Seats', 'Charging', 'Luggage', 'Meals'],
+            amenities: ['Reclining Seats', 'Headrests', 'AC', 'Entertainment', 'Snacks', 'Wi-Fi'],
             busCount: 21,
             fleet: [
                 { model: 'Higer A90', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Reclining Seats', 'Luggage'], description: 'Soft recliners and generous legroom for the longer southern hops.' },
@@ -213,7 +233,7 @@
             email: 'info@yegnabus.example.com',
             website: 'https://yegnabus.example.com',
             destinations: ['Bahir Dar', 'Gondar', 'Dessie', 'Debre Markos'],
-            amenities: ['Air Conditioning', 'Charging', 'Luggage', 'Entertainment'],
+            amenities: ['Reclining Seats', 'Headrests', 'AC', 'Entertainment', 'Wi-Fi'],
             busCount: 16,
             fleet: [
                 { model: 'MAN Lion\u2019s Coach', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Luggage', 'Charging'], description: 'Everyday coach with a comfortable seat pitch and plenty of luggage space.' },
@@ -252,7 +272,7 @@
             email: 'info@goldenbus.example.com',
             website: 'https://goldenbus.example.com',
             destinations: ['Adama', 'Dessie', 'Woldia', 'Kombolcha'],
-            amenities: ['Air Conditioning', 'Luggage', 'Charging', 'Reclining Seats'],
+            amenities: ['Reclining Seats', 'Headrests', 'Arm Support', 'AC', 'Luggage Space'],
             busCount: 14,
             fleet: [
                 { model: 'Yutong ZK6107H', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Luggage', 'Charging'], description: 'Compact coach well suited to the Adama commute.' },
@@ -290,7 +310,7 @@
             email: 'info@zemenbus.example.com',
             website: 'https://zemenbus.example.com',
             destinations: ['Dire Dawa', 'Jijiga', 'Harar', 'Adama', 'Dessie'],
-            amenities: ['Air Conditioning', 'Reclining Seats', 'Wi-Fi', 'Charging', 'Luggage', 'Meals'],
+            amenities: ['Reclining Seats', 'Headrests', 'Arm Support', 'AC', 'Entertainment', 'Snacks', 'Water', 'Multiple Pickup'],
             busCount: 19,
             fleet: [
                 { model: 'Mercedes-Benz Tourismo', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Wi-Fi', 'Charging', 'Meals'], description: 'Top-tier coach with aboard catering on the Dire Dawa route.' },
@@ -328,7 +348,7 @@
             email: 'info@odaabus.example.com',
             website: 'https://odaabus.example.com',
             destinations: ['Jimma', 'Hawassa', 'Wolkite', 'Mizan Teferi', 'Bonga'],
-            amenities: ['Air Conditioning', 'Reclining Seats', 'Charging', 'Luggage'],
+            amenities: ['Reclining Seats', 'Headrests', 'AC', 'Water', 'Multiple Pickup'],
             busCount: 12,
             fleet: [
                 { model: 'Yutong ZK6122H9', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Reclining Seats', 'Charging'], description: 'Flagship coach for the longer Jimma and Mizan departures.' },
@@ -366,7 +386,7 @@
             email: 'info@abaybus.example.com',
             website: 'https://abaybus.example.com',
             destinations: ['Bahir Dar', 'Debre Markos', 'Finote Selam', 'Gondar'],
-            amenities: ['Air Conditioning', 'Luggage', 'Charging'],
+            amenities: ['Reclining Seats', 'Headrests', 'AC', 'Luggage Space'],
             busCount: 9,
             fleet: [
                 { model: 'Yutong ZK6107H', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Luggage', 'Charging'], description: 'Dependable coach on the Bahir Dar and western departures.' },
@@ -403,7 +423,7 @@
             email: 'info@ethiobus.example.com',
             website: 'https://ethiobus.example.com',
             destinations: ['Adama', 'Hawassa', 'Debre Zeit', 'Shashamane'],
-            amenities: ['Air Conditioning', 'Luggage'],
+            amenities: ['Reclining Seats', 'AC', 'Water', 'Luggage Space'],
             busCount: 7,
             fleet: [
                 { model: 'King Long XMQ6898', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Luggage'], description: 'Compact coach for the Adama and Debre Zeit commute.' },
@@ -440,7 +460,7 @@
             email: 'info@liyubus.example.com',
             website: 'https://liyubus.example.com',
             destinations: ['Mekelle', 'Gondar', 'Bahir Dar', 'Hawassa'],
-            amenities: ['Air Conditioning', 'Reclining Seats', 'Wi-Fi', 'Charging', 'Meals', 'Entertainment'],
+            amenities: ['Reclining Seats', 'Headrests', 'Arm Support', 'AC', 'Entertainment', 'Snacks', 'Water', 'Wi-Fi', 'Luggage Space', 'Multiple Pickup'],
             busCount: 11,
             fleet: [
                 { model: 'Neoplan Skyliner', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Wi-Fi', 'Charging', 'Meals'], description: 'Signature coach for overnight routes.' },
@@ -641,17 +661,16 @@
     function renderAmenities(c) {
         var el = document.getElementById('amenity-grid');
         if (!el) { return; }
-        if (!(c.amenities && c.amenities.length)) {
-            /* Live company records have no amenities stored in the schema,
-               so show an honest note instead of an empty list. */
+        var list = (c.amenities && c.amenities.length) ? c.amenities : [];
+        if (!list.length) {
             el.innerHTML = '<li class="amenity-chip"><span class="amenity-icon" aria-hidden="true">&#10003;</span>' +
                 'Onboard amenities depend on the departure class</li>';
             return;
         }
         var html = '';
-        for (var i = 0; i < c.amenities.length; i++) {
-            html += '<li class="amenity-chip"><span class="amenity-icon" aria-hidden="true">&#10003;</span>' +
-                c.amenities[i] + '</li>';
+        for (var i = 0; i < list.length; i++) {
+            html += '<li class="amenity-chip"><span class="amenity-icon" aria-hidden="true">' +
+                amenityIcon(list[i]) + '</span>' + esc(list[i]) + '</li>';
         }
         el.innerHTML = html;
     }
@@ -1106,8 +1125,6 @@
         var bag = raw || {};
         var about = bag.description || '';
         var tagline = (about.split(/[.\n]/)[0] || '').trim() || bag.name || '';
-        var createdYear = /^\d{4}/.test(String(bag.created_at || ''))
-            ? parseInt(String(bag.created_at).slice(0, 4), 10) : null;
 
         var fleet = [];
         var fleetRaw = bag.fleet || [];
@@ -1207,7 +1224,9 @@
         var phonesList = (Array.isArray(bag.phones) && bag.phones.length)
             ? bag.phones.map(function (p) { return String(p === null || p === undefined ? '' : p); })
             : (bag.phone ? [bag.phone] : []);
-        /* Live companies may store an explicit founding year (companies.founded). */
+        /* Live companies post their founding year via the dashboard
+           (companies.founded). The public profile must reflect EXACTLY what
+           was posted — never the year the account was created. */
         var foundedYear = Number(bag.founded) || 0;
 
         return {
@@ -1221,14 +1240,14 @@
             description: about,
             rating: Number(bag.rating) || 0,
             reviewCount: Number(bag.review_count) || 0,
-            founded: foundedYear || createdYear,
+            founded: foundedYear,
             headOffice: bag.head_office || bag.address || '',
             phone: bag.phone || (phonesList[0] || ''),
             phones: phonesList,
             email: bag.email || '',
             website: bag.website || '',
             destinations: bag.destinations || [],
-            amenities: [],
+            amenities: (Array.isArray(bag.amenities) && bag.amenities.length) ? bag.amenities.slice() : [],
             busCount: Number(bag.bus_count) || fleet.length,
             fleet: fleet,
             popularRoutes: popularRoutes,

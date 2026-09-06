@@ -187,6 +187,30 @@ CREATE TABLE IF NOT EXISTS company_phones (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
+-- company_amenities — onboard amenities a company offers. Shown
+-- on the passenger-facing profile (Services & Amenities) and chosen
+-- from an icon picker in the company dashboard profile editor.
+-- The catalog the dashboard offers: Reclining Seats, Headrests,
+-- Arm Support, AC, Entertainment, Snacks, Water, Wi-Fi, Luggage
+-- Space, Multiple Pickup. The API keeps this list open (any short
+-- label) so the catalog can evolve without a schema change.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS company_amenities (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  company_id BIGINT UNSIGNED NOT NULL,
+  amenity VARCHAR(80) NOT NULL,
+  sort_order SMALLINT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_company_amenities_company_amenity (company_id, amenity),
+  KEY idx_company_amenities_company (company_id),
+  CONSTRAINT fk_company_amenities_company
+    FOREIGN KEY (company_id) REFERENCES companies(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
 -- buses — fleet vehicles owned by a company
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS buses (

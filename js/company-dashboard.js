@@ -3371,6 +3371,101 @@
         return out;
     }
 
+    /* ---------- Onboard amenities ---------- */
+    /* The catalog the dashboard profile editor offers. Only the displayed icon
+       lives here; the text name is what gets stored and compared. */
+    var AMENITY_CATALOG = [
+        { name: 'Reclining Seats', icon: '\uD83D\uDECB' },
+        { name: 'Headrests', icon: '\uD83E\uDE91' },
+        { name: 'Arm Support', icon: '\uD83D\uDCAA' },
+        { name: 'AC', icon: '\u2744\uFE0F' },
+        { name: 'Entertainment', icon: '\uD83C\uDEAC' },
+        { name: 'Snacks', icon: '\uD83C\uDF7F' },
+        { name: 'Water', icon: '\uD83D\uDCA7' },
+        { name: 'Wi-Fi', icon: '\uD83D\uDCF6' },
+        { name: 'Luggage Space', icon: '\uD83E\uDDF3' },
+        { name: 'Multiple Pickup', icon: '\uD83D\uDE8F' }
+    ];
+    var currentProfileAmenities = [];
+
+    /* Resolve the icon for an amenity name (fallback: plain check mark). */
+    function amenityInfo(name) {
+        for (var i = 0; i < AMENITY_CATALOG.length; i++) {
+            if (AMENITY_CATALOG[i].name === name) { return AMENITY_CATALOG[i]; }
+        }
+        return { name: name, icon: '\u2713' };
+    }
+
+    /* One selected amenity chip inside the picker (with x to remove). */
+    function amenityChipHtml(name) {
+        var a = amenityInfo(name);
+        return '<span class="cd-amenity-chip">' +
+            '<span class="cd-amenity-chip-icon" aria-hidden="true">' + a.icon + '</span>' +
+            '<span>' + escHtml(a.name) + '</span>' +
+            '<button type="button" class="cd-amenity-remove" data-amenity-action="remove" data-amenity="' + escHtml(a.name) + '" aria-label="Remove ' + escHtml(a.name) + '">&times;</button>' +
+        '</span>';
+    }
+
+    /* Render the public-profile amenity chips (view mode). */
+    function renderAmenityView() {
+        var view = byId('profile-amenities-view');
+        if (!view) { return; }
+        if (!currentProfileAmenities.length) { view.textContent = '\u2014'; return; }
+        var html = '';
+        for (var i = 0; i < currentProfileAmenities.length; i++) {
+            var a = amenityInfo(currentProfileAmenities[i]);
+            html += '<span class="cd-profile-amenity-view-chip">' +
+                '<span class="cd-amenity-view-icon" aria-hidden="true">' + a.icon + '</span>' +
+                escHtml(a.name) +
+            '</span>';
+        }
+        view.innerHTML = html;
+    }
+
+    /* Render both halves of the picker: selected chips (with x) and the
+       available icon list (with +). */
+    function renderAmenityPicker() {
+        var selected = byId('profile-amenities-selected');
+        var available = byId('profile-amenities-available');
+        var selEmpty = byId('profile-amenities-selected-empty');
+
+        if (selected) {
+            var sHtml = '';
+            for (var i = 0; i < currentProfileAmenities.length; i++) {
+                sHtml += amenityChipHtml(currentProfileAmenities[i]);
+            }
+            selected.innerHTML = sHtml;
+            selected.hidden = currentProfileAmenities.length === 0;
+            if (selEmpty) { selEmpty.hidden = currentProfileAmenities.length > 0; }
+        }
+
+        if (available) {
+            var aHtml = '';
+            for (var j = 0; j < AMENITY_CATALOG.length; j++) {
+                if (currentProfileAmenities.indexOf(AMENITY_CATALOG[j].name) !== -1) { continue; }
+                aHtml += '<button type="button" class="cd-amenity-item" data-amenity-action="add" data-amenity="' + escHtml(AMENITY_CATALOG[j].name) + '" aria-label="Add ' + escHtml(AMENITY_CATALOG[j].name) + '">' +
+                    '<span class="cd-amenity-item-icon" aria-hidden="true">' + AMENITY_CATALOG[j].icon + '</span>' +
+                    '<span class="cd-amenity-item-name">' + escHtml(AMENITY_CATALOG[j].name) + '</span>' +
+                    '<span class="cd-amenity-item-plus" aria-hidden="true">+</span>' +
+                '</button>';
+            }
+            available.innerHTML = aHtml || '<span class="cd-amenity-available-empty">All amenities added \u2713</span>';
+        }
+
+        renderAmenityView();
+    }
+
+    /* Toggle an amenity: add moves catalog -> selected, remove back. */
+    function handleAmenityClick(name, action) {
+        var idx = currentProfileAmenities.indexOf(name);
+        if (action === 'add' && idx === -1) {
+            currentProfileAmenities.push(name);
+        } else if (action === 'remove' && idx !== -1) {
+            currentProfileAmenities.splice(idx, 1);
+        }
+        renderAmenityPicker();
+    }
+
     function setProfileLink(el, value) {
         if (!el) { return; }
         if (value) {
@@ -3680,6 +3775,10 @@ var reviewEditingReplyId = null;
         byId('profile-head-office').textContent = profileValue(company.head_office);
         byId('profile-website').textContent = profileValue(company.website);
         byId('profile-desc').textContent = company.description ? company.description : '';
+        currentProfileAmenities = (Array.isArray(company.amenities) && company.amenities.length)
+            ? company.amenities.slice()
+            : [];
+        renderAmenityPicker();
         var statusBadge = byId('profile-status');
         if (statusBadge) {
             statusBadge.textContent = String(company.status ? company.status : '\u2014');
@@ -3785,6 +3884,12 @@ var reviewEditingReplyId = null;
         if (payload.getAll) { payload.delete('phones[]'); }
         for (var pi = 0; pi < phones.length; pi++) {
             payload.append('phones[]', phones[pi]);
+        }
+
+        /* Onboard amenities — the picker's current selection. */
+        payload.delete('amenities[]');
+        for (var ai = 0; ai < currentProfileAmenities.length; ai++) {
+            payload.append('amenities[]', currentProfileAmenities[ai]);
         }
 
         fetch('api/company.php?action=profile_update', {
@@ -4724,6 +4829,18 @@ function submitBranchForm() {
             phoneList.addEventListener('click', function (ev) {
                 var btn = ev.target.closest ? ev.target.closest('.cd-phone-remove') : null;
                 if (btn) { removeProfilePhoneRow(btn); }
+            });
+        }
+
+        /* Onboard amenities picker — add (+) / remove (x). */
+        var amenityEditor = byId('profile-amenity-editor');
+        if (amenityEditor) {
+            amenityEditor.addEventListener('click', function (ev) {
+                var btn = ev.target.closest ? ev.target.closest('[data-amenity-action]') : null;
+                if (!btn) { return; }
+                var name = btn.getAttribute('data-amenity');
+                var action = btn.getAttribute('data-amenity-action');
+                if (name) { handleAmenityClick(name, action); }
             });
         }
     });

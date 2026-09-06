@@ -132,6 +132,26 @@ function ensure_schema_columns(PDO $pdo): void
                 )"
         );
 
+        /* company_amenities — onboard amenities a company offers (shown on
+           the public profile and chosen in the dashboard profile editor).
+           Idempotent, same pattern as company_phones below. */
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS company_amenities (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                company_id BIGINT UNSIGNED NOT NULL,
+                amenity VARCHAR(80) NOT NULL,
+                sort_order SMALLINT NOT NULL DEFAULT 0,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                UNIQUE KEY uq_company_amenities_company_amenity (company_id, amenity),
+                KEY idx_company_amenities_company (company_id),
+                CONSTRAINT fk_company_amenities_company
+                    FOREIGN KEY (company_id) REFERENCES companies(id)
+                    ON DELETE CASCADE
+                    ON UPDATE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+
         /* company_reason_history — rejection/suspension audit trail (idempotent). */
         $pdo->exec(
             "CREATE TABLE IF NOT EXISTS company_reason_history (
