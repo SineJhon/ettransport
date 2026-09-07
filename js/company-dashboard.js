@@ -4561,6 +4561,112 @@ function submitBranchForm() {
         if (modal) { modal.hidden = true; }
     }
 
+    function parcelRouteTrips() {
+        var fromEl = byId('parcel-from');
+        var toEl = byId('parcel-to');
+        var from = fromEl ? String(fromEl.value || '').trim() : '';
+        var to = toEl ? String(toEl.value || '').trim() : '';
+        if (!from || !to || from.toUpperCase() === to.toUpperCase()) { return []; }
+        return currentTrips.filter(function (t) {
+            return String(t.status) === 'scheduled'
+                && String(t.from_city || '').toUpperCase() === from.toUpperCase()
+                && String(t.to_city || '').toUpperCase() === to.toUpperCase();
+        });
+    }
+
+    function refreshParcelPickupLocation() {
+        var out = byId('parcel-pickup-location');
+        if (!out) { return; }
+        var fromEl = byId('parcel-from');
+        var from = fromEl ? String(fromEl.value || '').trim() : '';
+        var office = null;
+        for (var i = 0; i < currentBranches.length; i++) {
+            var b = currentBranches[i];
+            if (b.status === 'inactive') { continue; }
+            if (String(b.city || '').toUpperCase() === from.toUpperCase()) { office = b; break; }
+        }
+        if (!office) {
+            for (var j = 0; j < currentBranches.length; j++) {
+                if (currentBranches[j].is_head && currentBranches[j].status !== 'inactive') { office = currentBranches[j]; break; }
+            }
+        }
+        var companyName = byId('company-name');
+        var prefix = (companyName && companyName.textContent) ? companyName.textContent + ' — ' : '';
+        out.value = office
+            ? (prefix + office.name + (office.address ? ' — ' + office.address : ''))
+            : (from ? (prefix + from + ' office') : '');
+    }
+
+    function renderParcelTravelPicker() {
+        var cell = byId('parcel-travel-date-cell');
+        var list = byId('parcel-travel-day-list');
+        var tripCell = byId('parcel-trip-cell');
+        if (!cell || !list) { return; }
+        var trips = parcelRouteTrips();
+        if (!trips.length) {
+            cell.hidden = true;
+            if (tripCell) { tripCell.hidden = true; }
+            list.innerHTML = '';
+            var sel = byId('parcel-trip');
+            if (sel) { sel.innerHTML = '<option value="">Select trip</option>'; }
+            return;
+        }
+        cell.hidden = false;
+        var dates = {};
+        for (var i = 0; i < trips.length; i++) { dates[trips[i].departure_date] = true; }
+        var sortedDates = Object.keys(dates).sort();
+        list.innerHTML = sortedDates.map(function (date) {
+            var d = new Date(date);
+            var dayNum = isNaN(d.getTime()) ? date : d.getDate();
+            var dayName = isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { weekday: 'short' });
+            return '<button type="button" class="cd-day-btn" data-date="' + date + '">' +
+                '<div>' + dayNum + '</div><div>' + dayName + '</div></button>';
+        }).join('');
+        var buttons = list.querySelectorAll('.cd-day-btn');
+        for (var j = 0; j < buttons.length; j++) {
+            buttons[j].addEventListener('click', function () {
+                list.querySelectorAll('.cd-day-btn').forEach(function (b) { b.classList.remove('active'); });
+                this.classList.add('active');
+                refreshParcelTripOptions(this.getAttribute('data-date'));
+            });
+        }
+        refreshParcelTripOptions('');
+    }
+
+    function refreshParcelTripOptions(date) {
+        var sel = byId('parcel-trip');
+        var empty = byId('parcel-trip-empty');
+        var tripCell = byId('parcel-trip-cell');
+        if (!sel) { return; }
+        var trips = parcelRouteTrips();
+        var filtered = date ? trips.filter(function (t) { return String(t.departure_date) === String(date); }) : trips;
+        if (empty) { empty.hidden = true; }
+        if (!date) {
+            if (tripCell) { tripCell.hidden = true; }
+            return;
+        }
+        if (tripCell) { tripCell.hidden = false; }
+        sel.innerHTML = '<option value="">Select trip</option>';
+        if (!filtered.length) {
+            if (empty) { empty.hidden = false; }
+            return;
+        }
+        for (var i = 0; i < filtered.length; i++) {
+            var t = filtered[i];
+            var opt = document.createElement('option');
+            opt.value = t.id;
+            opt.textContent = (t.departure_time || '') + ' \u00b7 ' + (t.bus_name || 'Bus') + ' \u00b7 ETB ' + formatMoney(t.price);
+            sel.appendChild(opt);
+        }
+    }
+
+    function parcelPhoneDigits(raw) {
+        var digits = String(raw == null ? '' : raw).replace(/\D/g, '');
+        if (digits.length === 12 && digits.slice(0, 3) === '251') { digits = digits.slice(3); }
+        if (digits.length === 10 && digits.charAt(0) === '0') { digits = digits.slice(1); }
+        return digits;
+    }
+
     function openParcelForm(parcel) {
         var form = byId('parcel-form');
         var modal = byId('parcel-form-modal');
@@ -4572,11 +4678,11 @@ function submitBranchForm() {
         if (heading) { heading.textContent = parcel ? 'Edit Parcel ' + parcel.reference : 'New Parcel'; }
         byId('parcel-id').value = parcel ? parcel.id : '';
         byId('parcel-sender').value = parcel ? (parcel.sender_name || '') : '';
-        byId('parcel-sender-phone').value = parcel ? (parcel.sender_phone || '') : '';
+        byId('parcel-sender-phone').value = parcel ? parcelPhoneDigits(parcel.sender_phone) : '';
         byId('parcel-recipient').value = parcel ? (parcel.recipient_name || '') : '';
-        byId('parcel-recipient-phone').value = parcel ? (parcel.recipient_phone || '') : '';
-        byId('parcel-from').value = parcel ? parcel.from_city : '';
-        byId('parcel-to').value = parcel ? parcel.to_city : '';
+        byId('parcel-recipient-phone').value = parcel ? parcelPhoneDigits(parcel.recipient_phone) : '';
+        byId('parcel-from').value = parcel ? (parcel.from_city || '') : '';
+        byId('parcel-to').value = parcel ? (parcel.to_city || '') : '';
         byId('parcel-weight').value = parcel ? parcel.weight_kg : '';
         byId('parcel-status').value = parcel ? parcel.status : 'received';
         byId('parcel-notes').value = parcel ? (parcel.notes || '') : '';
@@ -4585,6 +4691,8 @@ function submitBranchForm() {
             window.ETCityPicker.sync('parcel-from');
             window.ETCityPicker.sync('parcel-to');
         }
+        refreshParcelPickupLocation();
+        renderParcelTravelPicker();
 
         form.hidden = false;
         if (modal) {
@@ -4607,14 +4715,15 @@ function submitBranchForm() {
         var id = valueOf('parcel-id');
         var payload = {
             sender_name: valueOf('parcel-sender'),
-            sender_phone: valueOf('parcel-sender-phone'),
+            sender_phone: parcelPhoneDigits(valueOf('parcel-sender-phone')),
             recipient_name: valueOf('parcel-recipient'),
-            recipient_phone: valueOf('parcel-recipient-phone'),
+            recipient_phone: parcelPhoneDigits(valueOf('parcel-recipient-phone')),
             from_city: valueOf('parcel-from'),
             to_city: valueOf('parcel-to'),
             weight_kg: valueOf('parcel-weight'),
             status: valueOf('parcel-status') || 'received',
-            notes: valueOf('parcel-notes')
+            notes: valueOf('parcel-notes'),
+            pickup_location: valueOf('parcel-pickup-location')
         };
         if (id) { payload.parcel_id = id; }
         var action = id ? 'parcel_update' : 'parcel_create';
@@ -4624,9 +4733,21 @@ function submitBranchForm() {
         }
 
         if (!payload.sender_name || !payload.recipient_name) { bad('Sender and recipient names are required.'); return; }
+        if (!payload.sender_phone || !payload.recipient_phone) { bad('Both sender and recipient phone numbers are required.'); return; }
+        if (payload.sender_phone.length !== 9) { bad('Enter a valid 9-digit Ethiopian sender phone (after +251).'); return; }
+        if (payload.recipient_phone.length !== 9) { bad('Enter a valid 9-digit Ethiopian recipient phone (after +251).'); return; }
         if (!payload.from_city || !payload.to_city) { bad('Both departure city and destination are required.'); return; }
         if (payload.from_city.toUpperCase() === payload.to_city.toUpperCase()) { bad('Departure and destination must be different cities.'); return; }
         if (!(parseFloat(payload.weight_kg) > 0)) { bad('Please enter a valid parcel weight in kilograms.'); return; }
+
+        var tripSelect = byId('parcel-trip');
+        var tripId = tripSelect ? String(tripSelect.value || '') : '';
+        var tripCell = byId('parcel-trip-cell');
+        if (tripCell && !tripCell.hidden && !tripId) {
+            bad('Pick a travel date and choose a scheduled trip on this route.');
+            return;
+        }
+        if (tripId) { payload.trip_id = tripId; }
 
         var submitBtn = byId('parcel-form-submit');
         if (submitBtn) { submitBtn.disabled = true; }
@@ -4736,6 +4857,21 @@ function submitBranchForm() {
                 parcelSearchTerm = search.value.trim().toLowerCase();
                 applyParcelFilters();
             });
+        }
+
+        var parcelFromEl = byId('parcel-from');
+        var parcelToEl = byId('parcel-to');
+        var syncParcelRoute = function () {
+            refreshParcelPickupLocation();
+            renderParcelTravelPicker();
+        };
+        if (parcelFromEl) {
+            parcelFromEl.addEventListener('change', syncParcelRoute);
+            parcelFromEl.addEventListener('blur', syncParcelRoute);
+        }
+        if (parcelToEl) {
+            parcelToEl.addEventListener('change', syncParcelRoute);
+            parcelToEl.addEventListener('blur', syncParcelRoute);
         }
 
         var clearBtn = byId('btn-clear-parcel-filters');
