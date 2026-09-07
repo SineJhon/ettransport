@@ -4896,9 +4896,6 @@ function submitBranchForm() {
         var addBtn = byId('btn-add-parcel');
         if (addBtn) { addBtn.addEventListener('click', function () { openParcelForm(null); }); }
 
-        var refreshBtn = byId('btn-refresh-parcels');
-        if (refreshBtn) { refreshBtn.addEventListener('click', loadParcels); }
-
         var search = byId('parcel-search');
         if (search) {
             search.addEventListener('input', function () {
