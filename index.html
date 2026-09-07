@@ -8,6 +8,7 @@
 
     <!-- Styles -->
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/city-picker.css">
 
     <!-- Favicon (placed in assets/icons) -->
     <link rel="icon" type="image/x-icon" href="assets/icons/favicon.svg">
@@ -69,12 +70,12 @@
                 <form class="search-form" action="search.html" method="get">
                     <div class="form-group">
                         <label for="from">From</label>
-                        <input type="text" id="from" name="from" placeholder="e.g. Addis Ababa" required>
+                        <input type="text" id="from" name="from" placeholder="e.g. Addis Ababa" required data-city-picker>
                     </div>
 
                     <div class="form-group">
                         <label for="to">To</label>
-                        <input type="text" id="to" name="to" placeholder="e.g. Bahir Dar" required>
+                        <input type="text" id="to" name="to" placeholder="e.g. Bahir Dar" required data-city-picker>
                     </div>
 
                     <div class="form-group">
@@ -212,6 +213,8 @@
         <script src="js/auth.js"></script>
     <script src="js/notifications.js"></script>
     <script src="js/data.js"></script>
+    <script src="js/cities.js"></script>
+    <script src="js/city-picker.js"></script>
     <script src="js/company.js"></script>
 </body>
 </html>

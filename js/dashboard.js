@@ -1146,6 +1146,10 @@ function closeTicket() {
         fromEl.innerHTML = html;
         toEl.innerHTML = html;
         toEl.value = CITIES[2] || CITIES[1] || '';
+        if (window.ETCityPicker) {
+            window.ETCityPicker.sync('fav-from');
+            window.ETCityPicker.sync('fav-to');
+        }
     }
     /* ============================================================
        Notifications — real (MySQL) for authenticated passengers,

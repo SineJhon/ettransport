@@ -2950,6 +2950,10 @@
                 });
                 fromSelect.value = fromCurrent;
                 toSelect.value = toCurrent;
+                if (window.ETCityPicker) {
+                    window.ETCityPicker.sync('booking-from-filter');
+                    window.ETCityPicker.sync('booking-to-filter');
+                }
                 renderBookingDayPicker();
                 updateBookingDateLabel();
             })
@@ -3070,7 +3074,12 @@
         from.innerHTML = '<option value="">All cities</option>'; to.innerHTML = '<option value="">All cities</option>';
         Object.keys(fromCities).sort().forEach(function (city) { var option = document.createElement('option'); option.value = city; option.textContent = city; from.appendChild(option); });
         Object.keys(toCities).sort().forEach(function (city) { var option = document.createElement('option'); option.value = city; option.textContent = city; to.appendChild(option); });
-        from.value = fromValue; to.value = toValue; renderRevenueDayPicker();
+        from.value = fromValue; to.value = toValue;
+        if (window.ETCityPicker) {
+            window.ETCityPicker.sync('revenue-from-filter');
+            window.ETCityPicker.sync('revenue-to-filter');
+        }
+        renderRevenueDayPicker();
     }
 
         function paymentsFilterUrl() {
@@ -4551,6 +4560,10 @@ function submitBranchForm() {
                 selectedBookingStatus = 'all';
                 if (bookingFromFilter) { bookingFromFilter.value = ''; }
                 if (bookingToFilter) { bookingToFilter.value = ''; }
+                if (window.ETCityPicker) {
+                    window.ETCityPicker.sync('booking-from-filter');
+                    window.ETCityPicker.sync('booking-to-filter');
+                }
                 var statusButtons = document.querySelectorAll('.cd-booking-status-filter[data-booking-status]');
                 for (var b = 0; b < statusButtons.length; b++) {
                     var active = statusButtons[b].getAttribute('data-booking-status') === 'all';
@@ -4719,6 +4732,10 @@ function submitBranchForm() {
                 selectedPaymentStatus = 'all';
                 if (revFromFilter) { revFromFilter.value = ''; }
                 if (revToFilter) { revToFilter.value = ''; }
+                if (window.ETCityPicker) {
+                    window.ETCityPicker.sync('revenue-from-filter');
+                    window.ETCityPicker.sync('revenue-to-filter');
+                }
                 var statusButtons = document.querySelectorAll('.cd-payment-filter[data-payment-status]');
                 for (var b = 0; b < statusButtons.length; b++) {
                     var active = statusButtons[b].getAttribute('data-payment-status') === 'all';

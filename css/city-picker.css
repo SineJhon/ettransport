@@ -1,0 +1,117 @@
+/* ============================================================
+   ET Transport — city-picker.css
+   Searchable from/to city dropdown (js/city-picker.js).
+   Scoped to .city-picker so it layers over existing forms
+   without touching the shared styles.
+   ============================================================ */
+
+.city-picker {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+}
+
+/* The native select is kept in the DOM as the name/value holder
+   but hidden; the visible search field replaces it visually. */
+.city-picker .city-picker-native {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    border: 0 !important;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    overflow: hidden !important;
+    white-space: nowrap !important;
+}
+
+/* Visible combobox field — inherits the surrounding form styling. */
+.city-picker .city-picker-field {
+    width: 100%;
+    min-width: 0;
+    cursor: text;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2368746f' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right .75rem center;
+    background-size: .8rem auto;
+    padding-right: 2rem;
+}
+
+/* Dropdown list — absolute under the field, layered above the page. */
+.city-picker .city-picker-drop {
+    position: absolute;
+    z-index: 700;
+    top: calc(100% + .3rem);
+    left: 0;
+    right: 0;
+    max-height: 16rem;
+    overflow-y: auto;
+    margin: 0;
+    padding: .3rem;
+    background: #fff;
+    border: 1px solid #d1dce5;
+    border-radius: 10px;
+    box-shadow: 0 14px 34px rgba(24, 36, 72, .16);
+    display: none;
+    text-align: left;
+}
+.city-picker .city-picker-drop.open { display: block; }
+
+.city-picker .city-picker-item {
+    display: block;
+    width: 100%;
+    padding: .55rem .65rem;
+    margin: 0;
+    color: #1f2937;
+    background: #fff;
+    border: 0;
+    border-radius: 7px;
+    font: inherit;
+    font-size: .9rem;
+    line-height: 1.25;
+    text-align: left;
+    cursor: pointer;
+}
+.city-picker .city-picker-item:hover,
+.city-picker .city-picker-item.is-active {
+    background: #eef6f2;
+    color: #145c44;
+}
+.city-picker .city-picker-empty {
+    padding: .6rem .7rem;
+    color: #6b7280;
+    font-size: .85rem;
+}
+
+/* ---- Company dashboard context: match the route-field selects. ---- */
+.cd-route-fields .city-picker-field {
+    min-height: 2.7rem;
+    padding: .45rem .45rem .45rem 1.45rem;
+    padding-right: 2rem;
+    color: #1b473a;
+    background-color: #fff;
+    border: 1px solid #d2e1d8;
+    border-radius: 8px;
+    font-size: .78rem;
+    font-weight: 800;
+}
+.cd-route-fields .city-picker-field:focus {
+    outline: none;
+    border-color: #52a980;
+    box-shadow: 0 0 0 3px rgba(49, 164, 118, .14);
+}
+
+/* ---- Passenger dashboard favorites form: keep label alignment. ---- */
+.fav-route-form .city-picker-field {
+    padding: 0.7rem 0.8rem;
+    padding-right: 2rem;
+    border: 1px solid #d1d9e6;
+    border-radius: var(--radius, 10px);
+    font-size: 0.9rem;
+}
+.fav-route-form .city-picker-field:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(18, 96, 63, .12);
+}
