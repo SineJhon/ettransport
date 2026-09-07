@@ -4648,12 +4648,22 @@ function submitBranchForm() {
 
     var parcelTripFetchId = 0;   // discards responses from superseded parcel trip fetches
     var parcelRouteTripsCache = [];
+    var parcelRouteFetchedKey = ''; // last from|to key the trips strip finished loading for
 
     function fetchParcelTripsForRoute() {
         var fromEl = byId('parcel-from');
         var toEl = byId('parcel-to');
         var from = fromEl ? String(fromEl.value || '').trim() : '';
         var to = toEl ? String(toEl.value || '').trim() : '';
+        /* The city inputs fire change (from the picker) AND blur (when the
+           operator clicks into the day strip), so the SAME route can arrive
+           twice in a row. Without this guard the second event wipes the strip
+           mid-click — the operator then has to tap a date twice before it
+           registers. The key is only recorded after a response lands, so a
+           failed load still retries on the next event; openParcelForm resets
+           the key each time the modal opens so every open refetches. */
+        var routeKey = from.toUpperCase() + '|' + to.toUpperCase();
+        if (routeKey === parcelRouteFetchedKey) { return; }
         var rid = ++parcelTripFetchId;
 
         var cell = byId('parcel-travel-date-cell');
@@ -4691,6 +4701,7 @@ function submitBranchForm() {
             })
             .then(function (result) {
                 if (rid !== parcelTripFetchId) { return; }
+                parcelRouteFetchedKey = routeKey;
                 if (loading) { loading.hidden = true; }
                 var trips = [];
                 var data = result.data || {};
@@ -4826,6 +4837,7 @@ function submitBranchForm() {
             window.ETCityPicker.sync('parcel-from');
             window.ETCityPicker.sync('parcel-to');
         }
+        parcelRouteFetchedKey = '';
         fetchParcelTripsForRoute();
 
         form.hidden = false;
