@@ -2252,14 +2252,11 @@ function handle_route_update(PDO $pdo): void
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
 
-        /* A route that exists but matches no rows after this update is a
-           genuine ownership/catalog error, so surface it. */
-        if ($stmt->rowCount() === 0) {
-            auth_response(404, [
-                'success' => false,
-                'message' => 'Route not found.',
-            ]);
-        }
+        /* A rowCount of 0 is normal when the submitted values are identical to
+           the stored values (MySQL counts only changed rows). The route was
+           already verified to exist and belong to this company at the top of
+           this handler, so a no-op update is still a success — never surface a
+           misleading 404 here. */
 
         auth_response(200, [
             'success' => true,

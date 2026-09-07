@@ -738,6 +738,11 @@
         var statusBox = byId('route-status');
         if (statusBox) { statusBox.checked = true; }
         updateRouteStatusUI();
+        var vvBox = byId('route-vice-versa');
+        if (vvBox) { vvBox.checked = loadViceVersaPref(); }
+        var vvRow = byId('route-vice-versa-row');
+        if (vvRow) { vvRow.hidden = false; }
+        updateViceVersaUI();
         byId('route-form-title').textContent = 'Add Route';
         byId('route-form-submit').textContent = 'Save Route';
         var err = byId('route-form-error'); if (err) { err.textContent = ''; }
@@ -751,6 +756,40 @@
         if (!box) { return; }
         var text = byId('route-status-text');
         if (text) { text.textContent = box.checked ? 'On' : 'Off'; }
+    }
+
+    /* Keep the Vice versa switch and its hint in sync. The hint previews the
+       return route the toggle will add (To → From) as the user types. */
+    function updateViceVersaUI() {
+        var box = byId('route-vice-versa');
+        if (!box) { return; }
+        var text = byId('route-vice-versa-text');
+        if (text) { text.textContent = box.checked ? 'On' : 'Off'; }
+        var hint = byId('route-vice-versa-hint');
+        if (hint) {
+            var from = byId('route-from') ? byId('route-from').value.trim() : '';
+            var to = byId('route-to') ? byId('route-to').value.trim() : '';
+            hint.textContent = (from && to)
+                ? 'Also add ' + to + ' \u2192 ' + from
+                : 'Also add the return route (To \u2192 From)';
+        }
+    }
+
+    /* The Vice versa preference is remembered in localStorage so it stays on
+       across page refreshes. Default is ON: one manual entry creates both
+       directions (City 1 → City 2 and City 2 → City 1). */
+    var VICE_VERSA_KEY = 'etTransportViceVersa';
+
+    function loadViceVersaPref() {
+        try {
+            var raw = window.localStorage.getItem(VICE_VERSA_KEY);
+            if (raw !== null) { return raw === '1' || raw === 'true'; }
+        } catch (e) { /* storage unavailable */ }
+        return true;
+    }
+
+    function saveViceVersaPref(on) {
+        try { window.localStorage.setItem(VICE_VERSA_KEY, on ? '1' : '0'); } catch (e) { /* ignore */ }
     }
 
     function openEditRouteForm(id) {
@@ -768,6 +807,8 @@
         var statusBox = byId('route-status');
         if (statusBox) { statusBox.checked = String(route.status) !== 'inactive'; }
         updateRouteStatusUI();
+        var vvRow = byId('route-vice-versa-row');
+        if (vvRow) { vvRow.hidden = true; }
         byId('route-form-title').textContent = 'Edit Route';
         byId('route-form-submit').textContent = 'Update Route';
         var err = byId('route-form-error'); if (err) { err.textContent = ''; }
@@ -783,7 +824,25 @@
         if (modal) { modal.hidden = true; }
     }
 
- function submitRouteForm() {
+ /* POST one route write (create/update) and resolve with the JSON payload.
+       Rejects only on network failure — API failures resolve with {ok:false}. */
+    function postRoute(action, payload) {
+        return fetch('api/company.php?action=' + action, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+            .then(function (res) {
+                return res.json().catch(function () {
+                    return { success: false, message: 'Invalid server response.' };
+                }).then(function (json) {
+                    return { ok: res.ok, status: res.status, data: json };
+                });
+            });
+    }
+
+    function submitRouteForm() {
         var errEl = byId('route-form-error');
         var id = byId('route-id').value;
         var pickupStations = routeStationRows('pickup');
@@ -796,43 +855,95 @@
             if (errEl) { errEl.textContent = 'Add at least one drop-off station.'; }
             return;
         }
+        var fromCity = byId('route-from').value.trim();
+        var toCity = byId('route-to').value.trim();
+        var duration = byId('route-duration').value.trim();
+        var status = (byId('route-status') && byId('route-status').checked) ? 'active' : 'inactive';
+        var vvBox = byId('route-vice-versa');
+        var viceVersa = !id && vvBox && vvBox.checked;
+
         var payload = {
-            from_city: byId('route-from').value.trim(),
-            to_city: byId('route-to').value.trim(),
-            duration: byId('route-duration').value.trim(),
-            status: (byId('route-status') && byId('route-status').checked) ? 'active' : 'inactive',
+            from_city: fromCity,
+            to_city: toCity,
+            duration: duration,
+            status: status,
             pickup_stations: pickupStations,
             dropoff_stations: dropoffStations
         };
         if (id) { payload.route_id = id; }
         var action = id ? 'route_update' : 'route_create';
 
-        fetch('api/company.php?action=' + action, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        })
-            .then(function (res) {
-                return res.json().catch(function () {
-                    return { success: false, message: 'Invalid server response.' };
-                }).then(function (json) {
-                    return { ok: res.ok, status: res.status, data: json };
-                });
-            })
+        var submitBtn = byId('route-form-submit');
+        if (submitBtn) { submitBtn.disabled = true; }
+
+        postRoute(action, payload)
             .then(function (result) {
                 var data = result.data || {};
                 if (!result.ok || !data.success) {
-                    if (errEl) { errEl.textContent = data.message || 'Unable to save the route.'; }
+                    var err = new Error('api');
+                    err.userMessage = data.message || 'Unable to save the route.';
+                    throw err;
+                }
+                /* Vice versa: also create the return route (To → From). Pickup
+                   and drop-off stations swap sides; duration and status carry
+                   over. A failed reverse (e.g. it already exists) is non-fatal —
+                   the forward route is already saved. */
+                if (!viceVersa) { return { reverse: 'skipped' }; }
+                return postRoute('route_create', {
+                    from_city: toCity,
+                    to_city: fromCity,
+                    duration: duration,
+                    status: status,
+                    pickup_stations: dropoffStations,
+                    dropoff_stations: pickupStations
+                }).then(function (rev) {
+                    var revData = rev.data || {};
+                    if (rev.ok && revData.success) { return { reverse: 'ok' }; }
+                    return {
+                        reverse: 'failed',
+                        alreadyExists: rev.status === 409,
+                        message: revData.message || 'The reverse route could not be added.'
+                    };
+                });
+            })
+            .then(function (info) {
+                info = info || {};
+                /* The forward route is saved. */
+                if (info.reverse === 'failed') {
+                    if (info.alreadyExists) {
+                        /* The return route already exists — the goal (both
+                           directions available) is already met. Close the form
+                           and confirm. */
+                        toast('Route added. ' + toCity + ' \u2192 ' + fromCity + ' already exists.');
+                        hideRouteForm();
+                        loadRoutes();
+                        loadTrips();
+                        return;
+                    }
+                    /* A genuine reverse failure: keep the form open so the
+                       operator can see exactly what happened. */
+                    if (errEl) {
+                        errEl.textContent = 'Route added. ' + (info.message || 'The reverse route could not be added.');
+                    }
+                    loadRoutes();
+                    loadTrips();
                     return;
+                }
+                if (info.reverse === 'ok') {
+                    toast('2 routes added: ' + fromCity + ' \u2192 ' + toCity + ' and ' + toCity + ' \u2192 ' + fromCity + '.');
                 }
                 hideRouteForm();
                 loadRoutes();
                 /* New trips should immediately see the updated route catalog. */
                 loadTrips();
             })
-            .catch(function () {
-                if (errEl) { errEl.textContent = 'Network error while saving the route.'; }
+            .catch(function (err) {
+                if (errEl) {
+                    errEl.textContent = (err && err.userMessage) ? err.userMessage : 'Network error while saving the route.';
+                }
+            })
+            .then(function () {
+                if (submitBtn) { submitBtn.disabled = false; }
             });
     }
 
@@ -4273,6 +4384,27 @@ function submitBranchForm() {
                 ev.preventDefault();
                 submitRouteForm();
             });
+        }
+
+        /* Vice versa toggle: remember the preference, keep the switch text and the
+           return-route hint in sync as the operator types the two cities or
+           flips the switch. */
+        var vvBox = byId('route-vice-versa');
+        if (vvBox) {
+            vvBox.addEventListener('change', function () {
+                saveViceVersaPref(vvBox.checked);
+                updateViceVersaUI();
+            });
+        }
+        var routeFromEl = byId('route-from');
+        if (routeFromEl) {
+            routeFromEl.addEventListener('input', updateViceVersaUI);
+            routeFromEl.addEventListener('blur', updateViceVersaUI);
+        }
+        var routeToEl = byId('route-to');
+        if (routeToEl) {
+            routeToEl.addEventListener('input', updateViceVersaUI);
+            routeToEl.addEventListener('blur', updateViceVersaUI);
         }
 
         var addTripBtn = byId('btn-add-trip');
