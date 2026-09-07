@@ -115,3 +115,84 @@
     border-color: var(--color-primary);
     box-shadow: 0 0 0 3px rgba(18, 96, 63, .12);
 }
+
+/* ---- Same-city guard: inline warning under a from/to picker. ---- */
+.city-picker .city-picker-warn {
+    margin: .4rem 0 0;
+    padding: .4rem .55rem;
+    color: #b91c1c;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    font-size: .72rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+.city-picker .city-picker-warn[hidden] { display: none; }
+
+/* ---- Swap button: interchangeable from/to cities (two arrows). ---- */
+.city-swap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    margin-left: .4rem;
+    padding: 0;
+    vertical-align: middle;
+    color: #374151;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.city-swap:hover { color: #111827; background: #eef2f7; border-color: #9ca3af; }
+.city-swap:active { transform: translateY(1px); }
+.city-swap svg { width: 15px; height: 15px; }
+
+/* Company-dashboard route fields sit between two selects — make the swap the
+   same height as the comboboxes, centered in its own narrow grid column. */
+.cd-route-fields .city-swap {
+    width: 2.2rem;
+    height: 2.2rem;
+    margin: 0;
+    justify-self: center;
+    align-self: end;
+}
+
+/* ---- From/To routed pair wrapper (used on the search, favorite, parcel and
+   route forms): the two field groups plus a swap button in one row. ---- */
+.city-route {
+    display: flex;
+    align-items: flex-end;
+    gap: .5rem;
+}
+.city-route > .form-group,
+.city-route > div {
+    flex: 1 1 0;
+    min-width: 0;
+}
+.city-route > .city-swap {
+    flex: 0 0 auto;
+    align-self: flex-end;
+    margin: 0 0 .1rem;
+}
+
+/* Modal form rows for parcels / routes reuse the same paired layout. */
+.cd-parcel-form-row.city-route,
+.cd-route-form-row.city-route {
+    display: flex;
+    align-items: flex-end;
+    gap: .7rem;
+}
+.cd-parcel-form-row.city-route > div,
+.cd-route-form-row.city-route > div {
+    flex: 1 1 0;
+    min-width: 0;
+}
+.cd-parcel-form-row.city-route > .city-swap,
+.cd-route-form-row.city-route > .city-swap {
+    flex: 0 0 auto;
+    margin: 0 0 .25rem;
+}

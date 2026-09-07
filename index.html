@@ -8,7 +8,7 @@
 
     <!-- Styles -->
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/city-picker.css?v=20260907-vice-versa">
+    <link rel="stylesheet" href="css/city-picker.css?v=20260907-swap-fix">
 
     <!-- Favicon (placed in assets/icons) -->
     <link rel="icon" type="image/x-icon" href="assets/icons/favicon.svg">
@@ -70,12 +70,16 @@
                 <form class="search-form" action="search.html" method="get">
                     <div class="form-group">
                         <label for="from">From</label>
-                        <input type="text" id="from" name="from" placeholder="e.g. Addis Ababa" required data-city-picker>
+                        <input type="text" id="from" name="from" placeholder="e.g. Addis Ababa" required data-city-picker data-city-pair="home-search" data-city-role="from">
                     </div>
+
+                    <button type="button" class="city-swap" data-city-pair="home-search" aria-label="Swap from and to">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>
+                    </button>
 
                     <div class="form-group">
                         <label for="to">To</label>
-                        <input type="text" id="to" name="to" placeholder="e.g. Bahir Dar" required data-city-picker>
+                        <input type="text" id="to" name="to" placeholder="e.g. Bahir Dar" required data-city-picker data-city-pair="home-search" data-city-role="to">
                     </div>
 
                     <div class="form-group">
@@ -214,7 +218,7 @@
     <script src="js/notifications.js"></script>
     <script src="js/data.js"></script>
     <script src="js/cities.js"></script>
-    <script src="js/city-picker.js"></script>
+    <script src="js/city-picker.js?v=20260907-swap-fix-2"></script>
     <script src="js/company.js"></script>
 </body>
 </html>

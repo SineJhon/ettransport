@@ -7,7 +7,7 @@
     <title>Company Dashboard | ET Transport</title>
     <link rel="stylesheet" href="css/style.css?v=20260903-reason-suggestions">
     <link rel="stylesheet" href="css/walkin-booking.css?v=20260904-inline-validation-2">
-    <link rel="stylesheet" href="css/city-picker.css?v=20260907-vice-versa">
+    <link rel="stylesheet" href="css/city-picker.css?v=20260907-swap-fix">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
@@ -472,7 +472,7 @@
         .cd-day-list::-webkit-scrollbar { width: 8px; height: 6px; }
         .cd-day-list::-webkit-scrollbar-track { background: transparent; }
         .cd-day-list::-webkit-scrollbar-thumb { background-color: rgba(107, 114, 128, 0.3); border-radius: 3px; }
-        .cd-day-list::-webkit-scrollbar-thumb:hover { background-color: rgba(107, 114, 128, 0.45); }.cd-day-button { flex: 0 0 3.45rem; min-height: 4rem; padding: .38rem; color: #587068; background: #fff; border: 1px solid #edf1ef; border-radius: 13px; cursor: pointer; }.cd-day-button span, .cd-day-button b { display: block; }.cd-day-button span { font-size: .62rem; font-weight: 800; letter-spacing: .04em; }.cd-day-button b { margin-top: .18rem; color: #1e463a; font-size: 1.08rem; }.cd-day-button:hover { border-color: #6cb48c; }.cd-day-button[aria-pressed="true"] { color: #fff; background: #18b85c; border-color: #18b85c; box-shadow: 0 6px 14px rgba(24,184,92,.24); }.cd-day-button[aria-pressed="true"] b { color: #fff; }.cd-selected-date { min-height: 1.15rem; margin: 0; color: #5c756b; font-size: .7rem; font-weight: 700; text-align: right; }.cd-route-picker { min-width: 0; }.cd-route-fields { display: grid; grid-template-columns: 1fr 1.35rem 1fr; gap: .35rem; align-items: end; margin-top: .45rem; }.cd-route-fields label { position: relative; }.cd-route-fields label span { display: block; margin: 0 0 .25rem; color: #617a70; font-size: .65rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }.cd-route-fields label i { position: absolute; z-index: 1; bottom: .84rem; left: .7rem; color: #fa4e83; font-size: .75rem; font-style: normal; }.cd-route-fields select { width: 100%; min-width: 0; min-height: 2.7rem; padding: .45rem .45rem .45rem 1.45rem; color: #1b473a; background: #fff; border: 1px solid #d2e1d8; border-radius: 8px; font-size: .78rem; font-weight: 800; }.cd-route-arrow { display: grid; place-items: center; height: 2.7rem; color: #274f43; font-weight: 900; }.cd-passenger-filter > .btn { min-height: 2.7rem; white-space: nowrap; }
+        .cd-day-list::-webkit-scrollbar-thumb:hover { background-color: rgba(107, 114, 128, 0.45); }.cd-day-button { flex: 0 0 3.45rem; min-height: 4rem; padding: .38rem; color: #587068; background: #fff; border: 1px solid #edf1ef; border-radius: 13px; cursor: pointer; }.cd-day-button span, .cd-day-button b { display: block; }.cd-day-button span { font-size: .62rem; font-weight: 800; letter-spacing: .04em; }.cd-day-button b { margin-top: .18rem; color: #1e463a; font-size: 1.08rem; }.cd-day-button:hover { border-color: #6cb48c; }.cd-day-button[aria-pressed="true"] { color: #fff; background: #18b85c; border-color: #18b85c; box-shadow: 0 6px 14px rgba(24,184,92,.24); }.cd-day-button[aria-pressed="true"] b { color: #fff; }.cd-selected-date { min-height: 1.15rem; margin: 0; color: #5c756b; font-size: .7rem; font-weight: 700; text-align: right; }.cd-route-picker { min-width: 0; }.cd-route-fields { display: grid; grid-template-columns: 1fr 2.6rem 1fr; gap: .35rem; align-items: end; margin-top: .45rem; }.cd-route-fields label { position: relative; }.cd-route-fields label span { display: block; margin: 0 0 .25rem; color: #617a70; font-size: .65rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }.cd-route-fields label i { position: absolute; z-index: 1; bottom: .84rem; left: .7rem; color: #fa4e83; font-size: .75rem; font-style: normal; }.cd-route-fields select { width: 100%; min-width: 0; min-height: 2.7rem; padding: .45rem .45rem .45rem 1.45rem; color: #1b473a; background: #fff; border: 1px solid #d2e1d8; border-radius: 8px; font-size: .78rem; font-weight: 800; }.cd-route-arrow { display: grid; place-items: center; height: 2.7rem; color: #274f43; font-weight: 900; }.cd-passenger-filter > .btn { min-height: 2.7rem; white-space: nowrap; }
         @media (max-width: 980px) { .cd-passenger-filter { grid-template-columns: 1fr; }.cd-passenger-filter > .btn { grid-column: auto; } }
         .cd-filter-actions { display: flex; justify-content: flex-end; gap: .55rem; align-items: end; }.cd-filter-actions .btn { min-height: 2.7rem; white-space: nowrap; }.cd-filter-actions .btn-secondary { background: #fff; border-color: #c9ddd1; color: #315d4e; }.cd-filter-actions .btn-secondary:hover { background: #e8f3ec; }.cd-filter-actions .btn-primary { background: #187653; border-color: #187653; }.cd-filter-actions .btn-primary:hover { background: #105b3e; border-color: #105b3e; }
         .cd-revenue-filter { grid-template-columns: minmax(0, 1fr) auto; }.cd-revenue-filter .cd-filter-actions { align-self: end; }
@@ -849,9 +849,11 @@
                     <div class="cd-route-picker">
                         <div class="cd-filter-label-row"><strong>Search passenger bookings</strong></div>
                         <div class="cd-route-fields">
-                            <label><span>Leaving from</span><i aria-hidden="true">●</i><select id="booking-from-filter" data-city-picker><option value="">All cities</option></select></label>
-                            <span class="cd-route-arrow" aria-hidden="true">→</span>
-                            <label><span>Destination</span><i aria-hidden="true">●</i><select id="booking-to-filter" data-city-picker><option value="">All cities</option></select></label>
+                            <label><span>Leaving from</span><i aria-hidden="true">●</i><select id="booking-from-filter" data-city-picker data-city-pair="booking-filter" data-city-role="from"><option value="">All cities</option></select></label>
+                            <button type="button" class="city-swap" data-city-pair="booking-filter" aria-label="Swap leaving from and destination">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>
+                            </button>
+                            <label><span>Destination</span><i aria-hidden="true">●</i><select id="booking-to-filter" data-city-picker data-city-pair="booking-filter" data-city-role="to"><option value="">All cities</option></select></label>
                         </div>
                     </div>
                     <div class="cd-filter-actions"><button type="button" id="btn-clear-booking-filters" class="btn btn-secondary">Clear filters</button><button type="button" id="btn-refresh-bookings" class="btn btn-primary">Refresh bookings</button></div>
@@ -1327,14 +1329,17 @@
                         <p class="cd-parcel-form-hint">The recipient&rsquo;s ID will be required at pickup to verify their identity.</p>
                     </div>
                 </div>
-                <div class="cd-parcel-form-row">
+                <div class="cd-parcel-form-row city-route">
                     <div>
                         <label for="parcel-from">Leaving from *</label>
-                        <input type="text" id="parcel-from" data-city-picker placeholder="City" autocomplete="off">
+                        <input type="text" id="parcel-from" data-city-picker data-city-pair="parcel" data-city-role="from" placeholder="City" autocomplete="off">
                     </div>
+                    <button type="button" class="city-swap" data-city-pair="parcel" aria-label="Swap from and destination">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>
+                    </button>
                     <div>
                         <label for="parcel-to">Destination *</label>
-                        <input type="text" id="parcel-to" data-city-picker placeholder="City" autocomplete="off">
+                        <input type="text" id="parcel-to" data-city-picker data-city-pair="parcel" data-city-role="to" placeholder="City" autocomplete="off">
                     </div>
                 </div>
                 <div id="parcel-travel-date-cell" class="cd-parcel-form-row" hidden>
@@ -1404,9 +1409,11 @@
                 <div class="cd-route-picker">
                     <div class="cd-filter-label-row"><strong>Search payment records</strong></div>
                     <div class="cd-route-fields">
-                        <label><span>Leaving from</span><i aria-hidden="true">●</i><select id="revenue-from-filter" data-city-picker><option value="">All cities</option></select></label>
-                        <span class="cd-route-arrow" aria-hidden="true">→</span>
-                        <label><span>Destination</span><i aria-hidden="true">●</i><select id="revenue-to-filter" data-city-picker><option value="">All cities</option></select></label>
+                        <label><span>Leaving from</span><i aria-hidden="true">●</i><select id="revenue-from-filter" data-city-picker data-city-pair="revenue-filter" data-city-role="from"><option value="">All cities</option></select></label>
+                        <button type="button" class="city-swap" data-city-pair="revenue-filter" aria-label="Swap leaving from and destination">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>
+                        </button>
+                        <label><span>Destination</span><i aria-hidden="true">●</i><select id="revenue-to-filter" data-city-picker data-city-pair="revenue-filter" data-city-role="to"><option value="">All cities</option></select></label>
                     </div>
                 </div>
                 <div class="cd-filter-actions"><button type="button" id="btn-clear-revenue-filters" class="btn btn-secondary">Clear filters</button><button type="button" id="btn-search-revenue" class="btn btn-primary">Search payments</button></div>
@@ -1434,14 +1441,17 @@
             <form id="route-form" class="cd-route-form" hidden novalidate>
                 <input type="hidden" id="route-id">
                 <h3 id="route-form-title">Add Route</h3>
-                <div class="cd-route-form-row">
+                <div class="cd-route-form-row city-route">
                     <div>
                         <label for="route-from">Departure City *</label>
-                        <input type="text" id="route-from" maxlength="120" placeholder="e.g. Addis Ababa" data-city-picker>
+                        <input type="text" id="route-from" maxlength="120" placeholder="e.g. Addis Ababa" data-city-picker data-city-pair="route-form" data-city-role="from">
                     </div>
+                    <button type="button" class="city-swap" data-city-pair="route-form" aria-label="Swap departure and destination">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>
+                    </button>
                     <div>
                         <label for="route-to">Destination City *</label>
-                        <input type="text" id="route-to" maxlength="120" placeholder="e.g. Bahir Dar" data-city-picker>
+                        <input type="text" id="route-to" maxlength="120" placeholder="e.g. Bahir Dar" data-city-picker data-city-pair="route-form" data-city-role="to">
                     </div>
                 </div>
                 <div class="cd-route-form-row">
@@ -1838,7 +1848,7 @@
     <script src="js/main.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/cities.js"></script>
-    <script src="js/city-picker.js"></script>
+    <script src="js/city-picker.js?v=20260907-swap-fix-2"></script>
     <script src="js/company-dashboard.js?v=20260907-parcel-v5"></script>
 </body>
 </html>
