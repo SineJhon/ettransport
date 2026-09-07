@@ -193,8 +193,11 @@ function ensure_schema_columns(PDO $pdo): void
                 from_city VARCHAR(120) NOT NULL,
                 to_city VARCHAR(120) NOT NULL,
                 weight_kg DECIMAL(8, 2) NOT NULL,
+                parcel_type ENUM('document', 'standard', 'electronic', 'fragile', 'perishable') NOT NULL DEFAULT 'standard',
+                price DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
                 notes TEXT DEFAULT NULL,
                 status ENUM('received', 'sent', 'delivered', 'picked_up') NOT NULL DEFAULT 'received',
+                trip_id BIGINT UNSIGNED DEFAULT NULL,
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 PRIMARY KEY (id),
@@ -225,6 +228,45 @@ function ensure_schema_columns(PDO $pdo): void
         if ((int) $stmt->fetchColumn() > 0) {
             $pdo->exec("UPDATE parcels SET status = 'sent' WHERE status = 'in_transit'");
             $pdo->exec("ALTER TABLE parcels MODIFY status ENUM('received', 'sent', 'delivered', 'picked_up') NOT NULL DEFAULT 'received'");
+        }
+
+        /* parcels.parcel_type + parcels.price — pricing is based on weight (kg)
+           and parcel type. Back-fill both for databases created before they
+           existed: default an unknown type to 'standard' and seed price from
+           the same formula the API uses (billable 0.5 kg units × per-type rate). */
+        $stmt = $pdo->prepare(
+            "SELECT COUNT(*)
+               FROM information_schema.columns
+              WHERE table_schema = DATABASE()
+                AND table_name = 'parcels'
+                AND column_name = 'parcel_type'"
+        );
+        $stmt->execute();
+        if ((int) $stmt->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE parcels ADD COLUMN parcel_type ENUM('document', 'standard', 'electronic', 'fragile', 'perishable') NOT NULL DEFAULT 'standard' AFTER weight_kg");
+            $pdo->exec("ALTER TABLE parcels ADD COLUMN price DECIMAL(10, 2) NOT NULL DEFAULT 0.00 AFTER parcel_type");
+            $pdo->exec("UPDATE parcels SET price = GREATEST(1, CEIL(weight_kg / 0.5)) * 4.00");
+        }
+
+        /* parcels.trip_id — ties a parcel to the trip it ships on, so pricing
+           can factor in the route fare. Nullable (a parcel logged before a
+           trip was chosen keeps a weight/type price). */
+        $stmt = $pdo->prepare(
+            "SELECT COUNT(*)
+               FROM information_schema.columns
+              WHERE table_schema = DATABASE()
+                AND table_name = 'parcels'
+                AND column_name = 'trip_id'"
+        );
+        $stmt->execute();
+        if ((int) $stmt->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE parcels ADD COLUMN trip_id BIGINT UNSIGNED DEFAULT NULL AFTER status");
+        }
+        /* Back-fill $100 minimum on any rows created before the floor existed. */
+        $stmt = $pdo->prepare('SELECT COUNT(*) FROM parcels WHERE price < 100.00');
+        $stmt->execute();
+        if ((int) $stmt->fetchColumn() > 0) {
+            $pdo->exec('UPDATE parcels SET price = 100.00 WHERE price < 100.00');
         }
 
         /* bookings.booking_source — 'online' vs 'office' sales channel used by

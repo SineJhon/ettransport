@@ -4370,6 +4370,96 @@ function submitBranchForm() {
         { value: 'picked_up', label: 'Picked up' }
     ];
 
+    /* Mirrors the backend pricing (api/company.php PARCEL_TYPES). Price is
+   billable 0.5 kg units × per-type rate, plus 10% of the chosen trip's fare,
+   floored at ETB 100, but never more than half the trip fare. Min billable
+   unit is 0.5 kg. */
+    var PARCEL_MIN_CHARGE_KG = 0.5;
+    var PARCEL_MIN_PRICE = 100;
+    var PARCEL_TRIP_FARE_PERCENT = 0.10;
+    /* A parcel can never cost more than half the trip fare. */
+    var PARCEL_MAX_TRIP_FARE_RATIO = 0.5;
+    var PARCEL_TYPES_CONFIG = {
+        document:   { label: 'Document',   rate: 2 },
+        standard:   { label: 'Standard',   rate: 4 },
+        electronic: { label: 'Electronics', rate: 6 },
+        fragile:    { label: 'Fragile',    rate: 8 },
+        perishable: { label: 'Perishable', rate: 7 }
+    };
+
+    function parcelTypeLabel(value) {
+        var t = PARCEL_TYPES_CONFIG[value];
+        return t ? t.label : 'Standard';
+    }
+
+    function parcelChargeUnits(weightKg) {
+        var w = Number(weightKg);
+        if (!(w > 0)) { return 0; }
+        return Math.max(1, Math.ceil(w / PARCEL_MIN_CHARGE_KG));
+    }
+
+    /* Find the currently selected trip (if any) in the fetched route trips. */
+    function selectedParcelTrip() {
+        var sel = byId('parcel-trip');
+        var id = sel ? String(sel.value || '') : '';
+        if (!id) { return null; }
+        for (var i = 0; i < parcelRouteTripsCache.length; i++) {
+            if (String(parcelRouteTripsCache[i].id) === id) { return parcelRouteTripsCache[i]; }
+        }
+        return null;
+    }
+
+    function parcelPrice(weightKg, type, tripFare) {
+        var rate = (PARCEL_TYPES_CONFIG[type] || PARCEL_TYPES_CONFIG.standard).rate;
+        var weightCost = parcelChargeUnits(weightKg) * rate;
+        var tripFareNum = Number(tripFare);
+        var tripCost = (tripFareNum > 0) ? tripFareNum * PARCEL_TRIP_FARE_PERCENT : 0;
+        var computed = weightCost + tripCost;
+        if (tripFareNum > 0) {
+            /* Hard cap: never more than half the trip fare. */
+            return Math.min(computed, tripFareNum * PARCEL_MAX_TRIP_FARE_RATIO);
+        }
+        return Math.max(PARCEL_MIN_PRICE, computed);
+    }
+
+    function updateParcelPricePreview() {
+        var preview = byId('parcel-price-preview');
+        var breakdown = byId('parcel-price-breakdown');
+        var weightEl = byId('parcel-weight');
+        var typeEl = byId('parcel-type');
+        if (!preview || !weightEl || !typeEl) { return; }
+        var weight = Number(String(weightEl.value || '').trim());
+        var type = typeEl.value || 'standard';
+        var trip = selectedParcelTrip();
+        var tripFare = trip ? Number(trip.price) : 0;
+        if (!(weight > 0)) {
+            preview.textContent = 'ETB 0.00';
+            if (breakdown) { breakdown.textContent = ''; }
+            return;
+        }
+        var units = parcelChargeUnits(weight);
+        var rate = (PARCEL_TYPES_CONFIG[type] || PARCEL_TYPES_CONFIG.standard).rate;
+        var billed = units * PARCEL_MIN_CHARGE_KG;
+        var weightCost = units * rate;
+        var tripCost = (tripFare > 0) ? tripFare * PARCEL_TRIP_FARE_PERCENT : 0;
+        var computed = weightCost + tripCost;
+        var cap = (tripFare > 0) ? tripFare * PARCEL_MAX_TRIP_FARE_RATIO : 0;
+        var price = parcelPrice(weight, type, tripFare);
+        preview.textContent = 'ETB ' + formatMoney(price);
+        if (breakdown) {
+            var parts = [billed + ' kg billed · ' + units + ' × ETB ' + rate + ' = ETB ' + formatMoney(weightCost)];
+            if (tripFare > 0) {
+                parts.push('trip 10% = ETB ' + formatMoney(tripCost) + ' · max 50% fare = ETB ' + formatMoney(cap));
+            }
+            if (tripFare > 0 && price < computed) {
+                parts.push('capped at 50% of trip fare');
+            } else if (price === PARCEL_MIN_PRICE && price > computed) {
+                parts.push('min ETB ' + PARCEL_MIN_PRICE);
+            }
+            breakdown.textContent = parts.join(' · ') + ' → ETB ' + formatMoney(price);
+        }
+    }
+
     function parcelStatusLabel(value) {
         for (var s = 0; s < PARCEL_STATUSES.length; s++) {
             if (PARCEL_STATUSES[s].value === value) { return PARCEL_STATUSES[s].label; }
@@ -4441,6 +4531,8 @@ function submitBranchForm() {
                 '</div>' +
                 '<div class="cd-record-meta">' +
                     '<span>Weight<b>' + escHtml(p.weight_kg) + ' kg</b></span>' +
+                    '<span>Type<b>' + escHtml(parcelTypeLabel(p.parcel_type)) + '</b></span>' +
+                    '<span>Price<b>ETB ' + formatMoney(p.price) + '</b></span>' +
                     '<span>Registered<b>' + formatParcelDate(p.created_at) + '</b></span>' +
                     '<span>Status<b>' + escHtml(parcelStatusLabel(p.status)) + '</b></span>' +
                 '</div>' +
@@ -4733,6 +4825,8 @@ function submitBranchForm() {
         byId('parcel-from').value = parcel ? (parcel.from_city || '') : '';
         byId('parcel-to').value = parcel ? (parcel.to_city || '') : '';
         byId('parcel-weight').value = parcel ? parcel.weight_kg : '';
+        byId('parcel-type').value = parcel && parcel.parcel_type ? parcel.parcel_type : 'standard';
+        updateParcelPricePreview();
         byId('parcel-status').value = parcel ? parcel.status : 'received';
         byId('parcel-notes').value = parcel ? (parcel.notes || '') : '';
 
@@ -4769,6 +4863,7 @@ function submitBranchForm() {
             from_city: valueOf('parcel-from'),
             to_city: valueOf('parcel-to'),
             weight_kg: valueOf('parcel-weight'),
+            parcel_type: valueOf('parcel-type') || 'standard',
             status: valueOf('parcel-status') || 'received',
             notes: valueOf('parcel-notes')
         };
@@ -4954,6 +5049,16 @@ function submitBranchForm() {
 
         var form = byId('parcel-form');
         if (form) { form.addEventListener('submit', function (ev) { ev.preventDefault(); submitParcelForm(); }); }
+
+        var weightEl = byId('parcel-weight');
+        var typeEl = byId('parcel-type');
+        if (weightEl) {
+            weightEl.addEventListener('input', updateParcelPricePreview);
+            weightEl.addEventListener('change', updateParcelPricePreview);
+        }
+        if (typeEl) { typeEl.addEventListener('change', updateParcelPricePreview); }
+        var tripEl = byId('parcel-trip');
+        if (tripEl) { tripEl.addEventListener('change', updateParcelPricePreview); }
 
         var cancelBtn = byId('parcel-form-cancel');
         if (cancelBtn) { cancelBtn.addEventListener('click', hideParcelForm); }

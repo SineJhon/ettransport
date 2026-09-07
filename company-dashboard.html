@@ -659,6 +659,9 @@
         #parcel-trip-cell select { min-height: 2.7rem; }
         .cd-parcel-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; margin-top: .55rem; }
         .cd-parcel-form-error { color: #b91c1c; font-size: .82rem; font-weight: 600; margin: .6rem 0 0; }
+        .cd-parcel-price-box { display: flex; flex-direction: column; gap: .3rem; padding: .6rem .75rem; background: #f0f7f2; border: 1px solid #d4e6da; border-radius: 10px; align-self: stretch; justify-content: center; }
+        .cd-parcel-price-label { font: 800 .68rem/1 'DM Sans', sans-serif; text-transform: uppercase; letter-spacing: .05em; color: #5d776b; }
+        .cd-parcel-price-value { font: 800 1.5rem/1 'Outfit', sans-serif; color: #14603f; }
         .cd-parcel-form-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5ede8; }
         .cd-parcel-modal { position: fixed; inset: 0; z-index: 101; display: grid; place-items: center; padding: 1rem; background: rgba(8, 31, 25, .58); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
         .cd-parcel-modal[hidden] { display: none; }
@@ -1367,6 +1370,24 @@
                     <div>
                         <label for="parcel-weight">Weight (kg) *</label>
                         <input type="number" id="parcel-weight" min="0" max="999" step="0.1" placeholder="e.g. 5">
+                        <p class="cd-parcel-form-hint">Anything under 0.5 kg is billed as 0.5 kg.</p>
+                    </div>
+                    <div>
+                        <label for="parcel-type">Parcel type *</label>
+                        <select id="parcel-type">
+                            <option value="document">Document (cheaper)</option>
+                            <option value="standard" selected>Standard (general item)</option>
+                            <option value="electronic">Electronics</option>
+                            <option value="fragile">Fragile (needs care)</option>
+                            <option value="perishable">Perishable</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="cd-parcel-form-row">
+                    <div class="cd-parcel-price-box">
+                        <span class="cd-parcel-price-label">Estimated price</span>
+                        <span id="parcel-price-preview" class="cd-parcel-price-value">ETB 0.00</span>
+                        <p id="parcel-price-breakdown" class="cd-parcel-form-hint"></p>
                     </div>
                     <div>
                         <label for="parcel-status">Status</label>
@@ -1856,6 +1877,6 @@
     <script src="js/auth.js"></script>
     <script src="js/cities.js"></script>
     <script src="js/city-picker.js?v=20260907-swap-fix-3-dispatch"></script>
-    <script src="js/company-dashboard.js?v=20260907-parcel-v7-onespdate"></script>
+    <script src="js/company-dashboard.js?v=20260907-parcel-v10-cap"></script>
 </body>
 </html>

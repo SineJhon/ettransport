@@ -427,8 +427,11 @@ CREATE TABLE IF NOT EXISTS parcels (
   from_city VARCHAR(120) NOT NULL,
   to_city VARCHAR(120) NOT NULL,
   weight_kg DECIMAL(8, 2) NOT NULL,
+  parcel_type ENUM('document', 'standard', 'electronic', 'fragile', 'perishable') NOT NULL DEFAULT 'standard',
+  price DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
   notes TEXT DEFAULT NULL,
   status ENUM('received', 'sent', 'delivered', 'picked_up') NOT NULL DEFAULT 'received',
+  trip_id BIGINT UNSIGNED DEFAULT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
@@ -439,6 +442,10 @@ CREATE TABLE IF NOT EXISTS parcels (
   CONSTRAINT fk_parcels_company
     FOREIGN KEY (company_id) REFERENCES companies(id)
     ON DELETE CASCADE
+    ON UPDATE CASCADE,
+  CONSTRAINT fk_parcels_trip
+    FOREIGN KEY (trip_id) REFERENCES trips(id)
+    ON DELETE SET NULL
     ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

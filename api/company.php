@@ -89,6 +89,24 @@ if ($requestMethod !== 'GET' && $requestMethod !== 'POST') {
 
 const COMPANY_TRIP_WINDOW_DAYS = 14;
 
+/* Parcel pricing — based on weight (kg), parcel type, and the chosen trip's
+   fare. Price = billable 0.5 kg units × per-type rate, plus 10% of the trip
+   fare, floored at ETB 100, but NEVER more than half the trip fare. Anything
+   below 0.5 kg bills as one 0.5 kg unit. Fragile costs more (needs care),
+   documents cost less; longer/more expensive routes cost more to ship. */
+const PARCEL_MIN_CHARGE_KG = 0.5;
+const PARCEL_MIN_PRICE = 100.0;
+const PARCEL_TRIP_FARE_PERCENT = 0.10;
+/* The parcel price can NEVER exceed this share of the trip fare (half). */
+const PARCEL_MAX_TRIP_FARE_RATIO = 0.5;
+const PARCEL_TYPES = [
+    'document'   => ['label' => 'Document',   'rate' => 2.0],
+    'standard'   => ['label' => 'Standard (general item)', 'rate' => 4.0],
+    'electronic' => ['label' => 'Electronics', 'rate' => 6.0],
+    'fragile'    => ['label' => 'Fragile (needs care)', 'rate' => 8.0],
+    'perishable' => ['label' => 'Perishable',  'rate' => 7.0],
+];
+
 /** Read the request payload: JSON body when sent as JSON, otherwise form POST fields. */
 function company_input(): array
 {
@@ -2106,8 +2124,11 @@ function parcel_payload(array $row): array
         'from_city' => $row['from_city'],
         'to_city' => $row['to_city'],
         'weight_kg' => (float) $row['weight_kg'],
+        'parcel_type' => $row['parcel_type'],
+        'price' => (float) $row['price'],
         'notes' => $row['notes'] ?? null,
         'status' => $row['status'],
+        'trip_id' => isset($row['trip_id']) && $row['trip_id'] !== null ? (int) $row['trip_id'] : null,
         'created_at' => $row['created_at'],
         'updated_at' => $row['updated_at'],
     ];
@@ -2117,7 +2138,7 @@ function fetch_managed_parcels(PDO $pdo, int $companyId): array
 {
     $stmt = $pdo->prepare('
         SELECT id, company_id, reference, sender_name, sender_phone, recipient_name, recipient_phone,
-               from_city, to_city, weight_kg, notes, status, created_at, updated_at
+               from_city, to_city, weight_kg, parcel_type, price, notes, status, trip_id, created_at, updated_at
         FROM parcels
         WHERE company_id = :company_id
         ORDER BY created_at DESC, id DESC
@@ -2136,7 +2157,7 @@ function fetch_managed_parcel_row(PDO $pdo, int $parcelId, int $companyId): ?arr
 {
     $stmt = $pdo->prepare('
         SELECT id, company_id, reference, sender_name, sender_phone, recipient_name, recipient_phone,
-               from_city,to_city, weight_kg, notes, status, created_at, updated_at
+               from_city, to_city, weight_kg, parcel_type, price, notes, status, trip_id, created_at, updated_at
         FROM parcels
         WHERE id = :id AND company_id = :company_id
         LIMIT 1
@@ -2204,6 +2225,64 @@ function parcel_notes_or_error(mixed $raw): ?string
 function valid_parcel_status(string $value): bool
 {
     return in_array($value, ['received', 'sent', 'delivered', 'picked_up'], true);
+}
+
+function valid_parcel_type(string $value): bool
+{
+    return array_key_exists($value, PARCEL_TYPES);
+}
+
+function parcel_type_or_error(mixed $raw): string
+{
+    $type = trim((string) ($raw ?? 'standard'));
+    if (!valid_parcel_type($type)) {
+        $allowed = implode(', ', array_keys(PARCEL_TYPES));
+        auth_response(422, ['success' => false, 'message' => 'Invalid parcel type. Use one of: ' . $allowed . '.']);
+    }
+
+    return $type;
+}
+
+/* Billable weight in 0.5 kg units — anything under 0.5 kg still charges one unit. */
+function parcel_charge_units(float $weightKg): int
+{
+    return max(1, (int) ceil($weightKg / PARCEL_MIN_CHARGE_KG));
+}
+
+function parcel_price(float $weightKg, string $parcelType, ?float $tripFare): float
+{
+    $rate = PARCEL_TYPES[$parcelType]['rate'] ?? PARCEL_TYPES['standard']['rate'];
+    $weightCost = (float) round(parcel_charge_units($weightKg) * $rate, 2);
+    $tripContribution = ($tripFare !== null && $tripFare > 0) ? round($tripFare * PARCEL_TRIP_FARE_PERCENT, 2) : 0.0;
+    $computed = (float) round($weightCost + $tripContribution, 2);
+
+    /* Hard cap: a parcel can never cost more than half the trip fare. When a
+       trip is chosen this bound always applies (it can even override the
+       ETB 100 floor on very cheap trips). Without a trip, the floor governs. */
+    if ($tripFare !== null && $tripFare > 0) {
+        $cap = (float) round($tripFare * PARCEL_MAX_TRIP_FARE_RATIO, 2);
+        return min($computed, $cap);
+    }
+
+    return max(PARCEL_MIN_PRICE, $computed);
+}
+
+/* Resolve a browser-supplied trip_id to a fare, verifying it belongs to the
+   company. Returns the fare, or null when trip_id is absent/blank. */
+function parcel_trip_fare(PDO $pdo, int $companyId, mixed $raw): ?float
+{
+    if ($raw === null || trim((string) $raw) === '') {
+        return null;
+    }
+    $tripId = positive_int_or_error($raw, 'A valid trip id is required.');
+    $stmt = $pdo->prepare('SELECT price FROM trips WHERE id = :id AND company_id = :company_id LIMIT 1');
+    $stmt->execute([':id' => $tripId, ':company_id' => $companyId]);
+    $row = $stmt->fetch();
+    if ($row === false) {
+        auth_response(404, ['success' => false, 'message' => 'Trip not found.']);
+    }
+
+    return (float) $row['price'];
 }
 
 function parcel_status_or_error(mixed $raw): string
@@ -4406,6 +4485,12 @@ function handle_parcel_create(PDO $pdo): void
     $fromCity = route_city_or_error($input['from_city'] ?? '', 'Departure city');
     $toCity = route_city_or_error($input['to_city'] ?? '', 'Destination city');
     $weightKg = parcel_weight_or_error($input['weight_kg'] ?? null);
+    $parcelType = parcel_type_or_error($input['parcel_type'] ?? 'standard');
+    $tripKey = $input['trip_id'] ?? null;
+    $hasTrip = $tripKey !== null && trim((string) $tripKey) !== '';
+    $tripFare = $hasTrip ? parcel_trip_fare($pdo, $companyId, $tripKey) : null;
+    $tripId = $hasTrip ? positive_int_or_error($tripKey, 'A valid trip id is required.') : null;
+    $price = parcel_price($weightKg, $parcelType, $tripFare);
     $status = parcel_status_or_error($input['status'] ?? 'received');
     $notes = parcel_notes_or_error($input['notes'] ?? null);
 
@@ -4420,10 +4505,10 @@ function handle_parcel_create(PDO $pdo): void
         $ins = $pdo->prepare('
             INSERT INTO parcels
                 (company_id, reference, sender_name, sender_phone, recipient_name, recipient_phone,
-                 from_city, to_city, weight_kg, notes, status)
+                 from_city, to_city, weight_kg, parcel_type, price, notes, status, trip_id)
             VALUES
                 (:company_id, :reference, :sender_name, :sender_phone, :recipient_name, :recipient_phone,
-                 :from_city, :to_city, :weight_kg, :notes, :status)
+                 :from_city, :to_city, :weight_kg, :parcel_type, :price, :notes, :status, :trip_id)
         ');
         $ins->execute([
             ':company_id' => $companyId,
@@ -4435,8 +4520,11 @@ function handle_parcel_create(PDO $pdo): void
             ':from_city' => $fromCity,
             ':to_city' => $toCity,
             ':weight_kg' => $weightKg,
+            ':parcel_type' => $parcelType,
+            ':price' => $price,
             ':notes' => $notes,
             ':status' => $status,
+            ':trip_id' => $tripId,
         ]);
         $newId = (int) $pdo->lastInsertId();
     } catch (PDOException $e) {
@@ -4472,10 +4560,12 @@ function handle_parcel_update(PDO $pdo): void
     $hasFrom = has_key($input, 'from_city') && trim((string) ($input['from_city'] ?? '')) !== '';
     $hasTo = has_key($input, 'to_city') && trim((string) ($input['to_city'] ?? '')) !== '';
     $hasWeight = has_key($input, 'weight_kg');
+    $hasType = has_key($input, 'parcel_type') && trim((string) ($input['parcel_type'] ?? '')) !== '';
     $hasStatus = has_key($input, 'status') && trim((string) ($input['status'] ?? '')) !== '';
     $hasNotes = has_key($input, 'notes');
+    $hasTrip = has_key($input, 'trip_id');
 
-    if (!$hasSender && !$hasSenderPhone && !$hasRecipient && !$hasRecipientPhone && !$hasFrom && !$hasTo && !$hasWeight && !$hasStatus && !$hasNotes) {
+    if (!$hasSender && !$hasSenderPhone && !$hasRecipient && !$hasRecipientPhone && !$hasFrom && !$hasTo && !$hasWeight && !$hasType && !$hasStatus && !$hasNotes && !$hasTrip) {
         auth_response(422, ['success' => false, 'message' => 'At least one field to update is required.']);
    }
 
@@ -4486,6 +4576,11 @@ function handle_parcel_update(PDO $pdo): void
     $fromCity = $hasFrom ? route_city_or_error($input['from_city'], 'Departure city') : null;
     $toCity = $hasTo ? route_city_or_error($input['to_city'], 'Destination city') : null;
     $weightKg = $hasWeight ? parcel_weight_or_error($input['weight_kg']) : null;
+    $parcelType = $hasType ? parcel_type_or_error($input['parcel_type']) : null;
+    $tripKey = $input['trip_id'] ?? null;
+    $tripId = $hasTrip
+        ? (trim((string) $tripKey) === '' ? null : positive_int_or_error($tripKey, 'A valid trip id is required.'))
+        : null;
     $status = $hasStatus ? parcel_status_or_error($input['status']) : null;
     $notes = $hasNotes ? parcel_notes_or_error($input['notes']) : null;
     if ($hasFrom && $hasTo && mb_strtolower($fromCity) === mb_strtolower($toCity)) {
@@ -4515,6 +4610,33 @@ function handle_parcel_update(PDO $pdo): void
     if ($hasWeight) {
         $sets[] = 'weight_kg = :weight_kg';
         $params[':weight_kg'] = $weightKg; }
+    if ($hasType) {
+        $sets[] = 'parcel_type = :parcel_type';
+        $params[':parcel_type'] = $parcelType; }
+    if (($hasWeight || $hasType || $hasTrip)) {
+        /* Recompute the auto price from the final weight + type + trip fare.
+           Read any not-submitted field from the current row, and clear the
+           trip/route contribution when trip is removed. */
+        $cur = $pdo->prepare('SELECT weight_kg, parcel_type, trip_id FROM parcels WHERE id = :id AND company_id = :company_id LIMIT 1');
+        $cur->execute([':id' => $parcelId, ':company_id' => $companyId]);
+        $curRow = $cur->fetch();
+        $finalWeight = $hasWeight ? $weightKg : (float) ($curRow['weight_kg'] ?? 0);
+        $finalType = $hasType ? $parcelType : (string) ($curRow['parcel_type'] ?? 'standard');
+        $finalTripId = $hasTrip ? $tripId : (isset($curRow['trip_id']) && $curRow['trip_id'] !== null ? (int) $curRow['trip_id'] : null);
+        $finalFare = null;
+        if ($finalTripId !== null) {
+            $t = $pdo->prepare('SELECT price FROM trips WHERE id = :id AND company_id = :company_id LIMIT 1');
+            $t->execute([':id' => $finalTripId, ':company_id' => $companyId]);
+            $tRow = $t->fetch();
+            $finalFare = ($tRow !== false) ? (float) $tRow['price'] : null;
+        }
+        $sets[] = 'price = :price';
+        $params[':price'] = parcel_price($finalWeight, $finalType, $finalFare);
+    }
+    if ($hasTrip) {
+        $sets[] = 'trip_id = :trip_id';
+        $params[':trip_id'] = $tripId;
+    }
     if ($hasStatus) {
         $sets[] = 'status = :status';
         $params[':status'] = $status; }
