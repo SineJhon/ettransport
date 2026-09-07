@@ -4561,44 +4561,111 @@ function submitBranchForm() {
         if (modal) { modal.hidden = true; }
     }
 
-    function parcelRouteTrips() {
+    var parcelTripFetchId = 0;   // discards responses from superseded parcel trip fetches
+    var parcelRouteTripsCache = [];
+
+    function fetchParcelTripsForRoute() {
         var fromEl = byId('parcel-from');
         var toEl = byId('parcel-to');
         var from = fromEl ? String(fromEl.value || '').trim() : '';
         var to = toEl ? String(toEl.value || '').trim() : '';
-        if (!from || !to || from.toUpperCase() === to.toUpperCase()) { return []; }
-        return currentTrips.filter(function (t) {
-            return String(t.status) === 'scheduled'
-                && String(t.from_city || '').toUpperCase() === from.toUpperCase()
-                && String(t.to_city || '').toUpperCase() === to.toUpperCase();
-        });
-    }
+        var rid = ++parcelTripFetchId;
 
-    function renderParcelTravelPicker() {
         var cell = byId('parcel-travel-date-cell');
+        var loading = byId('parcel-travel-loading');
+        var empty = byId('parcel-travel-empty');
         var list = byId('parcel-travel-day-list');
         var tripCell = byId('parcel-trip-cell');
+        var tripSel = byId('parcel-trip');
+
+        parcelRouteTripsCache = [];
+        if (cell) { cell.hidden = true; }
+        if (loading) { loading.hidden = true; }
+        if (empty) { empty.hidden = true; }
+        if (list) { list.innerHTML = ''; }
+        if (tripCell) { tripCell.hidden = true; }
+        if (tripSel) { tripSel.innerHTML = '<option value="">Select trip</option>'; }
+        var tripEmpty = byId('parcel-trip-empty');
+        if (tripEmpty) { tripEmpty.hidden = true; }
+
+        if (!from || !to || from.toUpperCase() === to.toUpperCase()) { return; }
+
+        if (loading) { loading.hidden = false; }
+
+        fetch('api/company.php?action=trips', {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(function (res) {
+                return res.json().catch(function () {
+                    return { success: false, message: 'Invalid server response.' };
+                }).then(function (json) {
+                    return { ok: res.ok, status: res.status, data: json };
+                });
+            })
+            .then(function (result) {
+                if (rid !== parcelTripFetchId) { return; }
+                if (loading) { loading.hidden = true; }
+                var trips = [];
+                var data = result.data || {};
+                if (result.ok && result.status === 200 && data.success) {
+                    trips = (Array.isArray(data.trips) ? data.trips : []).filter(function (t) {
+                        return String(t.status || '').toLowerCase() === 'scheduled'
+                            && String(t.from_city || '').toUpperCase() === from.toUpperCase()
+                            && String(t.to_city || '').toUpperCase() === to.toUpperCase();
+                    });
+                }
+                parcelRouteTripsCache = trips;
+                renderParcelTripsForDate();
+            })
+            .catch(function () {
+                if (rid !== parcelTripFetchId) { return; }
+                if (loading) { loading.hidden = true; }
+                parcelRouteTripsCache = [];
+                renderParcelTripsForDate('Could not load trips for this route. Please try again.');
+            });
+    }
+
+    function renderParcelTripsForDate(errMsg) {
+        var cell = byId('parcel-travel-date-cell');
+        var list = byId('parcel-travel-day-list');
+        var empty = byId('parcel-travel-empty');
+        var tripCell = byId('parcel-trip-cell');
         if (!cell || !list) { return; }
-        var trips = parcelRouteTrips();
-        if (!trips.length) {
+
+        if (!parcelRouteTripsCache.length) {
             cell.hidden = true;
             if (tripCell) { tripCell.hidden = true; }
             list.innerHTML = '';
             var sel = byId('parcel-trip');
             if (sel) { sel.innerHTML = '<option value="">Select trip</option>'; }
+            if (!errMsg && empty) { empty.hidden = true; }
+            else if (empty) {
+                empty.textContent = errMsg;
+                empty.hidden = false;
+                cell.hidden = false;
+            }
             return;
         }
+
         cell.hidden = false;
         var dates = {};
-        for (var i = 0; i < trips.length; i++) { dates[trips[i].departure_date] = true; }
+        for (var i = 0; i < parcelRouteTripsCache.length; i++) { dates[parcelRouteTripsCache[i].departure_date] = true; }
         var sortedDates = Object.keys(dates).sort();
         list.innerHTML = sortedDates.map(function (date) {
             var d = new Date(date);
             var dayNum = isNaN(d.getTime()) ? date : d.getDate();
             var dayName = isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { weekday: 'short' });
+            var monthName = isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { month: 'short' });
             return '<button type="button" class="cd-day-btn" data-date="' + date + '">' +
-                '<div>' + dayNum + '</div><div>' + dayName + '</div></button>';
+                '<span class="wd">' + dayName + '</span>' +
+                '<b class="day">' + dayNum + '</b>' +
+                '<span class="mo">' + monthName + '</span>' +
+                '</button>';
         }).join('');
+        if (empty) { empty.hidden = true; }
+        if (tripCell) { tripCell.hidden = true; }
         var buttons = list.querySelectorAll('.cd-day-btn');
         for (var j = 0; j < buttons.length; j++) {
             buttons[j].addEventListener('click', function () {
@@ -4607,7 +4674,12 @@ function submitBranchForm() {
                 refreshParcelTripOptions(this.getAttribute('data-date'));
             });
         }
-        refreshParcelTripOptions('');
+        /* Show the next available date automatically so the operator sees
+           the trip options the moment the strip appears. */
+        if (buttons.length) {
+            buttons[0].classList.add('active');
+            refreshParcelTripOptions(sortedDates[0]);
+        }
     }
 
     function refreshParcelTripOptions(date) {
@@ -4615,11 +4687,11 @@ function submitBranchForm() {
         var empty = byId('parcel-trip-empty');
         var tripCell = byId('parcel-trip-cell');
         if (!sel) { return; }
-        var trips = parcelRouteTrips();
-        var filtered = date ? trips.filter(function (t) { return String(t.departure_date) === String(date); }) : trips;
+        var filtered = date ? parcelRouteTripsCache.filter(function (t) { return String(t.departure_date) === String(date); }) : parcelRouteTripsCache;
         if (empty) { empty.hidden = true; }
         if (!date) {
             if (tripCell) { tripCell.hidden = true; }
+            sel.innerHTML = '<option value="">Select trip</option>';
             return;
         }
         if (tripCell) { tripCell.hidden = false; }
@@ -4632,7 +4704,7 @@ function submitBranchForm() {
             var t = filtered[i];
             var opt = document.createElement('option');
             opt.value = t.id;
-            opt.textContent = (t.departure_time || '') + ' \u00b7 ' + (t.bus_name || 'Bus') + ' \u00b7 ETB ' + formatMoney(t.price);
+            opt.textContent = t.departure_time + ' \u00b7 ' + (t.bus_name || 'Bus') + ' (' + t.available_seats + ' seats left) \u00b7 ETB ' + formatMoney(t.price);
             sel.appendChild(opt);
         }
     }
@@ -4668,7 +4740,7 @@ function submitBranchForm() {
             window.ETCityPicker.sync('parcel-from');
             window.ETCityPicker.sync('parcel-to');
         }
-        renderParcelTravelPicker();
+        fetchParcelTripsForRoute();
 
         form.hidden = false;
         if (modal) {
@@ -4717,8 +4789,9 @@ function submitBranchForm() {
 
         var tripSelect = byId('parcel-trip');
         var tripId = tripSelect ? String(tripSelect.value || '') : '';
+        var dateCell = byId('parcel-travel-date-cell');
         var tripCell = byId('parcel-trip-cell');
-        if (tripCell && !tripCell.hidden && !tripId) {
+        if (dateCell && !dateCell.hidden && (!tripCell || tripCell.hidden || !tripId)) {
             bad('Pick a travel date and choose a scheduled trip on this route.');
             return;
         }
@@ -4837,7 +4910,7 @@ function submitBranchForm() {
         var parcelFromEl = byId('parcel-from');
         var parcelToEl = byId('parcel-to');
         var syncParcelRoute = function () {
-            renderParcelTravelPicker();
+            fetchParcelTripsForRoute();
         };
         if (parcelFromEl) {
             parcelFromEl.addEventListener('change', syncParcelRoute);

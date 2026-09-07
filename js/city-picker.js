@@ -282,6 +282,9 @@
                 dispatchChange(el);      /* existing filter listeners respond */
             } else {
                 closeDrop();
+                dispatchChange(el);      /* text fields too — lets route/trip
+                                            pickers (e.g. parcel modal) react
+                                            as soon as a city is chosen */
             }
         }
 

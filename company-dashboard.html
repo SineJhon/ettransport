@@ -646,10 +646,16 @@
         .cd-parcel-form .cd-walkin-phone-field { display: flex; align-items: stretch; }
         .cd-parcel-form .cd-walkin-phone-field .phone-prefix { display: inline-flex; align-items: center; padding: 0 .65rem; background: #eef2f7; border: 1px solid #cbd5e1; border-right: none; border-radius: 6px 0 0 6px; font-weight: 700; color: #374151; font-size: .9rem; white-space: nowrap; }
         .cd-parcel-form .cd-walkin-phone-field input { width: auto; flex: 1 1 auto; min-width: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; }
-        #parcel-travel-day-list { display: flex; flex-wrap: wrap; gap: .45rem; padding: .35rem 0 .15rem; }
-        #parcel-travel-day-list .cd-day-btn { flex: 0 0 3.45rem; min-height: 3.9rem; padding: .4rem; background: #fff; border: 1px solid #edf1ef; border-radius: 13px; cursor: pointer; }
-        #parcel-travel-day-list .cd-day-btn:hover { border-color: #c3d9cd; background: #f0f7f3; }
-        #parcel-travel-day-list .cd-day-btn.active { background: #187653; border-color: #187653; color: #fff; box-shadow: 0 4px 10px rgba(24,118,83,.17); }
+        #parcel-travel-day-list { display: flex; flex-wrap: nowrap; gap: .35rem; padding: .3rem 0 .2rem; overflow-x: auto; scrollbar-width: thin; }
+        #parcel-travel-day-list .cd-day-btn { flex: 0 0 3rem; min-height: 3.3rem; padding: .35rem .2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .1rem; color: #111c17; background: #fff; border: 1.5px solid #e2eae4; border-radius: 10px; cursor: pointer; font: inherit; transition: border-color .15s ease, background .15s ease, color .15s ease, transform .15s ease, box-shadow .15s ease; }
+        #parcel-travel-day-list .cd-day-btn .wd { font: 800 .55rem/1 'DM Sans', sans-serif; letter-spacing: .04em; text-transform: uppercase; color: #5f776c; }
+        #parcel-travel-day-list .cd-day-btn .day { font: 800 1.05rem/1 'Outfit', sans-serif; color: #153a31; }
+        #parcel-travel-day-list .cd-day-btn .mo { font: 800 .52rem/1 'DM Sans', sans-serif; text-transform: uppercase; color: #7a9087; }
+        #parcel-travel-day-list .cd-day-btn:hover { border-color: #8cc8a9; background: #f2faf5; transform: translateY(-1px); }
+        #parcel-travel-day-list .cd-day-btn.active { background: #187653; border-color: #187653; box-shadow: 0 6px 14px rgba(24,118,83,.2); }
+        #parcel-travel-day-list .cd-day-btn.active .wd,
+        #parcel-travel-day-list .cd-day-btn.active .day,
+        #parcel-travel-day-list .cd-day-btn.active .mo { color: #fff; }
         #parcel-trip-cell select { min-height: 2.7rem; }
         .cd-parcel-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; margin-top: .55rem; }
         .cd-parcel-form-error { color: #b91c1c; font-size: .82rem; font-weight: 600; margin: .6rem 0 0; }
@@ -1346,7 +1352,9 @@
                     <div>
                         <label>Travel date *</label>
                         <div id="parcel-travel-day-list" class="cd-day-list" role="group" aria-label="Travel date"></div>
-                        <p class="cd-parcel-form-hint">Choose the date with a scheduled trip on this route.</p>
+                        <p id="parcel-travel-loading" class="cd-parcel-form-hint" hidden>Fetching available trips&hellip;</p>
+                        <p id="parcel-travel-empty" class="cd-parcel-form-hint" hidden></p>
+                        <p class="cd-parcel-form-hint">Pick the date you want to ship on — only dates with a scheduled trip are shown.</p>
                     </div>
                 </div>
                 <div id="parcel-trip-cell" hidden>
@@ -1848,7 +1856,7 @@
     <script src="js/main.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/cities.js"></script>
-    <script src="js/city-picker.js?v=20260907-swap-fix-2"></script>
-    <script src="js/company-dashboard.js?v=20260907-parcel-v5"></script>
+    <script src="js/city-picker.js?v=20260907-swap-fix-3-dispatch"></script>
+    <script src="js/company-dashboard.js?v=20260907-parcel-v7-onespdate"></script>
 </body>
 </html>
