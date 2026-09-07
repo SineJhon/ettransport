@@ -4574,29 +4574,6 @@ function submitBranchForm() {
         });
     }
 
-    function refreshParcelPickupLocation() {
-        var out = byId('parcel-pickup-location');
-        if (!out) { return; }
-        var fromEl = byId('parcel-from');
-        var from = fromEl ? String(fromEl.value || '').trim() : '';
-        var office = null;
-        for (var i = 0; i < currentBranches.length; i++) {
-            var b = currentBranches[i];
-            if (b.status === 'inactive') { continue; }
-            if (String(b.city || '').toUpperCase() === from.toUpperCase()) { office = b; break; }
-        }
-        if (!office) {
-            for (var j = 0; j < currentBranches.length; j++) {
-                if (currentBranches[j].is_head && currentBranches[j].status !== 'inactive') { office = currentBranches[j]; break; }
-            }
-        }
-        var companyName = byId('company-name');
-        var prefix = (companyName && companyName.textContent) ? companyName.textContent + ' — ' : '';
-        out.value = office
-            ? (prefix + office.name + (office.address ? ' — ' + office.address : ''))
-            : (from ? (prefix + from + ' office') : '');
-    }
-
     function renderParcelTravelPicker() {
         var cell = byId('parcel-travel-date-cell');
         var list = byId('parcel-travel-day-list');
@@ -4691,7 +4668,6 @@ function submitBranchForm() {
             window.ETCityPicker.sync('parcel-from');
             window.ETCityPicker.sync('parcel-to');
         }
-        refreshParcelPickupLocation();
         renderParcelTravelPicker();
 
         form.hidden = false;
@@ -4722,8 +4698,7 @@ function submitBranchForm() {
             to_city: valueOf('parcel-to'),
             weight_kg: valueOf('parcel-weight'),
             status: valueOf('parcel-status') || 'received',
-            notes: valueOf('parcel-notes'),
-            pickup_location: valueOf('parcel-pickup-location')
+            notes: valueOf('parcel-notes')
         };
         if (id) { payload.parcel_id = id; }
         var action = id ? 'parcel_update' : 'parcel_create';
@@ -4862,7 +4837,6 @@ function submitBranchForm() {
         var parcelFromEl = byId('parcel-from');
         var parcelToEl = byId('parcel-to');
         var syncParcelRoute = function () {
-            refreshParcelPickupLocation();
             renderParcelTravelPicker();
         };
         if (parcelFromEl) {

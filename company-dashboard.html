@@ -646,7 +646,6 @@
         .cd-parcel-form .cd-walkin-phone-field { display: flex; align-items: stretch; }
         .cd-parcel-form .cd-walkin-phone-field .phone-prefix { display: inline-flex; align-items: center; padding: 0 .65rem; background: #eef2f7; border: 1px solid #cbd5e1; border-right: none; border-radius: 6px 0 0 6px; font-weight: 700; color: #374151; font-size: .9rem; white-space: nowrap; }
         .cd-parcel-form .cd-walkin-phone-field input { width: auto; flex: 1 1 auto; min-width: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; }
-        #parcel-pickup-location[readonly] { background: #eef4f0; color: #2c5548; font-weight: 600; }
         #parcel-travel-day-list { display: flex; flex-wrap: wrap; gap: .45rem; padding: .35rem 0 .15rem; }
         #parcel-travel-day-list .cd-day-btn { flex: 0 0 3.45rem; min-height: 3.9rem; padding: .4rem; background: #fff; border: 1px solid #edf1ef; border-radius: 13px; cursor: pointer; }
         #parcel-travel-day-list .cd-day-btn:hover { border-color: #c3d9cd; background: #f0f7f3; }
@@ -1338,13 +1337,8 @@
                         <input type="text" id="parcel-to" data-city-picker placeholder="City" autocomplete="off">
                     </div>
                 </div>
-                <div class="cd-parcel-form-row">
+                <div id="parcel-travel-date-cell" class="cd-parcel-form-row" hidden>
                     <div>
-                        <label for="parcel-pickup-location">Pickup location</label>
-                        <input type="text" id="parcel-pickup-location" readonly placeholder="Company office in departure city">
-                        <p class="cd-parcel-form-hint">Pickup is always at the company office in the departure city.</p>
-                    </div>
-                    <div id="parcel-travel-date-cell" hidden>
                         <label>Travel date *</label>
                         <div id="parcel-travel-day-list" class="cd-day-list" role="group" aria-label="Travel date"></div>
                         <p class="cd-parcel-form-hint">Choose the date with a scheduled trip on this route.</p>
@@ -1845,6 +1839,6 @@
     <script src="js/auth.js"></script>
     <script src="js/cities.js"></script>
     <script src="js/city-picker.js"></script>
-    <script src="js/company-dashboard.js?v=20260907-parcel-v4"></script>
+    <script src="js/company-dashboard.js?v=20260907-parcel-v5"></script>
 </body>
 </html>
