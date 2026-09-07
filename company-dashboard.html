@@ -93,6 +93,10 @@
         .cd-route-form label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem; }
         .cd-route-form input { width: 100%; padding: 0.6rem 0.7rem; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 6px; }
         .cd-route-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
+        .cd-route-duration-fields { display: flex; gap: .5rem; }
+        .cd-route-duration-field { display: flex; align-items: center; gap: .35rem; flex: 1; min-width: 0; }
+        .cd-route-duration-field input { flex: 1; min-width: 0; }
+        .cd-route-duration-unit { font-size: .8rem; font-weight: 700; color: #617a70; white-space: nowrap; }
         .cd-route-form-error { min-height: 1.1rem; font-size: 0.82rem; color: #b91c1c; }
         .cd-route-form-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
         @media (max-width: 768px) { .cd-route-list { grid-template-columns: 1fr; } .cd-route-form-row { grid-template-columns: 1fr; } }
@@ -1251,8 +1255,18 @@
                 </div>
                 <div class="cd-route-form-row">
                     <div>
-                        <label for="route-duration">Travel Time (minutes)</label>
-                        <input type="number" id="route-duration" min="1" max="1440" step="1" placeholder="e.g. 540">
+                        <label for="route-duration-hours">Travel Time</label>
+                        <div class="cd-route-duration-fields">
+                            <div class="cd-route-duration-field">
+                                <input type="number" id="route-duration-hours" min="0" max="24" step="1" placeholder="0" inputmode="numeric">
+                                <span class="cd-route-duration-unit">hr</span>
+                            </div>
+                            <div class="cd-route-duration-field">
+                                <input type="number" id="route-duration-minutes" min="0" max="59" step="1" placeholder="0" inputmode="numeric">
+                                <span class="cd-route-duration-unit">min</span>
+                            </div>
+                        </div>
+                        <input type="hidden" id="route-duration">
                     </div>
                 </div>
                 <div class="cd-route-form-row cd-route-stations-row">
@@ -1634,6 +1648,6 @@
     <script src="js/auth.js"></script>
     <script src="js/cities.js"></script>
     <script src="js/city-picker.js"></script>
-    <script src="js/company-dashboard.js?v=20260907-vice-versa-persist"></script>
+    <script src="js/company-dashboard.js?v=20260907-hrmin-viceversa"></script>
 </body>
 </html>

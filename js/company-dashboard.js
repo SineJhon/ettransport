@@ -564,6 +564,35 @@
         return 'Travel time ' + parts.join(' ');
     }
 
+    /* Set the hours + minutes fields (and the hidden total-minutes field)
+       from a stored duration in minutes. Blank/zero clears the fields. */
+    function setRouteDuration(minutes) {
+        var hEl = byId('route-duration-hours');
+        var mEl = byId('route-duration-minutes');
+        var totalEl = byId('route-duration');
+        var val = parseInt(minutes, 10);
+        if (isNaN(val) || val <= 0) {
+            if (hEl) { hEl.value = ''; }
+            if (mEl) { mEl.value = ''; }
+            if (totalEl) { totalEl.value = ''; }
+            return;
+        }
+        if (hEl) { hEl.value = String(Math.floor(val / 60)); }
+        if (mEl) { mEl.value = String(val % 60); }
+        if (totalEl) { totalEl.value = String(val); }
+    }
+
+    /* Read the hours + minutes fields and return total minutes as a string
+       ('' when both are empty/zero — travel time stays optional). */
+    function routeDurationMinutes() {
+        var h = parseInt(byId('route-duration-hours').value, 10);
+        var m = parseInt(byId('route-duration-minutes').value, 10);
+        h = isNaN(h) ? 0 : h;
+        m = isNaN(m) ? 0 : m;
+        if (h <= 0 && m <= 0) { return ''; }
+        return String(h * 60 + m);
+    }
+
     /* Small station summary shown on each dashboard route card. */
     function routeStationsPreview(r) {
         var pickup = Array.isArray(r.pickup_stations) ? r.pickup_stations : [];
@@ -733,6 +762,8 @@
         byId('route-from').value = '';
         byId('route-to').value = '';
         byId('route-duration').value = '';
+        byId('route-duration-hours').value = '';
+        byId('route-duration-minutes').value = '';
         renderStationRows('pickup', ['']);
         renderStationRows('dropoff', ['']);
         var statusBox = byId('route-status');
@@ -802,6 +833,7 @@
         byId('route-from').value = route.from_city || '';
         byId('route-to').value = route.to_city || '';
         byId('route-duration').value = route.duration === null || route.duration === undefined ? '' : route.duration;
+        setRouteDuration(route.duration);
         renderStationRows('pickup', Array.isArray(route.pickup_stations) ? route.pickup_stations : []);
         renderStationRows('dropoff', Array.isArray(route.dropoff_stations) ? route.dropoff_stations : []);
         var statusBox = byId('route-status');
@@ -857,7 +889,8 @@
         }
         var fromCity = byId('route-from').value.trim();
         var toCity = byId('route-to').value.trim();
-        var duration = byId('route-duration').value.trim();
+        var duration = routeDurationMinutes();
+        byId('route-duration').value = duration;
         var status = (byId('route-status') && byId('route-status').checked) ? 'active' : 'inactive';
         var vvBox = byId('route-vice-versa');
         var viceVersa = !id && vvBox && vvBox.checked;
