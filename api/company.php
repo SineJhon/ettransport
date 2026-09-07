@@ -2203,7 +2203,7 @@ function parcel_notes_or_error(mixed $raw): ?string
 
 function valid_parcel_status(string $value): bool
 {
-    return in_array($value, ['received', 'in_transit', 'delivered', 'picked_up'], true);
+    return in_array($value, ['received', 'sent', 'delivered', 'picked_up'], true);
 }
 
 function parcel_status_or_error(mixed $raw): string
@@ -2211,7 +2211,7 @@ function parcel_status_or_error(mixed $raw): string
 {
     $status = trim((string) ($raw ?? 'received'));
     if (!valid_parcel_status($status)) {
-        auth_response(422, ['success' => false, 'message' => 'Invalid parcel status. Use received, in_transit, delivered or picked_up.']);
+        auth_response(422, ['success' => false, 'message' => 'Invalid parcel status. Use received, sent, delivered or picked_up.']);
    }
 
     return $status;

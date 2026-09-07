@@ -428,7 +428,7 @@ CREATE TABLE IF NOT EXISTS parcels (
   to_city VARCHAR(120) NOT NULL,
   weight_kg DECIMAL(8, 2) NOT NULL,
   notes TEXT DEFAULT NULL,
-  status ENUM('received', 'in_transit', 'delivered', 'picked_up') NOT NULL DEFAULT 'received',
+  status ENUM('received', 'sent', 'delivered', 'picked_up') NOT NULL DEFAULT 'received',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),

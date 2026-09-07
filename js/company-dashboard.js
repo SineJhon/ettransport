@@ -4360,11 +4360,12 @@ function submitBranchForm() {
     var parcelRequestId = 0;   // discards responses from superseded parcel requests
     var currentParcels = [];
     var selectedParcelFilter = 'all';
+    var selectedParcelDate = '';
     var parcelSearchTerm = '';
 
     var PARCEL_STATUSES = [
         { value: 'received', label: 'Received' },
-        { value: 'in_transit', label: 'In transit' },
+        { value: 'sent', label: 'Sent' },
         { value: 'delivered', label: 'Delivered' },
         { value: 'picked_up', label: 'Picked up' }
     ];
@@ -4398,6 +4399,7 @@ function submitBranchForm() {
 
         var filtered = currentParcels.filter(function (p) {
             if (selectedParcelFilter !== 'all' && p.status !== selectedParcelFilter) { return false; }
+            if (selectedParcelDate && parcelDateKey(p.created_at) !== selectedParcelDate) { return false; }
             if (parcelSearchTerm) {
                 var hay = [p.reference, p.sender_name, p.recipient_name, p.from_city, p.to_city].join(' ').toLowerCase();
                 if (hay.indexOf(parcelSearchTerm) === -1) { return false; }
@@ -4410,7 +4412,7 @@ function submitBranchForm() {
             list.hidden = true;
             if (empty) {
                 empty.textContent = currentParcels.length
-                    ? 'No parcels match your filters.'
+                    ? (selectedParcelDate ? 'No parcels were registered on the selected date.' : 'No parcels match your filters.')
                     : 'No parcels yet. Register the first parcel to ship with your buses.';
                 empty.hidden = false;
             }
@@ -4419,7 +4421,7 @@ function submitBranchForm() {
         if (empty) { empty.hidden = true; }
 
         var html = filtered.map(function (p) {
-            var statusClass = (p.status === 'in_transit' || p.status === 'delivered' || p.status === 'picked_up') ? p.status : 'received';
+            var statusClass = (p.status === 'sent' || p.status === 'delivered' || p.status === 'picked_up') ? p.status : 'received';
             var options = PARCEL_STATUSES.map(function (s) {
                 return '<option value="' + s.value + '"' + (s.value === p.status ? ' selected' : '') + '>' + s.label + '</option>';
             }).join('');
@@ -4455,7 +4457,53 @@ function submitBranchForm() {
         list.hidden = false;
     }
 
+    function parcelDateISO(date) {
+        return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+    }
+
+    /* created_at arrives as 'YYYY-MM-DD HH:MM:SS' or an ISO timestamp; this
+       returns just the YYYY-MM-DD day key so the day filter can compare it. */
+    function parcelDateKey(value) {
+        var m = String(value == null ? '' : value).match(/^(\d{4}-\d{2}-\d{2})/);
+        return m ? m[1] : '';
+    }
+
+    function updateParcelDateLabel() {
+        var label = byId('parcel-date-label');
+        if (!label) { return; }
+        label.textContent = selectedParcelDate
+            ? new Date(selectedParcelDate + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+            : 'All registered dates';
+    }
+
+    /* Day strip mirrored from the trips section: today + the previous 13 days,
+       because parcels are historical records (created_at), not future departures. */
+    function renderParcelDayPicker() {
+        var list = byId('parcel-day-list');
+        if (!list) { return; }
+        var today = new Date();
+        today.setHours(0, 0, 0, 0);
+        var html = '';
+        for (var i = 13; i >= 0; i--) {
+            var day = new Date(today);
+            day.setDate(today.getDate() - i);
+            var iso = parcelDateISO(day);
+            html += '<button type="button" class="cd-day-button" data-parcel-date="' + iso + '" aria-pressed="' + String(iso === selectedParcelDate) + '"><span>' + day.toLocaleDateString(undefined, { weekday: 'short' }).toUpperCase() + '</span><b>' + day.getDate() + '</b></button>';
+        }
+        list.innerHTML = html;
+        var buttons = list.querySelectorAll('[data-parcel-date]');
+        for (var j = 0; j < buttons.length; j++) {
+            buttons[j].addEventListener('click', function () {
+                var date = this.getAttribute('data-parcel-date');
+                selectedParcelDate = selectedParcelDate === date ? '' : date;
+                renderParcelDayPicker();
+                applyParcelFilters();
+            });
+        }
+    }
+
     function applyParcelFilters() {
+        updateParcelDateLabel();
         renderParcels();
     }
 
@@ -4497,6 +4545,7 @@ function submitBranchForm() {
                     return;
                 }
                 currentParcels = Array.isArray(data.parcels) ? data.parcels : [];
+                renderParcelDayPicker();
                 renderParcels();
             })
             .catch(function () {
@@ -4673,6 +4722,7 @@ function submitBranchForm() {
 
     function initParcel() {
         loadParcels();
+        renderParcelDayPicker();
 
         var addBtn = byId('btn-add-parcel');
         if (addBtn) { addBtn.addEventListener('click', function () { openParcelForm(null); }); }
@@ -4692,6 +4742,7 @@ function submitBranchForm() {
         if (clearBtn) {
             clearBtn.addEventListener('click', function () {
                 selectedParcelFilter = 'all';
+                selectedParcelDate = '';
                 parcelSearchTerm = '';
                 if (search) { search.value = ''; }
                 var buttons = document.querySelectorAll('.cd-parcel-filter[data-parcel-status]');
@@ -4700,6 +4751,7 @@ function submitBranchForm() {
                     buttons[b].classList.toggle('is-active', active);
                     buttons[b].setAttribute('aria-pressed', active ? 'true' : 'false');
                 }
+                renderParcelDayPicker();
                 applyParcelFilters();
             });
         }

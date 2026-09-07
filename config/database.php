@@ -194,7 +194,7 @@ function ensure_schema_columns(PDO $pdo): void
                 to_city VARCHAR(120) NOT NULL,
                 weight_kg DECIMAL(8, 2) NOT NULL,
                 notes TEXT DEFAULT NULL,
-                status ENUM('received', 'in_transit', 'delivered', 'picked_up') NOT NULL DEFAULT 'received',
+                status ENUM('received', 'sent', 'delivered', 'picked_up') NOT NULL DEFAULT 'received',
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 PRIMARY KEY (id),
@@ -208,6 +208,24 @@ function ensure_schema_columns(PDO $pdo): void
                     ON UPDATE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
         );
+
+        /* Parcel lifecycle: the "in transit" status was renamed to "sent".
+           Migrate any rows created with the previous ENUM (and existing
+           databases whose parcels.status column still holds that ENUM), then
+           widen the column so future writes match the new catalog. */
+        $stmt = $pdo->prepare(
+            "SELECT COUNT(*)
+               FROM information_schema.columns
+              WHERE table_schema = DATABASE()
+                AND table_name = 'parcels'
+                AND column_name = 'status'
+                AND column_type = \"enum('received','in_transit','delivered','picked_up')\""
+        );
+        $stmt->execute();
+        if ((int) $stmt->fetchColumn() > 0) {
+            $pdo->exec("UPDATE parcels SET status = 'sent' WHERE status = 'in_transit'");
+            $pdo->exec("ALTER TABLE parcels MODIFY status ENUM('received', 'sent', 'delivered', 'picked_up') NOT NULL DEFAULT 'received'");
+        }
 
         /* bookings.booking_source — 'online' vs 'office' sales channel used by
            the admin revenue breakdown. Fresh installs already get the column

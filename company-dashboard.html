@@ -601,6 +601,7 @@
         .cd-parcel-filter:hover { color: #245944; background: #e7f4ec; }
         .cd-parcel-filter.is-active { color: #fff; background: #187653; border-color: #187653; box-shadow: 0 4px 10px rgba(24,118,83,.17); }
         .cd-parcel-filters { display: flex; align-items: flex-end; justify-content: space-between; gap: .65rem; flex-wrap: wrap; padding: .85rem; margin: 1rem 0 1.15rem; background: #f2f7f4; border: 1px solid #dce9e1; border-radius: 12px; }
+        .cd-parcel-filters .cd-day-picker { flex: 1 1 100%; min-width: 0; }
         .cd-parcel-search-row { display: flex; flex-direction: column; gap: .3rem; min-width: min(100%, 22rem); flex: 1 1 22rem; }
         .cd-parcel-search-row label { font-size: .7rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: #547067; }
         .cd-parcel-search-row input { width: 100%; min-height: 2.5rem; margin: 0; padding: .5rem .65rem; background: #fff; border: 1px solid #ccdcd3; border-radius: 8px; font: 700 .86rem 'DM Sans', sans-serif; }
@@ -611,7 +612,7 @@
         .cd-parcel-card { position: relative; display: flex; flex-direction: column; gap: .8rem; padding: 1.1rem 1.15rem 1rem; overflow: hidden; background: #fff; border: 1px solid #e1eae5; border-radius: 14px; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
         .cd-parcel-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: #d97706; }
         .cd-parcel-card.is-received::before { background: #2563eb; }
-        .cd-parcel-card.is-in_transit::before { background: #d97706; }
+        .cd-parcel-card.is-sent::before { background: #d97706; }
         .cd-parcel-card.is-delivered::before { background: #16a34a; }
         .cd-parcel-card.is-picked_up::before { background: #6b7280; }
     .cd-parcel-card:hover { transform: translateY(-2px); box-shadow: 0 9px 20px rgba(19,63,51,.09); border-color: #cbded5; }
@@ -619,7 +620,7 @@
         .cd-parcel-ref { color: #153a31; font-size: .8rem; font-weight: 800; letter-spacing: .02em; }
         .cd-parcel-badge { padding: .22rem .58rem; border-radius: 20px; color: #fff; background: #6b7280; font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; }
         .cd-parcel-badge.received { background: #2563eb; }
-        .cd-parcel-badge.in_transit { background: #d97706; }
+        .cd-parcel-badge.sent { background: #d97706; }
         .cd-parcel-badge.delivered { background: #16a34a; }
         .cd-parcel-badge.picked_up { background: #6b7280; }
         .cd-parcel-route { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; min-width: 0; }
@@ -1264,12 +1265,16 @@
             <div class="cd-parcel-toolbar" role="group" aria-label="Filter parcels by status">
                 <button type="button" class="cd-parcel-filter is-active" data-parcel-status="all" aria-pressed="true">All parcels</button>
                 <button type="button" class="cd-parcel-filter" data-parcel-status="received" aria-pressed="false">Received</button>
-                <button type="button" class="cd-parcel-filter" data-parcel-status="in_transit" aria-pressed="false">In transit</button>
+                <button type="button" class="cd-parcel-filter" data-parcel-status="sent" aria-pressed="false">Sent</button>
                 <button type="button" class="cd-parcel-filter" data-parcel-status="delivered" aria-pressed="false">Delivered</button>
                 <button type="button" class="cd-parcel-filter" data-parcel-status="picked_up" aria-pressed="false">Picked up</button>
             </div>
 
             <div class="cd-parcel-filters">
+                <div class="cd-day-picker">
+                    <div class="cd-date-head"><strong>Registered date</strong><p id="parcel-date-label" class="cd-selected-date">All registered dates</p></div>
+                    <div id="parcel-day-list" class="cd-day-list" role="group" aria-label="Parcel registered date"></div>
+                </div>
                 <div class="cd-parcel-search-row">
                     <label for="parcel-search">Search parcels</label>
                     <input type="search" id="parcel-search" placeholder="Search by reference, sender, recipient or city&hellip;" autocomplete="off">
@@ -1325,7 +1330,7 @@
                         <label for="parcel-status">Status</label>
                         <select id="parcel-status">
                             <option value="received">Received</option>
-                            <option value="in_transit">In transit</option>
+                            <option value="sent">Sent</option>
                             <option value="delivered">Delivered</option>
                             <option value="picked_up">Picked up</option>
                         </select>
@@ -1804,6 +1809,6 @@
     <script src="js/auth.js"></script>
     <script src="js/cities.js"></script>
     <script src="js/city-picker.js"></script>
-    <script src="js/company-dashboard.js?v=20260907-parcel-v2"></script>
+    <script src="js/company-dashboard.js?v=20260907-parcel-v3"></script>
 </body>
 </html>
