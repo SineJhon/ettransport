@@ -4371,31 +4371,25 @@ function submitBranchForm() {
     ];
 
     /* Mirrors the backend pricing (api/company.php PARCEL_TYPES). Price is
-   billable 0.5 kg units × per-type rate, plus 10% of the chosen trip's fare,
-   floored at ETB 100, but never more than half the trip fare. Min billable
-   unit is 0.5 kg. */
+   weight in kg × per-type rate, plus 25% of the chosen trip's fare,
+   floored at ETB 100, but never more than 75% of the trip fare. Anything
+   under 0.5 kg still bills as 0.5 kg. */
     var PARCEL_MIN_CHARGE_KG = 0.5;
     var PARCEL_MIN_PRICE = 100;
-    var PARCEL_TRIP_FARE_PERCENT = 0.10;
-    /* A parcel can never cost more than half the trip fare. */
-    var PARCEL_MAX_TRIP_FARE_RATIO = 0.5;
+    var PARCEL_TRIP_FARE_PERCENT = 0.25;
+    /* A parcel can never cost more than 75% of the trip fare. */
+    var PARCEL_MAX_TRIP_FARE_RATIO = 0.75;
     var PARCEL_TYPES_CONFIG = {
-        document:   { label: 'Document',   rate: 2 },
-        standard:   { label: 'Standard',   rate: 4 },
-        electronic: { label: 'Electronics', rate: 6 },
-        fragile:    { label: 'Fragile',    rate: 8 },
-        perishable: { label: 'Perishable', rate: 7 }
+        document:   { label: 'Document',   rate: 30 },
+        standard:   { label: 'Standard',   rate: 35 },
+        electronic: { label: 'Electronics', rate: 40 },
+        fragile:    { label: 'Fragile',    rate: 50 },
+        perishable: { label: 'Perishable', rate: 45 }
     };
 
     function parcelTypeLabel(value) {
         var t = PARCEL_TYPES_CONFIG[value];
         return t ? t.label : 'Standard';
-    }
-
-    function parcelChargeUnits(weightKg) {
-        var w = Number(weightKg);
-        if (!(w > 0)) { return 0; }
-        return Math.max(1, Math.ceil(w / PARCEL_MIN_CHARGE_KG));
     }
 
     /* Find the currently selected trip (if any) in the fetched route trips. */
@@ -4411,12 +4405,12 @@ function submitBranchForm() {
 
     function parcelPrice(weightKg, type, tripFare) {
         var rate = (PARCEL_TYPES_CONFIG[type] || PARCEL_TYPES_CONFIG.standard).rate;
-        var weightCost = parcelChargeUnits(weightKg) * rate;
+        var weightCost = Math.max(Number(weightKg), PARCEL_MIN_CHARGE_KG) * rate;
         var tripFareNum = Number(tripFare);
         var tripCost = (tripFareNum > 0) ? tripFareNum * PARCEL_TRIP_FARE_PERCENT : 0;
         var computed = weightCost + tripCost;
         if (tripFareNum > 0) {
-            /* Hard cap: never more than half the trip fare. */
+            /* Hard cap: never more than 75% of the trip fare. */
             return Math.min(computed, tripFareNum * PARCEL_MAX_TRIP_FARE_RATIO);
         }
         return Math.max(PARCEL_MIN_PRICE, computed);
@@ -4437,22 +4431,21 @@ function submitBranchForm() {
             if (breakdown) { breakdown.textContent = ''; }
             return;
         }
-        var units = parcelChargeUnits(weight);
+        var billed = Math.max(weight, PARCEL_MIN_CHARGE_KG);
         var rate = (PARCEL_TYPES_CONFIG[type] || PARCEL_TYPES_CONFIG.standard).rate;
-        var billed = units * PARCEL_MIN_CHARGE_KG;
-        var weightCost = units * rate;
+        var weightCost = billed * rate;
         var tripCost = (tripFare > 0) ? tripFare * PARCEL_TRIP_FARE_PERCENT : 0;
         var computed = weightCost + tripCost;
         var cap = (tripFare > 0) ? tripFare * PARCEL_MAX_TRIP_FARE_RATIO : 0;
         var price = parcelPrice(weight, type, tripFare);
         preview.textContent = 'ETB ' + formatMoney(price);
         if (breakdown) {
-            var parts = [billed + ' kg billed · ' + units + ' × ETB ' + rate + ' = ETB ' + formatMoney(weightCost)];
+            var parts = [billed + ' kg × ETB ' + rate + ' = ETB ' + formatMoney(weightCost)];
             if (tripFare > 0) {
-                parts.push('trip 10% = ETB ' + formatMoney(tripCost) + ' · max 50% fare = ETB ' + formatMoney(cap));
+                parts.push('trip 25% = ETB ' + formatMoney(tripCost) + ' · max 75% fare = ETB ' + formatMoney(cap));
             }
             if (tripFare > 0 && price < computed) {
-                parts.push('capped at 50% of trip fare');
+                parts.push('capped at 75% of trip fare');
             } else if (price === PARCEL_MIN_PRICE && price > computed) {
                 parts.push('min ETB ' + PARCEL_MIN_PRICE);
             }
@@ -4827,7 +4820,6 @@ function submitBranchForm() {
         byId('parcel-weight').value = parcel ? parcel.weight_kg : '';
         byId('parcel-type').value = parcel && parcel.parcel_type ? parcel.parcel_type : 'standard';
         updateParcelPricePreview();
-        byId('parcel-status').value = parcel ? parcel.status : 'received';
         byId('parcel-notes').value = parcel ? (parcel.notes || '') : '';
 
         if (window.ETCityPicker) {
@@ -4864,7 +4856,6 @@ function submitBranchForm() {
             to_city: valueOf('parcel-to'),
             weight_kg: valueOf('parcel-weight'),
             parcel_type: valueOf('parcel-type') || 'standard',
-            status: valueOf('parcel-status') || 'received',
             notes: valueOf('parcel-notes')
         };
         if (id) { payload.parcel_id = id; }

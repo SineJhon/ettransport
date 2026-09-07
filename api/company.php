@@ -90,21 +90,21 @@ if ($requestMethod !== 'GET' && $requestMethod !== 'POST') {
 const COMPANY_TRIP_WINDOW_DAYS = 14;
 
 /* Parcel pricing — based on weight (kg), parcel type, and the chosen trip's
-   fare. Price = billable 0.5 kg units × per-type rate, plus 10% of the trip
-   fare, floored at ETB 100, but NEVER more than half the trip fare. Anything
-   below 0.5 kg bills as one 0.5 kg unit. Fragile costs more (needs care),
+   fare. Price = weight in kg × per-type rate, plus 25% of the trip fare,
+   floored at ETB 100, but NEVER more than 75% of the trip fare. Anything
+   below 0.5 kg still bills as 0.5 kg. Fragile costs more (needs care),
    documents cost less; longer/more expensive routes cost more to ship. */
 const PARCEL_MIN_CHARGE_KG = 0.5;
 const PARCEL_MIN_PRICE = 100.0;
-const PARCEL_TRIP_FARE_PERCENT = 0.10;
-/* The parcel price can NEVER exceed this share of the trip fare (half). */
-const PARCEL_MAX_TRIP_FARE_RATIO = 0.5;
+const PARCEL_TRIP_FARE_PERCENT = 0.25;
+/* The parcel price can NEVER exceed this share of the trip fare (75%). */
+const PARCEL_MAX_TRIP_FARE_RATIO = 0.75;
 const PARCEL_TYPES = [
-    'document'   => ['label' => 'Document',   'rate' => 2.0],
-    'standard'   => ['label' => 'Standard (general item)', 'rate' => 4.0],
-    'electronic' => ['label' => 'Electronics', 'rate' => 6.0],
-    'fragile'    => ['label' => 'Fragile (needs care)', 'rate' => 8.0],
-    'perishable' => ['label' => 'Perishable',  'rate' => 7.0],
+    'document'   => ['label' => 'Document',   'rate' => 30.0],
+    'standard'   => ['label' => 'Standard (general item)', 'rate' => 35.0],
+    'electronic' => ['label' => 'Electronics', 'rate' => 40.0],
+    'fragile'    => ['label' => 'Fragile (needs care)', 'rate' => 50.0],
+    'perishable' => ['label' => 'Perishable',  'rate' => 45.0],
 ];
 
 /** Read the request payload: JSON body when sent as JSON, otherwise form POST fields. */
@@ -2243,16 +2243,11 @@ function parcel_type_or_error(mixed $raw): string
     return $type;
 }
 
-/* Billable weight in 0.5 kg units — anything under 0.5 kg still charges one unit. */
-function parcel_charge_units(float $weightKg): int
-{
-    return max(1, (int) ceil($weightKg / PARCEL_MIN_CHARGE_KG));
-}
-
 function parcel_price(float $weightKg, string $parcelType, ?float $tripFare): float
 {
     $rate = PARCEL_TYPES[$parcelType]['rate'] ?? PARCEL_TYPES['standard']['rate'];
-    $weightCost = (float) round(parcel_charge_units($weightKg) * $rate, 2);
+    $billedKg = max($weightKg, PARCEL_MIN_CHARGE_KG);
+    $weightCost = (float) round($billedKg * $rate, 2);
     $tripContribution = ($tripFare !== null && $tripFare > 0) ? round($tripFare * PARCEL_TRIP_FARE_PERCENT, 2) : 0.0;
     $computed = (float) round($weightCost + $tripContribution, 2);
 
