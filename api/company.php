@@ -55,6 +55,14 @@ declare(strict_types=1);
  *   POST api/company.php?action=route_delete         -> { success, message }
  *                                                     (authenticated company role only; rejected when
  *                                                      trips still reference the route)
+ *   GET  api/company.php?action=parcels            -> { success, company_id, parcels }
+ *                                                     (authenticated company role only; this company's own parcels)
+ *   POST api/company.php?action=parcel_create     -> { success, message, parcel }
+ *                                                     (authenticated company role only)
+ *   POST api/company.php?action=parcel_update     -> { success, message, parcel }
+ *                                                     (authenticated company role only; partial edit / status change)
+ *   POST api/company.php?action=parcel_delete     -> { success, message }
+ *                                                     (authenticated company role only)
  *
  * Only approved companies are exposed publicly through list/get. Ratings and
  * review counts are computed from the reviews table. Destinations / fleet /
@@ -2082,6 +2090,165 @@ function route_exists_between(PDO $pdo, int $companyId, string $fromCity, string
     $stmt->execute($params);
 
     return $stmt->fetch() !== false;
+}
+
+/* ===== Parcel / freight management ===== */
+function parcel_payload(array $row): array
+{
+    return [
+        'id' => (int) $row['id'],
+        'company_id' => isset($row['company_id']) && $row['company_id'] !== null ? (int) $row['company_id'] : null,
+        'reference' => $row['reference'],
+        'sender_name' => $row['sender_name'],
+        'sender_phone' => $row['sender_phone'],
+        'recipient_name' => $row['recipient_name'],
+        'recipient_phone' => $row['recipient_phone'],
+        'from_city' => $row['from_city'],
+        'to_city' => $row['to_city'],
+        'weight_kg' => (float) $row['weight_kg'],
+        'notes' => $row['notes'] ?? null,
+        'status' => $row['status'],
+        'created_at' => $row['created_at'],
+        'updated_at' => $row['updated_at'],
+    ];
+}
+
+function fetch_managed_parcels(PDO $pdo, int $companyId): array
+{
+    $stmt = $pdo->prepare('
+        SELECT id, company_id, reference, sender_name, sender_phone, recipient_name, recipient_phone,
+               from_city, to_city, weight_kg, notes, status, created_at, updated_at
+        FROM parcels
+        WHERE company_id = :company_id
+        ORDER BY created_at DESC, id DESC
+    ');
+    $stmt->execute([':company_id' => $companyId]);
+
+    $out = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $out[] = parcel_payload($row);
+    }
+
+    return $out;
+}
+
+function fetch_managed_parcel_row(PDO $pdo, int $parcelId, int $companyId): ?array
+{
+    $stmt = $pdo->prepare('
+        SELECT id, company_id, reference, sender_name, sender_phone, recipient_name, recipient_phone,
+               from_city,to_city, weight_kg, notes, status, created_at, updated_at
+        FROM parcels
+        WHERE id = :id AND company_id = :company_id
+        LIMIT 1
+    ');
+    $stmt->execute([':id' => $parcelId, ':company_id' => $companyId]);
+    $row = $stmt->fetch();
+
+    return $row !== false ? parcel_payload($row) : null;
+}
+
+function parcel_person_name_or_error(mixed $raw, string $label): string
+{
+    $name = trim((string) $raw);
+    if ($name === '') {
+        auth_response(422, ['success' => false, 'message' => $label . ' is required.']);
+    }
+    if (mb_strlen($name) > 120) {
+        auth_response(422, ['success' => false, 'message' => $label . ' must be at most 120 characters.']);
+    }
+
+    return $name;
+}
+
+function parcel_phone_or_error(mixed $raw, string $label): string
+{
+    $phone = trim((string) $raw);
+    if ($phone === '') {
+        auth_response(422, ['success' => false, 'message' => $label . ' is required.']);
+    }
+    if (mb_strlen($phone) > 30) {
+        auth_response(422, ['success' => false, 'message' => $label . ' must be at most 30 characters.']);
+    }
+
+    return $phone;
+}
+
+function parcel_weight_or_error(mixed $raw): float
+{
+    $value = trim((string) $raw);
+    if (preg_match('/^\d{1,3}(\.\d{1,2})?$/', $value) !== 1) {
+        auth_response(422, ['success' => false, 'message' => 'Parcel weight must be a number in kilograms (e.g. 5 or 2.5).']);
+    }
+
+    $weight = (float) $value;
+    if ($weight < 0.1 || $weight > 999.9) {
+        auth_response(422, ['success' => false, 'message' => 'Parcel weight must be between 0.1 and 999.9 kg.']);
+   }
+
+    return round($weight, 2);
+}
+
+function parcel_notes_or_error(mixed $raw): ?string
+{
+    if ($raw === null || $raw === '') {
+        return null;
+    }
+    $notes = trim((string) $raw);
+    if (mb_strlen($notes) > 500) {
+        auth_response(422, ['success' => false, 'message' => 'Parcel notes must be at most 500 characters.']);
+    }
+
+    return $notes === '' ? null : $notes;
+}
+
+function valid_parcel_status(string $value): bool
+{
+    return in_array($value, ['received', 'in_transit', 'delivered', 'picked_up'], true);
+}
+
+function parcel_status_or_error(mixed $raw): string
+
+{
+    $status = trim((string) ($raw ?? 'received'));
+    if (!valid_parcel_status($status)) {
+        auth_response(422, ['success' => false, 'message' => 'Invalid parcel status. Use received, in_transit, delivered or picked_up.']);
+   }
+
+    return $status;
+}
+
+function existing_parcel_or_error(PDO $pdo, mixed $raw, int $companyId): int
+{
+    $parcelId = positive_int_or_error($raw, 'A valid parcel id is required.');
+    $stmt = $pdo->prepare('SELECT id FROM parcels WHERE id = :id AND company_id = :company_id LIMIT 1');
+    $stmt->execute([':id' => $parcelId, ':company_id' => $companyId]);
+
+    if ($stmt->fetch() === false) {
+        auth_response(404, ['success' => false, 'message' => 'Parcel not found.']);
+   }
+
+    return $parcelId;
+}
+
+function generate_parcel_reference(PDO $pdo): string
+{
+    $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    $max = strlen($chars) - 1;
+    $check = $pdo->prepare('SELECT id FROM parcels WHERE reference = :ref LIMIT 1');
+
+    for ($attempt = 0; $attempt < 25; $attempt++) {
+        $rand = '';
+        for ($i = 0; $i < 6; $i++) {
+            $rand .= $chars[random_int(0, $max)];
+        }
+        $ref = 'PCL-' . date('Ymd') . '-' . $rand;
+        $check->execute([':ref' => $ref]);
+        if (!$check->fetch()) {
+            return $ref;
+        }
+    }
+
+    auth_response(500, ['success' => false, 'message' => 'Unable to allocate a parcel reference. Please retry.']);
 }
 
 /** GET /api/company.php?action=routes — this company's own route book. */
@@ -4206,7 +4373,178 @@ function handle_branch_delete(PDO $pdo): void
     ]);
 }
 
-try {
+/* ===== Parcel handlers ===== */
+
+/** GET /api/company.php?action=parcels — this company's own parcels. */
+function handle_parcels(PDO $pdo): void
+{
+    $user = requireRole('company');
+    $company = require_company_scope($pdo, (int) $user['id']);
+    $companyId = (int) $company['id'];
+
+    auth_response(200, [
+        'success' => true,
+        'company_id' => $companyId,
+        'parcels' => fetch_managed_parcels($pdo, $companyId),
+    ]);
+}
+
+/** POST /api/company.php?action=parcel_create — register a new parcel. */
+function handle_parcel_create(PDO $pdo): void
+{
+    require_company_post();
+    $user = requireRole('company');
+    $company = require_company_scope($pdo, (int) $user['id']);
+    $companyId = (int) $company['id'];
+
+    $input = company_input();
+
+    $senderName = parcel_person_name_or_error($input['sender_name'] ?? '', 'Sender name');
+    $senderPhone = parcel_phone_or_error($input['sender_phone'] ?? '', 'Sender phone');
+    $recipientName = parcel_person_name_or_error($input['recipient_name'] ?? '', 'Recipient name');
+    $recipientPhone = parcel_phone_or_error($input['recipient_phone'] ?? '', 'Recipient phone');
+    $fromCity = route_city_or_error($input['from_city'] ?? '', 'Departure city');
+    $toCity = route_city_or_error($input['to_city'] ?? '', 'Destination city');
+    $weightKg = parcel_weight_or_error($input['weight_kg'] ?? null);
+    $status = parcel_status_or_error($input['status'] ?? 'received');
+    $notes = parcel_notes_or_error($input['notes'] ?? null);
+
+    if (mb_strtolower($fromCity) === mb_strtolower($toCity)) {
+
+        auth_response(422, ['success' => false, 'message' => 'Departure and destination cities must be different.']);
+    }
+
+    $reference = generate_parcel_reference($pdo);
+
+    try {
+        $ins = $pdo->prepare('
+            INSERT INTO parcels
+                (company_id, reference, sender_name, sender_phone, recipient_name, recipient_phone,
+                 from_city, to_city, weight_kg, notes, status)
+            VALUES
+                (:company_id, :reference, :sender_name, :sender_phone, :recipient_name, :recipient_phone,
+                 :from_city, :to_city, :weight_kg, :notes, :status)
+        ');
+        $ins->execute([
+            ':company_id' => $companyId,
+            ':reference' => $reference,
+            ':sender_name' => $senderName,
+            ':sender_phone' => $senderPhone,
+            ':recipient_name' => $recipientName,
+            ':recipient_phone' => $recipientPhone,
+            ':from_city' => $fromCity,
+            ':to_city' => $toCity,
+            ':weight_kg' => $weightKg,
+            ':notes' => $notes,
+            ':status' => $status,
+        ]);
+        $newId = (int) $pdo->lastInsertId();
+    } catch (PDOException $e) {
+        if ((int) $e->getCode() === 23000) {
+            auth_response(409, ['success' => false, 'message' => 'A duplicate parcel reference was generated. Please retry.']);
+        }
+        throw $e;
+    }
+
+    auth_response(201, [
+        'success' => true,
+        'message' => 'Parcel registered.',
+        'parcel' => fetch_managed_parcel_row($pdo, $newId, $companyId),
+    ]);
+}
+
+/** POST /api/company.php?action=parcel_update — edit details and/or change the status.
+    Only fields actually submitted are updated (partial write, like the route update action. */
+function handle_parcel_update(PDO $pdo): void
+{
+    require_company_post();
+    $user = requireRole('company');
+    $company = require_company_scope($pdo, (int) $user['id']);
+    $companyId = (int) $company['id'];
+
+    $input = company_input();
+    $parcelId = existing_parcel_or_error($pdo, $input['parcel_id'] ?? null, $companyId);
+
+    $hasSender = has_key($input, 'sender_name') && trim((string) ($input['sender_name'] ?? '')) !== '';
+    $hasSenderPhone = has_key($input, 'sender_phone') && trim((string) ($input['sender_phone'] ?? '')) !== '';
+    $hasRecipient = has_key($input, 'recipient_name') && trim((string) ($input['recipient_name'] ?? '')) !== '';
+    $hasRecipientPhone = has_key($input, 'recipient_phone') && trim((string) ($input['recipient_phone'] ?? '')) !== '';
+    $hasFrom = has_key($input, 'from_city') && trim((string) ($input['from_city'] ?? '')) !== '';
+    $hasTo = has_key($input, 'to_city') && trim((string) ($input['to_city'] ?? '')) !== '';
+    $hasWeight = has_key($input, 'weight_kg');
+    $hasStatus = has_key($input, 'status') && trim((string) ($input['status'] ?? '')) !== '';
+    $hasNotes = has_key($input, 'notes');
+
+    if (!$hasSender && !$hasSenderPhone && !$hasRecipient && !$hasRecipientPhone && !$hasFrom && !$hasTo && !$hasWeight && !$hasStatus && !$hasNotes) {
+        auth_response(422, ['success' => false, 'message' => 'At least one field to update is required.']);
+   }
+
+    $senderName = $hasSender ? parcel_person_name_or_error($input['sender_name'], 'Sender name') : null;
+    $senderPhone = $hasSenderPhone ? parcel_phone_or_error($input['sender_phone'], 'Sender phone') : null;
+    $recipientName = $hasRecipient ? parcel_person_name_or_error($input['recipient_name'], 'Recipient name') : null;
+    $recipientPhone = $hasRecipientPhone ? parcel_phone_or_error($input['recipient_phone'], 'Recipient phone') : null;
+    $fromCity = $hasFrom ? route_city_or_error($input['from_city'], 'Departure city') : null;
+    $toCity = $hasTo ? route_city_or_error($input['to_city'], 'Destination city') : null;
+    $weightKg = $hasWeight ? parcel_weight_or_error($input['weight_kg']) : null;
+    $status = $hasStatus ? parcel_status_or_error($input['status']) : null;
+    $notes = $hasNotes ? parcel_notes_or_error($input['notes']) : null;
+    if ($hasFrom && $hasTo && mb_strtolower($fromCity) === mb_strtolower($toCity)) {
+
+        auth_response(422, ['success' => false, 'message' => 'Departure and destination cities must be different.']);
+    }
+    $sets = [];
+    $params = [':parcel_id' => $parcelId, ':company_id' => $companyId];
+    if ($hasSender) {
+        $sets[] = 'sender_name = :sender_name';
+        $params[':sender_name'] = $senderName; }
+    if ($hasSenderPhone) {
+        $sets[] = 'sender_phone = :sender_phone';
+        $params[':sender_phone'] = $senderPhone; }
+    if ($hasRecipient) {
+        $sets[] = 'recipient_name = :recipient_name';
+        $params[':recipient_name'] = $recipientName; }
+    if ($hasRecipientPhone) {
+        $sets[] = 'recipient_phone = :recipient_phone';
+        $params[':recipient_phone'] = $recipientPhone; }
+    if ($hasFrom) {
+        $sets[] = 'from_city = :from_city';
+        $params[':from_city'] = $fromCity; }
+    if ($hasTo) {
+        $sets[] = 'to_city = :to_city';
+        $params[':to_city'] = $toCity; }
+    if ($hasWeight) {
+        $sets[] = 'weight_kg = :weight_kg';
+        $params[':weight_kg'] = $weightKg; }
+    if ($hasStatus) {
+        $sets[] = 'status = :status';
+        $params[':status'] = $status; }
+    if ($hasNotes) {
+        $sets[] = 'notes = :notes';
+        $params[':notes'] = $notes; }
+    $sql = 'UPDATE parcels SET ' . implode(', ', $sets) . ' WHERE id = :parcel_id AND company_id = :company_id';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    auth_response(200, [
+        'success' => true,
+        'message' => 'Parcel updated.',
+        'parcel' => fetch_managed_parcel_row($pdo, $parcelId, $companyId),
+    ]);
+}
+/** POST /api/company.php?action=parcel_delete — permanently remove one of this company's own parcels. */
+function handle_parcel_delete(PDO $pdo): void
+{
+    require_company_post();
+    $user = requireRole('company');
+    $company = require_company_scope($pdo, (int) $user['id']);
+    $companyId = (int) $company['id'];
+    $input = company_input();
+    $parcelId = existing_parcel_or_error($pdo, $input['parcel_id'] ?? null, $companyId);
+    $del = $pdo->prepare('DELETE FROM parcels WHERE id = :id AND company_id = :company_id');
+    $del->execute([':id' => $parcelId, ':company_id' => $companyId]);
+    auth_response(200, ['success' => true, 'message' => 'Parcel deleted.']);
+}
+
+    try {
     $pdo = db();
     $action = company_action();
 
@@ -4362,10 +4700,22 @@ try {
     if ($action === 'route_delete') {
         handle_route_delete($pdo);
     }
+    if ($action === 'parcels') {
+        handle_parcels($pdo);
+    }
+    if ($action === 'parcel_create') {
+        handle_parcel_create($pdo);
+    }
+    if ($action === 'parcel_update') {
+        handle_parcel_update($pdo);
+    }
+    if ($action === 'parcel_delete') {
+        handle_parcel_delete($pdo);
+    }
 
     auth_response(400, [
         'success' => false,
-        'message' => 'Unsupported action. Use action=list, action=get, action=overview, action=buses, action=bus_create, action=bus_update, action=trips, action=trip_create, action=trip_update, action=trip_status, action=trip_delete, action=bookings, action=booking_create, action=booking_cancel, action=manifest, action=revenue, action=revenue_breakdown, action=payments, action=profile, action=profile_update, action=branches, action=branch_create, action=branch_update, action=branch_delete, action=routes, action=route_create, action=route_update or action=route_delete.',
+        'message' => 'Unsupported action. Use action=list, action=get, action=overview, action=buses, action=bus_create, action=bus_update, action=trips, action=trip_create, action=trip_update, action=trip_status, action=trip_delete, action=bookings, action=booking_create, action=booking_cancel, action=manifest, action=revenue, action=revenue_breakdown, action=payments, action=profile, action=profile_update, action=branches, action=branch_create, action=branch_update, action=branch_delete, action=parcels, action=parcel_create, action=parcel_update, action=parcel_delete, action=routes, action=route_create, action=route_update or action=route_delete.',
     ]);
 } catch (Throwable $e) {
     auth_response(500, [

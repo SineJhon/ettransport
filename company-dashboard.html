@@ -530,8 +530,8 @@
         .cd-pane .cd-bus-card:hover, .cd-pane .cd-trip-card:hover, .cd-pane .cd-booking-card:hover, .cd-pane .cd-payment-card:hover, .cd-pane .cd-route-card:hover { transform: translateY(-2px); box-shadow: 0 9px 20px rgba(19,63,51,.08); }
         .cd-pane .btn-primary { background: #177550; border-color: #177550; }.cd-pane .btn-primary:hover { background: #105c3e; border-color: #105c3e; }
         .cd-pane input, .cd-pane select, .cd-pane textarea { border-color: #ccdcd3; border-radius: 8px; }.cd-pane input:focus, .cd-pane select:focus, .cd-pane textarea:focus { outline: 3px solid rgba(49,164,118,.16); border-color: #31a476; }
-        @media (max-width: 900px) { .cd-layout { grid-template-columns: 1fr; }.cd-sidebar { position: static; }.cd-nav { grid-template-columns: repeat(7, minmax(9rem,1fr)); overflow-x: auto; }.cd-nav button { white-space: nowrap; }.cd-pane .cd-stats { grid-template-columns: repeat(3, 1fr); } }
-        @media (max-width: 600px) { .cd-page { padding: 1.15rem 0 2rem; }.cd-workspace-head { align-items: flex-start; flex-direction: column; gap: .75rem; }.cd-workspace-head h1 { font-size: 2rem; }.cd-live { padding: .4rem .65rem; border-radius: 99px; background: #e7f4ec; }.cd-sidebar, .cd-pane { border-radius: 14px; }.cd-nav { grid-template-columns: repeat(7, max-content); }.cd-nav button { padding: .66rem; }.cd-nav button span { display: none; }.cd-pane { padding: 1rem; }.cd-pane .cd-stats, .cd-quick-actions { grid-template-columns: repeat(2, 1fr); }.cd-quick-action { align-items: flex-start; }.cd-pane .cd-stat-value { font-size: 1.2rem; } }
+        @media (max-width: 900px) { .cd-layout { grid-template-columns: 1fr; }.cd-sidebar { position: static; }.cd-nav { grid-template-columns: repeat(9, minmax(9rem,1fr)); overflow-x: auto; }.cd-nav button { white-space: nowrap; }.cd-pane .cd-stats { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 600px) { .cd-page { padding: 1.15rem 0 2rem; }.cd-workspace-head { align-items: flex-start; flex-direction: column; gap: .75rem; }.cd-workspace-head h1 { font-size: 2rem; }.cd-live { padding: .4rem .65rem; border-radius: 99px; background: #e7f4ec; }.cd-sidebar, .cd-pane { border-radius: 14px; }.cd-nav { grid-template-columns: repeat(9, max-content); }.cd-nav button { padding: .66rem; }.cd-nav button span { display: none; }.cd-pane { padding: 1rem; }.cd-pane .cd-stats, .cd-quick-actions { grid-template-columns: repeat(2, 1fr); }.cd-quick-action { align-items: flex-start; }.cd-pane .cd-stat-value { font-size: 1.2rem; } }
 
         /* ===== Operational records refresh: strong sans-serif system ===== */
         .cd-workspace, .cd-workspace * { font-family: 'DM Sans', 'Segoe UI', sans-serif; }
@@ -588,8 +588,73 @@
         .cd-route-stations-preview { display: flex; flex-direction: column; gap: .2rem; font-size: .78rem; color: #6a7d75; }
         .cd-route-stations-preview b { display: inline-block; min-width: 3.2rem; margin-right: .45rem; color: #38635a; text-transform: uppercase; font-size: .66rem; letter-spacing: .04em; }
         @media (max-width: 768px) { .cd-route-stations-row { grid-template-columns: 1fr; } }
-        @media (max-width: 900px) { .cd-nav { grid-template-columns: repeat(7, minmax(9rem, 1fr)); }.cd-revenue-filters, .cd-bookings-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }.cd-revenue-filters label:nth-of-type(n), .cd-revenue-filters select:nth-of-type(n), .cd-revenue-filters input:nth-of-type(n) { grid-column: auto; grid-row: auto; } }
-        @media (max-width: 600px) { .cd-nav { grid-template-columns: repeat(7, max-content); }.cd-record-meta { grid-template-columns: 1fr 1fr; }.cd-pane .cd-bus-list, .cd-pane .cd-trip-list { grid-template-columns: 1fr; }.cd-revenue-filters, .cd-bookings-filters { grid-template-columns: 1fr; }.cd-bus-modal { align-items: end; padding: .5rem; }.cd-bus-modal-box { max-height: 94vh; border-radius: 16px 16px 10px 10px; padding: 1.1rem; } }
+        @media (max-width: 900px) { .cd-nav { grid-template-columns: repeat(9, minmax(9rem, 1fr)); }.cd-revenue-filters, .cd-bookings-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }.cd-revenue-filters label:nth-of-type(n), .cd-revenue-filters select:nth-of-type(n), .cd-revenue-filters input:nth-of-type(n) { grid-column: auto; grid-row: auto; } }
+        @media (max-width: 600px) { .cd-nav { grid-template-columns: repeat(9, max-content); }.cd-record-meta { grid-template-columns: 1fr 1fr; }.cd-pane .cd-bus-list, .cd-pane .cd-trip-list { grid-template-columns: 1fr; }.cd-revenue-filters, .cd-bookings-filters { grid-template-columns: 1fr; }.cd-bus-modal { align-items: end; padding: .5rem; }.cd-bus-modal-box { max-height: 94vh; border-radius: 16px 16px 10px 10px; padding: 1.1rem; } }
+    /* ===== Parcel / freight management (additive, scoped to .cd-*) ===== */
+        .cd-parcel { margin-top: var(--space-md); }
+        .cd-parcel-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+        .cd-parcel-head h2 { font-size: 1.2rem; color: var(--color-dark); margin: 0; }
+        .cd-pane .cd-parcel-head h2 { font-family: 'Outfit', 'Segoe UI', sans-serif; font-weight: 800; letter-spacing: -.035em; }
+        .cd-parcel-head-actions { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+        .cd-parcel-toolbar { display: flex; gap: .45rem; padding: .3rem 0 .9rem; margin-bottom: .25rem; overflow-x: auto; border-bottom: 1px solid #e5eee9; }
+        .cd-parcel-filter { flex: 0 0 auto; padding: .52rem .78rem; color: #5c736a; background: #f2f7f4; border: 1px solid #dceae2; border-radius: 8px; cursor: pointer; font: 800 .74rem/1 'DM Sans', sans-serif; }
+        .cd-parcel-filter:hover { color: #245944; background: #e7f4ec; }
+        .cd-parcel-filter.is-active { color: #fff; background: #187653; border-color: #187653; box-shadow: 0 4px 10px rgba(24,118,83,.17); }
+        .cd-parcel-filters { display: flex; align-items: flex-end; justify-content: space-between; gap: .65rem; flex-wrap: wrap; padding: .85rem; margin: 1rem 0 1.15rem; background: #f2f7f4; border: 1px solid #dce9e1; border-radius: 12px; }
+        .cd-parcel-search-row { display: flex; flex-direction: column; gap: .3rem; min-width: min(100%, 22rem); flex: 1 1 22rem; }
+        .cd-parcel-search-row label { font-size: .7rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: #547067; }
+        .cd-parcel-search-row input { width: 100%; min-height: 2.5rem; margin: 0; padding: .5rem .65rem; background: #fff; border: 1px solid #ccdcd3; border-radius: 8px; font: 700 .86rem 'DM Sans', sans-serif; }
+        .cd-parcel-search-row input:focus { outline: 3px solid rgba(49,164,118,.16); border-color: #31a476; }
+        .cd-parcel-empty { padding: 2rem 1rem; margin-top: .5rem; border: 1px dashed #cfdde0; border-radius: 12px; color: #66796f; text-align: center; font-size: .9rem; }
+        .cd-parcel-error { margin-top: .5rem; }
+        .cd-parcel-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+        .cd-parcel-card { position: relative; display: flex; flex-direction: column; gap: .8rem; padding: 1.1rem 1.15rem 1rem; overflow: hidden; background: #fff; border: 1px solid #e1eae5; border-radius: 14px; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+        .cd-parcel-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: #d97706; }
+        .cd-parcel-card.is-received::before { background: #2563eb; }
+        .cd-parcel-card.is-in_transit::before { background: #d97706; }
+        .cd-parcel-card.is-delivered::before { background: #16a34a; }
+        .cd-parcel-card.is-picked_up::before { background: #6b7280; }
+    .cd-parcel-card:hover { transform: translateY(-2px); box-shadow: 0 9px 20px rgba(19,63,51,.09); border-color: #cbded5; }
+        .cd-parcel-top { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+        .cd-parcel-ref { color: #153a31; font-size: .8rem; font-weight: 800; letter-spacing: .02em; }
+        .cd-parcel-badge { padding: .22rem .58rem; border-radius: 20px; color: #fff; background: #6b7280; font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; }
+        .cd-parcel-badge.received { background: #2563eb; }
+        .cd-parcel-badge.in_transit { background: #d97706; }
+        .cd-parcel-badge.delivered { background: #16a34a; }
+        .cd-parcel-badge.picked_up { background: #6b7280; }
+        .cd-parcel-route { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; min-width: 0; }
+        .cd-parcel-route b { display: inline-flex; align-items: center; max-width: 100%; padding: .32rem .62rem; font-weight: 700; font-size: .88rem; line-height: 1.25; color: #1b473e; background: #eef6f2; border: 1px solid #dcebe3; border-radius: 8px; }
+        .cd-parcel-route svg { flex: 0 0 auto; width: 15px; height: 15px; color: #94b1a5; }
+        .cd-parcel-people { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+        .cd-parcel-person { min-width: 0; }
+        .cd-parcel-person i { display: block; margin-bottom: .12rem; color: #7c8f87; font-size: .64rem; font-style: normal; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+        .cd-parcel-person b { display: block; overflow: hidden; color: #1d483d; font-size: .86rem; text-overflow: ellipsis; white-space: nowrap; }
+        .cd-parcel-person small { display: block; overflow: hidden; color: #7a9087; font-size: .74rem; text-overflow: ellipsis; white-space: nowrap; }
+        .cd-parcel-notes { margin: 0; color: #5c736a; font-size: .82rem; line-height: 1.5; }
+        .cd-parcel-notes:empty { display: none; }
+        .cd-parcel-card .cd-record-meta { margin: 0; }
+        .cd-parcel-actions { display: flex; align-items: center; gap: .5rem; padding-top: .75rem; border-top: 1px solid #e8efeb; }
+        .cd-parcel-actions select { flex: 1; min-width: 8.5rem; }
+        .cd-parcel-form { display: block; margin-top: 1rem; padding: 1.1rem; border: 1px solid #e5e7eb; border-radius: 10px; }
+        .cd-parcel-form h3 { margin: 0 0 .75rem; font-size: 1.05rem; }
+        .cd-parcel-form label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: .25rem; }
+        .cd-parcel-form input, .cd-parcel-form select, .cd-parcel-form textarea { width: 100%; padding: .6rem .7rem; font-size: .9rem; background: #fff; border: 1px solid #ccdcd3; border-radius: 8px; font-family: inherit; }
+        .cd-parcel-form input:focus, .cd-parcel-form select:focus, .cd-parcel-form textarea:focus { outline: 3px solid rgba(49,164,118,.16); border-color: #31a476; }
+        .cd-parcel-form textarea { min-height: 76px; resize: vertical; }
+        .cd-parcel-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; margin-top: .55rem; }
+        .cd-parcel-form-error { color: #b91c1c; font-size: .82rem; font-weight: 600; margin: .6rem 0 0; }
+        .cd-parcel-form-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5ede8; }
+        .cd-parcel-modal { position: fixed; inset: 0; z-index: 101; display: grid; place-items: center; padding: 1rem; background: rgba(8, 31, 25, .58); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+        .cd-parcel-modal[hidden] { display: none; }
+        .cd-parcel-modal-box { width: min(100%, 680px); max-height: min(90vh, 800px); overflow: auto; padding: 1.4rem; background: #fff; border: 1px solid #dfe9e3; border-radius: 18px; box-shadow: 0 25px 70px rgba(5, 26, 20, .28); }
+        .cd-parcel-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid #e5ede8; }
+        .cd-parcel-modal-head p { margin: .3rem 0 0; color: #647a71; font-size: .85rem; }
+        .cd-parcel-modal-close { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; padding: 0; color: #275147; background: #edf5f0; border: 0; border-radius: 50%; cursor: pointer; font-size: 1.25rem; line-height: 1; }
+        .cd-parcel-modal .cd-parcel-form { display: block; padding: 0; margin: 0; border: 0; }
+        .cd-parcel-modal .cd-parcel-form h3 { display: none; }
+        .cd-parcel-modal .cd-parcel-form label { margin-top: .8rem; color: #254a40; font-size: .78rem; font-weight: 800; letter-spacing: .025em; }
+        .cd-parcel-modal .cd-parcel-form input, .cd-parcel-modal .cd-parcel-form select, .cd-parcel-modal .cd-parcel-form textarea { min-height: 2.7rem; background: #fbfdfc; }
+        @media (max-width: 600px) { .cd-parcel-list { grid-template-columns: 1fr; }.cd-parcel-people { grid-template-columns: 1fr; }.cd-parcel-form-row { grid-template-columns: 1fr; }.cd-parcel-filters { align-items: stretch; flex-direction: column; }.cd-parcel-modal { align-items: end; padding: .5rem; }.cd-parcel-modal-box { max-height: 94vh; border-radius: 16px 16px 10px 10px; padding: 1.1rem; } }
     </style>
 </head>
 <body data-auth-required="1" data-auth-role="company" data-auth-company-approved="1">
@@ -1187,6 +1252,97 @@
                 </div>
             </section>
 
+        <section id="company-parcel" class="cd-parcel" hidden>
+            <div class="cd-parcel-head">
+                <h2>Parcels</h2>
+                <div class="cd-parcel-head-actions">
+                    <button type="button" id="btn-refresh-parcels" class="btn btn-secondary btn-sm">Refresh</button>
+                    <button type="button" id="btn-add-parcel" class="btn btn-primary">New Parcel</button>
+                </div>
+            </div>
+
+            <div class="cd-parcel-toolbar" role="group" aria-label="Filter parcels by status">
+                <button type="button" class="cd-parcel-filter is-active" data-parcel-status="all" aria-pressed="true">All parcels</button>
+                <button type="button" class="cd-parcel-filter" data-parcel-status="received" aria-pressed="false">Received</button>
+                <button type="button" class="cd-parcel-filter" data-parcel-status="in_transit" aria-pressed="false">In transit</button>
+                <button type="button" class="cd-parcel-filter" data-parcel-status="delivered" aria-pressed="false">Delivered</button>
+                <button type="button" class="cd-parcel-filter" data-parcel-status="picked_up" aria-pressed="false">Picked up</button>
+            </div>
+
+            <div class="cd-parcel-filters">
+                <div class="cd-parcel-search-row">
+                    <label for="parcel-search">Search parcels</label>
+                    <input type="search" id="parcel-search" placeholder="Search by reference, sender, recipient or city&hellip;" autocomplete="off">
+                </div>
+                <div class="cd-filter-actions">
+                    <button type="button" id="btn-clear-parcel-filters" class="btn btn-secondary">Clear filters</button>
+                </div>
+            </div>
+
+            <p id="parcel-empty" class="cd-parcel-empty" hidden>No parcels yet. Register the first parcel to ship with your buses.</p>
+            <div id="parcel-error" class="cd-parcel-error auth-message" hidden></div>
+            <div id="parcel-list" class="cd-parcel-list" hidden></div>
+
+            <form id="parcel-form" class="cd-parcel-form" hidden novalidate>
+                <input type="hidden" id="parcel-id">
+                <h3 id="parcel-form-title">New Parcel</h3>
+                <div class="cd-parcel-form-row">
+                    <div>
+                        <label for="parcel-sender">Sender name *</label>
+                        <input type="text" id="parcel-sender" maxlength="120" placeholder="e.g. Abebe Kebede">
+                    </div>
+                    <div>
+                        <label for="parcel-sender-phone">Sender phone *</label>
+                        <input type="tel" id="parcel-sender-phone" maxlength="15" placeholder="e.g. 911234567" inputmode="numeric" autocomplete="tel">
+                    </div>
+                </div>
+                <div class="cd-parcel-form-row">
+                    <div>
+                        <label for="parcel-recipient">Recipient name *</label>
+                        <input type="text" id="parcel-recipient" maxlength="120" placeholder="e.g. Sara Alemu">
+                    </div>
+                    <div>
+                        <label for="parcel-recipient-phone">Recipient phone *</label>
+                        <input type="tel" id="parcel-recipient-phone" maxlength="15" placeholder="e.g. 922345678" inputmode="numeric" autocomplete="tel">
+                    </div>
+                </div>
+                <div class="cd-parcel-form-row">
+                    <div>
+                        <label for="parcel-from">Leaving from *</label>
+                        <input type="text" id="parcel-from" data-city-picker placeholder="City" autocomplete="off">
+                    </div>
+                    <div>
+                        <label for="parcel-to">Destination *</label>
+                        <input type="text" id="parcel-to" data-city-picker placeholder="City" autocomplete="off">
+                    </div>
+                </div>
+                <div class="cd-parcel-form-row">
+                    <div>
+                        <label for="parcel-weight">Weight (kg) *</label>
+                        <input type="number" id="parcel-weight" min="0" max="999" step="0.1" placeholder="e.g. 5">
+                    </div>
+                    <div>
+                        <label for="parcel-status">Status</label>
+                        <select id="parcel-status">
+                            <option value="received">Received</option>
+                            <option value="in_transit">In transit</option>
+                            <option value="delivered">Delivered</option>
+                            <option value="picked_up">Picked up</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label for="parcel-notes">Contents / description</label>
+                    <textarea id="parcel-notes" maxlength="500" placeholder="e.g. Documents and clothes"></textarea>
+                </div>
+                <p id="parcel-form-error" class="cd-parcel-form-error" role="alert" hidden></p>
+                <div class="cd-parcel-form-actions">
+                    <button type="button" id="parcel-form-cancel" class="btn">Cancel</button>
+                    <button type="submit" id="parcel-form-submit" class="btn btn-primary">Save Parcel</button>
+                </div>
+            </form>
+        </section>
+
         <section id="company-revenue" class="cd-revenue" hidden>
             <div class="cd-revenue-head">
                 <h2>Revenue / Payments</h2>
@@ -1648,6 +1804,6 @@
     <script src="js/auth.js"></script>
     <script src="js/cities.js"></script>
     <script src="js/city-picker.js"></script>
-    <script src="js/company-dashboard.js?v=20260907-hrmin-viceversa"></script>
+    <script src="js/company-dashboard.js?v=20260907-parcel-v2"></script>
 </body>
 </html>

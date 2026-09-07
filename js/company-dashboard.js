@@ -171,7 +171,7 @@
         var nodes = {
             identity: byId('auth-identity'), loading: byId('company-loading'), error: byId('company-error'),
             banner: byId('company-banner'), stats: byId('company-stats'), fleet: byId('company-fleet'),
-            trips: byId('company-trips'), bookings: byId('company-bookings'), revenue: byId('company-revenue'), profile: byId('company-profile'), routes: byId('company-routes'), reviews: byId('company-reviews')
+            trips: byId('company-trips'), bookings: byId('company-bookings'), revenue: byId('company-revenue'), profile: byId('company-profile'), routes: byId('company-routes'), reviews: byId('company-reviews'), parcel: byId('company-parcel')
         };
         var icon = {
             overview: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
@@ -180,7 +180,8 @@
             revenue: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5"/><path d="M4 19h16"/><path d="m7 15 4-4 3 2 4-6"/></svg>',
             route: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/></svg>',
             profile: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.4-4 4-6 8-6s6.6 2 8 6"/></svg>',
-            reviews: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2  L14.25 8.91  L21.51 8.91  L15.63 13.18  L17.88 20.09  L12 15.82  L6.12 20.09  L8.37 13.18  L2.49 8.91  L9.75 8.91  Z"/></svg>'
+            reviews: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2  L14.25 8.91  L21.51 8.91  L15.63 13.18  L17.88 20.09  L12 15.82  L6.12 20.09  L8.37 13.18  L2.49 8.91  L9.75 8.91  Z"/></svg>',
+            parcel: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>'
         };
         main.className = 'container cd-page';
         main.innerHTML =
@@ -193,14 +194,16 @@
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-routes" data-cd-view="routes">' + icon.route + '<span>Routes</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-trips" data-cd-view="trips">' + icon.fleet + '<span>Trips</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-passengers" data-cd-view="passengers">' + icon.passengers + '<span>Passengers</span></button>' +
+                  '<button type="button" role="tab" aria-selected="false" aria-controls="cd-parcel" data-cd-view="parcel">' + icon.parcel + '<span>Parcel</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-revenue" data-cd-view="revenue">' + icon.revenue + '<span>Revenue</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-reviews" data-cd-view="reviews">' + icon.reviews + '<span>Reviews</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-profile" data-cd-view="profile">' + icon.profile + '<span>Public profile</span></button>' +
                 '</nav></aside><div class="cd-content">' +
-                  '<section id="cd-overview" class="cd-pane" role="tabpanel"><div id="cd-overview-slot"></div><div class="cd-quick-actions"><button type="button" class="cd-quick-action" data-cd-go="fleet" data-cd-action="btn-add-bus"><b class="cd-quick-icon">+</b><span>Add a bus<small>Expand your active fleet</small></span></button><button type="button" class="cd-quick-action" data-cd-go="trips" data-cd-action="btn-add-trip"><b class="cd-quick-icon">↗</b><span>Schedule a trip<small>Open a new departure</small></span></button><button type="button" class="cd-quick-action" data-cd-go="routes" data-cd-action="btn-add-route"><b class="cd-quick-icon">⇄</b><span>Add Routes<small>Add and update city pairs</small></span></button><button type="button" class="cd-quick-action" data-cd-go="profile" data-cd-action="btn-edit-profile"><b class="cd-quick-icon">✦</b><span>Update public profile<small>Keep passenger details current</small></span></button></div></section>' +
+                  '<section id="cd-overview" class="cd-pane" role="tabpanel"><div id="cd-overview-slot"></div><div class="cd-quick-actions"><button type="button" class="cd-quick-action" data-cd-go="fleet" data-cd-action="btn-add-bus"><b class="cd-quick-icon">+</b><span>Add a bus<small>Expand your active fleet</small></span></button><button type="button" class="cd-quick-action" data-cd-go="trips" data-cd-action="btn-add-trip"><b class="cd-quick-icon">↗</b><span>Schedule a trip<small>Open a new departure</small></span></button><button type="button" class="cd-quick-action" data-cd-go="routes" data-cd-action="btn-add-route"><b class="cd-quick-icon">⇄</b><span>Add Routes<small>Add and update city pairs</small></span></button><button type="button" class="cd-quick-action" data-cd-go="profile" data-cd-action="btn-edit-profile"><b class="cd-quick-icon">✦</b><span>Update public profile<small>Keep passenger details current</small></span></button><button type="button" class="cd-quick-action" data-cd-go="parcel" data-cd-action="btn-add-parcel"><b class="cd-quick-icon">▣</b><span>Ship a parcel<small>Register freight with a bus</small></span></button></div></section>' +
                   '<section id="cd-fleet" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Fleet register</h2><p>Add, edit and update the operating status of every vehicle.</p></div></div></section>' +
                   '<section id="cd-trips" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Trips</h2><p>Publish, update and manage each scheduled departure.</p></div></div></section>' +
                   '<section id="cd-passengers" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Passengers &amp; bookings</h2><p>Review bookings and view each passenger\'s digital ticket.</p></div></div></section>' +
+                  '<section id="cd-parcel" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Parcel &amp; freight</h2><p>Register and track parcels travelling with your buses.</p></div></div></section>' +
                   '<section id="cd-revenue" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Revenue &amp; payments</h2><p>Review paid and refunded passenger payments.</p></div></div></section>' +
                   '<section id="cd-routes" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Routes</h2></div></div></section>' +
                   '<section id="cd-reviews" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Reviews</h2><p>What passengers say about travelling with your company.</p></div></div></section>' +
@@ -212,6 +215,7 @@
         if (nodes.fleet) { byId('cd-fleet').appendChild(nodes.fleet); }
         if (nodes.trips) { byId('cd-trips').appendChild(nodes.trips); }
         if (nodes.bookings) { byId('cd-passengers').appendChild(nodes.bookings); }
+        if (nodes.parcel) { byId('cd-parcel').appendChild(nodes.parcel); }
         if (nodes.revenue) { byId('cd-revenue').appendChild(nodes.revenue); }
         if (nodes.routes) { byId('cd-routes').appendChild(nodes.routes); }
         if (nodes.reviews) {
@@ -235,7 +239,7 @@
         var quickActions = document.querySelectorAll('[data-cd-go]');
         for (var q = 0; q < quickActions.length; q++) { quickActions[q].addEventListener('click', function () { selectView(this.getAttribute('data-cd-go')); var target = byId(this.getAttribute('data-cd-action')); if (target) { target.click(); } }); }
         var requested = window.location.hash.replace('#', '');
-        if (requested === 'fleet' || requested === 'trips' || requested === 'passengers' || requested === 'revenue' || requested === 'routes' || requested === 'reviews' || requested === 'profile') { selectView(requested); }
+        if (requested === 'fleet' || requested === 'trips' || requested === 'passengers' || requested === 'parcel' || requested === 'revenue' || requested === 'routes' || requested === 'reviews' || requested === 'profile') { selectView(requested); }
 
         var busForm = byId('bus-form');
         if (busForm) {
@@ -306,6 +310,19 @@
                     renderStationRows(type, rows);
                 });
             });
+        }
+
+        var parcelForm = byId('parcel-form');
+        if (parcelForm) {
+            var parcelModal = document.createElement('div');
+            parcelModal.id = 'parcel-form-modal';
+            parcelModal.className = 'cd-parcel-modal cd-workspace';
+            parcelModal.hidden = true;
+            parcelModal.innerHTML = '<div class="cd-parcel-modal-box" role="dialog" aria-modal="true" aria-labelledby="parcel-modal-heading"><div class="cd-parcel-modal-head"><div><strong id="parcel-modal-heading">Parcel details</strong><p>Book a parcel to ship with your scheduled departures.</p></div><button type="button" id="parcel-modal-close" class="cd-parcel-modal-close" aria-label="Close parcel form">×</button></div></div>';
+            parcelModal.firstChild.appendChild(parcelForm);
+            document.body.appendChild(parcelModal);
+            byId('parcel-modal-close').addEventListener('click', hideParcelForm);
+            parcelModal.addEventListener('click', function (ev) { if (ev.target === parcelModal) { hideParcelForm(); } });
         }
 
         function syncCompanyMini() {
@@ -4335,6 +4352,395 @@ function submitBranchForm() {
         loadPayments();
     }
 
+    /* ===== Parcel / freight management (real backend) =====
+       Company-scoped CRUD against api/company.php?action=parcels plus
+       parcel_create / parcel_update / parcel_delete. Every write carries
+       the company scope server-side (auth.php + require_company_scope), so
+       another company's parcels can never be touched. */
+    var parcelRequestId = 0;   // discards responses from superseded parcel requests
+    var currentParcels = [];
+    var selectedParcelFilter = 'all';
+    var parcelSearchTerm = '';
+
+    var PARCEL_STATUSES = [
+        { value: 'received', label: 'Received' },
+        { value: 'in_transit', label: 'In transit' },
+        { value: 'delivered', label: 'Delivered' },
+        { value: 'picked_up', label: 'Picked up' }
+    ];
+
+    function parcelStatusLabel(value) {
+        for (var s = 0; s < PARCEL_STATUSES.length; s++) {
+            if (PARCEL_STATUSES[s].value === value) { return PARCEL_STATUSES[s].label; }
+        }
+        return 'Received';
+    }
+
+    function formatParcelDate(iso) {
+        var d = new Date(iso);
+        if (isNaN(d.getTime())) { return String(iso == null ? '' : iso); }
+        return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    function parcelById(id) {
+        for (var i = 0; i < currentParcels.length; i++) {
+            if (String(currentParcels[i].id) === String(id)) { return currentParcels[i]; }
+        }
+        return null;
+    }
+
+    function renderParcels() {
+        var list = byId('parcel-list');
+        var empty = byId('parcel-empty');
+        var error = byId('parcel-error');
+        if (error) { error.hidden = true; }
+        if (!list) { return; }
+
+        var filtered = currentParcels.filter(function (p) {
+            if (selectedParcelFilter !== 'all' && p.status !== selectedParcelFilter) { return false; }
+            if (parcelSearchTerm) {
+                var hay = [p.reference, p.sender_name, p.recipient_name, p.from_city, p.to_city].join(' ').toLowerCase();
+                if (hay.indexOf(parcelSearchTerm) === -1) { return false; }
+            }
+            return true;
+        });
+
+        if (!filtered.length) {
+            list.innerHTML = '';
+            list.hidden = true;
+            if (empty) {
+                empty.textContent = currentParcels.length
+                    ? 'No parcels match your filters.'
+                    : 'No parcels yet. Register the first parcel to ship with your buses.';
+                empty.hidden = false;
+            }
+            return;
+        }
+        if (empty) { empty.hidden = true; }
+
+        var html = filtered.map(function (p) {
+            var statusClass = (p.status === 'in_transit' || p.status === 'delivered' || p.status === 'picked_up') ? p.status : 'received';
+            var options = PARCEL_STATUSES.map(function (s) {
+                return '<option value="' + s.value + '"' + (s.value === p.status ? ' selected' : '') + '>' + s.label + '</option>';
+            }).join('');
+            return '<article class="cd-parcel-card is-' + statusClass + '" data-parcel-id="' + escHtml(p.id) + '">' +
+                '<div class="cd-parcel-top">' +
+                    '<span class="cd-parcel-ref">' + escHtml(p.reference) + '</span>' +
+                    '<span class="cd-parcel-badge ' + statusClass + '">' + escHtml(parcelStatusLabel(p.status)) + '</span>' +
+                '</div>' +
+                '<div class="cd-parcel-route">' +
+                    '<b>' + escHtml(p.from_city) + '</b>' +
+                    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>' +
+                    '<b>' + escHtml(p.to_city) + '</b>' +
+                '</div>' +
+                '<div class="cd-parcel-people">' +
+                    '<span class="cd-parcel-person"><i>From</i><b>' + escHtml(p.sender_name) + '</b><small>+251 ' + escHtml(p.sender_phone) + '</small></span>' +
+                    '<span class="cd-parcel-person"><i>To</i><b>' + escHtml(p.recipient_name) + '</b><small>+251 ' + escHtml(p.recipient_phone) + '</small></span>' +
+                '</div>' +
+                '<div class="cd-record-meta">' +
+                    '<span>Weight<b>' + escHtml(p.weight_kg) + ' kg</b></span>' +
+                    '<span>Registered<b>' + formatParcelDate(p.created_at) + '</b></span>' +
+                    '<span>Status<b>' + escHtml(parcelStatusLabel(p.status)) + '</b></span>' +
+                '</div>' +
+                (p.notes ? '<p class="cd-parcel-notes">' + escHtml(p.notes) + '</p>' : '') +
+                '<div class="cd-parcel-actions">' +
+                    '<button type="button" class="btn btn-secondary btn-sm" data-parcel-edit="' + escHtml(p.id) + '">Edit</button>' +
+                    '<select data-parcel-status="' + escHtml(p.id) + '" aria-label="Change parcel status">' + options + '</select>' +
+                    '<button type="button" class="btn btn-danger btn-sm" data-parcel-delete="' + escHtml(p.id) + '">Delete</button>' +
+                '</div>' +
+            '</article>';
+        }).join('');
+
+        list.innerHTML = html;
+        list.hidden = false;
+    }
+
+    function applyParcelFilters() {
+        renderParcels();
+    }
+
+    function showParcelError(message) {
+        var list = byId('parcel-list'); if (list) { list.innerHTML = ''; list.hidden = true; }
+        var empty = byId('parcel-empty'); if (empty) { empty.hidden = true; }
+        var error = byId('parcel-error');
+        if (error) {
+            error.hidden = false;
+            error.className = 'cd-parcel-error auth-message error';
+            error.textContent = message || 'Unable to load parcels. Please try again later.';
+        }
+    }
+
+    function loadParcels() {
+        var rid = ++parcelRequestId;
+        var sec = byId('company-parcel'); if (sec) { sec.hidden = false; }
+        var errorEl = byId('parcel-error'); if (errorEl) { errorEl.hidden = true; }
+        var list = byId('parcel-list'); if (list) { list.innerHTML = ''; list.hidden = true; }
+        var empty = byId('parcel-empty'); if (empty) { empty.hidden = true; }
+
+        fetch('api/company.php?action=parcels', {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(function (res) {
+                return res.json().catch(function () {
+                    return { success: false, message: 'Invalid server response.' };
+                }).then(function (json) {
+                    return { ok: res.ok, status: res.status, data: json };
+                });
+            })
+            .then(function (result) {
+                if (rid !== parcelRequestId) { return; }
+                var data = result.data || {};
+                if (!result.ok || result.status !== 200 || !data.success) {
+                    showParcelError(data.message || 'Unable to load parcels.');
+                    return;
+                }
+                currentParcels = Array.isArray(data.parcels) ? data.parcels : [];
+                renderParcels();
+            })
+            .catch(function () {
+                if (rid !== parcelRequestId) { return; }
+                showParcelError('Network error while loading parcels.');
+            });
+    }
+
+    function hideParcelForm() {
+        var f = byId('parcel-form');
+        if (f) { f.hidden = true; }
+        var modal = byId('parcel-form-modal');
+        if (modal) { modal.hidden = true; }
+    }
+
+    function openParcelForm(parcel) {
+        var form = byId('parcel-form');
+        var modal = byId('parcel-form-modal');
+        if (!form) { return; }
+        var error = byId('parcel-form-error');
+        if (error) { error.textContent = ''; error.hidden = true; }
+
+        var heading = byId('parcel-modal-heading');
+        if (heading) { heading.textContent = parcel ? 'Edit Parcel ' + parcel.reference : 'New Parcel'; }
+        byId('parcel-id').value = parcel ? parcel.id : '';
+        byId('parcel-sender').value = parcel ? (parcel.sender_name || '') : '';
+        byId('parcel-sender-phone').value = parcel ? (parcel.sender_phone || '') : '';
+        byId('parcel-recipient').value = parcel ? (parcel.recipient_name || '') : '';
+        byId('parcel-recipient-phone').value = parcel ? (parcel.recipient_phone || '') : '';
+        byId('parcel-from').value = parcel ? parcel.from_city : '';
+        byId('parcel-to').value = parcel ? parcel.to_city : '';
+        byId('parcel-weight').value = parcel ? parcel.weight_kg : '';
+        byId('parcel-status').value = parcel ? parcel.status : 'received';
+        byId('parcel-notes').value = parcel ? (parcel.notes || '') : '';
+
+        if (window.ETCityPicker) {
+            window.ETCityPicker.sync('parcel-from');
+            window.ETCityPicker.sync('parcel-to');
+        }
+
+        form.hidden = false;
+        if (modal) {
+            if (modal.parentNode !== document.body) { document.body.appendChild(modal); }
+            modal.hidden = false;
+            var first = byId('parcel-sender');
+            if (first) { first.focus(); }
+        }
+    }
+
+    function submitParcelForm() {
+        var error = byId('parcel-form-error');
+        if (error) { error.hidden = true; }
+
+        function valueOf(id) {
+            var el = byId(id);
+            return el ? String(el.value || '').trim() : '';
+        }
+
+        var id = valueOf('parcel-id');
+        var payload = {
+            sender_name: valueOf('parcel-sender'),
+            sender_phone: valueOf('parcel-sender-phone'),
+            recipient_name: valueOf('parcel-recipient'),
+            recipient_phone: valueOf('parcel-recipient-phone'),
+            from_city: valueOf('parcel-from'),
+            to_city: valueOf('parcel-to'),
+            weight_kg: valueOf('parcel-weight'),
+            status: valueOf('parcel-status') || 'received',
+            notes: valueOf('parcel-notes')
+        };
+        if (id) { payload.parcel_id = id; }
+        var action = id ? 'parcel_update' : 'parcel_create';
+
+        function bad(message) {
+            if (error) { error.textContent = message; error.hidden = false; }
+        }
+
+        if (!payload.sender_name || !payload.recipient_name) { bad('Sender and recipient names are required.'); return; }
+        if (!payload.from_city || !payload.to_city) { bad('Both departure city and destination are required.'); return; }
+        if (payload.from_city.toUpperCase() === payload.to_city.toUpperCase()) { bad('Departure and destination must be different cities.'); return; }
+        if (!(parseFloat(payload.weight_kg) > 0)) { bad('Please enter a valid parcel weight in kilograms.'); return; }
+
+        var submitBtn = byId('parcel-form-submit');
+        if (submitBtn) { submitBtn.disabled = true; }
+
+        fetch('api/company.php?action=' + action, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+            .then(function (res) {
+                return res.json().catch(function () {
+                    return { success: false, message: 'Invalid server response.' };
+                }).then(function (json) {
+                    return { ok: res.ok, status: res.status, data: json };
+                });
+            })
+            .then(function (result) {
+                var data = result.data || {};
+                if (!result.ok || !data.success) {
+                    bad(data.message || 'Unable to save the parcel.');
+                    if (submitBtn) { submitBtn.disabled = false; }
+                    return;
+                }
+                hideParcelForm();
+                loadParcels();
+                toast(data.message || 'Parcel saved.');
+            })
+            .catch(function () {
+                bad('Network error while saving the parcel.');
+            });
+    }
+
+    function changeParcelStatus(id, status) {
+        fetch('api/company.php?action=parcel_update', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ parcel_id: id, status: status })
+        })
+            .then(function (res) {
+                return res.json().catch(function () {
+                    return { success: false, message: 'Invalid server response.' };
+                }).then(function (json) {
+                    return { ok: res.ok, status: res.status, data: json };
+                });
+            })
+            .then(function (result) {
+                var data = result.data || {};
+                if (result.ok && result.status === 200) { loadParcels(); return; }
+                toast(data.message || 'Unable to change the parcel status.');
+                loadParcels();
+            })
+            .catch(function () {
+                toast('Network error while changing the parcel status.');
+                loadParcels();
+            });
+    }
+
+    function deleteParcel(id) {
+        var match = parcelById(id);
+        if (!match) { return; }
+        if (!window.confirm('Delete parcel ' + match.reference + '? This cannot be undone.')) { return; }
+
+        fetch('api/company.php?action=parcel_delete', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ parcel_id: id })
+        })
+            .then(function (res) {
+                return res.json().catch(function () {
+                    return { success: false, message: 'Invalid server response.' };
+                }).then(function (json) {
+                    return { ok: res.ok, status: res.status, data: json };
+                });
+            })
+            .then(function (result) {
+                var data = result.data || {};
+                if (!result.ok || !data.success) {
+                    toast(data.message || 'Unable to delete the parcel.');
+                    loadParcels();
+                    return;
+                }
+                loadParcels();
+                toast(data.message || 'Parcel deleted.');
+            })
+            .catch(function () {
+                toast('Network error while deleting the parcel.');
+                loadParcels();
+            });
+    }
+
+    function initParcel() {
+        loadParcels();
+
+        var addBtn = byId('btn-add-parcel');
+        if (addBtn) { addBtn.addEventListener('click', function () { openParcelForm(null); }); }
+
+        var refreshBtn = byId('btn-refresh-parcels');
+        if (refreshBtn) { refreshBtn.addEventListener('click', loadParcels); }
+
+        var search = byId('parcel-search');
+        if (search) {
+            search.addEventListener('input', function () {
+                parcelSearchTerm = search.value.trim().toLowerCase();
+                applyParcelFilters();
+            });
+        }
+
+        var clearBtn = byId('btn-clear-parcel-filters');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function () {
+                selectedParcelFilter = 'all';
+                parcelSearchTerm = '';
+                if (search) { search.value = ''; }
+                var buttons = document.querySelectorAll('.cd-parcel-filter[data-parcel-status]');
+                for (var b = 0; b < buttons.length; b++) {
+                    var active = buttons[b].getAttribute('data-parcel-status') === 'all';
+                    buttons[b].classList.toggle('is-active', active);
+                    buttons[b].setAttribute('aria-pressed', active ? 'true' : 'false');
+                }
+                applyParcelFilters();
+            });
+        }
+
+        var filterButtons = document.querySelectorAll('.cd-parcel-filter[data-parcel-status]');
+        for (var f = 0; f < filterButtons.length; f++) {
+            (function (btn) {
+                btn.addEventListener('click', function () {
+                    selectedParcelFilter = btn.getAttribute('data-parcel-status') || 'all';
+                    var buttons = document.querySelectorAll('.cd-parcel-filter[data-parcel-status]');
+                    for (var b = 0; b < buttons.length; b++) {
+                        var active = buttons[b] === btn;
+                        buttons[b].classList.toggle('is-active', active);
+                        buttons[b].setAttribute('aria-pressed', active ? 'true' : 'false');
+                    }
+                    applyParcelFilters();
+                });
+            })(filterButtons[f]);
+        }
+
+        var form = byId('parcel-form');
+        if (form) { form.addEventListener('submit', function (ev) { ev.preventDefault(); submitParcelForm(); }); }
+
+        var cancelBtn = byId('parcel-form-cancel');
+        if (cancelBtn) { cancelBtn.addEventListener('click', hideParcelForm); }
+
+        var listEl = byId('parcel-list');
+        if (listEl) {
+            listEl.addEventListener('click', function (ev) {
+                var btn = ev.target.closest ? ev.target.closest('[data-parcel-edit],[data-parcel-delete]') : null;
+                if (!btn) { return; }
+                if (btn.hasAttribute('data-parcel-edit')) { openParcelForm(parcelById(btn.getAttribute('data-parcel-edit'))); return; }
+                if (btn.hasAttribute('data-parcel-delete')) { deleteParcel(btn.getAttribute('data-parcel-delete')); }
+            });
+            listEl.addEventListener('change', function (ev) {
+                var sel = ev.target.closest ? ev.target.closest('select[data-parcel-status]') : null;
+                if (sel) { changeParcelStatus(sel.getAttribute('data-parcel-status'), sel.value); }
+            });
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         initWorkspaceNavigation();
         loadOverview();
@@ -4348,6 +4754,7 @@ function submitBranchForm() {
         loadPayments();
         loadProfile();
         loadBranches();
+        initParcel();
 
         var refreshReviews = byId('btn-refresh-reviews');
         if (refreshReviews) { refreshReviews.addEventListener('click', loadReviews); }
@@ -4844,6 +5251,8 @@ function submitBranchForm() {
                 if (bdModal && !bdModal.hidden) { closeBranchDeleteModal(); }
                 var roModal = byId('cd-revenue-overview-modal');
                 if (roModal && !roModal.hidden) { closeRevenueOverview(); }
+                var parcelModal = byId('parcel-form-modal');
+                if (parcelModal && !parcelModal.hidden) { hideParcelForm(); }
             }
         });
 

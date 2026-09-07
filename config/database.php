@@ -176,6 +176,39 @@ function ensure_schema_columns(PDO $pdo): void
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
         );
 
+        /* parcels — freight parcels a company ships with its scheduled buses.
+           Idempotent, same pattern as company_phones / company_reason_history.
+           Schema.sql is the source of truth for fresh installs; this back-fills
+           the table for databases created before parcels existed. Reference
+           numbers are unique and server-generated (api/company.php). */
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS parcels (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                company_id BIGINT UNSIGNED NOT NULL,
+                reference VARCHAR(30) NOT NULL,
+                sender_name VARCHAR(120) NOT NULL,
+                sender_phone VARCHAR(30) NOT NULL,
+                recipient_name VARCHAR(120) NOT NULL,
+                recipient_phone VARCHAR(30) NOT NULL,
+                from_city VARCHAR(120) NOT NULL,
+                to_city VARCHAR(120) NOT NULL,
+                weight_kg DECIMAL(8, 2) NOT NULL,
+                notes TEXT DEFAULT NULL,
+                status ENUM('received', 'in_transit', 'delivered', 'picked_up') NOT NULL DEFAULT 'received',
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                UNIQUE KEY uq_parcels_reference (reference),
+                KEY idx_parcels_company (company_id),
+                KEY idx_parcels_company_status (company_id, status),
+                KEY idx_parcels_company_created (company_id, created_at),
+                CONSTRAINT fk_parcels_company
+                    FOREIGN KEY (company_id) REFERENCES companies(id)
+                    ON DELETE CASCADE
+                    ON UPDATE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+
         /* bookings.booking_source — 'online' vs 'office' sales channel used by
            the admin revenue breakdown. Fresh installs already get the column
            from schema.sql; this adds it to databases created before it existed.
