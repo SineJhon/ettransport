@@ -4700,6 +4700,7 @@ function submitBranchForm() {
                 '</div>' +
                 (p.notes ? '<p class="cd-parcel-notes">' + escHtml(p.notes) + '</p>' : '') +
                 '<div class="cd-parcel-actions">' +
+                    '<button type="button" class="btn btn-secondary btn-sm" data-parcel-receipt="' + escHtml(p.id) + '">Show receipt</button>' +
                     '<button type="button" class="btn btn-danger btn-sm" data-parcel-delete="' + escHtml(p.id) + '">Delete</button>' +
                 '</div>' +
             '</article>';
@@ -5077,7 +5078,8 @@ function submitBranchForm() {
     function buildParcelReceiptHtml(parcel) {
         var nameEl = byId('cd-mini-name');
         var companyName = (nameEl && nameEl.textContent && String(nameEl.textContent).trim()) ? String(nameEl.textContent).trim() : 'ET Transport';
-        var paidAt = new Date();
+        var paidAt = parcel && parcel.created_at ? new Date(String(parcel.created_at).replace(' ', 'T')) : new Date();
+        if (isNaN(paidAt.getTime())) { paidAt = new Date(); }
         var dateStr = paidAt.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
             + ' \u00b7 ' + paidAt.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
         var methodLabel = parcelPaymentMethod === 'transfer' ? 'Bank Transfer' : 'Cash';
@@ -5720,6 +5722,12 @@ function submitBranchForm() {
                 if (!target || !target.closest) { return; }
                 var delBtn = target.closest('[data-parcel-delete]');
                 if (delBtn) { deleteParcel(delBtn.getAttribute('data-parcel-delete')); return; }
+                var receiptBtn = target.closest('[data-parcel-receipt]');
+                if (receiptBtn) {
+                    var receiptParcel = parcelById(receiptBtn.getAttribute('data-parcel-receipt'));
+                    if (receiptParcel) { showParcelReceipt(receiptParcel); }
+                    return;
+                }
                 var setBtn = target.closest('[data-parcel-status-set]');
                 if (setBtn) {
                     openParcelStatusModal(setBtn.getAttribute('data-parcel-status-set'), setBtn.getAttribute('data-parcel-status-value'));
