@@ -2194,6 +2194,13 @@ function parcel_phone_or_error(mixed $raw, string $label): string
     return $phone;
 }
 
+/* Digits-only view of a phone for comparisons (ignores +251, leading 0,
+   dashes, spaces…). */
+function parcel_phone_digits(string $raw): string
+{
+    return preg_replace('/\D/', '', $raw);
+}
+
 function parcel_weight_or_error(mixed $raw): float
 {
     $value = trim((string) $raw);
@@ -4494,6 +4501,15 @@ function handle_parcel_create(PDO $pdo): void
         auth_response(422, ['success' => false, 'message' => 'Departure and destination cities must be different.']);
     }
 
+    /* A parcel ships between two different people — a matching name or a
+       matching phone number on both sides is not accepted. */
+    if (mb_strtolower($senderName) === mb_strtolower($recipientName)) {
+        auth_response(422, ['success' => false, 'message' => 'Recipient must have a different name from the sender.']);
+    }
+    if (parcel_phone_digits($senderPhone) === parcel_phone_digits($recipientPhone)) {
+        auth_response(422, ['success' => false, 'message' => 'Recipient must use a different phone number from the sender.']);
+    }
+
     $reference = generate_parcel_reference($pdo);
 
     try {
@@ -4581,6 +4597,24 @@ function handle_parcel_update(PDO $pdo): void
     if ($hasFrom && $hasTo && mb_strtolower($fromCity) === mb_strtolower($toCity)) {
 
         auth_response(422, ['success' => false, 'message' => 'Departure and destination cities must be different.']);
+    }
+    /* Same rule for edits: compare the RESULTING sender/recipient pair, reading
+       any side the payload did not touch from the current row (partial write).
+       Either a matching name or a matching phone number is rejected. */
+    if ($hasSender || $hasSenderPhone || $hasRecipient || $hasRecipientPhone) {
+        $person = $pdo->prepare('SELECT sender_name, sender_phone, recipient_name, recipient_phone FROM parcels WHERE id = :id AND company_id = :company_id LIMIT 1');
+        $person->execute([':id' => $parcelId, ':company_id' => $companyId]);
+        $personRow = $person->fetch();
+        $finalSenderName = $hasSender ? $senderName : (string) ($personRow['sender_name'] ?? '');
+        $finalSenderPhone = $hasSenderPhone ? $senderPhone : (string) ($personRow['sender_phone'] ?? '');
+        $finalRecipientName = $hasRecipient ? $recipientName : (string) ($personRow['recipient_name'] ?? '');
+        $finalRecipientPhone = $hasRecipientPhone ? $recipientPhone : (string) ($personRow['recipient_phone'] ?? '');
+        if (mb_strtolower($finalSenderName) === mb_strtolower($finalRecipientName)) {
+            auth_response(422, ['success' => false, 'message' => 'Recipient must have a different name from the sender.']);
+        }
+        if (parcel_phone_digits($finalSenderPhone) === parcel_phone_digits($finalRecipientPhone)) {
+            auth_response(422, ['success' => false, 'message' => 'Recipient must use a different phone number from the sender.']);
+        }
     }
     $sets = [];
     $params = [':parcel_id' => $parcelId, ':company_id' => $companyId];

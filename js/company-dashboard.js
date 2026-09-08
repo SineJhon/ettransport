@@ -4817,8 +4817,14 @@ function submitBranchForm() {
 
     var PARCEL_FIELD_IDS = [
         'parcel-sender', 'parcel-sender-phone', 'parcel-recipient', 'parcel-recipient-phone',
-        'parcel-from', 'parcel-to', 'parcel-weight', 'parcel-trip', 'parcel-travel-date'
+        'parcel-from', 'parcel-to', 'parcel-weight', 'parcel-trip', 'parcel-travel-date',
+        'parcel-payment-ref'
     ];
+
+    var parcelEditing = false;   // true when the modal is editing an existing parcel
+    var parcelStep = 1;          // 1 = details, 2 = payment (new parcels only)
+    var parcelPaymentMethod = '';
+    var parcelPaymentRef = '';
 
     function setParcelFieldError(id, message) {
         var field = byId(id);
@@ -4842,6 +4848,103 @@ function submitBranchForm() {
         for (var i = 0; i < PARCEL_FIELD_IDS.length; i++) { setParcelFieldError(PARCEL_FIELD_IDS[i], ''); }
     }
 
+    function syncParcelPaymentMethodUI() {
+        var labels = document.querySelectorAll('.cd-parcel-payment-method');
+        for (var l = 0; l < labels.length; l++) {
+            var input = labels[l].querySelector ? labels[l].querySelector('input[type="radio"]') : null;
+            labels[l].classList.toggle('is-selected', !!(input && input.checked));
+        }
+        var checked = document.querySelector('input[name="parcel-payment-method"]:checked');
+        var isTransfer = checked && checked.value === 'transfer';
+        var tf = byId('parcel-payment-transfer-fields');
+        if (tf) {
+            tf.hidden = !isTransfer;
+            if (isTransfer) { tf.classList.add('visible'); } else { tf.classList.remove('visible'); }
+        }
+    }
+
+    function renderParcelPaymentSummary() {
+        var box = byId('parcel-payment-summary');
+        if (!box) { return; }
+        var fromEl = byId('parcel-from'), toEl = byId('parcel-to');
+        var weightEl = byId('parcel-weight'), typeEl = byId('parcel-type');
+        var from = fromEl ? String(fromEl.value || '').trim() : '';
+        var to = toEl ? String(toEl.value || '').trim() : '';
+        var weight = weightEl ? String(weightEl.value || '').trim() : '';
+        var type = typeEl ? typeEl.value : 'standard';
+        var trip = selectedParcelTrip();
+        var tripFare = trip ? Number(trip.price) : 0;
+        var price = (parseFloat(weight) > 0) ? parcelPrice(weight, type, tripFare) : 0;
+        var rows = '';
+        var cell = function (k, v) { return '<span class="k">' + k + '</span><span class="v">' + v + '</span>'; };
+        rows += cell('Route', escHtml(from) + ' &rarr; ' + escHtml(to));
+        rows += cell('Travel date', trip ? (escHtml(trip.departure_date) + ' &middot; ' + escHtml(trip.departure_time)) : '&mdash;');
+        rows += cell('Parcel', escHtml(weight || '0') + ' kg &middot; ' + escHtml(parcelTypeLabel(type)));
+        rows += cell('Amount to pay', 'ETB ' + formatMoney(price));
+        box.innerHTML = rows;
+    }
+
+    function goToParcelStep(step) {
+        /* Moving forward into the payment step runs details validation first. */
+        if (step === 2 && parcelStep !== 2 && !validateParcelDetails()) { return; }
+        var step1 = byId('parcel-form-step-1');
+        var step2 = byId('parcel-form-step-2');
+        var pill1 = byId('parcel-step-1-pill');
+        var pill2 = byId('parcel-step-2-pill');
+        if (step1) { step1.hidden = step !== 1; }
+        if (step2) { step2.hidden = step !== 2; }
+        if (pill1) { pill1.className = step === 1 ? 'is-active' : 'is-done'; }
+        if (pill2) { pill2.className = step === 2 ? 'is-active' : ''; }
+        parcelStep = step;
+        if (step === 2) { renderParcelPaymentSummary(); }
+    }
+
+    function buildParcelReceiptHtml(parcel) {
+        var nameEl = byId('cd-mini-name');
+        var companyName = (nameEl && nameEl.textContent && String(nameEl.textContent).trim()) ? String(nameEl.textContent).trim() : 'ET Transport';
+        var paidAt = new Date();
+        var dateStr = paidAt.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
+            + ' \u00b7 ' + paidAt.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+        var methodLabel = parcelPaymentMethod === 'transfer' ? 'Bank Transfer' : 'Cash';
+        var payRef = (parcelPaymentMethod === 'transfer' && parcelPaymentRef) ? parcelPaymentRef : '\u2014';
+        var trip = null;
+        if (parcel.trip_id) {
+            for (var i = 0; i < parcelRouteTripsCache.length; i++) {
+                if (String(parcelRouteTripsCache[i].id) === String(parcel.trip_id)) { trip = parcelRouteTripsCache[i]; break; }
+            }
+        }
+        var travelLine = trip ? (escHtml(trip.departure_date) + ' \u00b7 ' + escHtml(trip.departure_time)) : '\u2014';
+        var row = function (k, v) { return '<dt>' + escHtml(k) + '</dt><dd>' + v + '</dd>'; };
+        var html = '';
+        html += '<div class="cd-receipt-brand"><b>' + escHtml(companyName) + '</b><span>Parcel shipment receipt</span></div>';
+        html += '<dl>';
+        html += row('Receipt no.', '<b>' + escHtml(parcel.reference || '') + '</b>');
+        html += row('Registered', escHtml(dateStr));
+        html += row('Sender', escHtml(parcel.sender_name || '') + ' \u00b7 ' + escHtml(parcel.sender_phone || ''));
+        html += row('Recipient', escHtml(parcel.recipient_name || '') + ' \u00b7 ' + escHtml(parcel.recipient_phone || ''));
+        html += row('Route', escHtml(String(parcel.from_city || '') + ' \u2192 ' + String(parcel.to_city || '')));
+        html += row('Travel', travelLine);
+        html += row('Parcel', escHtml(String(parcel.weight_kg || '0')) + ' kg \u00b7 ' + escHtml(parcelTypeLabel(parcel.parcel_type)));
+        html += row('Payment', escHtml(methodLabel) + (parcelPaymentMethod === 'transfer' ? ' \u00b7 ' + escHtml(payRef) : ''));
+        html += '</dl>';
+        html += '<div class="cd-receipt-total"><dt>Amount paid</dt><dd>ETB ' + formatMoney(Number(parcel.price)) + '</dd></div>';
+        return html;
+    }
+
+    function showParcelReceipt(parcel) {
+        var body = byId('parcel-receipt-body');
+        var modal = byId('parcel-receipt-modal');
+        if (!body || !modal) { return; }
+        body.innerHTML = buildParcelReceiptHtml(parcel);
+        if (modal.parentNode !== document.body) { document.body.appendChild(modal); }
+        modal.hidden = false;
+    }
+
+    function closeParcelReceipt() {
+        var modal = byId('parcel-receipt-modal');
+        if (modal) { modal.hidden = true; }
+    }
+
     function openParcelForm(parcel) {
         var form = byId('parcel-form');
         var modal = byId('parcel-form-modal');
@@ -4849,6 +4952,24 @@ function submitBranchForm() {
         var error = byId('parcel-form-error');
         if (error) { error.textContent = ''; error.hidden = true; }
         clearParcelFieldErrors();
+        setParcelFieldError('parcel-payment-method', '');
+        setParcelFieldError('parcel-payment-ref', '');
+
+        /* New parcels flow through details -> payment. Edits stay single-step. */
+        parcelEditing = !!parcel;
+        parcelStep = 1;
+        var stepsEl = byId('parcel-steps');
+        if (stepsEl) { stepsEl.hidden = parcelEditing; }
+        var submitBtn = byId('parcel-form-submit');
+        var nextBtn = byId('parcel-form-next');
+        if (submitBtn) { submitBtn.hidden = !parcelEditing; }
+        if (nextBtn) { nextBtn.hidden = parcelEditing; }
+        var cashRadio = document.querySelector('input[name="parcel-payment-method"][value="cash"]');
+        if (cashRadio) { cashRadio.checked = true; }
+        var payRefInput = byId('parcel-payment-ref');
+        if (payRefInput) { payRefInput.value = ''; }
+        syncParcelPaymentMethodUI();
+        goToParcelStep(1);
 
         var heading = byId('parcel-modal-heading');
         if (heading) { heading.textContent = parcel ? 'Edit Parcel ' + parcel.reference : 'New Parcel'; }
@@ -4880,16 +5001,11 @@ function submitBranchForm() {
         }
     }
 
-    function submitParcelForm() {
-        var error = byId('parcel-form-error');
-        if (error) { error.hidden = true; }
-
+    function parcelDetailsPayload() {
         function valueOf(id) {
             var el = byId(id);
             return el ? String(el.value || '').trim() : '';
         }
-
-        var id = valueOf('parcel-id');
         var payload = {
             sender_name: valueOf('parcel-sender'),
             sender_phone: parcelPhoneDigits(valueOf('parcel-sender-phone')),
@@ -4901,9 +5017,15 @@ function submitBranchForm() {
             parcel_type: valueOf('parcel-type') || 'standard',
             notes: valueOf('parcel-notes')
         };
+        var id = valueOf('parcel-id');
         if (id) { payload.parcel_id = id; }
-        var action = id ? 'parcel_update' : 'parcel_create';
+        return payload;
+    }
 
+    function validateParcelDetails() {
+        var error = byId('parcel-form-error');
+        if (error) { error.hidden = true; }
+        var payload = parcelDetailsPayload();
         var firstInvalid = '';
         function bad(fieldId, message) {
             setParcelFieldError(fieldId, message);
@@ -4916,6 +5038,14 @@ function submitBranchForm() {
         else if (payload.sender_phone.length !== 9) { bad('parcel-sender-phone', 'Enter a valid 9-digit Ethiopian sender phone (after +251).'); }
         if (!payload.recipient_phone) { bad('parcel-recipient-phone', 'Recipient phone number is required.'); }
         else if (payload.recipient_phone.length !== 9) { bad('parcel-recipient-phone', 'Enter a valid 9-digit Ethiopian recipient phone (after +251).'); }
+        if (payload.sender_name && payload.recipient_name &&
+            payload.sender_name.toUpperCase() === payload.recipient_name.toUpperCase()) {
+            bad('parcel-recipient', 'Recipient must have a different name from the sender.');
+        }
+        if (payload.sender_phone && payload.recipient_phone &&
+            payload.sender_phone === payload.recipient_phone) {
+            bad('parcel-recipient-phone', 'Recipient must use a different phone number from the sender.');
+        }
         if (!payload.from_city) { bad('parcel-from', 'Departure city is required.'); }
         if (!payload.to_city) { bad('parcel-to', 'Destination city is required.'); }
         else if (payload.from_city && payload.from_city.toUpperCase() === payload.to_city.toUpperCase()) { bad('parcel-to', 'Departure and destination must be different cities.'); }
@@ -4936,10 +5066,47 @@ function submitBranchForm() {
         if (firstInvalid) {
             var firstEl = byId(firstInvalid);
             if (firstEl && firstEl.focus) { firstEl.focus(); }
-            return;
+            return null;
         }
         if (tripId) { payload.trip_id = tripId; }
+        return payload;
+    }
 
+    function submitParcelForm() {
+        var error = byId('parcel-form-error');
+        if (error) { error.hidden = true; }
+
+        /* New-parcel details step: submit / Enter behaves like "Next". */
+        if (!parcelEditing && parcelStep === 1) { goToParcelStep(2); return; }
+
+        var payload = validateParcelDetails();
+        if (!payload) { return; }
+
+        /* Payment step — new parcels only. */
+        if (!parcelEditing) {
+            var payRadio = document.querySelector('input[name="parcel-payment-method"]:checked');
+            var payMethod = payRadio ? String(payRadio.value || '') : '';
+            if (!payMethod) {
+                setParcelFieldError('parcel-payment-method', 'Choose a payment method.');
+                return;
+            }
+            parcelPaymentMethod = payMethod;
+            if (payMethod === 'transfer') {
+                var payRefEl = byId('parcel-payment-ref');
+                var payRef = payRefEl ? String(payRefEl.value || '').trim() : '';
+                if (!payRef) {
+                    setParcelFieldError('parcel-payment-ref', 'Enter the bank transaction reference.');
+                    return;
+                }
+                parcelPaymentRef = payRef;
+                payload.payment_ref = payRef;
+            } else {
+                parcelPaymentRef = '';
+            }
+            payload.payment_method = payMethod;
+        }
+
+        var action = payload.parcel_id ? 'parcel_update' : 'parcel_create';
         var submitBtn = byId('parcel-form-submit');
         if (submitBtn) { submitBtn.disabled = true; }
 
@@ -4966,6 +5133,7 @@ function submitBranchForm() {
                 hideParcelForm();
                 loadParcels();
                 toast(data.message || 'Parcel saved.');
+                if (!parcelEditing && data.parcel) { showParcelReceipt(data.parcel); }
             })
             .catch(function () {
                 if (error) { error.textContent = 'Network error while saving the parcel.'; error.hidden = false; }
@@ -5110,6 +5278,34 @@ function submitBranchForm() {
 
         var cancelBtn = byId('parcel-form-cancel');
         if (cancelBtn) { cancelBtn.addEventListener('click', hideParcelForm); }
+
+        var nextBtn = byId('parcel-form-next');
+        if (nextBtn) { nextBtn.addEventListener('click', function () { submitParcelForm(); }); }
+        var backBtn = byId('parcel-form-back');
+        if (backBtn) { backBtn.addEventListener('click', function () { goToParcelStep(1); }); }
+        var paymentRadios = document.querySelectorAll('input[name="parcel-payment-method"]');
+        for (var pm = 0; pm < paymentRadios.length; pm++) {
+            paymentRadios[pm].addEventListener('change', function () {
+                syncParcelPaymentMethodUI();
+                setParcelFieldError('parcel-payment-method', '');
+            });
+        }
+        var receiptPrint = byId('parcel-receipt-print');
+        if (receiptPrint) { receiptPrint.addEventListener('click', function () { document.body.classList.add('printing-parcel-receipt'); window.print(); }); }
+        var receiptDone = byId('parcel-receipt-done');
+        if (receiptDone) { receiptDone.addEventListener('click', closeParcelReceipt); }
+        var receiptClose = byId('parcel-receipt-close');
+        if (receiptClose) { receiptClose.addEventListener('click', closeParcelReceipt); }
+        var receiptModal = byId('parcel-receipt-modal');
+        if (receiptModal) {
+            if (receiptModal.parentNode !== document.body) { document.body.appendChild(receiptModal); }
+            receiptModal.addEventListener('click', function (ev) {
+                if (ev.target === receiptModal) { closeParcelReceipt(); }
+            });
+        }
+        window.addEventListener('afterprint', function () {
+            document.body.classList.remove('printing-parcel-receipt');
+        });
 
         /* Live-clear each field's inline error as the operator edits it. */
         for (var fi = 0; fi < PARCEL_FIELD_IDS.length; fi++) {
@@ -5648,6 +5844,8 @@ function submitBranchForm() {
                 if (roModal && !roModal.hidden) { closeRevenueOverview(); }
                 var parcelModal = byId('parcel-form-modal');
                 if (parcelModal && !parcelModal.hidden) { hideParcelForm(); }
+                var prModal = byId('parcel-receipt-modal');
+                if (prModal && !prModal.hidden) { closeParcelReceipt(); }
             }
         });
 

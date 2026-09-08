@@ -667,6 +667,50 @@
         .cd-parcel-price-label { font: 800 .68rem/1 'DM Sans', sans-serif; text-transform: uppercase; letter-spacing: .05em; color: #5d776b; }
         .cd-parcel-price-value { font: 800 1.5rem/1 'Outfit', sans-serif; color: #14603f; }
         .cd-parcel-form-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5ede8; }
+        .cd-parcel-form-actions .btn[hidden] { display: none; }
+        .cd-parcel-steps { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: 0 0 .85rem; }
+        .cd-parcel-steps[hidden] { display: none; }
+        .cd-parcel-steps li { display: inline-flex; align-items: center; gap: .35rem; padding: .3rem .72rem; border-radius: 20px; color: #5c736a; background: #f2f7f4; border: 1px solid #dceae2; font: 800 .72rem/1 'DM Sans', sans-serif; }
+        .cd-parcel-steps li b { display: grid; place-items: center; width: 1.15rem; height: 1.15rem; border-radius: 50%; background: #dceae2; color: #5c736a; font-size: .62rem; line-height: 1; }
+        .cd-parcel-steps li.is-active { color: #fff; background: #187653; border-color: #187653; box-shadow: 0 4px 10px rgba(24,118,83,.17); }
+        .cd-parcel-steps li.is-active b { background: #fff; color: #187653; }
+        .cd-parcel-steps li.is-done { color: #166534; background: #dcfce7; border-color: #bbf7d0; }
+        .cd-parcel-steps li.is-done b { background: #16a34a; color: #fff; }
+        .cd-parcel-payment-summary { display: grid; grid-template-columns: 1fr 1fr; gap: .45rem .9rem; margin: 0 0 .9rem; padding: .75rem .85rem; background: #f0f7f2; border: 1px solid #d4e6da; border-radius: 10px; }
+        .cd-parcel-payment-summary .k { color: #5d776b; font: 800 .66rem/1 'DM Sans', sans-serif; text-transform: uppercase; letter-spacing: .04em; }
+        .cd-parcel-payment-summary .v { color: #153a31; font-size: .88rem; font-weight: 700; }
+        .cd-parcel-form .cd-parcel-payment-methods { display: grid; gap: .55rem; }
+        .cd-parcel-form .cd-parcel-payment-method { display: flex; align-items: center; gap: .6rem; padding: .7rem .85rem; border: 1px solid #dcebe3; border-radius: 10px; background: #fbfdfc; cursor: pointer; font: 700 .86rem 'DM Sans', sans-serif; }
+        .cd-parcel-modal .cd-parcel-form .cd-parcel-payment-method { margin-top: 0; }
+        .cd-parcel-form .cd-parcel-payment-method.is-selected { border-color: #187653; background: #edf6f0; box-shadow: 0 0 0 2px rgba(24,118,83,.1); }
+        .cd-parcel-form .cd-parcel-payment-method input { width: auto; flex: 0 0 auto; }
+        .cd-parcel-transfer-fields { display: none; gap: .5rem; margin-top: .6rem; }
+        .cd-parcel-transfer-fields.visible { display: grid; }
+        .cd-parcel-receipt-modal { position: fixed; inset: 0; z-index: 105; display: grid; place-items: center; padding: 1rem; background: rgba(8,31,25,.58); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+        .cd-parcel-receipt-modal[hidden] { display: none; }
+        .cd-parcel-receipt-box { width: min(100%, 430px); max-height: min(90vh, 780px); overflow: auto; padding: 1.1rem; background: #fff; border: 1px solid #dfe9e3; border-radius: 16px; box-shadow: 0 25px 70px rgba(5,26,20,.28); }
+        .cd-parcel-receipt-head { display: flex; align-items: flex-start; justify-content: space-between; gap: .8rem; padding-bottom: .8rem; margin-bottom: .8rem; border-bottom: 1px solid #e5ede8; }
+        .cd-parcel-receipt-head h3 { margin: 0; font-size: 1.02rem; color: #163a33; }
+        .cd-parcel-receipt-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .8rem; }
+        .cd-parcel-receipt-actions .btn[hidden] { display: none; }
+        .cd-receipt { padding: .9rem .75rem; background: #fbfdfc; border: 1px solid #e1eae5; border-radius: 10px; }
+        .cd-receipt-brand { display: flex; flex-direction: column; gap: .1rem; padding: .55rem .65rem; margin-bottom: .7rem; background: #163a33; color: #fff; border-radius: 8px; }
+        .cd-receipt-brand b { font: 800 1.15rem/1.2 'Outfit', sans-serif; letter-spacing: .01em; }
+        .cd-receipt-brand span { font: 700 .66rem/1 'DM Sans', sans-serif; letter-spacing: .08em; text-transform: uppercase; opacity: .85; }
+        .cd-receipt dl { display: grid; grid-template-columns: 1fr auto; gap: .35rem .75rem; margin: 0; }
+        .cd-receipt dt { color: #5f776c; font-size: .74rem; font-weight: 700; }
+        .cd-receipt dd { margin: 0; color: #153a31; font-size: .82rem; font-weight: 700; }
+        .cd-receipt-total { display: flex; justify-content: space-between; align-items: center; gap: .75rem; margin-top: .6rem; padding: .55rem .65rem; background: #eaf3ee; border-radius: 8px; }
+        .cd-receipt-total dt { color: #254a40; font-size: .8rem; font-weight: 800; }
+        .cd-receipt-total dd { margin: 0; color: #14603f; font: 800 1.25rem/1 'Outfit', sans-serif; }
+        @media print {
+            body.printing-parcel-receipt * { visibility: hidden; }
+            body.printing-parcel-receipt .cd-parcel-receipt-box,
+            body.printing-parcel-receipt .cd-parcel-receipt-box * { visibility: visible; }
+            body.printing-parcel-receipt .cd-parcel-receipt-box { position: static; top: auto; left: auto; width: auto; max-width: none; max-height: none; overflow: visible; box-shadow: none; border: 0; padding: 1.1rem; }
+            body.printing-parcel-receipt .cd-parcel-receipt-head,
+            body.printing-parcel-receipt .cd-parcel-receipt-actions { display: none; }
+        }
         .cd-parcel-modal { position: fixed; inset: 0; z-index: 101; display: grid; place-items: center; padding: 1rem; background: rgba(8, 31, 25, .58); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
         .cd-parcel-modal[hidden] { display: none; }
         .cd-parcel-modal-box { width: min(100%, 680px); max-height: min(90vh, 800px); overflow: auto; padding: 1.4rem; background: #fff; border: 1px solid #dfe9e3; border-radius: 18px; box-shadow: 0 25px 70px rgba(5, 26, 20, .28); }
@@ -1314,6 +1358,12 @@
             <form id="parcel-form" class="cd-parcel-form" hidden novalidate>
                 <input type="hidden" id="parcel-id">
                 <h3 id="parcel-form-title">New Parcel</h3>
+                <ol id="parcel-steps" class="cd-parcel-steps" aria-label="Parcel registration steps">
+                    <li id="parcel-step-1-pill" class="is-active"><b>1</b>Parcel details</li>
+                    <li id="parcel-step-2-pill"><b>2</b>Payment</li>
+                </ol>
+                <p id="parcel-form-error" class="cd-parcel-form-error" role="alert" hidden></p>
+                <div id="parcel-form-step-1">
                 <div class="cd-parcel-form-row">
                     <div>
                         <label for="parcel-sender">Sender name *</label>
@@ -1405,12 +1455,50 @@
                     <label for="parcel-notes">Contents / description</label>
                     <textarea id="parcel-notes" maxlength="500" placeholder="e.g. Documents and clothes"></textarea>
                 </div>
-                <p id="parcel-form-error" class="cd-parcel-form-error" role="alert" hidden></p>
                 <div class="cd-parcel-form-actions">
                     <button type="button" id="parcel-form-cancel" class="btn">Cancel</button>
-                    <button type="submit" id="parcel-form-submit" class="btn btn-primary">Save Parcel</button>
+                    <button type="submit" id="parcel-form-submit" class="btn btn-primary" hidden>Save Parcel</button>
+                    <button type="button" id="parcel-form-next" class="btn btn-primary" hidden>Next</button>
+                </div>
+                </div>
+
+                <div id="parcel-form-step-2" hidden>
+                    <div id="parcel-payment-summary" class="cd-parcel-payment-summary"></div>
+                    <div>
+                        <label>Payment method *</label>
+                        <div class="cd-parcel-payment-methods">
+                            <label class="cd-parcel-payment-method"><input type="radio" name="parcel-payment-method" value="cash" checked> <span>Cash</span></label>
+                            <label class="cd-parcel-payment-method"><input type="radio" name="parcel-payment-method" value="transfer"> <span>Bank Transfer</span></label>
+                        </div>
+                        <p id="parcel-payment-method-error" class="cd-parcel-field-error" hidden role="alert"></p>
+                        <div id="parcel-payment-transfer-fields" class="cd-parcel-transfer-fields" hidden>
+                            <label for="parcel-payment-ref">Transaction reference *</label>
+                            <input type="text" id="parcel-payment-ref" maxlength="120" placeholder="e.g. T23456" autocomplete="off">
+                            <p id="parcel-payment-ref-error" class="cd-parcel-field-error" hidden role="alert"></p>
+                        </div>
+                    </div>
+                    <div class="cd-parcel-form-actions">
+                        <button type="button" id="parcel-form-back" class="btn">Back</button>
+                        <button type="submit" id="parcel-form-pay-submit" class="btn btn-primary">Register &amp; Pay</button>
+                    </div>
                 </div>
             </form>
+
+            <!-- Receipt modal — shown after a new parcel is paid and saved so the
+                 operator can hand the customer a downloadable / printable receipt. -->
+            <div id="parcel-receipt-modal" class="cd-parcel-receipt-modal" hidden>
+                <div class="cd-parcel-receipt-box" role="dialog" aria-modal="true" aria-labelledby="parcel-receipt-title">
+                    <div class="cd-parcel-receipt-head">
+                        <h3 id="parcel-receipt-title">Payment receipt</h3>
+                        <button type="button" id="parcel-receipt-close" class="cd-parcel-modal-close" aria-label="Close receipt">&times;</button>
+                    </div>
+                    <div id="parcel-receipt-body" class="cd-receipt"></div>
+                    <div class="cd-parcel-receipt-actions">
+                        <button type="button" id="parcel-receipt-done" class="btn btn-secondary">Done</button>
+                        <button type="button" id="parcel-receipt-print" class="btn btn-primary">Download / Print Receipt</button>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <section id="company-revenue" class="cd-revenue" hidden>
