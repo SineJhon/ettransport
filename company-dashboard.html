@@ -1471,10 +1471,24 @@
                             <label class="cd-parcel-payment-method"><input type="radio" name="parcel-payment-method" value="transfer"> <span>Bank Transfer</span></label>
                         </div>
                         <p id="parcel-payment-method-error" class="cd-parcel-field-error" hidden role="alert"></p>
+                        <div id="parcel-payment-cash-fields" class="cd-parcel-transfer-fields" hidden>
+                            <label for="parcel-payment-cashier">Cashier name *</label>
+                            <input type="text" id="parcel-payment-cashier" maxlength="120" placeholder="e.g. Hanna Tesfaye" autocomplete="off">
+                            <p id="parcel-payment-cashier-error" class="cd-parcel-field-error" hidden role="alert"></p>
+                        </div>
                         <div id="parcel-payment-transfer-fields" class="cd-parcel-transfer-fields" hidden>
-                            <label for="parcel-payment-ref">Transaction reference *</label>
-                            <input type="text" id="parcel-payment-ref" maxlength="120" placeholder="e.g. T23456" autocomplete="off">
-                            <p id="parcel-payment-ref-error" class="cd-parcel-field-error" hidden role="alert"></p>
+                            <div class="cd-parcel-form-row">
+                                <div>
+                                    <label for="parcel-payment-sender">Sender / account name *</label>
+                                    <input type="text" id="parcel-payment-sender" maxlength="120" placeholder="Sender name" autocomplete="off">
+                                    <p id="parcel-payment-sender-error" class="cd-parcel-field-error" hidden role="alert"></p>
+                                </div>
+                                <div>
+                                    <label for="parcel-payment-ref">TXN / transaction reference *</label>
+                                    <input type="text" id="parcel-payment-ref" maxlength="120" placeholder="e.g. T23456" autocomplete="off">
+                                    <p id="parcel-payment-ref-error" class="cd-parcel-field-error" hidden role="alert"></p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="cd-parcel-form-actions">

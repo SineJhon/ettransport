@@ -4818,12 +4818,14 @@ function submitBranchForm() {
     var PARCEL_FIELD_IDS = [
         'parcel-sender', 'parcel-sender-phone', 'parcel-recipient', 'parcel-recipient-phone',
         'parcel-from', 'parcel-to', 'parcel-weight', 'parcel-trip', 'parcel-travel-date',
-        'parcel-payment-ref'
+        'parcel-payment-cashier', 'parcel-payment-sender', 'parcel-payment-ref'
     ];
 
     var parcelEditing = false;   // true when the modal is editing an existing parcel
     var parcelStep = 1;          // 1 = details, 2 = payment (new parcels only)
     var parcelPaymentMethod = '';
+    var parcelPaymentCashier = '';
+    var parcelPaymentSender = '';
     var parcelPaymentRef = '';
 
     function setParcelFieldError(id, message) {
@@ -4856,10 +4858,16 @@ function submitBranchForm() {
         }
         var checked = document.querySelector('input[name="parcel-payment-method"]:checked');
         var isTransfer = checked && checked.value === 'transfer';
+        var isCash = checked && checked.value === 'cash';
         var tf = byId('parcel-payment-transfer-fields');
         if (tf) {
             tf.hidden = !isTransfer;
             if (isTransfer) { tf.classList.add('visible'); } else { tf.classList.remove('visible'); }
+        }
+        var cf = byId('parcel-payment-cash-fields');
+        if (cf) {
+            cf.hidden = !isCash;
+            if (isCash) { cf.classList.add('visible'); } else { cf.classList.remove('visible'); }
         }
     }
 
@@ -4906,7 +4914,14 @@ function submitBranchForm() {
         var dateStr = paidAt.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
             + ' \u00b7 ' + paidAt.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
         var methodLabel = parcelPaymentMethod === 'transfer' ? 'Bank Transfer' : 'Cash';
-        var payRef = (parcelPaymentMethod === 'transfer' && parcelPaymentRef) ? parcelPaymentRef : '\u2014';
+        var paymentDetail = methodLabel;
+        if (parcelPaymentMethod === 'transfer') {
+            paymentDetail = methodLabel
+                + (parcelPaymentSender ? ' \u00b7 ' + escHtml(parcelPaymentSender) : '')
+                + (parcelPaymentRef ? ' \u00b7 ' + escHtml(parcelPaymentRef) : '');
+        } else {
+            paymentDetail = methodLabel + (parcelPaymentCashier ? ' \u00b7 Cashier: ' + escHtml(parcelPaymentCashier) : '');
+        }
         var trip = null;
         if (parcel.trip_id) {
             for (var i = 0; i < parcelRouteTripsCache.length; i++) {
@@ -4925,7 +4940,7 @@ function submitBranchForm() {
         html += row('Route', escHtml(String(parcel.from_city || '') + ' \u2192 ' + String(parcel.to_city || '')));
         html += row('Travel', travelLine);
         html += row('Parcel', escHtml(String(parcel.weight_kg || '0')) + ' kg \u00b7 ' + escHtml(parcelTypeLabel(parcel.parcel_type)));
-        html += row('Payment', escHtml(methodLabel) + (parcelPaymentMethod === 'transfer' ? ' \u00b7 ' + escHtml(payRef) : ''));
+        html += row('Payment', paymentDetail);
         html += '</dl>';
         html += '<div class="cd-receipt-total"><dt>Amount paid</dt><dd>ETB ' + formatMoney(Number(parcel.price)) + '</dd></div>';
         return html;
@@ -4968,6 +4983,10 @@ function submitBranchForm() {
         if (cashRadio) { cashRadio.checked = true; }
         var payRefInput = byId('parcel-payment-ref');
         if (payRefInput) { payRefInput.value = ''; }
+        var cashierInput = byId('parcel-payment-cashier');
+        if (cashierInput) { cashierInput.value = ''; }
+        var paySenderInput = byId('parcel-payment-sender');
+        if (paySenderInput) { paySenderInput.value = ''; }
         syncParcelPaymentMethodUI();
         goToParcelStep(1);
 
@@ -5092,15 +5111,31 @@ function submitBranchForm() {
             }
             parcelPaymentMethod = payMethod;
             if (payMethod === 'transfer') {
+                var paySenderEl = byId('parcel-payment-sender');
+                var paySender = paySenderEl ? String(paySenderEl.value || '').trim() : '';
+                if (!paySender) {
+                    setParcelFieldError('parcel-payment-sender', 'Enter the sender / account name.');
+                    return;
+                }
                 var payRefEl = byId('parcel-payment-ref');
                 var payRef = payRefEl ? String(payRefEl.value || '').trim() : '';
                 if (!payRef) {
-                    setParcelFieldError('parcel-payment-ref', 'Enter the bank transaction reference.');
+                    setParcelFieldError('parcel-payment-ref', 'Enter the TXN / transaction reference.');
                     return;
                 }
+                parcelPaymentCashier = '';
+                parcelPaymentSender = paySender;
                 parcelPaymentRef = payRef;
                 payload.payment_ref = payRef;
             } else {
+                var cashierEl = byId('parcel-payment-cashier');
+                var cashier = cashierEl ? String(cashierEl.value || '').trim() : '';
+                if (!cashier) {
+                    setParcelFieldError('parcel-payment-cashier', 'Enter the cashier name.');
+                    return;
+                }
+                parcelPaymentCashier = cashier;
+                parcelPaymentSender = '';
                 parcelPaymentRef = '';
             }
             payload.payment_method = payMethod;
