@@ -2239,7 +2239,7 @@ function parcel_notes_or_error(mixed $raw): ?string
 
 function valid_parcel_status(string $value): bool
 {
-    return in_array($value, ['received', 'sent', 'delivered', 'picked_up'], true);
+    return in_array($value, ['received', 'sent', 'delivered', 'picked_up', 'returned_to_sender', 'lost'], true);
 }
 
 function valid_parcel_type(string $value): bool
@@ -2300,10 +2300,50 @@ function parcel_status_or_error(mixed $raw): string
 {
     $status = trim((string) ($raw ?? 'received'));
     if (!valid_parcel_status($status)) {
-        auth_response(422, ['success' => false, 'message' => 'Invalid parcel status. Use received, sent, delivered or picked_up.']);
+        auth_response(422, ['success' => false, 'message' => 'Invalid parcel status.']);
    }
 
     return $status;
+}
+
+function parcel_status_transition_allowed(string $from, string $to): bool
+{
+    $transitions = [
+        'received' => ['sent', 'lost'],
+        'sent' => ['delivered', 'returned_to_sender', 'lost'],
+        'delivered' => ['picked_up', 'returned_to_sender', 'lost'],
+    ];
+    return isset($transitions[$from]) && in_array($to, $transitions[$from], true);
+}
+
+function parcel_status_details_or_error(mixed $raw): array
+{
+    if (!is_array($raw) || $raw === []) {
+        auth_response(422, ['success' => false, 'message' => 'Status change details are required.']);
+    }
+    $details = [];
+    foreach ($raw as $key => $value) {
+        $key = trim((string) $key);
+        $value = trim((string) $value);
+        if ($key !== '' && $value !== '') { $details[$key] = mb_substr($value, 0, 500); }
+    }
+    if ($details === []) { auth_response(422, ['success' => false, 'message' => 'Status change details are required.']); }
+    return $details;
+}
+
+function record_parcel_status_change(PDO $pdo, int $parcelId, int $companyId, int $userId, string $from, string $to, array $details): void
+{
+    /* Kept in its own append-only table so parcel contents/notes stay intact. */
+    $pdo->exec('CREATE TABLE IF NOT EXISTS parcel_status_log (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        parcel_id BIGINT UNSIGNED NOT NULL, company_id BIGINT UNSIGNED NOT NULL,
+        changed_by BIGINT UNSIGNED NOT NULL, from_status VARCHAR(32) NOT NULL,
+        to_status VARCHAR(32) NOT NULL, details_json TEXT NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_parcel_status_log_parcel (parcel_id, created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+    $log = $pdo->prepare('INSERT INTO parcel_status_log (parcel_id, company_id, changed_by, from_status, to_status, details_json) VALUES (:parcel_id, :company_id, :changed_by, :from_status, :to_status, :details_json)');
+    $log->execute([':parcel_id' => $parcelId, ':company_id' => $companyId, ':changed_by' => $userId, ':from_status' => $from, ':to_status' => $to, ':details_json' => json_encode($details, JSON_UNESCAPED_UNICODE)]);
 }
 
 function existing_parcel_or_error(PDO $pdo, mixed $raw, int $companyId): int
@@ -4609,7 +4649,22 @@ function handle_parcel_update(PDO $pdo): void
         ? (trim((string) $tripKey) === '' ? null : positive_int_or_error($tripKey, 'A valid trip id is required.'))
         : null;
     $status = $hasStatus ? parcel_status_or_error($input['status']) : null;
+    $statusDetails = $hasStatus ? parcel_status_details_or_error($input['status_details'] ?? null) : [];
+    if ($hasStatus) {
+        $password = (string) ($input['password'] ?? '');
+        if ($password === '' || !verify_current_password($password)) {
+            auth_response(401, ['success' => false, 'message' => 'Your password was not accepted. Parcel status was not changed.']);
+        }
+    }
     $notes = $hasNotes ? parcel_notes_or_error($input['notes']) : null;
+    if ($hasStatus) {
+        $currentStatusStmt = $pdo->prepare('SELECT status FROM parcels WHERE id = :id AND company_id = :company_id LIMIT 1');
+        $currentStatusStmt->execute([':id' => $parcelId, ':company_id' => $companyId]);
+        $currentStatus = (string) (($currentStatusStmt->fetch()['status'] ?? ''));
+        if (!parcel_status_transition_allowed($currentStatus, $status)) {
+            auth_response(422, ['success' => false, 'message' => 'This parcel status is final or cannot be changed from its current stage.']);
+        }
+    }
     if ($hasFrom && $hasTo && mb_strtolower($fromCity) === mb_strtolower($toCity)) {
 
         auth_response(422, ['success' => false, 'message' => 'Departure and destination cities must be different.']);
@@ -4691,6 +4746,17 @@ function handle_parcel_update(PDO $pdo): void
     $sql = 'UPDATE parcels SET ' . implode(', ', $sets) . ' WHERE id = :parcel_id AND company_id = :company_id';
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
+    if ($hasStatus) {
+        /* The status itself is the primary operation. Older installations may
+           not yet have applied the log-table migration (or may not grant this
+           web user CREATE TABLE), so never report a failed status change after
+           the parcel row was already updated. */
+        try {
+            record_parcel_status_change($pdo, $parcelId, $companyId, (int) $user['id'], $currentStatus, $status, $statusDetails);
+        } catch (Throwable $e) {
+            error_log('Parcel status audit log could not be written: ' . $e->getMessage());
+        }
+    }
     auth_response(200, [
         'success' => true,
         'message' => 'Parcel updated.',

@@ -430,7 +430,7 @@ CREATE TABLE IF NOT EXISTS parcels (
   parcel_type ENUM('document', 'standard', 'electronic', 'fragile', 'perishable') NOT NULL DEFAULT 'standard',
   price DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
   notes TEXT DEFAULT NULL,
-  status ENUM('received', 'sent', 'delivered', 'picked_up') NOT NULL DEFAULT 'received',
+  status ENUM('received', 'sent', 'delivered', 'picked_up', 'returned_to_sender', 'lost') NOT NULL DEFAULT 'received',
   trip_id BIGINT UNSIGNED DEFAULT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -447,6 +447,20 @@ CREATE TABLE IF NOT EXISTS parcels (
     FOREIGN KEY (trip_id) REFERENCES trips(id)
     ON DELETE SET NULL
     ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Append-only operational records for every guided parcel status change.
+CREATE TABLE IF NOT EXISTS parcel_status_log (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  parcel_id BIGINT UNSIGNED NOT NULL,
+  company_id BIGINT UNSIGNED NOT NULL,
+  changed_by BIGINT UNSIGNED NOT NULL,
+  from_status VARCHAR(32) NOT NULL,
+  to_status VARCHAR(32) NOT NULL,
+  details_json TEXT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_parcel_status_log_parcel (parcel_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------

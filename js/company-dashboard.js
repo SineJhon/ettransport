@@ -534,6 +534,7 @@
                     return;
                 }
                 hideBusForm();
+                toast(data.message || 'Bus saved successfully.');
                 loadFleet();
             })
             .catch(function () {
@@ -964,8 +965,8 @@
                         /* The return route already exists — the goal (both
                            directions available) is already met. Close the form
                            and confirm. */
-                        toast('Route added. ' + toCity + ' \u2192 ' + fromCity + ' already exists.');
                         hideRouteForm();
+                        toast('Route added. ' + toCity + ' \u2192 ' + fromCity + ' already exists.');
                         loadRoutes();
                         loadTrips();
                         return;
@@ -979,10 +980,12 @@
                     loadTrips();
                     return;
                 }
+                hideRouteForm();
                 if (info.reverse === 'ok') {
                     toast('2 routes added: ' + fromCity + ' \u2192 ' + toCity + ' and ' + toCity + ' \u2192 ' + fromCity + '.');
+                } else {
+                    toast(id ? 'Route updated successfully.' : 'Route added successfully.');
                 }
-                hideRouteForm();
                 loadRoutes();
                 /* New trips should immediately see the updated route catalog. */
                 loadTrips();
@@ -1031,6 +1034,7 @@
                 }
                 if (modal && !modal.hidden) { modal.hidden = true; }
                 pendingRouteDeleteId = null;
+                toast(data.message || 'Route deleted successfully.');
                 loadRoutes();
                 /* New trips should immediately see the updated route catalog. */
                 loadTrips();
@@ -1410,6 +1414,7 @@
                     return;
                 }
                 hideTripForm();
+                toast(data.message || 'Trip saved successfully.');
                 loadTrips();
             })
             .catch(function () {
@@ -1938,6 +1943,7 @@
                 if (modal && !modal.hidden) { modal.hidden = true; }
                 pendingTripDeleteId = null;
                 showTripNotice(data.message || 'Trip deleted.');
+                toast(data.message || 'Trip deleted successfully.');
                 loadTrips();
             })
             .catch(function () {
@@ -2412,6 +2418,7 @@
                     return;
                 }
                 closeCancelBookingModal();
+                toast(data.message || 'Booking cancelled successfully.');
                 loadBookings();
                 var notice = data.message || 'Booking cancelled successfully.';
                 var info = byId('booking-error');
@@ -4366,8 +4373,8 @@ function submitBranchForm() {
                     setBranchFormError(data.message || 'Unable to save the branch.');
                     return;
                 }
-                toast(data.message || 'Branch saved.');
                 closeBranchForm();
+                toast(data.message || 'Branch saved successfully.');
                 loadBranches();
             })
             .catch(function () {
@@ -4485,8 +4492,16 @@ function submitBranchForm() {
         { value: 'received', label: 'Received' },
         { value: 'sent', label: 'Sent' },
         { value: 'delivered', label: 'Delivered' },
-        { value: 'picked_up', label: 'Picked up' }
+        { value: 'picked_up', label: 'Received by recipient' },
+        { value: 'returned_to_sender', label: 'Returned to sender' },
+        { value: 'lost', label: 'Lost' }
     ];
+    var PARCEL_TERMINAL_STATUSES = ['picked_up', 'returned_to_sender', 'lost'];
+    var PARCEL_STATUS_TRANSITIONS = {
+        received: ['sent', 'lost'],
+        sent: ['delivered', 'returned_to_sender', 'lost'],
+        delivered: ['picked_up', 'returned_to_sender', 'lost']
+    };
 
     var PARCEL_DELETE_REASON_SUGGESTIONS = [
         'Registered by mistake / wrong details',
@@ -4645,10 +4660,11 @@ function submitBranchForm() {
         if (empty) { empty.hidden = true; }
 
         var html = filtered.map(function (p) {
-            var statusClass = (p.status === 'sent' || p.status === 'delivered' || p.status === 'picked_up') ? p.status : 'received';
+            var statusClass = PARCEL_STATUSES.some(function (s) { return s.value === p.status; }) ? p.status : 'received';
             var statusLabel = escHtml(parcelStatusLabel(p.status));
             var statusDot = '<span class="dot" aria-hidden="true"></span>';
-            var menuItems = PARCEL_STATUSES.map(function (s) {
+            var allowedTransitions = PARCEL_STATUS_TRANSITIONS[p.status] || [];
+            var menuItems = PARCEL_STATUSES.filter(function (s) { return allowedTransitions.indexOf(s.value) !== -1; }).map(function (s) {
                 return '<button type="button" class="st-' + s.value + (s.value === p.status ? ' is-current' : '') + '" data-parcel-status-set="' + escHtml(p.id) + '" data-parcel-status-value="' + s.value + '">' +
                     '<span class="dot" aria-hidden="true"></span>' + escHtml(s.label) +
                     '<span class="check' + (s.value === p.status ? '' : ' is-empty') + '" aria-hidden="true">&#10003;</span>' +
@@ -4658,10 +4674,12 @@ function submitBranchForm() {
                 '<div class="cd-parcel-top">' +
                     '<span class="cd-parcel-ref">' + escHtml(p.reference) + '</span>' +
                     '<span class="cd-parcel-status-wrap">' +
-                        '<button type="button" class="cd-parcel-status-chip st-' + statusClass + '" data-parcel-status-toggle="' + escHtml(p.id) + '" aria-haspopup="true" aria-expanded="false" aria-label="Change parcel status">' +
+                        (PARCEL_TERMINAL_STATUSES.indexOf(p.status) !== -1
+                            ? '<span class="cd-parcel-status-chip st-' + statusClass + '" aria-label="Parcel status is final">'
+                            : '<button type="button" class="cd-parcel-status-chip st-' + statusClass + '" data-parcel-status-toggle="' + escHtml(p.id) + '" aria-haspopup="true" aria-expanded="false" aria-label="Change parcel status">') +
                             statusDot + statusLabel + '<span class="caret" aria-hidden="true">&#9662;</span>' +
-                        '</button>' +
-                        '<div class="cd-parcel-status-menu" data-parcel-status-menu="' + escHtml(p.id) + '" hidden>' + menuItems + '</div>' +
+                        (PARCEL_TERMINAL_STATUSES.indexOf(p.status) !== -1 ? '</span>' : '</button>') +
+                        (PARCEL_TERMINAL_STATUSES.indexOf(p.status) !== -1 ? '' : '<div class="cd-parcel-status-menu" data-parcel-status-menu="' + escHtml(p.id) + '" hidden>' + menuItems + '</div>') +
                     '</span>' +
                 '</div>' +
                 '<div class="cd-parcel-route">' +
@@ -5333,7 +5351,75 @@ function submitBranchForm() {
             });
     }
 
-    function changeParcelStatus(id, status) {
+    var pendingParcelStatusChange = null;
+
+    function statusField(label, key, placeholder, required) {
+        return '<label for="parcel-status-' + key + '">' + label + (required ? ' *' : '') + '</label><input id="parcel-status-' + key + '" data-status-detail="' + key + '" ' + (required ? 'required' : '') + ' maxlength="180" placeholder="' + placeholder + '">';
+    }
+
+    function openParcelStatusModal(id, status) {
+        var parcel = parcelById(id);
+        var modal = byId('parcel-status-modal');
+        if (!parcel || !modal || PARCEL_TERMINAL_STATUSES.indexOf(parcel.status) !== -1 || (PARCEL_STATUS_TRANSITIONS[parcel.status] || []).indexOf(status) === -1) { return; }
+        pendingParcelStatusChange = { id: id, status: status };
+        var title = byId('parcel-status-title');
+        var subtitle = byId('parcel-status-subtitle');
+        var fields = byId('parcel-status-fields');
+        var error = byId('parcel-status-error');
+        if (title) { title.textContent = 'Mark parcel as ' + parcelStatusLabel(status); }
+        if (subtitle) { subtitle.textContent = (parcel.reference || 'Parcel') + ' · ' + (parcel.from_city || '') + ' → ' + (parcel.to_city || ''); }
+        var html = '';
+        if (status === 'sent') {
+            html = statusField('Vehicle plate number', 'plate_number', 'e.g. 3-12345 A.A', true) + statusField('Driver name', 'driver_name', 'Full name of driver', true) + statusField('Dispatch time', 'dispatch_time', 'e.g. 10:30 AM', true) + statusField('Dispatch note', 'note', 'Optional loading or route note', false);
+        } else if (status === 'delivered') {
+            html = statusField('Received at destination by', 'branch_receiver', 'Staff member or branch name', true) + statusField('Arrival time', 'arrival_time', 'e.g. 4:15 PM', true);
+        } else if (status === 'picked_up') {
+            html = statusField('Who received the parcel?', 'recipient_name', 'Full name of recipient', true) + statusField('ID / phone verification', 'verification', 'Last 4 ID digits or phone number', true) + '<label>Handover method *</label><div class="cd-status-quick-answers" data-status-choice="handover"><button type="button" data-value="Collected at branch">Collected at branch</button><button type="button" data-value="Handed to recipient">Handed to recipient</button></div>';
+        } else if (status === 'returned_to_sender') {
+            html = '<label>Why was it returned? *</label><div class="cd-status-quick-answers" data-status-choice="reason"><button type="button" data-value="Recipient did not come">Recipient did not come</button><button type="button" data-value="Recipient could not be reached">Recipient could not be reached</button><button type="button" data-value="Sender requested return">Sender requested return</button></div>' + statusField('Accepted by sender', 'sender_receiver', 'Name of sender / representative', true) + statusField('Return handover note', 'note', 'Where and when it was returned', true);
+        } else if (status === 'lost') {
+            html = '<label>Loss reason *</label><div class="cd-status-quick-answers" data-status-choice="reason"><button type="button" data-value="Could not locate after arrival">Could not locate after arrival</button><button type="button" data-value="Missing during transit">Missing during transit</button><button type="button" data-value="Damaged beyond recovery">Damaged beyond recovery</button></div>' + '<label>Was a refund paid? *</label><div class="cd-status-quick-answers" data-status-choice="refund_paid"><button type="button" data-value="Yes">Yes</button><button type="button" data-value="No">No</button></div>' + statusField('Refund amount / reference', 'refund_reference', 'Required if refund was paid', false);
+        }
+        html += '<label for="parcel-status-password">Your account password *</label><input id="parcel-status-password" type="password" autocomplete="current-password" required placeholder="Enter your password">';
+        if (fields) { fields.innerHTML = html; }
+        if (error) { error.hidden = true; error.textContent = ''; }
+        modal.hidden = false;
+    }
+
+    function closeParcelStatusModal() {
+        var modal = byId('parcel-status-modal');
+        if (modal) { modal.hidden = true; }
+        pendingParcelStatusChange = null;
+    }
+
+    function submitParcelStatusChange() {
+        if (!pendingParcelStatusChange) { return; }
+        var details = {};
+        var fields = document.querySelectorAll('#parcel-status-fields [data-status-detail]');
+        for (var i = 0; i < fields.length; i++) {
+            var value = String(fields[i].value || '').trim();
+            if (fields[i].required && !value) { showStatusError('Complete all required details before confirming.'); return; }
+            if (value) { details[fields[i].getAttribute('data-status-detail')] = value; }
+        }
+        var choices = document.querySelectorAll('#parcel-status-fields [data-status-choice]');
+        for (var j = 0; j < choices.length; j++) {
+            var selected = choices[j].querySelector('.is-selected');
+            if (!selected) { showStatusError('Choose an answer for each required question.'); return; }
+            details[choices[j].getAttribute('data-status-choice')] = selected.getAttribute('data-value');
+        }
+        if (pendingParcelStatusChange.status === 'lost' && details.refund_paid === 'Yes' && !details.refund_reference) { showStatusError('Enter the refund amount or payment reference.'); return; }
+        var passwordField = byId('parcel-status-password');
+        var password = passwordField ? String(passwordField.value || '') : '';
+        if (!password) { showStatusError('Enter your account password to confirm this status change.'); return; }
+        changeParcelStatus(pendingParcelStatusChange.id, pendingParcelStatusChange.status, details, password);
+    }
+
+    function showStatusError(message) {
+        var error = byId('parcel-status-error');
+        if (error) { error.textContent = message; error.hidden = false; }
+    }
+
+    function changeParcelStatus(id, status, details, password) {
         var chips = document.querySelectorAll('.cd-parcel-status-chip[data-parcel-status-toggle]');
         for (var c = 0; c < chips.length; c++) {
             if (chips[c].getAttribute('data-parcel-status-toggle') === String(id)) {
@@ -5346,7 +5432,7 @@ function submitBranchForm() {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-            body: JSON.stringify({ parcel_id: id, status: status })
+            body: JSON.stringify({ parcel_id: id, status: status, status_details: details || {}, password: password || '' })
         })
             .then(function (res) {
                 return res.json().catch(function () {
@@ -5357,7 +5443,8 @@ function submitBranchForm() {
             })
             .then(function (result) {
                 var data = result.data || {};
-                if (result.ok && result.status === 200) { loadParcels(); return; }
+                if (result.ok && data.success) { closeParcelStatusModal(); loadParcels(); toast(data.message || 'Parcel status updated successfully.'); return; }
+                if (result.status === 401) { showStatusError(data.message || 'Your password was not accepted.'); var pw = byId('parcel-status-password'); if (pw) { pw.value = ''; pw.focus(); } return; }
                 toast(data.message || 'Unable to change the parcel status.');
                 loadParcels();
             })
@@ -5635,7 +5722,7 @@ function submitBranchForm() {
                 if (delBtn) { deleteParcel(delBtn.getAttribute('data-parcel-delete')); return; }
                 var setBtn = target.closest('[data-parcel-status-set]');
                 if (setBtn) {
-                    changeParcelStatus(setBtn.getAttribute('data-parcel-status-set'), setBtn.getAttribute('data-parcel-status-value'));
+                    openParcelStatusModal(setBtn.getAttribute('data-parcel-status-set'), setBtn.getAttribute('data-parcel-status-value'));
                     return;
                 }
                 var toggle = target.closest('[data-parcel-status-toggle]');
@@ -5663,6 +5750,25 @@ function submitBranchForm() {
             if (t && t.closest && t.closest('#parcel-list')) { return; }
             closeParcelStatusMenus();
         });
+
+        var statusModal = byId('parcel-status-modal');
+        if (statusModal) {
+            if (statusModal.parentNode !== document.body) { document.body.appendChild(statusModal); }
+            statusModal.addEventListener('click', function (ev) {
+                if (ev.target === statusModal) { closeParcelStatusModal(); }
+                var choice = ev.target && ev.target.closest ? ev.target.closest('[data-status-choice] button') : null;
+                if (choice) {
+                    var group = choice.parentNode;
+                    var buttons = group.querySelectorAll('button');
+                    for (var cb = 0; cb < buttons.length; cb++) { buttons[cb].classList.toggle('is-selected', buttons[cb] === choice); }
+                    var statusErr = byId('parcel-status-error'); if (statusErr) { statusErr.hidden = true; }
+                }
+            });
+        }
+        var statusForm = byId('parcel-status-form');
+        if (statusForm) { statusForm.addEventListener('submit', function (ev) { ev.preventDefault(); submitParcelStatusChange(); }); }
+        var statusClose = byId('parcel-status-close'); if (statusClose) { statusClose.addEventListener('click', closeParcelStatusModal); }
+        var statusCancel = byId('parcel-status-cancel'); if (statusCancel) { statusCancel.addEventListener('click', closeParcelStatusModal); }
 
         var deleteModal = byId('parcel-delete-modal');
         if (deleteModal) {

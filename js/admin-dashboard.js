@@ -63,6 +63,24 @@
         el.textContent = message || 'Something went wrong.';
     }
 
+    /* A shared, non-blocking completion message for actions that close an
+       admin modal. It uses the site's existing toast styling and is created
+       only once, so no page markup is required. */
+    function toast(message) {
+        var el = byId('admin-dash-toast');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'admin-dash-toast';
+            el.className = 'dash-toast';
+            el.setAttribute('role', 'status');
+            document.body.appendChild(el);
+        }
+        el.textContent = message;
+        el.classList.add('show');
+        window.clearTimeout(el._toastTimer);
+        el._toastTimer = window.setTimeout(function () { el.classList.remove('show'); }, 3500);
+    }
+
     function parseJson(res) {
         return res.json().catch(function () {
             return { success: false, message: 'Invalid server response.' };
@@ -758,6 +776,7 @@ function renderDetail(c) {
                 }
                 loadOverview();
                 loadCompanies();
+                toast(data.message || 'Company updated successfully.');
             })
             .catch(function () {
                 if (confirmBtn) {
@@ -2033,6 +2052,7 @@ function renderDetail(c) {
                     return;
                 }
                 closeAddCompany();
+                toast(res.message || 'Company account created successfully.');
                 loadCompanies();
                 loadOverview();
             })

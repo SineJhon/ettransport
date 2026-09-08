@@ -642,6 +642,8 @@
         .cd-parcel-card.is-sent::before { background: #d97706; }
         .cd-parcel-card.is-delivered::before { background: #16a34a; }
         .cd-parcel-card.is-picked_up::before { background: #6b7280; }
+        .cd-parcel-card.is-returned_to_sender::before { background: #7c3aed; }
+        .cd-parcel-card.is-lost::before { background: #dc2626; }
     .cd-parcel-card:hover { transform: translateY(-2px); box-shadow: 0 9px 20px rgba(19,63,51,.09); border-color: #cbded5; }
         .cd-parcel-top { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
         .cd-parcel-ref { color: #153a31; font-size: .8rem; font-weight: 800; letter-spacing: .02em; }
@@ -676,14 +678,20 @@
         .cd-parcel-status-chip.st-sent { color: #b45309; background: #fdf1e0; border: 1px solid #f4d9b0; }
         .cd-parcel-status-chip.st-delivered { color: #16a34a; background: #e6f8ec; border: 1px solid #c4ecd4; }
         .cd-parcel-status-chip.st-picked_up { color: #4b5563; background: #f0f2f5; border: 1px solid #dfe4ea; }
+        .cd-parcel-status-chip.st-returned_to_sender { color: #6d28d9; background: #f3e8ff; border: 1px solid #ddd6fe; }
+        .cd-parcel-status-chip.st-lost { color: #b91c1c; background: #fef2f2; border: 1px solid #fecaca; }
         .cd-parcel-status-chip.st-received .dot { background: #2563eb; }
         .cd-parcel-status-chip.st-sent .dot { background: #d97706; }
         .cd-parcel-status-chip.st-delivered .dot { background: #16a34a; }
         .cd-parcel-status-chip.st-picked_up .dot { background: #6b7280; }
+        .cd-parcel-status-chip.st-returned_to_sender .dot { background: #7c3aed; }
+        .cd-parcel-status-chip.st-lost .dot { background: #dc2626; }
         .cd-parcel-status-menu button.st-received .dot { background: #2563eb; }
         .cd-parcel-status-menu button.st-sent .dot { background: #d97706; }
         .cd-parcel-status-menu button.st-delivered .dot { background: #16a34a; }
         .cd-parcel-status-menu button.st-picked_up .dot { background: #6b7280; }
+        .cd-parcel-status-menu button.st-returned_to_sender .dot { background: #7c3aed; }
+        .cd-parcel-status-menu button.st-lost .dot { background: #dc2626; }
         .cd-parcel-form { display: block; margin-top: 1rem; padding: 1.1rem; border: 1px solid #e5e7eb; border-radius: 10px; }
         .cd-parcel-form h3 { margin: 0 0 .75rem; font-size: 1.05rem; }
         .cd-parcel-form label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: .25rem; }
@@ -736,6 +744,16 @@
         .cd-parcel-transfer-fields.visible { display: grid; }
         .cd-parcel-receipt-modal { position: fixed; inset: 0; z-index: 105; display: grid; place-items: center; padding: 1rem; background: rgba(8,31,25,.58); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
         .cd-parcel-receipt-modal[hidden] { display: none; }
+        .cd-parcel-status-modal { position: fixed; inset: 0; z-index: 107; display: grid; place-items: center; padding: 1rem; background: rgba(8,31,25,.58); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+        .cd-parcel-status-modal[hidden] { display: none; }
+        .cd-parcel-status-box { width: min(100%, 560px); max-height: min(90vh, 820px); overflow: auto; padding: 1.3rem; background: #fff; border: 1px solid #dfe9e3; border-radius: 18px; box-shadow: 0 25px 70px rgba(5,26,20,.28); }
+        .cd-parcel-status-subtitle { margin: .25rem 0 0; color: #647a71; font-size: .84rem; }
+        .cd-parcel-status-box label { display: block; margin: .8rem 0 .3rem; color: #254a40; font-size: .78rem; font-weight: 800; letter-spacing: .025em; }
+        .cd-parcel-status-box input, .cd-parcel-status-box textarea, .cd-parcel-status-box select { box-sizing: border-box; width: 100%; padding: .6rem .7rem; border: 1px solid #ccdcd3; border-radius: 8px; font: inherit; }
+        .cd-parcel-status-box textarea { min-height: 76px; resize: vertical; }
+        .cd-status-quick-answers { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .35rem; }
+        .cd-status-quick-answers button { padding: .38rem .6rem; color: #245944; background: #eef6f2; border: 1px solid #cfe4d8; border-radius: 999px; cursor: pointer; font: 700 .75rem/1 'DM Sans', sans-serif; }
+        .cd-status-quick-answers button:hover, .cd-status-quick-answers button.is-selected { color: #fff; background: #187653; border-color: #187653; }
         .cd-parcel-receipt-box { width: min(100%, 560px); max-height: min(90vh, 820px); overflow: auto; padding: 1.3rem; background: #fff; border: 1px solid #dfe9e3; border-radius: 18px; box-shadow: 0 25px 70px rgba(5,26,20,.28); }
         .cd-parcel-receipt-head { display: flex; align-items: flex-start; justify-content: space-between; gap: .8rem; padding-bottom: .8rem; margin-bottom: .8rem; border-bottom: 1px solid #e5ede8; }
         .cd-parcel-receipt-head h3 { margin: 0; font-size: 1.02rem; color: #163a33; }
@@ -1418,7 +1436,9 @@
                 <button type="button" class="cd-parcel-filter" data-parcel-status="received" aria-pressed="false">Received</button>
                 <button type="button" class="cd-parcel-filter" data-parcel-status="sent" aria-pressed="false">Sent</button>
                 <button type="button" class="cd-parcel-filter" data-parcel-status="delivered" aria-pressed="false">Delivered</button>
-                <button type="button" class="cd-parcel-filter" data-parcel-status="picked_up" aria-pressed="false">Picked up</button>
+                <button type="button" class="cd-parcel-filter" data-parcel-status="picked_up" aria-pressed="false">Received by recipient</button>
+                <button type="button" class="cd-parcel-filter" data-parcel-status="returned_to_sender" aria-pressed="false">Returned to sender</button>
+                <button type="button" class="cd-parcel-filter" data-parcel-status="lost" aria-pressed="false">Lost</button>
             </div>
 
             <div class="cd-parcel-filters">
@@ -1595,6 +1615,23 @@
                         <button type="button" id="parcel-receipt-done" class="btn btn-secondary">Done</button>
                         <button type="button" id="parcel-receipt-print" class="btn btn-primary">Download / Print Receipt</button>
                     </div>
+                </div>
+            </div>
+
+            <div id="parcel-status-modal" class="cd-parcel-status-modal" hidden>
+                <div class="cd-parcel-status-box" role="dialog" aria-modal="true" aria-labelledby="parcel-status-title">
+                    <div class="cd-parcel-receipt-head">
+                        <div><h3 id="parcel-status-title">Update parcel status</h3><p id="parcel-status-subtitle" class="cd-parcel-status-subtitle"></p></div>
+                        <button type="button" id="parcel-status-close" class="cd-parcel-modal-close" aria-label="Close status dialog">&times;</button>
+                    </div>
+                    <form id="parcel-status-form" novalidate>
+                        <div id="parcel-status-fields"></div>
+                        <p id="parcel-status-error" class="cd-parcel-field-error" role="alert" hidden></p>
+                        <div class="cd-parcel-receipt-actions">
+                            <button type="button" id="parcel-status-cancel" class="btn btn-secondary">Cancel</button>
+                            <button type="submit" id="parcel-status-confirm" class="btn btn-primary">Confirm status</button>
+                        </div>
+                    </form>
                 </div>
             </div>
 
@@ -2119,6 +2156,6 @@
     <script src="js/auth.js"></script>
     <script src="js/cities.js"></script>
     <script src="js/city-picker.js?v=20260907-swap-fix-3-dispatch"></script>
-    <script src="js/company-dashboard.js?v=20260907-parcel-v10-cap"></script>
+    <script src="js/company-dashboard.js?v=20260908-modal-success-v4"></script>
 </body>
 </html>
