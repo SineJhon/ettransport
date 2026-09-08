@@ -4674,6 +4674,8 @@ function submitBranchForm() {
         var tripSel = byId('parcel-trip');
 
         parcelRouteTripsCache = [];
+        setParcelFieldError('parcel-travel-date', '');
+        setParcelFieldError('parcel-trip', '');
         if (cell) { cell.hidden = true; }
         if (loading) { loading.hidden = true; }
         if (empty) { empty.hidden = true; }
@@ -4779,6 +4781,7 @@ function submitBranchForm() {
     }
 
     function refreshParcelTripOptions(date) {
+        setParcelFieldError('parcel-travel-date', '');
         var sel = byId('parcel-trip');
         var empty = byId('parcel-trip-empty');
         var tripCell = byId('parcel-trip-cell');
@@ -4812,12 +4815,40 @@ function submitBranchForm() {
         return digits;
     }
 
+    var PARCEL_FIELD_IDS = [
+        'parcel-sender', 'parcel-sender-phone', 'parcel-recipient', 'parcel-recipient-phone',
+        'parcel-from', 'parcel-to', 'parcel-weight', 'parcel-trip', 'parcel-travel-date'
+    ];
+
+    function setParcelFieldError(id, message) {
+        var field = byId(id);
+        if (field) {
+            if (message) {
+                field.classList.add('is-invalid');
+                field.setAttribute('aria-invalid', 'true');
+            } else {
+                field.classList.remove('is-invalid');
+                field.removeAttribute('aria-invalid');
+            }
+        }
+        var errEl = byId(id + '-error');
+        if (errEl) {
+            errEl.textContent = message || '';
+            errEl.hidden = !message;
+        }
+    }
+
+    function clearParcelFieldErrors() {
+        for (var i = 0; i < PARCEL_FIELD_IDS.length; i++) { setParcelFieldError(PARCEL_FIELD_IDS[i], ''); }
+    }
+
     function openParcelForm(parcel) {
         var form = byId('parcel-form');
         var modal = byId('parcel-form-modal');
         if (!form) { return; }
         var error = byId('parcel-form-error');
         if (error) { error.textContent = ''; error.hidden = true; }
+        clearParcelFieldErrors();
 
         var heading = byId('parcel-modal-heading');
         if (heading) { heading.textContent = parcel ? 'Edit Parcel ' + parcel.reference : 'New Parcel'; }
@@ -4873,24 +4904,38 @@ function submitBranchForm() {
         if (id) { payload.parcel_id = id; }
         var action = id ? 'parcel_update' : 'parcel_create';
 
-        function bad(message) {
-            if (error) { error.textContent = message; error.hidden = false; }
+        var firstInvalid = '';
+        function bad(fieldId, message) {
+            setParcelFieldError(fieldId, message);
+            if (!firstInvalid) { firstInvalid = fieldId; }
         }
 
-        if (!payload.sender_name || !payload.recipient_name) { bad('Sender and recipient names are required.'); return; }
-        if (!payload.sender_phone || !payload.recipient_phone) { bad('Both sender and recipient phone numbers are required.'); return; }
-        if (payload.sender_phone.length !== 9) { bad('Enter a valid 9-digit Ethiopian sender phone (after +251).'); return; }
-        if (payload.recipient_phone.length !== 9) { bad('Enter a valid 9-digit Ethiopian recipient phone (after +251).'); return; }
-        if (!payload.from_city || !payload.to_city) { bad('Both departure city and destination are required.'); return; }
-        if (payload.from_city.toUpperCase() === payload.to_city.toUpperCase()) { bad('Departure and destination must be different cities.'); return; }
-        if (!(parseFloat(payload.weight_kg) > 0)) { bad('Please enter a valid parcel weight in kilograms.'); return; }
+        if (!payload.sender_name) { bad('parcel-sender', 'Sender name is required.'); }
+        if (!payload.recipient_name) { bad('parcel-recipient', 'Recipient name is required.'); }
+        if (!payload.sender_phone) { bad('parcel-sender-phone', 'Sender phone number is required.'); }
+        else if (payload.sender_phone.length !== 9) { bad('parcel-sender-phone', 'Enter a valid 9-digit Ethiopian sender phone (after +251).'); }
+        if (!payload.recipient_phone) { bad('parcel-recipient-phone', 'Recipient phone number is required.'); }
+        else if (payload.recipient_phone.length !== 9) { bad('parcel-recipient-phone', 'Enter a valid 9-digit Ethiopian recipient phone (after +251).'); }
+        if (!payload.from_city) { bad('parcel-from', 'Departure city is required.'); }
+        if (!payload.to_city) { bad('parcel-to', 'Destination city is required.'); }
+        else if (payload.from_city && payload.from_city.toUpperCase() === payload.to_city.toUpperCase()) { bad('parcel-to', 'Departure and destination must be different cities.'); }
+        if (!(parseFloat(payload.weight_kg) > 0)) { bad('parcel-weight', 'Enter a valid parcel weight in kilograms.'); }
 
         var tripSelect = byId('parcel-trip');
         var tripId = tripSelect ? String(tripSelect.value || '') : '';
         var dateCell = byId('parcel-travel-date-cell');
+        var dateList = byId('parcel-travel-day-list');
         var tripCell = byId('parcel-trip-cell');
-        if (dateCell && !dateCell.hidden && (!tripCell || tripCell.hidden || !tripId)) {
-            bad('Pick a travel date and choose a scheduled trip on this route.');
+        var hasDate = dateList ? dateList.querySelector('.cd-day-btn.active') != null : false;
+        if (dateCell && !dateCell.hidden && !hasDate) {
+            bad('parcel-travel-date', 'Pick a travel date for your shipment.');
+        } else if (tripCell && !tripCell.hidden && !tripId) {
+            bad('parcel-trip', 'Choose a scheduled trip on that date.');
+        }
+
+        if (firstInvalid) {
+            var firstEl = byId(firstInvalid);
+            if (firstEl && firstEl.focus) { firstEl.focus(); }
             return;
         }
         if (tripId) { payload.trip_id = tripId; }
@@ -4914,7 +4959,7 @@ function submitBranchForm() {
             .then(function (result) {
                 var data = result.data || {};
                 if (!result.ok || !data.success) {
-                    bad(data.message || 'Unable to save the parcel.');
+                    if (error) { error.textContent = data.message || 'Unable to save the parcel.'; error.hidden = false; }
                     if (submitBtn) { submitBtn.disabled = false; }
                     return;
                 }
@@ -4923,7 +4968,7 @@ function submitBranchForm() {
                 toast(data.message || 'Parcel saved.');
             })
             .catch(function () {
-                bad('Network error while saving the parcel.');
+                if (error) { error.textContent = 'Network error while saving the parcel.'; error.hidden = false; }
             });
     }
 
@@ -5065,6 +5110,16 @@ function submitBranchForm() {
 
         var cancelBtn = byId('parcel-form-cancel');
         if (cancelBtn) { cancelBtn.addEventListener('click', hideParcelForm); }
+
+        /* Live-clear each field's inline error as the operator edits it. */
+        for (var fi = 0; fi < PARCEL_FIELD_IDS.length; fi++) {
+            (function (fieldId) {
+                var fel = byId(fieldId);
+                if (!fel) { return; }
+                fel.addEventListener('input', function () { setParcelFieldError(fieldId, ''); });
+                fel.addEventListener('change', function () { setParcelFieldError(fieldId, ''); });
+            })(PARCEL_FIELD_IDS[fi]);
+        }
 
         var listEl = byId('parcel-list');
         if (listEl) {

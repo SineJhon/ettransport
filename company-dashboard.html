@@ -643,6 +643,10 @@
         .cd-parcel-form input:focus, .cd-parcel-form select:focus, .cd-parcel-form textarea:focus { outline: 3px solid rgba(49,164,118,.16); border-color: #31a476; }
         .cd-parcel-form textarea { min-height: 76px; resize: vertical; }
         .cd-parcel-form-hint { margin: .35rem 0 0; color: #7a9087; font-size: .72rem; line-height: 1.45; }
+        .cd-parcel-field-error { margin: .35rem 0 0; color: #b91c1c; font-size: .78rem; font-weight: 600; line-height: 1.4; }
+        .cd-parcel-field-error[hidden] { display: none; }
+        .cd-parcel-form .is-invalid { border-color: #dc2626; }
+        .cd-parcel-form .is-invalid:focus { outline: 3px solid rgba(220,38,38,.16); border-color: #dc2626; }
         .cd-parcel-form .cd-walkin-phone-field { display: flex; align-items: stretch; }
         .cd-parcel-form .cd-walkin-phone-field .phone-prefix { display: inline-flex; align-items: center; padding: 0 .65rem; background: #eef2f7; border: 1px solid #cbd5e1; border-right: none; border-radius: 6px 0 0 6px; font-weight: 700; color: #374151; font-size: .9rem; white-space: nowrap; }
         .cd-parcel-form .cd-walkin-phone-field input { width: auto; flex: 1 1 auto; min-width: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; }
@@ -1313,41 +1317,47 @@
                 <div class="cd-parcel-form-row">
                     <div>
                         <label for="parcel-sender">Sender name *</label>
-                        <input type="text" id="parcel-sender" maxlength="120" placeholder="e.g. Abebe Kebede">
+                        <input type="text" id="parcel-sender" maxlength="120" placeholder="e.g. Abebe Kebede" required aria-describedby="parcel-sender-error">
+                        <p id="parcel-sender-error" class="cd-parcel-field-error" hidden role="alert"></p>
                     </div>
                     <div>
                         <label for="parcel-sender-phone">Sender phone *</label>
                         <div class="cd-walkin-phone-field phone-field">
                             <span class="phone-prefix" aria-hidden="true">+251</span>
-                            <input type="tel" id="parcel-sender-phone" maxlength="9" placeholder="9XXXXXXXX" inputmode="numeric" autocomplete="tel-national">
+                            <input type="tel" id="parcel-sender-phone" maxlength="9" placeholder="9XXXXXXXX" inputmode="numeric" autocomplete="tel-national" required aria-describedby="parcel-sender-phone-error">
                         </div>
+                        <p id="parcel-sender-phone-error" class="cd-parcel-field-error" hidden role="alert"></p>
                     </div>
                 </div>
                 <div class="cd-parcel-form-row">
                     <div>
                         <label for="parcel-recipient">Recipient name *</label>
-                        <input type="text" id="parcel-recipient" maxlength="120" placeholder="e.g. Sara Alemu">
+                        <input type="text" id="parcel-recipient" maxlength="120" placeholder="e.g. Sara Alemu" required aria-describedby="parcel-recipient-error">
+                        <p id="parcel-recipient-error" class="cd-parcel-field-error" hidden role="alert"></p>
                     </div>
                     <div>
                         <label for="parcel-recipient-phone">Recipient phone *</label>
                         <div class="cd-walkin-phone-field phone-field">
                             <span class="phone-prefix" aria-hidden="true">+251</span>
-                            <input type="tel" id="parcel-recipient-phone" maxlength="9" placeholder="9XXXXXXXX" inputmode="numeric" autocomplete="tel-national">
+                            <input type="tel" id="parcel-recipient-phone" maxlength="9" placeholder="9XXXXXXXX" inputmode="numeric" autocomplete="tel-national" required aria-describedby="parcel-recipient-phone-error">
                         </div>
+                        <p id="parcel-recipient-phone-error" class="cd-parcel-field-error" hidden role="alert"></p>
                         <p class="cd-parcel-form-hint">The recipient&rsquo;s ID will be required at pickup to verify their identity.</p>
                     </div>
                 </div>
                 <div class="cd-parcel-form-row city-route">
                     <div>
                         <label for="parcel-from">Leaving from *</label>
-                        <input type="text" id="parcel-from" data-city-picker data-city-pair="parcel" data-city-role="from" placeholder="City" autocomplete="off">
+                        <input type="text" id="parcel-from" data-city-picker data-city-pair="parcel" data-city-role="from" placeholder="City" autocomplete="off" required aria-describedby="parcel-from-error">
+                        <p id="parcel-from-error" class="cd-parcel-field-error" hidden role="alert"></p>
                     </div>
                     <button type="button" class="city-swap" data-city-pair="parcel" aria-label="Swap from and destination">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>
                     </button>
                     <div>
                         <label for="parcel-to">Destination *</label>
-                        <input type="text" id="parcel-to" data-city-picker data-city-pair="parcel" data-city-role="to" placeholder="City" autocomplete="off">
+                        <input type="text" id="parcel-to" data-city-picker data-city-pair="parcel" data-city-role="to" placeholder="City" autocomplete="off" required aria-describedby="parcel-to-error">
+                        <p id="parcel-to-error" class="cd-parcel-field-error" hidden role="alert"></p>
                     </div>
                 </div>
                 <div id="parcel-travel-date-cell" class="cd-parcel-form-row" hidden>
@@ -1357,24 +1367,27 @@
                         <p id="parcel-travel-loading" class="cd-parcel-form-hint" hidden>Fetching available trips&hellip;</p>
                         <p id="parcel-travel-empty" class="cd-parcel-form-hint" hidden></p>
                         <p class="cd-parcel-form-hint">Pick the date you want to ship on — only dates with a scheduled trip are shown.</p>
+                        <p id="parcel-travel-date-error" class="cd-parcel-field-error" hidden role="alert"></p>
                     </div>
                 </div>
                 <div id="parcel-trip-cell" hidden>
                     <label for="parcel-trip">Choose trip on that date *</label>
-                    <select id="parcel-trip">
+                    <select id="parcel-trip" required aria-describedby="parcel-trip-error">
                         <option value="">Select trip</option>
                     </select>
                     <p id="parcel-trip-empty" class="cd-parcel-form-hint" hidden>No scheduled trips on this route for the selected date.</p>
+                    <p id="parcel-trip-error" class="cd-parcel-field-error" hidden role="alert"></p>
                 </div>
                 <div class="cd-parcel-form-row">
                     <div>
                         <label for="parcel-weight">Weight (kg) *</label>
-                        <input type="number" id="parcel-weight" min="0" max="999" step="0.1" placeholder="e.g. 5">
+                        <input type="number" id="parcel-weight" min="0" max="999" step="0.1" placeholder="e.g. 5" required aria-describedby="parcel-weight-error">
+                        <p id="parcel-weight-error" class="cd-parcel-field-error" hidden role="alert"></p>
                         <p class="cd-parcel-form-hint">Anything under 0.5 kg is billed as 0.5 kg.</p>
                     </div>
                     <div>
                         <label for="parcel-type">Parcel type *</label>
-                        <select id="parcel-type">
+                        <select id="parcel-type" required>
                             <option value="document">Document (cheaper)</option>
                             <option value="standard" selected>Standard (general item)</option>
                             <option value="electronic">Electronics</option>
