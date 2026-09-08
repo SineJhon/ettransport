@@ -2331,6 +2331,34 @@ function parcel_status_details_or_error(mixed $raw): array
     return $details;
 }
 
+function ensure_parcel_payments_table(PDO $pdo): void
+{
+    $pdo->exec('CREATE TABLE IF NOT EXISTS parcel_payments (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        parcel_id BIGINT UNSIGNED NOT NULL, company_id BIGINT UNSIGNED NOT NULL,
+        amount DECIMAL(10,2) NOT NULL DEFAULT 0.00, refunded_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+        method VARCHAR(30) NOT NULL DEFAULT \'cash\', transaction_reference VARCHAR(120) DEFAULT NULL,
+        status ENUM(\'paid\',\'refunded\') NOT NULL DEFAULT \'paid\',
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_parcel_payments_parcel (parcel_id), KEY idx_parcel_payments_company (company_id, created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+    /* Backfill parcels registered before this ledger was introduced. They
+       were all paid in the company workflow, so safely record them as cash
+       office payments; the unique parcel key prevents duplicate inserts. */
+    $pdo->exec('INSERT IGNORE INTO parcel_payments (parcel_id, company_id, amount, method, status, created_at)
+        SELECT id, company_id, price, \'cash\', \'paid\', created_at FROM parcels');
+}
+
+function parcel_payment_method_or_error(mixed $raw): string
+{
+    $method = strtolower(trim((string) $raw));
+    if (!in_array($method, ['cash', 'transfer'], true)) {
+        auth_response(422, ['success' => false, 'message' => 'Choose cash or bank transfer for the parcel payment.']);
+    }
+    return $method;
+}
+
 function record_parcel_status_change(PDO $pdo, int $parcelId, int $companyId, int $userId, string $from, string $to, array $details): void
 {
     /* Kept in its own append-only table so parcel contents/notes stay intact. */
@@ -3582,8 +3610,16 @@ function company_revenue_summary(PDO $pdo, int $companyId, ?int $tripId, ?string
     $refundStmt = $pdo->prepare($refundSql);
     $refundStmt->execute($refundParams);
     $refundRow = $refundStmt->fetch() ?: [];
-    $grossPaid = round((float) ($row['gross_paid_revenue'] ?? 0), 2);
-    $refundsPaid = round((float) ($refundRow['refunds_paid'] ?? 0), 2);
+    /* Parcel counter payments are a separate ledger: they are not bookings,
+       but they are company revenue and must be part of the same paid/refund/net totals. */
+    ensure_parcel_payments_table($pdo);
+    $parcelSql = 'SELECT COALESCE(SUM(amount), 0) AS paid, COALESCE(SUM(refunded_amount), 0) AS refunds, COUNT(*) AS count FROM parcel_payments WHERE company_id = :company_id';
+    $parcelParams = [':company_id' => $companyId];
+    if ($fromDate !== null) { $parcelSql .= ' AND created_at >= :from_date'; $parcelParams[':from_date'] = $fromDate . ' 00:00:00'; }
+    if ($toDate !== null) { $parcelSql .= ' AND created_at <= :to_date'; $parcelParams[':to_date'] = $toDate . ' 23:59:59'; }
+    $parcelStmt = $pdo->prepare($parcelSql); $parcelStmt->execute($parcelParams); $parcelRow = $parcelStmt->fetch() ?: [];
+    $grossPaid = round((float) ($row['gross_paid_revenue'] ?? 0) + (float) ($parcelRow['paid'] ?? 0), 2);
+    $refundsPaid = round((float) ($refundRow['refunds_paid'] ?? 0) + (float) ($parcelRow['refunds'] ?? 0), 2);
 
     return [
         'gross_paid_revenue' => $grossPaid,
@@ -3593,7 +3629,7 @@ function company_revenue_summary(PDO $pdo, int $companyId, ?int $tripId, ?string
         'total_paid_revenue' => $grossPaid,
         'paid_payment_count' => (int) ($row['paid_payment_count'] ?? 0),
         'refunded_payment_count' => (int) ($row['refunded_payment_count'] ?? 0),
-        'total_payment_count' => (int) ($row['total_payment_count'] ?? 0),
+        'total_payment_count' => (int) ($row['total_payment_count'] ?? 0) + (int) ($parcelRow['count'] ?? 0),
         'paid_booking_count' => (int) ($row['paid_booking_count'] ?? 0),
         'no_refund_cancellation_count' => (int) ($refundRow['no_refund_cancellation_count'] ?? 0),
         'half_refund_count' => (int) ($refundRow['half_refund_count'] ?? 0),
@@ -3735,10 +3771,20 @@ function company_revenue_breakdown(PDO $pdo, int $companyId, ?int $month, ?int $
         ];
     }
 
+    /* Parcel counter sales are independent from office ticket bookings. */
+    ensure_parcel_payments_table($pdo);
+    $parcelPeriod = '';
+    $parcelParams = [':company_id' => $companyId];
+    if ($year !== null) { $parcelPeriod .= ' AND YEAR(created_at) = :year'; $parcelParams[':year'] = $year; }
+    if ($month !== null) { $parcelPeriod .= ' AND MONTH(created_at) = :month'; $parcelParams[':month'] = $month; }
+    $parcelStmt = $pdo->prepare('SELECT COUNT(*) AS records, COALESCE(SUM(amount), 0) AS paid, COALESCE(SUM(refunded_amount), 0) AS refunds FROM parcel_payments WHERE company_id = :company_id' . $parcelPeriod);
+    $parcelStmt->execute($parcelParams); $parcelRow = $parcelStmt->fetch() ?: [];
+    $breakdown['parcels'] = ['bookings' => (int) ($parcelRow['records'] ?? 0), 'paid' => round((float) ($parcelRow['paid'] ?? 0), 2), 'refunds' => round((float) ($parcelRow['refunds'] ?? 0), 2), 'net' => round((float) ($parcelRow['paid'] ?? 0) - (float) ($parcelRow['refunds'] ?? 0), 2)];
+
     $total = [
-        'bookings' => $breakdown['online']['bookings'] + $breakdown['office']['bookings'],
-        'paid' => round($breakdown['online']['paid'] + $breakdown['office']['paid'], 2),
-        'refunds' => round($breakdown['online']['refunds'] + $breakdown['office']['refunds'], 2),
+        'bookings' => $breakdown['online']['bookings'] + $breakdown['office']['bookings'] + $breakdown['parcels']['bookings'],
+        'paid' => round($breakdown['online']['paid'] + $breakdown['office']['paid'] + $breakdown['parcels']['paid'], 2),
+        'refunds' => round($breakdown['online']['refunds'] + $breakdown['office']['refunds'] + $breakdown['parcels']['refunds'], 2),
         'net' => 0.0,
     ];
     $total['net'] = round($total['paid'] - $total['refunds'], 2);
@@ -3746,6 +3792,7 @@ function company_revenue_breakdown(PDO $pdo, int $companyId, ?int $month, ?int $
     return [
         'online' => $breakdown['online'],
         'office' => $breakdown['office'],
+        'parcels' => $breakdown['parcels'],
         'total' => $total,
     ];
 }
@@ -4551,6 +4598,11 @@ function handle_parcel_create(PDO $pdo): void
     $price = parcel_price($weightKg, $parcelType, $tripFare);
     $status = parcel_status_or_error($input['status'] ?? 'received');
     $notes = parcel_notes_or_error($input['notes'] ?? null);
+    $paymentMethod = parcel_payment_method_or_error($input['payment_method'] ?? '');
+    $paymentReference = trim((string) ($input['payment_ref'] ?? ''));
+    if ($paymentMethod === 'transfer' && $paymentReference === '') {
+        auth_response(422, ['success' => false, 'message' => 'A transaction reference is required for bank transfer.']);
+    }
 
     if (mb_strtolower($fromCity) === mb_strtolower($toCity)) {
 
@@ -4566,6 +4618,7 @@ function handle_parcel_create(PDO $pdo): void
         auth_response(422, ['success' => false, 'message' => 'Recipient must use a different phone number from the sender.']);
     }
 
+    ensure_parcel_payments_table($pdo);
     $reference = generate_parcel_reference($pdo);
 
     try {
@@ -4594,6 +4647,11 @@ function handle_parcel_create(PDO $pdo): void
             ':trip_id' => $tripId,
         ]);
         $newId = (int) $pdo->lastInsertId();
+        $payment = $pdo->prepare('INSERT INTO parcel_payments (parcel_id, company_id, amount, method, transaction_reference, status) VALUES (:parcel_id, :company_id, :amount, :method, :reference, \'paid\')');
+        $payment->execute([
+            ':parcel_id' => $newId, ':company_id' => $companyId, ':amount' => $price,
+            ':method' => $paymentMethod, ':reference' => $paymentReference !== '' ? $paymentReference : null,
+        ]);
     } catch (PDOException $e) {
         if ((int) $e->getCode() === 23000) {
             auth_response(409, ['success' => false, 'message' => 'A duplicate parcel reference was generated. Please retry.']);
@@ -4654,6 +4712,10 @@ function handle_parcel_update(PDO $pdo): void
         $password = (string) ($input['password'] ?? '');
         if ($password === '' || !verify_current_password($password)) {
             auth_response(401, ['success' => false, 'message' => 'Your password was not accepted. Parcel status was not changed.']);
+        }
+        if ($status === 'lost' && (($statusDetails['refund_paid'] ?? '') === 'Yes')
+            && ((float) ($statusDetails['refund_amount'] ?? 0) <= 0 || trim((string) ($statusDetails['refund_reference'] ?? '')) === '')) {
+            auth_response(422, ['success' => false, 'message' => 'A positive refund amount and payment reference are required.']);
         }
     }
     $notes = $hasNotes ? parcel_notes_or_error($input['notes']) : null;
@@ -4747,6 +4809,15 @@ function handle_parcel_update(PDO $pdo): void
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     if ($hasStatus) {
+        /* A lost parcel can include a real refund. Keep it in the parcel
+           payment ledger so paid, refunded and net revenue remain accurate. */
+        if ($status === 'lost' && (($statusDetails['refund_paid'] ?? '') === 'Yes')) {
+            $refundAmount = (float) ($statusDetails['refund_amount'] ?? 0);
+            $refundReference = trim((string) ($statusDetails['refund_reference'] ?? ''));
+            ensure_parcel_payments_table($pdo);
+            $payment = $pdo->prepare('UPDATE parcel_payments SET refunded_amount = LEAST(amount, :refund_amount), status = \'refunded\', transaction_reference = :reference WHERE parcel_id = :parcel_id AND company_id = :company_id');
+            $payment->execute([':refund_amount' => $refundAmount, ':reference' => $refundReference, ':parcel_id' => $parcelId, ':company_id' => $companyId]);
+        }
         /* The status itself is the primary operation. Older installations may
            not yet have applied the log-table migration (or may not grant this
            web user CREATE TABLE), so never report a failed status change after

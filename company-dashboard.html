@@ -1708,6 +1708,23 @@
             <p id="revenue-loading" class="cd-revenue-msg" hidden>Loading your revenue&hellip;</p>
             <div id="revenue-error" class="cd-revenue-error auth-message" hidden></div>
 
+            <div id="revenue-inline-summary" class="cd-revenue-inline-summary" hidden>
+                <div class="cd-revenue-overview-stats">
+                    <div class="cd-revenue-overview-stat"><span>Website paid</span><strong id="cd-rev-inline-online">ETB 0</strong></div>
+                    <div class="cd-revenue-overview-stat"><span>Office paid</span><strong id="cd-rev-inline-office">ETB 0</strong></div>
+                    <div class="cd-revenue-overview-stat"><span>Parcel paid</span><strong id="cd-rev-inline-parcels">ETB 0</strong></div>
+                    <div class="cd-revenue-overview-stat"><span>Total paid</span><strong id="cd-rev-inline-paid">ETB 0</strong></div>
+                    <div class="cd-revenue-overview-stat"><span>Total refunds</span><strong id="cd-rev-inline-refunds">ETB 0</strong></div>
+                    <div class="cd-revenue-overview-stat"><span>Net revenue</span><strong id="cd-rev-inline-net">ETB 0</strong></div>
+                </div>
+                <div class="cd-revenue-overview-wrap">
+                    <table class="cd-revenue-overview-table">
+                        <thead><tr><th>Channel</th><th>Records</th><th>Paid (ETB)</th><th>Refunds (ETB)</th><th>Net (ETB)</th></tr></thead>
+                        <tbody id="cd-revenue-inline-rows"></tbody>
+                    </table>
+                </div>
+            </div>
+
             <div class="cd-passenger-filter cd-revenue-filter" aria-label="Filter revenue payments">
                 <div class="cd-day-picker">
                     <div class="cd-date-head"><strong>Departure date</strong><p id="revenue-date-label" class="cd-selected-date">All upcoming departure dates</p></div>
@@ -2132,9 +2149,10 @@
 
             <div id="revenue-overview-detail" hidden>
                 <div class="cd-revenue-overview-stats">
-                    <div class="cd-revenue-overview-stat"><span>Total Bookings</span><strong id="cd-rev-ov-bookings">0</strong></div>
-                    <div class="cd-revenue-overview-stat"><span>Online</span><strong id="cd-rev-ov-online">0</strong></div>
-                    <div class="cd-revenue-overview-stat"><span>Office</span><strong id="cd-rev-ov-office">0</strong></div>
+                    <div class="cd-revenue-overview-stat"><span>Total records</span><strong id="cd-rev-ov-bookings">0</strong></div>
+                    <div class="cd-revenue-overview-stat"><span>Website records</span><strong id="cd-rev-ov-online">0</strong></div>
+                    <div class="cd-revenue-overview-stat"><span>Office bookings</span><strong id="cd-rev-ov-office">0</strong></div>
+                    <div class="cd-revenue-overview-stat"><span>Parcels</span><strong id="cd-rev-ov-parcels">0</strong></div>
                     <div class="cd-revenue-overview-stat"><span>Paid (ETB)</span><strong id="cd-rev-ov-paid">0</strong></div>
                     <div class="cd-revenue-overview-stat"><span>Refunds (ETB)</span><strong id="cd-rev-ov-refunds">0</strong></div>
                     <div class="cd-revenue-overview-stat"><span>Net (ETB)</span><strong id="cd-rev-ov-net">0</strong></div>
@@ -2156,6 +2174,6 @@
     <script src="js/auth.js"></script>
     <script src="js/cities.js"></script>
     <script src="js/city-picker.js?v=20260907-swap-fix-3-dispatch"></script>
-    <script src="js/company-dashboard.js?v=20260908-parcel-receipt-v5"></script>
+    <script src="js/company-dashboard.js?v=20260908-parcel-revenue-v9"></script>
 </body>
 </html>

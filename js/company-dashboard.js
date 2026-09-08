@@ -3404,10 +3404,12 @@
         var total = bd.total || { bookings: 0, paid: 0, refunds: 0, net: 0 };
         var online = bd.online || {};
         var office = bd.office || {};
+        var parcels = bd.parcels || {};
 
         setRevStat('cd-rev-ov-bookings', String(total.bookings == null ? 0 : total.bookings));
         setRevStat('cd-rev-ov-online', String(online.bookings == null ? 0 : online.bookings));
         setRevStat('cd-rev-ov-office', String(office.bookings == null ? 0 : office.bookings));
+        setRevStat('cd-rev-ov-parcels', String(parcels.bookings == null ? 0 : parcels.bookings));
         setRevStat('cd-rev-ov-paid', formatMoney(total.paid));
         setRevStat('cd-rev-ov-refunds', formatMoney(total.refunds));
         setRevStat('cd-rev-ov-net', formatMoney(total.net));
@@ -3418,8 +3420,9 @@
         var body = byId('cd-revenue-overview-rows');
         if (!body) { return; }
         var rows = [
-            ['Online bookings', online],
+            ['Website bookings', online],
             ['Office bookings', office],
+            ['Parcels', parcels],
             ['Total', total]
         ];
         var html = '';
@@ -3494,6 +3497,33 @@
 
     var paymentsRequestId = 0;   // discards responses from superseded payment requests
 
+    function renderInlineRevenueSummary(data) {
+        var bd = (data && data.breakdown) || {};
+        var online = bd.online || {}, office = bd.office || {}, parcels = bd.parcels || {}, total = bd.total || {};
+        setRevStat('cd-rev-inline-online', 'ETB ' + formatMoney(online.paid));
+        setRevStat('cd-rev-inline-office', 'ETB ' + formatMoney(office.paid));
+        setRevStat('cd-rev-inline-parcels', 'ETB ' + formatMoney(parcels.paid));
+        setRevStat('cd-rev-inline-paid', 'ETB ' + formatMoney(total.paid));
+        setRevStat('cd-rev-inline-refunds', 'ETB ' + formatMoney(total.refunds));
+        setRevStat('cd-rev-inline-net', 'ETB ' + formatMoney(total.net));
+        var rows = [['Website bookings', online], ['Office bookings', office], ['Parcels', parcels], ['Total', total]];
+        var body = byId('cd-revenue-inline-rows');
+        if (body) {
+            body.innerHTML = rows.map(function (row, index) {
+                var value = row[1] || {};
+                return '<tr' + (index === rows.length - 1 ? ' class="cd-revenue-overview-total"' : '') + '><td>' + row[0] + '</td><td>' + (value.bookings == null ? 0 : value.bookings) + '</td><td>' + formatMoney(value.paid) + '</td><td>' + formatMoney(value.refunds) + '</td><td>' + formatMoney(value.net) + '</td></tr>';
+            }).join('');
+        }
+        var box = byId('revenue-inline-summary'); if (box) { box.hidden = false; }
+    }
+
+    function loadInlineRevenueSummary() {
+        fetch('api/company.php?action=revenue_breakdown', { method: 'GET', credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+            .then(function (res) { return res.json().catch(function () { return { success: false }; }).then(function (data) { return { ok: res.ok, data: data }; }); })
+            .then(function (result) { if (result.ok && result.data && result.data.success) { renderInlineRevenueSummary(result.data); } })
+            .catch(function () { /* Payment records stay usable if the summary is temporarily unavailable. */ });
+    }
+
     function loadPayments() {
         var rid = ++paymentsRequestId;
         var sec = byId('company-revenue'); if (sec) { sec.hidden = false; }
@@ -3501,6 +3531,7 @@
         var list = byId('payment-list'); if (list) { list.innerHTML = ''; list.hidden = true; }
         var empty = byId('payment-empty'); if (empty) { empty.hidden = true; }
         var loading = byId('payment-loading'); if (loading) { loading.hidden = false; }
+        loadInlineRevenueSummary();
 
         fetch(paymentsFilterUrl(), {
             method: 'GET',
@@ -5380,7 +5411,7 @@ function submitBranchForm() {
         } else if (status === 'returned_to_sender') {
             html = '<label>Why was it returned? *</label><div class="cd-status-quick-answers" data-status-choice="reason"><button type="button" data-value="Recipient did not come">Recipient did not come</button><button type="button" data-value="Recipient could not be reached">Recipient could not be reached</button><button type="button" data-value="Sender requested return">Sender requested return</button></div>' + statusField('Accepted by sender', 'sender_receiver', 'Name of sender / representative', true) + statusField('Return handover note', 'note', 'Where and when it was returned', true);
         } else if (status === 'lost') {
-            html = '<label>Loss reason *</label><div class="cd-status-quick-answers" data-status-choice="reason"><button type="button" data-value="Could not locate after arrival">Could not locate after arrival</button><button type="button" data-value="Missing during transit">Missing during transit</button><button type="button" data-value="Damaged beyond recovery">Damaged beyond recovery</button></div>' + '<label>Was a refund paid? *</label><div class="cd-status-quick-answers" data-status-choice="refund_paid"><button type="button" data-value="Yes">Yes</button><button type="button" data-value="No">No</button></div>' + statusField('Refund amount / reference', 'refund_reference', 'Required if refund was paid', false);
+            html = '<label>Loss reason *</label><div class="cd-status-quick-answers" data-status-choice="reason"><button type="button" data-value="Could not locate after arrival">Could not locate after arrival</button><button type="button" data-value="Missing during transit">Missing during transit</button><button type="button" data-value="Damaged beyond recovery">Damaged beyond recovery</button></div>' + '<label>Was a refund paid? *</label><div class="cd-status-quick-answers" data-status-choice="refund_paid"><button type="button" data-value="Yes">Yes</button><button type="button" data-value="No">No</button></div>' + '<label for="parcel-status-refund_amount">Refund amount (ETB)</label><input id="parcel-status-refund_amount" data-status-detail="refund_amount" type="number" min="0" step="0.01" placeholder="Required if refund was paid">' + statusField('Refund payment reference', 'refund_reference', 'Required if refund was paid', false);
         }
         html += '<label for="parcel-status-password">Your account password *</label><input id="parcel-status-password" type="password" autocomplete="current-password" required placeholder="Enter your password">';
         if (fields) { fields.innerHTML = html; }
@@ -5409,7 +5440,7 @@ function submitBranchForm() {
             if (!selected) { showStatusError('Choose an answer for each required question.'); return; }
             details[choices[j].getAttribute('data-status-choice')] = selected.getAttribute('data-value');
         }
-        if (pendingParcelStatusChange.status === 'lost' && details.refund_paid === 'Yes' && !details.refund_reference) { showStatusError('Enter the refund amount or payment reference.'); return; }
+        if (pendingParcelStatusChange.status === 'lost' && details.refund_paid === 'Yes' && (!(Number(details.refund_amount) > 0) || !details.refund_reference)) { showStatusError('Enter the refund amount and payment reference.'); return; }
         var passwordField = byId('parcel-status-password');
         var password = passwordField ? String(passwordField.value || '') : '';
         if (!password) { showStatusError('Enter your account password to confirm this status change.'); return; }

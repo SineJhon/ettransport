@@ -554,7 +554,7 @@
                             <th>Status</th>
                             <th>Trips</th>
                             <th>Bookings</th>
-                            <th>Paid Revenue (ETB)</th>
+                            <th>Total Paid Revenue (ETB)</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -927,9 +927,10 @@
             <div id="ad-revenue-detail-error" class="auth-message" hidden></div>
             <div id="ad-revenue-detail" hidden>
                 <div class="ad-revenue-stats">
-                    <div class="ad-revenue-stat"><span>Total Bookings</span><strong id="ad-rev-stat-bookings">0</strong></div>
-                    <div class="ad-revenue-stat"><span>Online</span><strong id="ad-rev-stat-online">0</strong></div>
-                    <div class="ad-revenue-stat"><span>Office</span><strong id="ad-rev-stat-office">0</strong></div>
+                    <div class="ad-revenue-stat"><span>Total Records</span><strong id="ad-rev-stat-bookings">0</strong></div>
+                    <div class="ad-revenue-stat"><span>Website Records</span><strong id="ad-rev-stat-online">0</strong></div>
+                    <div class="ad-revenue-stat"><span>Office Bookings</span><strong id="ad-rev-stat-office">0</strong></div>
+                    <div class="ad-revenue-stat"><span>Parcels</span><strong id="ad-rev-stat-parcels">0</strong></div>
                     <div class="ad-revenue-stat"><span>Paid (ETB)</span><strong id="ad-rev-stat-paid">0</strong></div>
                     <div class="ad-revenue-stat"><span>Refunds (ETB)</span><strong id="ad-rev-stat-refunds">0</strong></div>
                     <div class="ad-revenue-stat"><span>Net (ETB)</span><strong id="ad-rev-stat-net">0</strong></div>
@@ -938,7 +939,7 @@
                 <div class="ad-table-wrap">
                     <table class="ad-table ad-revenue-breakdown">
                         <thead>
-                            <tr><th>Channel</th><th>Bookings</th><th>Paid (ETB)</th><th>Refunds (ETB)</th><th>Net Revenue (ETB)</th></tr>
+                            <tr><th>Channel</th><th>Records</th><th>Paid (ETB)</th><th>Refunds (ETB)</th><th>Net Revenue (ETB)</th></tr>
                         </thead>
                         <tbody id="ad-revenue-breakdown-rows"></tbody>
                     </table>
@@ -949,6 +950,6 @@
 
     <script src="js/main.js"></script>
     <script src="js/auth.js?v=20260904-password-toggle"></script>
-    <script src="js/admin-dashboard.js?v=20260908-modal-success"></script>
+    <script src="js/admin-dashboard.js?v=20260908-parcel-revenue-v2"></script>
 </body>
 </html>

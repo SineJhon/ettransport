@@ -1460,10 +1460,12 @@ function renderDetail(c) {
         var total = bd.total || { bookings: 0, paid: 0, refunds: 0, net: 0 };
         var online = bd.online || {};
         var office = bd.office || {};
+        var parcels = bd.parcels || {};
 
         setText('ad-rev-stat-bookings', String(total.bookings == null ? 0 : total.bookings));
         setText('ad-rev-stat-online', String(online.bookings == null ? 0 : online.bookings));
         setText('ad-rev-stat-office', String(office.bookings == null ? 0 : office.bookings));
+        setText('ad-rev-stat-parcels', String(parcels.bookings == null ? 0 : parcels.bookings));
         setText('ad-rev-stat-paid', formatMoney(total.paid));
         setText('ad-rev-stat-refunds', formatMoney(total.refunds));
         setText('ad-rev-stat-net', formatMoney(total.net));
@@ -1472,8 +1474,9 @@ function renderDetail(c) {
         var body = byId('ad-revenue-breakdown-rows');
         if (!body) { return; }
         var rows = [
-            ['Online bookings', online],
+            ['Website bookings', online],
             ['Office bookings', office],
+            ['Parcels', parcels],
             ['Total', total]
         ];
         var html = '';

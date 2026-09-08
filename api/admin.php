@@ -575,6 +575,7 @@ function handle_admin_revenue(PDO $pdo): void
     }
 
     requireRole('admin');
+    ensure_admin_parcel_payments_table($pdo);
 
     $stmt = $pdo->query('
         SELECT
@@ -593,7 +594,8 @@ function handle_admin_revenue(PDO $pdo): void
                        JOIN bookings bk ON bk.id = p.booking_id
                        JOIN trips t ON t.id = bk.trip_id
                       WHERE t.company_id = c.id
-                        AND p.status IN (\'paid\', \'refunded\')), 0) AS collected_revenue
+                        AND p.status IN (\'paid\', \'refunded\')), 0)
+            + COALESCE((SELECT SUM(pp.amount) FROM parcel_payments pp WHERE pp.company_id = c.id), 0) AS collected_revenue
         FROM companies c
         ORDER BY collected_revenue DESC, c.name ASC
     ');
@@ -632,6 +634,7 @@ function handle_admin_company_revenue(PDO $pdo): void
     }
 
     requireRole('admin');
+    ensure_admin_parcel_payments_table($pdo);
 
     $companyId = admin_company_id_or_error($_GET['company_id'] ?? null, 'A valid company id is required.');
     [$month, $year] = admin_filter_period($_GET['month'] ?? null, $_GET['year'] ?? null);
@@ -706,10 +709,20 @@ function handle_admin_company_revenue(PDO $pdo): void
         ];
     }
 
+    /* Parcel counter sales are independent from office ticket bookings. */
+    $parcelPeriod = '';
+    $parcelParams = [':company_id' => $companyId];
+    if ($year !== null) { $parcelPeriod .= ' AND YEAR(created_at) = :year'; $parcelParams[':year'] = $year; }
+    if ($month !== null) { $parcelPeriod .= ' AND MONTH(created_at) = :month'; $parcelParams[':month'] = $month; }
+    $parcelStmt = $pdo->prepare('SELECT COUNT(*) AS records, COALESCE(SUM(amount), 0) AS paid, COALESCE(SUM(refunded_amount), 0) AS refunds FROM parcel_payments WHERE company_id = :company_id' . $parcelPeriod);
+    $parcelStmt->execute($parcelParams);
+    $parcelRow = $parcelStmt->fetch() ?: [];
+    $breakdown['parcels'] = ['bookings' => (int) ($parcelRow['records'] ?? 0), 'paid' => round((float) ($parcelRow['paid'] ?? 0), 2), 'refunds' => round((float) ($parcelRow['refunds'] ?? 0), 2), 'net' => round((float) ($parcelRow['paid'] ?? 0) - (float) ($parcelRow['refunds'] ?? 0), 2)];
+
     $total = [
-        'bookings' => $breakdown['online']['bookings'] + $breakdown['office']['bookings'],
-        'paid' => round($breakdown['online']['paid'] + $breakdown['office']['paid'], 2),
-        'refunds' => round($breakdown['online']['refunds'] + $breakdown['office']['refunds'], 2),
+        'bookings' => $breakdown['online']['bookings'] + $breakdown['office']['bookings'] + $breakdown['parcels']['bookings'],
+        'paid' => round($breakdown['online']['paid'] + $breakdown['office']['paid'] + $breakdown['parcels']['paid'], 2),
+        'refunds' => round($breakdown['online']['refunds'] + $breakdown['office']['refunds'] + $breakdown['parcels']['refunds'], 2),
         'net' => 0.0,
     ];
     $total['net'] = round($total['paid'] - $total['refunds'], 2);
@@ -737,6 +750,7 @@ function handle_admin_company_revenue(PDO $pdo): void
         'breakdown' => [
             'online' => $breakdown['online'],
             'office' => $breakdown['office'],
+            'parcels' => $breakdown['parcels'],
             'total' => $total,
         ],
     ]);
@@ -1774,4 +1788,19 @@ try {
         'success' => false,
         'message' => 'Admin data is temporarily unavailable. Please try again later.',
     ]);
+}
+
+function ensure_admin_parcel_payments_table(PDO $pdo): void
+{
+    $pdo->exec('CREATE TABLE IF NOT EXISTS parcel_payments (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        parcel_id BIGINT UNSIGNED NOT NULL, company_id BIGINT UNSIGNED NOT NULL,
+        amount DECIMAL(10,2) NOT NULL DEFAULT 0.00, refunded_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+        method VARCHAR(30) NOT NULL DEFAULT \'cash\', transaction_reference VARCHAR(120) DEFAULT NULL,
+        status ENUM(\'paid\',\'refunded\') NOT NULL DEFAULT \'paid\',
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_parcel_payments_parcel (parcel_id), KEY idx_parcel_payments_company (company_id, created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+    $pdo->exec('INSERT IGNORE INTO parcel_payments (parcel_id, company_id, amount, method, status, created_at)
+        SELECT id, company_id, price, \'cash\', \'paid\', created_at FROM parcels');
 }
