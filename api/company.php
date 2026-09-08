@@ -4681,7 +4681,10 @@ function handle_parcel_update(PDO $pdo): void
         'parcel' => fetch_managed_parcel_row($pdo, $parcelId, $companyId),
     ]);
 }
-/** POST /api/company.php?action=parcel_delete — permanently remove one of this company's own parcels. */
+/** POST /api/company.php?action=parcel_delete — permanently remove one of this
+    company's own parcels. The operator must supply BOTH their own account
+    password (verified server-side from the session) AND a reason, which is
+    recorded to the parcel_delete_log audit trail before the row is removed. */
 function handle_parcel_delete(PDO $pdo): void
 {
     require_company_post();
@@ -4689,9 +4692,50 @@ function handle_parcel_delete(PDO $pdo): void
     $company = require_company_scope($pdo, (int) $user['id']);
     $companyId = (int) $company['id'];
     $input = company_input();
+
     $parcelId = existing_parcel_or_error($pdo, $input['parcel_id'] ?? null, $companyId);
-    $del = $pdo->prepare('DELETE FROM parcels WHERE id = :id AND company_id = :company_id');
-    $del->execute([':id' => $parcelId, ':company_id' => $companyId]);
+
+    /* Reason is mandatory — mirror the booking-cancel validation. */
+    $reason = trim((string) ($input['reason'] ?? ''));
+    if ($reason === '') {
+        auth_response(422, ['success' => false, 'message' => 'A deletion reason is required.']);
+    }
+    if (mb_strlen($reason) > 500) {
+        auth_response(422, ['success' => false, 'message' => 'Deletion reason must be at most 500 characters.']);
+    }
+
+    /* The operator's own password is required for this sensitive action.
+       verify_current_password() derives the user from the server-side session,
+       never from the browser payload. */
+    $password = (string) ($input['password'] ?? '');
+    if ($password === '' || !verify_current_password($password)) {
+        auth_response(401, ['success' => false, 'message' => 'Your password was not accepted. Parcel was not deleted.']);
+    }
+
+    $parcelRow = fetch_managed_parcel_row($pdo, $parcelId, $companyId);
+
+    $pdo->beginTransaction();
+    try {
+        $log = $pdo->prepare('
+            INSERT INTO parcel_delete_log (company_id, parcel_reference, reason, deleted_by_user)
+            VALUES (:company_id, :parcel_reference, :reason, :deleted_by_user)
+        ');
+        $log->execute([
+            ':company_id' => $companyId,
+            ':parcel_reference' => $parcelRow['reference'] ?? '', 
+            ':reason' => $reason,
+            ':deleted_by_user' => (int) $user['id'],
+        ]);
+
+        $del = $pdo->prepare('DELETE FROM parcels WHERE id = :id AND company_id = :company_id');
+        $del->execute([':id' => $parcelId, ':company_id' => $companyId]);
+
+        $pdo->commit();
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        throw $e;
+    }
+
     auth_response(200, ['success' => true, 'message' => 'Parcel deleted.']);
 }
 

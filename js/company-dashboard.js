@@ -4370,6 +4370,14 @@ function submitBranchForm() {
         { value: 'picked_up', label: 'Picked up' }
     ];
 
+    var PARCEL_DELETE_REASON_SUGGESTIONS = [
+        'Registered by mistake / wrong details',
+        'Duplicate parcel entry',
+        'Parcel no longer being shipped',
+        'Customer cancelled the shipment',
+        'Test entry'
+    ];
+
     /* Mirrors the backend pricing (api/company.php PARCEL_TYPES). Price is
    weight in kg × per-type rate, plus 25% of the chosen trip's fare,
    floored at ETB 100, but never more than 75% of the trip fare. Anything
@@ -4556,7 +4564,6 @@ function submitBranchForm() {
                 '</div>' +
                 (p.notes ? '<p class="cd-parcel-notes">' + escHtml(p.notes) + '</p>' : '') +
                 '<div class="cd-parcel-actions">' +
-                    '<button type="button" class="btn btn-secondary btn-sm" data-parcel-edit="' + escHtml(p.id) + '">Edit</button>' +
                     '<button type="button" class="btn btn-danger btn-sm" data-parcel-delete="' + escHtml(p.id) + '">Delete</button>' +
                 '</div>' +
             '</article>';
@@ -5245,13 +5252,114 @@ function submitBranchForm() {
     function deleteParcel(id) {
         var match = parcelById(id);
         if (!match) { return; }
-        if (!window.confirm('Delete parcel ' + match.reference + '? This cannot be undone.')) { return; }
+        openParcelDeleteModal(match);
+    }
+
+    function openParcelDeleteModal(parcel) {
+        var modal = byId('parcel-delete-modal');
+        if (!modal || !parcel) { return; }
+        var ref = byId('parcel-delete-ref');
+        var route = byId('parcel-delete-route');
+        var sender = byId('parcel-delete-sender');
+        var status = byId('parcel-delete-status');
+        if (ref) { ref.textContent = parcel.reference || ''; }
+        if (route) { route.textContent = String(parcel.from_city || '') + ' \u2192 ' + String(parcel.to_city || ''); }
+        if (sender) { sender.textContent = String(parcel.sender_name || '') + ' \u00b7 ' + String(parcel.sender_phone || ''); }
+        if (status) { status.textContent = parcelStatusLabel(parcel.status); }
+        var reason = byId('parcel-delete-reason');
+        if (reason) { reason.value = ''; reason.removeAttribute('aria-invalid'); }
+        var pwInput = byId('parcel-delete-password');
+        if (pwInput) { pwInput.value = ''; }
+        var pwErr = byId('parcel-delete-password-error');
+        if (pwErr) { pwErr.hidden = true; pwErr.textContent = ''; }
+        syncParcelDeletePassword();
+        var msg = byId('parcel-delete-msg');
+        if (msg) { msg.hidden = true; msg.textContent = ''; }
+        closeParcelStatusMenus();
+        renderParcelDeleteReasonSuggestions();
+        if (modal.parentNode !== document.body) { document.body.appendChild(modal); }
+        modal.hidden = false;
+        var first = byId('parcel-delete-reason');
+        if (first && first.focus) { first.focus(); }
+    }
+
+    function renderParcelDeleteReasonSuggestions() {
+        var container = byId('parcel-delete-reason-suggestions');
+        if (!container) { return; }
+        container.innerHTML = PARCEL_DELETE_REASON_SUGGESTIONS.map(function (text) {
+            return '<button type="button" class="cd-cancel-suggestion" data-reason="' +
+                escHtml(text).replace(/"/g, '&quot;') + '">' + escHtml(text) + '</button>';
+        }).join('');
+        var chips = container.querySelectorAll('.cd-cancel-suggestion');
+        for (var i = 0; i < chips.length; i++) {
+            chips[i].addEventListener('click', function () {
+                var reasonEl = byId('parcel-delete-reason');
+                if (reasonEl) {
+                    reasonEl.value = this.getAttribute('data-reason');
+                    reasonEl.removeAttribute('aria-invalid');
+                }
+                var msg = byId('parcel-delete-msg');
+                if (msg) { msg.hidden = true; msg.textContent = ''; }
+            });
+        }
+    }
+
+    function closeParcelDeleteModal() {
+        var modal = byId('parcel-delete-modal');
+        if (modal) { modal.hidden = true; }
+    }
+
+    /* Mirrors the admin dashboard's syncConfirmPassword: the destructive
+       confirm button stays disabled until a password has been typed. */
+    function syncParcelDeletePassword() {
+        var pwInput = byId('parcel-delete-password');
+        var confirmBtn = byId('parcel-delete-confirm-btn');
+        if (!pwInput || !confirmBtn) { return; }
+        confirmBtn.disabled = String(pwInput.value || '').trim() === '';
+    }
+
+    function submitParcelDelete() {
+        var confirmBtn = byId('parcel-delete-confirm-btn');
+        var parcelId = null;
+        var modalRef = byId('parcel-delete-ref');
+        if (modalRef) {
+            for (var i = 0; i < currentParcels.length; i++) {
+                if (String(currentParcels[i].reference) === String(modalRef.textContent)) { parcelId = currentParcels[i].id; break; }
+            }
+        }
+        if (!parcelId) { toast('Unable to find the parcel to delete. Please try again.'); closeParcelDeleteModal(); return; }
+
+        var reasonEl = byId('parcel-delete-reason');
+        var reason = reasonEl ? String(reasonEl.value || '').trim() : '';
+        var pwInput = byId('parcel-delete-password');
+        var password = pwInput ? String(pwInput.value || '') : '';
+        var pwErr = byId('parcel-delete-password-error');
+        var msg = byId('parcel-delete-msg');
+
+        function badPw(message) {
+            if (pwErr) { pwErr.textContent = message; pwErr.hidden = false; }
+            if (pwInput && pwInput.select) { pwInput.select(); }
+            if (pwInput && pwInput.focus) { pwInput.focus(); }
+        }
+        if (!reason) {
+            if (reasonEl) {
+                reasonEl.setAttribute('aria-invalid', 'true');
+                if (reasonEl.focus) { reasonEl.focus(); }
+            }
+            if (msg) { msg.textContent = 'Enter or pick a reason for the deletion.'; msg.hidden = false; msg.className = 'cd-trip-delete-msg'; }
+            return;
+        }
+        if (!password) { badPw('Enter your account password.'); return; }
+        if (msg) { msg.hidden = true; msg.textContent = ''; }
+        if (pwErr) { pwErr.hidden = true; pwErr.textContent = ''; }
+
+        if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Working\u2026'; }
 
         fetch('api/company.php?action=parcel_delete', {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-            body: JSON.stringify({ parcel_id: id })
+            body: JSON.stringify({ parcel_id: parcelId, password: password, reason: reason })
         })
             .then(function (res) {
                 return res.json().catch(function () {
@@ -5262,17 +5370,24 @@ function submitBranchForm() {
             })
             .then(function (result) {
                 var data = result.data || {};
-                if (!result.ok || !data.success) {
-                    toast(data.message || 'Unable to delete the parcel.');
-                    loadParcels();
+                if (confirmBtn) { confirmBtn.textContent = 'Delete Parcel'; }
+                syncParcelDeletePassword();
+                if (result.status === 401) {
+                    badPw(data.message || 'Your password was not accepted.');
                     return;
                 }
+                if (!result.ok || !data.success) {
+                    if (msg) { msg.textContent = data.message || 'Unable to delete the parcel.'; msg.hidden = false; msg.className = 'cd-trip-delete-msg'; }
+                    return;
+                }
+                closeParcelDeleteModal();
                 loadParcels();
                 toast(data.message || 'Parcel deleted.');
             })
             .catch(function () {
-                toast('Network error while deleting the parcel.');
-                loadParcels();
+                if (confirmBtn) { confirmBtn.textContent = 'Delete Parcel'; }
+                syncParcelDeletePassword();
+                if (msg) { msg.textContent = 'Network error while deleting the parcel.'; msg.hidden = false; msg.className = 'cd-trip-delete-msg'; }
             });
     }
 
@@ -5398,8 +5513,6 @@ function submitBranchForm() {
             listEl.addEventListener('click', function (ev) {
                 var target = ev.target;
                 if (!target || !target.closest) { return; }
-                var editBtn = target.closest('[data-parcel-edit]');
-                if (editBtn) { openParcelForm(parcelById(editBtn.getAttribute('data-parcel-edit'))); return; }
                 var delBtn = target.closest('[data-parcel-delete]');
                 if (delBtn) { deleteParcel(delBtn.getAttribute('data-parcel-delete')); return; }
                 var setBtn = target.closest('[data-parcel-status-set]');
@@ -5432,6 +5545,37 @@ function submitBranchForm() {
             if (t && t.closest && t.closest('#parcel-list')) { return; }
             closeParcelStatusMenus();
         });
+
+        var deleteModal = byId('parcel-delete-modal');
+        if (deleteModal) {
+            if (deleteModal.parentNode !== document.body) { document.body.appendChild(deleteModal); }
+            deleteModal.style.zIndex = '106';
+            deleteModal.addEventListener('click', function (ev) {
+                if (ev.target === deleteModal) { closeParcelDeleteModal(); }
+            });
+        }
+        var deleteClose = byId('parcel-delete-close');
+        if (deleteClose) { deleteClose.addEventListener('click', closeParcelDeleteModal); }
+        var deleteKeep = byId('parcel-delete-keep-btn');
+        if (deleteKeep) { deleteKeep.addEventListener('click', closeParcelDeleteModal); }
+        var deleteConfirm = byId('parcel-delete-confirm-btn');
+        if (deleteConfirm) { deleteConfirm.addEventListener('click', submitParcelDelete); }
+        var deleteReason = byId('parcel-delete-reason');
+        if (deleteReason) {
+            deleteReason.addEventListener('input', function () {
+                deleteReason.removeAttribute('aria-invalid');
+                var msg = byId('parcel-delete-msg');
+                if (msg) { msg.hidden = true; msg.textContent = ''; }
+            });
+        }
+        var deletePassword = byId('parcel-delete-password');
+        if (deletePassword) {
+            deletePassword.addEventListener('input', function () {
+                var pwErr = byId('parcel-delete-password-error');
+                if (pwErr) { pwErr.hidden = true; pwErr.textContent = ''; }
+                syncParcelDeletePassword();
+            });
+        }
     }
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -5944,6 +6088,8 @@ function submitBranchForm() {
                 if (bdModal && !bdModal.hidden) { closeBranchDeleteModal(); }
                 var roModal = byId('cd-revenue-overview-modal');
                 if (roModal && !roModal.hidden) { closeRevenueOverview(); }
+                var pdModal = byId('parcel-delete-modal');
+                if (pdModal && !pdModal.hidden) { closeParcelDeleteModal(); }
                 var parcelModal = byId('parcel-form-modal');
                 if (parcelModal && !parcelModal.hidden) { hideParcelForm(); }
                 var prModal = byId('parcel-receipt-modal');

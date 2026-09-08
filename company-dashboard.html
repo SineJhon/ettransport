@@ -207,6 +207,17 @@
         .cd-cancel-msg-error { color: #b91c1c; }
         .cd-cancel-actions { display: flex; justify-content: flex-end; gap: 0.55rem; margin-top: 1rem; }
 
+ /* ===== Parcel-delete confirm modal — mirrors the admin dashboard's =====
+        password-confirmation UX: red accent bar, disabled-until-typed
+        confirm button, inline password error under the field. */
+        #parcel-delete-modal .cd-cancel-box { position: relative; max-width: 460px; }
+        #parcel-delete-modal .cd-cancel-box::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: #dc2626; border-radius: 12px 12px 0 0; }
+        #parcel-delete-modal .cd-cancel-box .password-field input { width: 100%; padding: .6rem .8rem; padding-right: 3.25rem; border: 1px solid #d1d5db; border-radius: 8px; font: inherit; box-sizing: border-box; }
+        #parcel-delete-modal .cd-cancel-box .password-field input:focus { outline: none; border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,.12); }
+        .cd-parcel-delete-pw-error { margin: .35rem 0 0; color: #b91c1c; font-size: .82rem; line-height: 1.35; }
+        .cd-parcel-delete-pw-error[hidden] { display: none; }
+        #parcel-delete-modal .cd-cancel-actions .btn:disabled { opacity: .55; cursor: not-allowed; }
+
  /* ===== Trip-cancel confirmation modal (scoped to .cd-*) ===== */
         .cd-trip-cancel-modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); display: flex; align-items: center; justify-content: center; z-index: 103; padding: 1rem; }
         .cd-trip-cancel-modal[hidden] { display: none; }
@@ -1541,6 +1552,60 @@
                     <div class="cd-parcel-receipt-actions">
                         <button type="button" id="parcel-receipt-done" class="btn btn-secondary">Done</button>
                         <button type="button" id="parcel-receipt-print" class="btn btn-primary">Download / Print Receipt</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Delete-parcel modal — opened by the "Delete" action on a parcel
+                 card. Deleting a parcel is permanent and requires BOTH the
+                 operator's account password AND a reason (with quick chips).
+                 Posts { parcel_id, password, reason } to
+                 api/company.php?action=parcel_delete. -->
+            <div id="parcel-delete-modal" class="cd-cancel-modal" hidden>
+                <div class="cd-cancel-box" role="dialog" aria-modal="true" aria-labelledby="parcel-delete-title">
+                    <div class="cd-cancel-head">
+                        <h3 id="parcel-delete-title">Delete Parcel?</h3>
+                        <button type="button" id="parcel-delete-close" class="cd-cancel-close" aria-label="Close parcel deletion dialog">&times;</button>
+                    </div>
+                    <p class="cd-cancel-intro">Permanently remove this parcel and its record. This action cannot be undone. To confirm, enter your account password and a reason for the deletion.</p>
+
+                    <div class="cd-cancel-summary">
+                        <div class="cd-cancel-field"><span class="k">Parcel</span><span class="v" id="parcel-delete-ref"></span></div>
+                        <div class="cd-cancel-field"><span class="k">Route</span><span class="v" id="parcel-delete-route"></span></div>
+                        <div class="cd-cancel-field"><span class="k">Sender</span><span class="v" id="parcel-delete-sender"></span></div>
+                        <div class="cd-cancel-field"><span class="k">Status</span><span class="v" id="parcel-delete-status"></span></div>
+                    </div>
+
+                    <div class="cd-cancel-group">
+                        <span class="cd-cancel-label">Quick reasons</span>
+                        <div class="cd-cancel-suggestions" id="parcel-delete-reason-suggestions" role="group" aria-label="Quick parcel deletion reasons">
+                            <!-- Populated by JS. -->
+                        </div>
+                    </div>
+
+                    <div class="cd-cancel-group">
+                        <label class="cd-cancel-label" for="parcel-delete-reason">Reason for deletion *</label>
+                        <textarea id="parcel-delete-reason" class="cd-cancel-reason" rows="3" maxlength="500" required placeholder="e.g. Registered by mistake, duplicate parcel, no longer shipping..."></textarea>
+                    </div>
+
+                    <div class="cd-cancel-group">
+                        <label class="cd-cancel-label" for="parcel-delete-password">Your account password *</label>
+                        <div class="password-field">
+                            <input id="parcel-delete-password" type="password" autocomplete="current-password" placeholder="Enter your password" aria-label="Your account password">
+                            <button class="password-toggle" type="button" aria-controls="parcel-delete-password" aria-pressed="false" aria-label="Show password">
+                                <svg class="password-toggle-icon password-toggle-icon--show" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.75"/></svg>
+                                <svg class="password-toggle-icon password-toggle-icon--hide" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18M10.6 6.2A10.8 10.8 0 0 1 12 6c6.1 0 9.5 6 9.5 6a18.2 18.2 0 0 1-3.3 3.8M6.1 6.1A18.5 18.5 0 0 0 2.5 12S5.9 18 12 18c1.3 0 2.5-.3 3.5-.7"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+                                <span class="sr-only">Show password</span>
+                            </button>
+                        </div>
+                        <p id="parcel-delete-password-error" class="cd-parcel-delete-pw-error" role="alert" hidden></p>
+                    </div>
+
+                    <p id="parcel-delete-msg" class="cd-trip-delete-msg" role="alert" hidden></p>
+
+                    <div class="cd-cancel-actions">
+                        <button type="button" id="parcel-delete-keep-btn" class="btn btn-secondary">Cancel</button>
+                        <button type="button" id="parcel-delete-confirm-btn" class="btn btn-danger" disabled>Delete Parcel</button>
                     </div>
                 </div>
             </div>

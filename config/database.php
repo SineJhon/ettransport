@@ -212,6 +212,31 @@ function ensure_schema_columns(PDO $pdo): void
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
         );
 
+        /* parcel_delete_log — audit trail for parcel deletions (idempotent).
+           A company operator must supply their account password AND a reason
+           to permanently delete a parcel; each deletion appends one row. */
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS parcel_delete_log (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                company_id BIGINT UNSIGNED NOT NULL,
+                parcel_reference VARCHAR(30) NOT NULL,
+                reason VARCHAR(500) NOT NULL,
+                deleted_by_user BIGINT UNSIGNED NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY idx_parcel_delete_log_company (company_id),
+                KEY idx_parcel_delete_log_parcel (parcel_reference),
+                CONSTRAINT fk_parcel_delete_log_company
+                    FOREIGN KEY (company_id) REFERENCES companies(id)
+                    ON DELETE CASCADE
+                    ON UPDATE CASCADE,
+                CONSTRAINT fk_parcel_delete_log_user
+                    FOREIGN KEY (deleted_by_user) REFERENCES users(id)
+                    ON DELETE CASCADE
+                    ON UPDATE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+
         /* Parcel lifecycle: the "in transit" status was renamed to "sent".
            Migrate any rows created with the previous ENUM (and existing
            databases whose parcels.status column still holds that ENUM), then
