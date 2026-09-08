@@ -1649,6 +1649,14 @@ function handle_trip_status(PDO $pdo): void
         ]);
     }
 
+    /* The operator's own password is required for this sensitive action.
+       verify_current_password() derives the user from the server-side session,
+       never from the browser payload. */
+    $password = (string) ($input['password'] ?? '');
+    if ($password === '' || !verify_current_password($password)) {
+        auth_response(401, ['success' => false, 'message' => 'Your password was not accepted. Trip was not cancelled.']);
+    }
+
     try {
         $pdo->beginTransaction();
 
@@ -3016,6 +3024,14 @@ function handle_booking_cancel(PDO $pdo): void
             'success' => false,
             'message' => 'Cancellation reason must be at most 500 characters.',
         ]);
+    }
+
+    /* The operator's own password is required for this sensitive action.
+       verify_current_password() derives the user from the server-side session,
+       never from the browser payload. */
+    $password = (string) ($input['password'] ?? '');
+    if ($password === '' || !verify_current_password($password)) {
+        auth_response(401, ['success' => false, 'message' => 'Your password was not accepted. Booking was not cancelled.']);
     }
 
     $bookingStmt = $pdo->prepare('
