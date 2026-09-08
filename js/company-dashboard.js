@@ -4460,6 +4460,21 @@ function submitBranchForm() {
         return 'Received';
     }
 
+    function closeParcelStatusMenus(exceptId) {
+        var menus = document.querySelectorAll('.cd-parcel-status-menu');
+        var toggles = document.querySelectorAll('.cd-parcel-status-chip[data-parcel-status-toggle]');
+        for (var i = 0; i < menus.length; i++) {
+            var mid = menus[i].getAttribute('data-parcel-status-menu');
+            if (exceptId && mid === exceptId) { continue; }
+            menus[i].hidden = true;
+            for (var j = 0; j < toggles.length; j++) {
+                if (toggles[j].getAttribute('data-parcel-status-toggle') === mid) {
+                    toggles[j].setAttribute('aria-expanded', 'false');
+                }
+            }
+        }
+    }
+
     function formatParcelDate(iso) {
         var d = new Date(iso);
         if (isNaN(d.getTime())) { return String(iso == null ? '' : iso); }
@@ -4505,13 +4520,23 @@ function submitBranchForm() {
 
         var html = filtered.map(function (p) {
             var statusClass = (p.status === 'sent' || p.status === 'delivered' || p.status === 'picked_up') ? p.status : 'received';
-            var options = PARCEL_STATUSES.map(function (s) {
-                return '<option value="' + s.value + '"' + (s.value === p.status ? ' selected' : '') + '>' + s.label + '</option>';
+            var statusLabel = escHtml(parcelStatusLabel(p.status));
+            var statusDot = '<span class="dot" aria-hidden="true"></span>';
+            var menuItems = PARCEL_STATUSES.map(function (s) {
+                return '<button type="button" class="st-' + s.value + (s.value === p.status ? ' is-current' : '') + '" data-parcel-status-set="' + escHtml(p.id) + '" data-parcel-status-value="' + s.value + '">' +
+                    '<span class="dot" aria-hidden="true"></span>' + escHtml(s.label) +
+                    '<span class="check' + (s.value === p.status ? '' : ' is-empty') + '" aria-hidden="true">&#10003;</span>' +
+                '</button>';
             }).join('');
             return '<article class="cd-parcel-card is-' + statusClass + '" data-parcel-id="' + escHtml(p.id) + '">' +
                 '<div class="cd-parcel-top">' +
                     '<span class="cd-parcel-ref">' + escHtml(p.reference) + '</span>' +
-                    '<span class="cd-parcel-badge ' + statusClass + '">' + escHtml(parcelStatusLabel(p.status)) + '</span>' +
+                    '<span class="cd-parcel-status-wrap">' +
+                        '<button type="button" class="cd-parcel-status-chip st-' + statusClass + '" data-parcel-status-toggle="' + escHtml(p.id) + '" aria-haspopup="true" aria-expanded="false" aria-label="Change parcel status">' +
+                            statusDot + statusLabel + '<span class="caret" aria-hidden="true">&#9662;</span>' +
+                        '</button>' +
+                        '<div class="cd-parcel-status-menu" data-parcel-status-menu="' + escHtml(p.id) + '" hidden>' + menuItems + '</div>' +
+                    '</span>' +
                 '</div>' +
                 '<div class="cd-parcel-route">' +
                     '<b>' + escHtml(p.from_city) + '</b>' +
@@ -4532,7 +4557,6 @@ function submitBranchForm() {
                 (p.notes ? '<p class="cd-parcel-notes">' + escHtml(p.notes) + '</p>' : '') +
                 '<div class="cd-parcel-actions">' +
                     '<button type="button" class="btn btn-secondary btn-sm" data-parcel-edit="' + escHtml(p.id) + '">Edit</button>' +
-                    '<select data-parcel-status="' + escHtml(p.id) + '" aria-label="Change parcel status">' + options + '</select>' +
                     '<button type="button" class="btn btn-danger btn-sm" data-parcel-delete="' + escHtml(p.id) + '">Delete</button>' +
                 '</div>' +
             '</article>';
@@ -4929,20 +4953,29 @@ function submitBranchForm() {
             }
         }
         var travelLine = trip ? (escHtml(trip.departure_date) + ' \u00b7 ' + escHtml(trip.departure_time)) : '\u2014';
-        var row = function (k, v) { return '<dt>' + escHtml(k) + '</dt><dd>' + v + '</dd>'; };
+        var field = function (k, v) {
+            return '<div class="cd-receipt-field"><span class="k">' + escHtml(k) + '</span><span class="v">' + v + '</span></div>';
+        };
+        var person = function (k, name, phone) {
+            return '<div class="cd-receipt-person"><span class="k">' + escHtml(k) + '</span><b>' + escHtml(name) + '</b><small>+251 ' + escHtml(phone) + '</small></div>';
+        };
+        var metaRow = function (k, v) { return '<span class="k">' + escHtml(k) + '</span><span class="v">' + v + '</span>'; };
         var html = '';
-        html += '<div class="cd-receipt-brand"><b>' + escHtml(companyName) + '</b><span>Parcel shipment receipt</span></div>';
-        html += '<dl>';
-        html += row('Receipt no.', '<b>' + escHtml(parcel.reference || '') + '</b>');
-        html += row('Registered', escHtml(dateStr));
-        html += row('Sender', escHtml(parcel.sender_name || '') + ' \u00b7 ' + escHtml(parcel.sender_phone || ''));
-        html += row('Recipient', escHtml(parcel.recipient_name || '') + ' \u00b7 ' + escHtml(parcel.recipient_phone || ''));
-        html += row('Route', escHtml(String(parcel.from_city || '') + ' \u2192 ' + String(parcel.to_city || '')));
-        html += row('Travel', travelLine);
-        html += row('Parcel', escHtml(String(parcel.weight_kg || '0')) + ' kg \u00b7 ' + escHtml(parcelTypeLabel(parcel.parcel_type)));
-        html += row('Payment', paymentDetail);
-        html += '</dl>';
-        html += '<div class="cd-receipt-total"><dt>Amount paid</dt><dd>ETB ' + formatMoney(Number(parcel.price)) + '</dd></div>';
+        html += '<div class="cd-receipt-brand">' +
+            '<div class="co"><b>' + escHtml(companyName) + '</b><span>Parcel shipment receipt</span></div>' +
+            '<div class="meta">' + metaRow('Receipt no.', escHtml(parcel.reference || '')) + metaRow('Issued', escHtml(dateStr)) + '</div>' +
+        '</div>';
+        html += '<div class="cd-receipt-fields">';
+        html += field('Route', escHtml(String(parcel.from_city || '') + ' \u2192 ' + String(parcel.to_city || '')));
+        html += field('Travel', travelLine);
+        html += field('Parcel', escHtml(String(parcel.weight_kg || '0')) + ' kg \u00b7 ' + escHtml(parcelTypeLabel(parcel.parcel_type)));
+        html += field('Payment', paymentDetail);
+        html += '</div>';
+        html += '<div class="cd-receipt-people">' +
+            person('Sender', parcel.sender_name || '', parcel.sender_phone || '') +
+            person('Recipient', parcel.recipient_name || '', parcel.recipient_phone || '') +
+        '</div>';
+        html += '<div class="cd-receipt-total"><span>Amount paid</span><b>ETB ' + formatMoney(Number(parcel.price)) + '</b></div>';
         return html;
     }
 
@@ -5176,6 +5209,14 @@ function submitBranchForm() {
     }
 
     function changeParcelStatus(id, status) {
+        var chips = document.querySelectorAll('.cd-parcel-status-chip[data-parcel-status-toggle]');
+        for (var c = 0; c < chips.length; c++) {
+            if (chips[c].getAttribute('data-parcel-status-toggle') === String(id)) {
+                chips[c].classList.add('is-saving');
+                break;
+            }
+        }
+        closeParcelStatusMenus();
         fetch('api/company.php?action=parcel_update', {
             method: 'POST',
             credentials: 'same-origin',
@@ -5355,16 +5396,42 @@ function submitBranchForm() {
         var listEl = byId('parcel-list');
         if (listEl) {
             listEl.addEventListener('click', function (ev) {
-                var btn = ev.target.closest ? ev.target.closest('[data-parcel-edit],[data-parcel-delete]') : null;
-                if (!btn) { return; }
-                if (btn.hasAttribute('data-parcel-edit')) { openParcelForm(parcelById(btn.getAttribute('data-parcel-edit'))); return; }
-                if (btn.hasAttribute('data-parcel-delete')) { deleteParcel(btn.getAttribute('data-parcel-delete')); }
-            });
-            listEl.addEventListener('change', function (ev) {
-                var sel = ev.target.closest ? ev.target.closest('select[data-parcel-status]') : null;
-                if (sel) { changeParcelStatus(sel.getAttribute('data-parcel-status'), sel.value); }
+                var target = ev.target;
+                if (!target || !target.closest) { return; }
+                var editBtn = target.closest('[data-parcel-edit]');
+                if (editBtn) { openParcelForm(parcelById(editBtn.getAttribute('data-parcel-edit'))); return; }
+                var delBtn = target.closest('[data-parcel-delete]');
+                if (delBtn) { deleteParcel(delBtn.getAttribute('data-parcel-delete')); return; }
+                var setBtn = target.closest('[data-parcel-status-set]');
+                if (setBtn) {
+                    changeParcelStatus(setBtn.getAttribute('data-parcel-status-set'), setBtn.getAttribute('data-parcel-status-value'));
+                    return;
+                }
+                var toggle = target.closest('[data-parcel-status-toggle]');
+                if (toggle) {
+                    var tId = toggle.getAttribute('data-parcel-status-toggle');
+                    var menu = null;
+                    var menus = document.querySelectorAll('.cd-parcel-status-menu');
+                    for (var m = 0; m < menus.length; m++) {
+                        if (menus[m].getAttribute('data-parcel-status-menu') === tId) { menu = menus[m]; break; }
+                    }
+                    if (!menu) { return; }
+                    var willOpen = menu.hidden;
+                    closeParcelStatusMenus();
+                    if (willOpen) {
+                        menu.hidden = false;
+                        toggle.setAttribute('aria-expanded', 'true');
+                    }
+                    return;
+                }
+                if (!target.closest('.cd-parcel-status-wrap')) { closeParcelStatusMenus(); }
             });
         }
+        document.addEventListener('click', function (ev) {
+            var t = ev.target;
+            if (t && t.closest && t.closest('#parcel-list')) { return; }
+            closeParcelStatusMenus();
+        });
     }
 
     document.addEventListener('DOMContentLoaded', function () {
