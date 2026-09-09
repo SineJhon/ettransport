@@ -147,6 +147,7 @@
                 }
                 renderOverview(data);
                 loadReviews();
+                loadComplaints();
             })
             .catch(function () {
                 if (rid !== overviewRequestId) { return; }
@@ -239,7 +240,15 @@
             try { window.history.replaceState(null, '', '#' + view); } catch (e) { /* non-critical */ }
         }
         var navButtons = document.querySelectorAll('[data-cd-view]');
-        for (var b = 0; b < navButtons.length; b++) { navButtons[b].addEventListener('click', function () { selectView(this.getAttribute('data-cd-view')); }); }
+        for (var b = 0; b < navButtons.length; b++) {
+            navButtons[b].addEventListener('click', function () {
+                var view = this.getAttribute('data-cd-view');
+                selectView(view);
+                /* Refresh complaints whenever the tab is opened, so items filed
+                   after this page loaded show up without a full reload. */
+                if (view === 'complaints') { loadComplaints(); }
+            });
+        }
         var quickActions = document.querySelectorAll('[data-cd-go]');
         for (var q = 0; q < quickActions.length; q++) { quickActions[q].addEventListener('click', function () { selectView(this.getAttribute('data-cd-go')); var target = byId(this.getAttribute('data-cd-action')); if (target) { target.click(); } }); }
         var requested = window.location.hash.replace('#', '');
@@ -4091,9 +4100,9 @@ var reviewEditingReplyId = null;
        resolved/closed and can write a response the passenger sees on
        their own dashboard (api/company.php?action=complaint_update). */
     var complaintsRequestId = 0;
-    var complaintFilter = null;         // 'open' | 'in_progress' | 'resolved' | 'closed' | null
+    var complaintFilter = null;         // status: 'open' | 'in_progress' | 'resolved' | 'closed' | null
     var complaintEditingReplyId = null; // complaint id whose reply editor is open
-    var complaintsCounts = {};          // status → count, fed by the API
+    var complaintsCounts = {};          // status → count, fed by the API (always full)
     var currentComplaints = [];
 
     var COMPLAINT_STATUSES = [
@@ -4104,12 +4113,14 @@ var reviewEditingReplyId = null;
     ];
 
     var COMPLAINT_CATEGORY_LABELS = {
-        late_departure: 'Late departure',
-        cancelled_trip: 'Trip cancelled',
-        refund_issue: 'Refund problem',
-        missed_bus: 'Missed the bus',
-        lost_parcel: 'Lost parcel',
-        rude_staff: 'Staff behaviour',
+        refund_issue: 'Refund Problem',
+        lost_parcel: 'Lost Parcel',
+        crew_behavior: 'Crew Behavior',
+        comfort: 'Comfort',
+        luggage: 'Luggage',
+        late_departure: 'Late Departure',
+        cancelled_trip: 'Canceled Trip',
+        missed_bus: 'Missed Bus',
         other: 'Other'
     };
 
@@ -4181,7 +4192,7 @@ var reviewEditingReplyId = null;
     function renderComplaintFilterBar() {
         var bar = byId('complaint-filterbar');
         if (!bar) { return; }
-        if (!currentComplaints.length) { bar.hidden = true; bar.innerHTML = ''; return; }
+        if (!currentComplaints.length && complaintFilter === null) { bar.hidden = true; bar.innerHTML = ''; return; }
         var options = [[null, 'All'], ['open', 'Open'], ['in_progress', 'In progress'], ['resolved', 'Resolved'], ['closed', 'Closed']];
         var html = '';
         var total = 0;
@@ -4212,7 +4223,9 @@ var reviewEditingReplyId = null;
             if (list) { list.innerHTML = ''; list.hidden = true; }
             if (empty) {
                 empty.hidden = false;
-                empty.textContent = complaintFilter === null ? 'No complaints yet. Passenger feedback will appear here as soon as it is filed.' : 'No ' + complaintStatusLabel(complaintFilter).toLowerCase() + ' complaints match this filter.';
+                empty.textContent = complaintFilter === null
+                    ? 'No complaints yet. Passenger feedback will appear here as soon as it is filed.'
+                    : 'No complaints match the selected status.';
             }
         }
     }
@@ -4269,7 +4282,9 @@ var reviewEditingReplyId = null;
         if (!currentCompanyId) { if (loading) { loading.hidden = true; } return; }
 
         var rid = ++complaintsRequestId;
-        fetch('api/company.php?action=complaints', {
+        var url = 'api/company.php?action=complaints';
+        if (complaintFilter) { url += '&status=' + encodeURIComponent(complaintFilter); }
+        fetch(url, {
             method: 'GET',
             credentials: 'same-origin',
             headers: { 'Accept': 'application/json' }
@@ -6179,10 +6194,8 @@ function submitBranchForm() {
             complaintFilterBar.addEventListener('click', function (ev) {
                 var btn = ev.target.closest ? ev.target.closest('.cd-complaint-filter') : null;
                 if (!btn) { return; }
-                var raw = btn.getAttribute('data-complaint-filter');
-                complaintFilter = raw === '' ? null : raw;
-                renderComplaintFilterBar();
-                renderComplaintCards();
+                complaintFilter = btn.getAttribute('data-complaint-filter') || null;
+                loadComplaints();
             });
         }
 

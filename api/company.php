@@ -4904,27 +4904,10 @@ function handle_parcel_delete(PDO $pdo): void
    response the passenger sees on their own dashboard.
    ============================================================ */
 
-/** The complaint category catalog (also used by api/complaint.php). */
-const COMPLAINT_CATEGORIES = [
-    'late_departure',
-    'cancelled_trip',
-    'refund_issue',
-    'missed_bus',
-    'lost_parcel',
-    'rude_staff',
-    'other',
-];
-
 /** True when the value is one of the schema's complaint status ENUM values. */
 function valid_complaint_status(string $value): bool
 {
     return in_array($value, ['open', 'in_progress', 'resolved', 'closed'], true);
-}
-
-/** True when the value is one of the complaint category catalog values. */
-function valid_complaint_category(string $value): bool
-{
-    return in_array($value, COMPLAINT_CATEGORIES, true);
 }
 
 /** Safe presentation payload for one complaint row (never internal data). */

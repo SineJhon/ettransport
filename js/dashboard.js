@@ -1440,12 +1440,14 @@ function closeTicket() {
     }
 
     var COMPLAINT_CATEGORY_LABELS = {
-        late_departure: 'Late departure',
-        cancelled_trip: 'Trip cancelled',
-        refund_issue: 'Refund problem',
-        missed_bus: 'Missed the bus',
-        lost_parcel: 'Lost parcel',
-        rude_staff: 'Staff behaviour',
+        refund_issue: 'Refund Problem',
+        lost_parcel: 'Lost Parcel',
+        crew_behavior: 'Crew Behavior',
+        comfort: 'Comfort',
+        luggage: 'Luggage',
+        late_departure: 'Late Departure',
+        cancelled_trip: 'Canceled Trip',
+        missed_bus: 'Missed Bus',
         other: 'Other'
     };
 

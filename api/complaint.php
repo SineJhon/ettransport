@@ -21,8 +21,9 @@ declare(strict_types=1);
  *   - company_id must reference a board-visible company (approved + listed +
  *     active account), so passengers cannot complain about a hidden one;
  *   - passenger_id always comes from the session;
- *   - category must be in the catalog (late_departure, cancelled_trip,
- *     refund_issue, missed_bus, lost_parcel, rude_staff, other);
+ *   - category must be in the catalog (refund_issue, lost_parcel,
+ *     crew_behavior, comfort, luggage, late_departure, cancelled_trip,
+ *     missed_bus, other);
  *   - an optional booking_reference is looked up against the passenger's OWN
  *     bookings for that company; the resolved booking_id is stored.
  *
@@ -35,12 +36,14 @@ require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/notifications.php';
 
 const COMPLAINT_CATEGORIES = [
+    'refund_issue',
+    'lost_parcel',
+    'crew_behavior',
+    'comfort',
+    'luggage',
     'late_departure',
     'cancelled_trip',
-    'refund_issue',
     'missed_bus',
-    'lost_parcel',
-    'rude_staff',
     'other',
 ];
 
