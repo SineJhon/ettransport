@@ -4911,7 +4911,7 @@ function valid_complaint_status(string $value): bool
 }
 
 /** Safe presentation payload for one complaint row (never internal data). */
-function complaint_payload(array $row): array
+function complaint_payload(array $row, array $responses = []): array
 {
     $departure = '';
     if (($row['departure_date'] ?? null) !== null) {
@@ -4933,11 +4933,100 @@ function complaint_payload(array $row): array
         'status' => $row['status'],
         'response' => $row['response'] !== null && $row['response'] !== '' ? (string) $row['response'] : null,
         'response_at' => $row['response_at'] ?? null,
+        'responses' => $responses,
         'route' => $row['route'] ?? null,
         'departure' => $departure === '' ? null : $departure,
         'created_at' => $row['created_at'] ?? '',
         'updated_at' => $row['updated_at'] ?? '',
     ];
+}
+
+/** The response thread of one complaint, oldest first. */
+function fetch_complaint_responses(PDO $pdo, int $complaintId): array
+{
+    $stmt = $pdo->prepare('
+        SELECT id, complaint_id, message, created_at, updated_at
+        FROM complaint_responses
+        WHERE complaint_id = :complaint_id
+        ORDER BY id ASC
+    ');
+    $stmt->execute([':complaint_id' => $complaintId]);
+
+    $out = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $out[] = [
+            'id' => (int) $row['id'],
+            'message' => $row['message'],
+            'created_at' => $row['created_at'] ?? '',
+            'updated_at' => $row['updated_at'] ?? '',
+        ];
+    }
+    return $out;
+}
+
+/** Attach the response thread to every payload in a list (one query). */
+function attach_complaint_responses(PDO $pdo, array $complaints): array
+{
+    if (count($complaints) === 0) {
+        return $complaints;
+    }
+
+    $ids = [];
+    foreach ($complaints as $c) {
+        $ids[] = (int) $c['id'];
+    }
+
+    $stmt = $pdo->prepare('
+        SELECT id, complaint_id, message, created_at, updated_at
+        FROM complaint_responses
+        WHERE complaint_id IN (' . implode(',', $ids) . ')
+        ORDER BY id ASC
+    ');
+    $stmt->execute();
+
+    $map = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $map[(int) $row['complaint_id']][] = [
+            'id' => (int) $row['id'],
+            'message' => $row['message'],
+            'created_at' => $row['created_at'] ?? '',
+            'updated_at' => $row['updated_at'] ?? '',
+        ];
+    }
+
+    $out = [];
+    foreach ($complaints as $c) {
+        $copy = $c;
+        $copy['responses'] = $map[(int) $c['id']] ?? [];
+        $out[] = $copy;
+    }
+    return $out;
+}
+
+/** Keep the denormalized complaints.response/response_at = LATEST response. */
+function sync_latest_complaint_response(PDO $pdo, int $complaintId): void
+{
+    $stmt = $pdo->prepare('
+        SELECT message, created_at
+        FROM complaint_responses
+        WHERE complaint_id = :complaint_id
+        ORDER BY id DESC
+        LIMIT 1
+    ');
+    $stmt->execute([':complaint_id' => $complaintId]);
+    $row = $stmt->fetch();
+
+    if ($row !== false) {
+        $upd = $pdo->prepare('UPDATE complaints SET response = :resp, response_at = :at WHERE id = :id');
+        $upd->execute([
+            ':resp' => $row['message'],
+            ':at' => $row['created_at'] ?? null,
+            ':id' => $complaintId,
+        ]);
+    } else {
+        $upd = $pdo->prepare('UPDATE complaints SET response = NULL, response_at = NULL WHERE id = :id');
+        $upd->execute([':id' => $complaintId]);
+    }
 }
 
 /** This company's own complaints, newest first; open ones float to the top. */
@@ -4974,7 +5063,7 @@ function fetch_company_complaints(PDO $pdo, int $companyId, ?string $status = nu
     foreach ($stmt->fetchAll() as $row) {
         $out[] = complaint_payload($row);
     }
-    return $out;
+    return attach_complaint_responses($pdo, $out);
 }
 
 /** One owned complaint row (company scoped), or a 404 response. */
@@ -5037,10 +5126,10 @@ function handle_complaints(PDO $pdo): void
     ]);
 }
 
-/** POST /api/company.php?action=complaint_update — triage one owned complaint:
- *  change its status and/or write a reply for the passenger. Ownership is
- *  enforced by the company-scoped WHERE clause — another company's complaint
- *  simply does not match (404). */
+/** POST /api/company.php?action=complaint_update — handle one owned complaint
+ *  from the complaint modal: change its status AND/OR write, edit or extend
+ *  the response thread. Ownership is enforced by the company-scoped WHERE
+ *  clause — another company's complaint simply does not match (404). */
 function handle_complaint_update(PDO $pdo): void
 {
     require_company_post();
@@ -5058,32 +5147,47 @@ function handle_complaint_update(PDO $pdo): void
         auth_response(422, ['success' => false, 'message' => 'Unknown complaint status.']);
     }
 
-    $reply = $input['reply'] ?? null;
-    if ($reply !== null) {
-        $reply = trim((string) $reply);
-        if (strlen($reply) > 1000) {
-            auth_response(422, ['success' => false, 'message' => 'Reply must be 1000 characters or fewer.']);
+    $response = $input['response'] ?? null;
+    if ($response !== null) {
+        $response = trim((string) $response);
+        if (mb_strlen($response) > 1000) {
+            auth_response(422, ['success' => false, 'message' => 'Response must be 1000 characters or fewer.']);
         }
     }
+    $hasResponse = $response !== null && $response !== '';
+    $responseId = (int) ($input['response_id'] ?? 0);
 
-    $hasReply = $reply !== null && $reply !== '';
-    $sql = 'UPDATE complaints SET status = :status';
-    $params = [':status' => $status, ':id' => $complaintId, ':company_id' => $companyId];
+    $upd = $pdo->prepare('UPDATE complaints SET status = :status WHERE id = :id AND company_id = :company_id');
+    $upd->execute([':status' => $status, ':id' => $complaintId, ':company_id' => $companyId]);
 
-    if ($reply !== null) {
-        $sql .= ', response = :reply';
-        $params[':reply'] = $hasReply ? $reply : null;
+    /* Response handling:
+       - response_id + response  → edit an existing response
+       - response only           → add a new response (append to the thread) */
+    $notify = false;
+    if ($responseId > 0) {
+        $rStmt = $pdo->prepare('SELECT id FROM complaint_responses WHERE id = :rid AND complaint_id = :cid LIMIT 1');
+        $rStmt->execute([':rid' => $responseId, ':cid' => $complaintId]);
+        if ($rStmt->fetch() === false) {
+            auth_response(404, [
+                'success' => false,
+                'message' => 'Response not found.',
+            ]);
+        }
+        if ($hasResponse) {
+            $rUpd = $pdo->prepare('UPDATE complaint_responses SET message = :message WHERE id = :rid');
+            $rUpd->execute([':message' => $response, ':rid' => $responseId]);
+        }
+    } elseif ($hasResponse) {
+        $ins = $pdo->prepare('INSERT INTO complaint_responses (complaint_id, message) VALUES (:cid, :message)');
+        $ins->execute([':cid' => $complaintId, ':message' => $response]);
+        $notify = true;
     }
-    if ($hasReply) {
-        $sql .= ', response_at = NOW()';
-    }
 
-    $sql .= ' WHERE id = :id AND company_id = :company_id';
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
+    /* complaints.response/response_at stay in sync with the latest response. */
+    sync_latest_complaint_response($pdo, $complaintId);
 
-    /* Best-effort notification to the passenger when the company responds. */
-    if ($hasReply && (int) ($row['passenger_id'] ?? 0) > 0) {
+    /* Best-effort notification to the passenger when a NEW response is added. */
+    if ($notify && (int) ($row['passenger_id'] ?? 0) > 0) {
         try {
             createNotification(
                 $pdo,
@@ -5102,7 +5206,7 @@ function handle_complaint_update(PDO $pdo): void
     auth_response(200, [
         'success' => true,
         'message' => 'Complaint updated.',
-        'complaint' => complaint_payload($updated),
+        'complaint' => complaint_payload($updated, fetch_complaint_responses($pdo, $complaintId)),
     ]);
 }
 

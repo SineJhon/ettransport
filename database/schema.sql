@@ -661,6 +661,27 @@ CREATE TABLE IF NOT EXISTS complaints (
     ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ------------------------------------------------------------
+-- complaint_responses — a real response thread on a complaint.
+-- The company can write a response, edit any earlier response and
+-- add as many follow-up responses as needed. complaints.response /
+-- response_at stay as a denormalized copy of the LATEST response
+-- so legacy read paths keep working.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS complaint_responses (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  complaint_id BIGINT UNSIGNED NOT NULL,
+  message TEXT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_complaint_responses_complaint (complaint_id),
+  CONSTRAINT fk_complaint_responses_complaint
+    FOREIGN KEY (complaint_id) REFERENCES complaints(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ============================================================
 -- Bootstrap admin
 -- Do NOT insert a password hash here. On a fresh database the app

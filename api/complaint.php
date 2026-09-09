@@ -125,7 +125,7 @@ function complaint_target_company(PDO $pdo, int $companyId): array
 }
 
 /** Safe passenger-facing payload for one complaint row. */
-function passenger_complaint_payload(array $row): array
+function passenger_complaint_payload(array $row, array $responses = []): array
 {
     $departure = '';
     if (($row['departure_date'] ?? null) !== null) {
@@ -147,10 +147,34 @@ function passenger_complaint_payload(array $row): array
         'status' => $row['status'],
         'response' => $row['response'] !== null && $row['response'] !== '' ? (string) $row['response'] : null,
         'response_at' => $row['response_at'] ?? null,
+        'responses' => $responses,
         'route' => $row['route'] ?? null,
         'departure' => $departure === '' ? null : $departure,
         'created_at' => $row['created_at'] ?? '',
     ];
+}
+
+/** The response thread of one complaint, oldest first. */
+function fetch_passenger_complaint_responses(PDO $pdo, int $complaintId): array
+{
+    $stmt = $pdo->prepare('
+        SELECT id, complaint_id, message, created_at, updated_at
+        FROM complaint_responses
+        WHERE complaint_id = :complaint_id
+        ORDER BY id ASC
+    ');
+    $stmt->execute([':complaint_id' => $complaintId]);
+
+    $out = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $out[] = [
+            'id' => (int) $row['id'],
+            'message' => $row['message'],
+            'created_at' => $row['created_at'] ?? '',
+            'updated_at' => $row['updated_at'] ?? '',
+        ];
+    }
+    return $out;
 }
 
 /** The one booking JOIN shared by insert/readback/list (keeps shape identical). */
@@ -283,7 +307,7 @@ function handle_create(): void
     auth_response(201, [
         'success' => true,
         'message' => 'Complaint submitted. The company will respond soon.',
-        'complaint' => passenger_complaint_payload($row),
+        'complaint' => passenger_complaint_payload($row, fetch_passenger_complaint_responses($pdo, $newId)),
     ]);
 }
 
@@ -301,7 +325,9 @@ function handle_list(): void
 
     $complaints = [];
     foreach ($stmt->fetchAll() as $row) {
-        $complaints[] = passenger_complaint_payload($row);
+        $payload = passenger_complaint_payload($row);
+        $payload['responses'] = fetch_passenger_complaint_responses($pdo, (int) $row['id']);
+        $complaints[] = $payload;
     }
 
     auth_response(200, [

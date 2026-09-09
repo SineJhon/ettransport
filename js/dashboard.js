@@ -1465,6 +1465,18 @@ function closeTicket() {
         } catch (e) { return String(value).slice(0, 10); }
     }
 
+    function complaintRepliesHtml(c) {
+        var replies = (Array.isArray(c.responses) && c.responses.length)
+            ? c.responses
+            : (c.response ? [{ id: -1, message: c.response, created_at: c.response_at, updated_at: c.response_at }] : []);
+        if (!replies.length) { return ''; }
+        var html = '';
+        for (var i = 0; i < replies.length; i++) {
+            html += '<div class="dash-complaint-reply"><span class="dash-complaint-reply-label">Company response</span><p>' + escapeHtml(replies[i].message) + '</p></div>';
+        }
+        return html;
+    }
+
     function renderComplaints() {
         var list = document.getElementById('complaint-list');
         var empty = document.getElementById('complaint-empty');
@@ -1497,8 +1509,7 @@ function closeTicket() {
                     '</div>' +
                     '<h4 class="dash-complaint-subject">' + escapeHtml(c.subject) + '</h4>' +
                     '<p class="dash-complaint-message">' + escapeHtml(c.message) + '</p>' +
-                    ctx +
-                    (c.response ? '<div class="dash-complaint-reply"><span class="dash-complaint-reply-label">Company response</span><p>' + escapeHtml(c.response) + '</p></div>' : '') +
+                    ctx + complaintRepliesHtml(c) +
                 '</article>';
             }
             list.innerHTML = html;

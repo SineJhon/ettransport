@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Company operator dashboard for ET Transport">
     <title>Company Dashboard | ET Transport</title>
-    <link rel="stylesheet" href="css/style.css?v=20260909-complaints-v2">
+    <link rel="stylesheet" href="css/style.css?v=20260909-complaints-v3">
     <link rel="stylesheet" href="css/walkin-booking.css?v=20260904-inline-validation-2">
     <link rel="stylesheet" href="css/city-picker.css?v=20260907-swap-fix">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -433,28 +433,56 @@
         .cd-complaint-person { display: grid; gap: .12rem; min-width: 0; }
         .cd-complaint-person strong { color: #193c35; font-size: .92rem; }
         .cd-complaint-meta { color: #72877f; font-size: .73rem; }
-        .cd-complaint-category { margin-left: auto; padding: .3rem .55rem; border-radius: 99px; font: 800 .68rem/1 'DM Sans', sans-serif; text-transform: uppercase; letter-spacing: .05em; }
-        .cd-complaint-category { color: #245f8a; background: #e7f1f8; }
+        .cd-complaint-status-badge { margin-left: auto; padding: .3rem .55rem; border-radius: 99px; font: 800 .68rem/1 'DM Sans', sans-serif; text-transform: uppercase; letter-spacing: .05em; }
+        .cd-complaint-status-badge.is-open { color: #9f5a06; background: #fff4d6; }
+        .cd-complaint-status-badge.is-in_progress { color: #245f9e; background: #e7f1fb; }
+        .cd-complaint-status-badge.is-resolved { color: #166534; background: #e6f5ea; }
+        .cd-complaint-status-badge.is-closed { color: #55606a; background: #e9edf0; }
+        .cd-complaint-category { padding: .3rem .55rem; border-radius: 99px; font: 800 .68rem/1 'DM Sans', sans-serif; text-transform: uppercase; letter-spacing: .05em; color: #245f8a; background: #e7f1f8; }
         .cd-complaint-subject { margin: 0; color: #153a31; font: 800 1rem/1.3 'Outfit', sans-serif; letter-spacing: -.01em; }
         .cd-complaint-text { margin: 0; color: #385148; font-size: .9rem; line-height: 1.6; }
         .cd-complaint-context { display: flex; flex-wrap: wrap; gap: .4rem; }
         .cd-complaint-context span { padding: .28rem .55rem; color: #547067; background: #f1f6f3; border: 1px solid #e0ebe4; border-radius: 7px; font-size: .72rem; font-weight: 700; }
-        .cd-complaint-reply { padding: .75rem .85rem; background: #f0f8f3; border: 1px solid #d7eade; border-left: 3px solid #58a275; border-radius: 9px; }
-        .cd-complaint-reply-label { display: block; margin-bottom: .3rem; color: #2a7054; font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
-        .cd-complaint-reply p { margin: 0; color: #335248; font-size: .86rem; line-height: 1.55; }
-        .cd-complaint-reply-meta { display: block; margin-top: .35rem; color: #6f857c; font-size: .73rem; }
-        .cd-complaint-actions { display: flex; align-items: center; gap: .5rem; margin-top: auto; padding-top: .75rem; border-top: 1px solid #eef2ef; }
-        .cd-complaint-status-label { color: #5f766d; font-size: .7rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
-        .cd-complaint-status-select { flex: 0 0 auto; min-height: 2.3rem; padding: .35rem .5rem; color: #1d483d; background: #fff; border: 1px solid #cfe0d6; border-radius: 8px; font: 700 .78rem 'DM Sans', sans-serif; }
-        .cd-complaint-save { margin-left: auto; }
-        .cd-complaint-reply-editor { display: grid; gap: .5rem; padding: .8rem; background: #f1f8f3; border: 1px solid #c6e0d0; border-radius: 10px; }
-        .cd-complaint-reply-editor-head { display: flex; justify-content: space-between; gap: 1rem; color: #356357; font-size: .76rem; font-weight: 800; }
-        .cd-complaint-reply-editor-head small { color: #6f857c; font-size: .72rem; font-weight: 600; }
-        .cd-complaint-reply-input { width: 100%; min-height: 6rem; resize: vertical; padding: .6rem .7rem; border: 1px solid #c8ded1; border-radius: 8px; background: #fff; font: inherit; font-size: .85rem; line-height: 1.5; }
-        .cd-complaint-reply-input:focus { outline: 3px solid rgba(49,164,118,.16); border-color: #3f976a; }
-        .cd-complaint-reply-editor-actions { display: flex; justify-content: flex-end; gap: .5rem; }
+        .cd-complaint-actions { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-top: auto; padding-top: .75rem; border-top: 1px solid #eef2ef; }
+        .cd-complaint-handle-btn { white-space: nowrap; }
         .cd-complaint-empty { margin-top: 1rem; padding: 2.4rem 1rem; border: 1px dashed #cfe1d6; border-radius: 14px; background: #f8fbf9; color: #668078; text-align: center; font-size: .9rem; }
-        @media (max-width: 600px) { .cd-complaint-list { grid-template-columns: 1fr; }.cd-complaint-actions { flex-wrap: wrap; }.cd-complaint-save { margin-left: 0; } }
+        /* ===== Handle-complaint modal ===== */
+        .cd-complaint-modal { position: fixed; inset: 0; z-index: 102; display: grid; place-items: center; padding: 1rem; background: rgba(8, 31, 25, .58); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+        .cd-complaint-modal[hidden] { display: none; }
+        .cd-complaint-modal-box { width: min(100%, 720px); max-height: min(92vh, 820px); overflow: auto; display: flex; flex-direction: column; padding: 1.4rem; background: #fff; border: 1px solid #dfe9e3; border-radius: 18px; box-shadow: 0 25px 70px rgba(5, 26, 20, .28); }
+        .cd-complaint-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid #e5ede8; }
+        .cd-complaint-modal-head h3 { margin: 0; color: #163a33; font: 800 1.35rem/1 'Outfit', sans-serif; letter-spacing: -.02em; }
+        .cd-complaint-modal-subject { margin: .3rem 0 0; color: #647a71; font-size: .85rem; }
+        .cd-complaint-modal-close { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; padding: 0; color: #275147; background: #edf5f0; border: 0; border-radius: 50%; cursor: pointer; font-size: 1.25rem; line-height: 1; }
+        .cd-complaint-modal-content { display: grid; gap: 1rem; }
+        .cd-complaint-modal-person { display: flex; align-items: center; gap: .65rem; }
+        .cd-complaint-modal-person strong { color: #193c35; font-size: .92rem; }
+        .cd-complaint-modal-person .cd-complaint-category { margin-left: .25rem; }
+        .cd-complaint-modal-meta { margin: 0; color: #6b7c76; font-size: .78rem; }
+        .cd-complaint-modal-message { margin: 0; padding: .85rem 1rem; color: #385148; background: #f2f7f4; border: 1px solid #dce9e1; border-radius: 10px; font-size: .9rem; line-height: 1.6; }
+        .cd-complaint-modal-field { display: grid; grid-template-columns: auto 1fr; gap: .75rem; align-items: center; }
+        .cd-complaint-modal-field label { color: #5f766d; font-size: .7rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+        .cd-complaint-modal-status-select { width: 100%; min-height: 2.6rem; padding: .45rem .6rem; color: #1d483d; background: #fff; border: 1px solid #cfe0d6; border-radius: 8px; font: 700 .84rem 'DM Sans', sans-serif; }
+        .cd-complaint-modal-responses { border-top: 1px solid #e5ede8; padding-top: 1rem; }
+        .cd-complaint-modal-responses h4 { margin: 0 0 .7rem; color: #2d5649; font-size: .8rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+        .cd-complaint-modal-responses-list { display: grid; gap: .7rem; }
+        .cd-complaint-modal-response { display: grid; gap: .35rem; padding: .8rem .9rem; background: #f0f8f3; border: 1px solid #d7eade; border-left: 3px solid #58a275; border-radius: 10px; }
+        .cd-complaint-modal-response.is-editing { background: #fbfefb; border-color: #c6e0d0; border-left-color: #3f976a; }
+        .cd-complaint-modal-response-head { display: flex; align-items: center; justify-content: space-between; gap: .6rem; }
+        .cd-complaint-modal-response-label { color: #2a7054; font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
+        .cd-complaint-modal-response-meta { color: #6f857c; font-size: .72rem; }
+        .cd-complaint-modal-response p { margin: 0; color: #335248; font-size: .88rem; line-height: 1.55; }
+        .cd-complaint-modal-response-input { width: 100%; min-height: 5.5rem; resize: vertical; padding: .55rem .65rem; border: 1px solid #c8ded1; border-radius: 8px; background: #fff; font: inherit; font-size: .86rem; line-height: 1.5; }
+        .cd-complaint-modal-response-input:focus { outline: 3px solid rgba(49,164,118,.16); border-color: #3f976a; }
+        .cd-complaint-modal-response-editor-actions { display: flex; justify-content: flex-end; gap: .5rem; }
+        .cd-complaint-modal-no-responses { margin: 0; color: #6b7c76; font-size: .85rem; }
+        .cd-complaint-modal-new-response { border-top: 1px solid #e5ede8; padding-top: 1rem; display: grid; gap: .5rem; }
+        .cd-complaint-modal-new-response label { color: #2d5649; font-size: .78rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+        .cd-complaint-modal-new-response textarea { width: 100%; min-height: 6rem; resize: vertical; padding: .6rem .7rem; border: 1px solid #c8ded1; border-radius: 8px; background: #fff; font: inherit; font-size: .88rem; line-height: 1.5; }
+        .cd-complaint-modal-new-response textarea:focus { outline: 3px solid rgba(49,164,118,.16); border-color: #3f976a; }
+        .cd-complaint-modal-error { margin: 0; color: #b91c1c; font-size: .85rem; }
+        .cd-complaint-modal-actions { display: flex; justify-content: flex-end; gap: .6rem; margin-top: 1rem; }
+        @media (max-width: 600px) { .cd-complaint-list { grid-template-columns: 1fr; }.cd-complaint-modal { align-items: end; padding: .5rem; }.cd-complaint-modal-box { max-height: 94vh; border-radius: 16px 16px 10px 10px; padding: 1.1rem; }.cd-complaint-modal-field { grid-template-columns: 1fr; } }
 
         .cd-profile { margin-top: var(--space-md); }
         .cd-profile-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
@@ -2078,6 +2106,16 @@
     </main>
 
     <!-- ============================================================
+         Handle-complaint modal — status changer + response thread
+         (write / edit / add responses). Lives OUTSIDE <main> because
+         initWorkspaceNavigation() rebuilds main's innerHTML and would
+         otherwise destroy the modal.
+         ============================================================ -->
+    <div id="complaint-modal" class="cd-complaint-modal" hidden>
+        <div id="complaint-modal-body"></div>
+    </div>
+
+    <!-- ============================================================
          Branch form modal (add / edit) — scoped to the public-profile
          branch management. Reuses the trip modal design for the overlay.
          ============================================================ -->
@@ -2238,6 +2276,6 @@
     <script src="js/auth.js"></script>
     <script src="js/cities.js"></script>
     <script src="js/city-picker.js?v=20260907-swap-fix-3-dispatch"></script>
-    <script src="js/company-dashboard.js?v=20260909-complaints-v2"></script>
+    <script src="js/company-dashboard.js?v=20260909-complaints-v3"></script>
 </body>
 </html>

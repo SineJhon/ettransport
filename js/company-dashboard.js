@@ -4100,10 +4100,11 @@ var reviewEditingReplyId = null;
        resolved/closed and can write a response the passenger sees on
        their own dashboard (api/company.php?action=complaint_update). */
     var complaintsRequestId = 0;
-    var complaintFilter = null;         // status: 'open' | 'in_progress' | 'resolved' | 'closed' | null
-    var complaintEditingReplyId = null; // complaint id whose reply editor is open
-    var complaintsCounts = {};          // status → count, fed by the API (always full)
+    var complaintFilter = null;                    // status filter
+    var complaintsCounts = {};                     // status → count, always full
     var currentComplaints = [];
+    var activeComplaintModalId = null;             // complaint id whose modal is open
+    var complaintModalEditingResponseId = null;    // response id being edited in the modal
 
     var COMPLAINT_STATUSES = [
         ['open', 'Open'],
@@ -4135,28 +4136,7 @@ var reviewEditingReplyId = null;
         return COMPLAINT_CATEGORY_LABELS[category] || 'Other';
     }
 
-    function complaintReplyBlockHtml(c) {
-        if (!c.response) { return ''; }
-        return '<div class="cd-complaint-reply" data-complaint-id="' + c.id + '">' +
-            '<span class="cd-complaint-reply-label">Company response</span>' +
-            '<p>' + escHtml(c.response) + '</p>' +
-            '<span class="cd-complaint-reply-meta">Published ' + (formatReviewDate(c.response_at) || '') + '</span>' +
-        '</div>';
-    }
-
-    function complaintReplyEditorHtml(c) {
-        return '<div class="cd-complaint-reply-editor" data-complaint-id="' + c.id + '">' +
-            '<div class="cd-complaint-reply-editor-head"><span>Reply to passenger</span><small data-complaint-reply-count>' + String(c.response || '').length + ' / 1000</small></div>' +
-            '<textarea class="cd-complaint-reply-input" maxlength="1000" placeholder="Write a reply the passenger will see on their dashboard\u2026">' + escHtml(c.response || '') + '</textarea>' +
-            '<div class="cd-complaint-reply-editor-actions">' +
-                '<button type="button" class="btn btn-sm btn-secondary cd-complaint-reply-cancel" data-complaint-id="' + c.id + '">Cancel</button>' +
-                '<button type="button" class="btn btn-sm btn-primary cd-complaint-reply-save" data-complaint-id="' + c.id + '">' + (c.response ? 'Update reply' : 'Post reply') + '</button>' +
-            '</div>' +
-        '</div>';
-    }
-
     function complaintCardHtml(c) {
-        var editing = Number(complaintEditingReplyId) === Number(c.id);
         var initial = String(c.passenger_name || 'P').trim().charAt(0).toUpperCase() || 'P';
         var context = '';
         if (c.booking_reference || c.route || c.departure) {
@@ -4164,27 +4144,21 @@ var reviewEditingReplyId = null;
             if (c.route) { context += '<span>' + escHtml(c.route) + '</span>'; }
             if (c.departure) { context += '<span>Departs ' + escHtml(c.departure) + '</span>'; }
         }
-        var statusOptions = '';
-        for (var i = 0; i < COMPLAINT_STATUSES.length; i++) {
-            var val = COMPLAINT_STATUSES[i][0]; var label = COMPLAINT_STATUSES[i][1];
-            statusOptions += '<option value="' + val + '"' + (c.status === val ? ' selected' : '') + '>' + label + '</option>';
-        }
+        var responseCount = (Array.isArray(c.responses) && c.responses.length) ? c.responses.length : (c.response ? 1 : 0);
         return '<article class="cd-complaint-card' + (c.status === 'open' ? ' is-new' : '') + '" data-complaint-id="' + c.id + '">' +
             '<div class="cd-complaint-card-head">' +
                 '<span class="cd-complaint-avatar" aria-hidden="true">' + escHtml(initial) + '</span>' +
                 '<div class="cd-complaint-person"><strong>' + escHtml(c.passenger_name || 'Passenger') + '</strong><span class="cd-complaint-meta">' + (formatReviewDate(c.created_at) || 'Recent complaint') + '</span></div>' +
-                '<span class="cd-complaint-category">' + escHtml(complaintCategoryLabel(c.category)) + '</span>' +
+                '<span class="cd-complaint-status-badge is-' + escHtml(c.status) + '">' + escHtml(complaintStatusLabel(c.status)) + '</span>' +
             '</div>' +
             '<h4 class="cd-complaint-subject">' + escHtml(c.subject) + '</h4>' +
             '<p class="cd-complaint-text">' + escHtml(c.message) + '</p>' +
             (context ? '<div class="cd-complaint-context">' + context + '</div>' : '') +
-            complaintReplyBlockHtml(c) +
-            (editing ? complaintReplyEditorHtml(c) : '') +
             '<div class="cd-complaint-actions">' +
-                '<label class="cd-complaint-status-label" for="complaint-status-' + c.id + '">Status</label>' +
-                '<select id="complaint-status-' + c.id + '" class="cd-complaint-status-select" data-complaint-status>' + statusOptions + '</select>' +
-                (!editing ? '<button type="button" class="btn btn-secondary btn-sm cd-complaint-reply-btn" data-complaint-id="' + c.id + '">' + (c.response ? 'Edit response' : 'Respond') + '</button>' : '') +
-                '<button type="button" class="btn btn-primary btn-sm cd-complaint-save" data-complaint-id="' + c.id + '">Save changes</button>' +
+                '<span class="cd-complaint-category">' + escHtml(complaintCategoryLabel(c.category)) + '</span>' +
+                '<button type="button" class="btn btn-primary btn-sm cd-complaint-handle-btn" data-complaint-id="' + c.id + '">' +
+                    (responseCount ? 'Handle complaint (' + responseCount + ')' : 'Handle complaint') +
+                '</button>' +
             '</div>' +
         '</article>';
     }
@@ -4319,27 +4293,135 @@ var reviewEditingReplyId = null;
         return null;
     }
 
-    function beginComplaintReply(id) {
-        complaintEditingReplyId = Number(id);
-        renderComplaintCards();
+    /* ===== Handle-complaint modal ===== */
+
+    function complaintModalStatusOptions(selected) {
+        var html = '';
+        for (var i = 0; i < COMPLAINT_STATUSES.length; i++) {
+            var val = COMPLAINT_STATUSES[i][0]; var label = COMPLAINT_STATUSES[i][1];
+            html += '<option value="' + val + '"' + (selected === val ? ' selected' : '') + '>' + label + '</option>';
+        }
+        return html;
     }
 
-    function cancelComplaintReply() {
-        complaintEditingReplyId = null;
-        renderComplaintCards();
+    function complaintModalResponseHtml(r) {
+        var editing = Number(complaintModalEditingResponseId) === Number(r.id);
+        if (editing) {
+            return '<div class="cd-complaint-modal-response is-editing" data-response-id="' + r.id + '">' +
+                '<textarea class="cd-complaint-modal-response-input" maxlength="1000" data-complaint-response-edit-input>' + escHtml(r.message) + '</textarea>' +
+                '<div class="cd-complaint-modal-response-editor-actions">' +
+                    '<button type="button" class="btn btn-sm btn-secondary cd-complaint-modal-response-cancel">Cancel</button>' +
+                    '<button type="button" class="btn btn-sm btn-primary cd-complaint-modal-response-save" data-response-id="' + r.id + '">Save response</button>' +
+                '</div>' +
+            '</div>';
+        }
+        return '<div class="cd-complaint-modal-response" data-response-id="' + r.id + '">' +
+            '<div class="cd-complaint-modal-response-head"><span class="cd-complaint-modal-response-label">Company response</span><span class="cd-complaint-modal-response-meta">' + (formatReviewDate(r.created_at) || '') + '</span></div>' +
+            '<p>' + escHtml(r.message) + '</p>' +
+            '<button type="button" class="btn btn-sm btn-secondary cd-complaint-modal-response-edit" data-response-id="' + r.id + '">Edit response</button>' +
+        '</div>';
+    }
+
+    function renderComplaintModal() {
+        var modal = byId('complaint-modal');
+        if (!modal) { return; }
+        var complaint = currentComplaintById(activeComplaintModalId);
+        if (!complaint) { closeComplaintModal(); return; }
+
+        var responses = (Array.isArray(complaint.responses) && complaint.responses.length)
+            ? complaint.responses
+            : (complaint.response ? [{ id: -1, message: complaint.response, created_at: complaint.response_at, updated_at: complaint.response_at }] : []);
+        var html = '';
+        for (var i = 0; i < responses.length; i++) { html += complaintModalResponseHtml(responses[i]); }
+        if (!html) { html = '<p class="cd-complaint-modal-no-responses">No responses yet. Write the first response below.</p>'; }
+
+        var ctx = '';
+        if (complaint.booking_reference || complaint.route || complaint.departure) {
+            var parts = [];
+            if (complaint.booking_reference) { parts.push('Booking ' + complaint.booking_reference); }
+            if (complaint.route) { parts.push(complaint.route); }
+            if (complaint.departure) { parts.push('Departs ' + complaint.departure); }
+            ctx = '<p class="cd-complaint-modal-meta">' + escHtml(parts.join(' \u00b7 ')) + '</p>';
+        }
+
+        var body = byId('complaint-modal-body');
+        if (!body) { return; }
+        body.innerHTML =
+            '<div class="cd-complaint-modal-box" role="dialog" aria-modal="true" aria-labelledby="complaint-modal-title">' +
+                '<div class="cd-complaint-modal-head">' +
+                    '<div><h3 id="complaint-modal-title">Handle complaint</h3><p class="cd-complaint-modal-subject">' + escHtml(complaint.subject) + '</p></div>' +
+                    '<button type="button" id="complaint-modal-close" class="cd-complaint-modal-close" aria-label="Close">\u00d7</button>' +
+                '</div>' +
+                '<div class="cd-complaint-modal-content">' +
+                    '<div class="cd-complaint-modal-person">' +
+                        '<span class="cd-complaint-avatar">' + escHtml(String(complaint.passenger_name || 'P').charAt(0).toUpperCase()) + '</span>' +
+                        '<div><strong>' + escHtml(complaint.passenger_name || 'Passenger') + '</strong>' +
+                        '<span class="cd-complaint-category">' + escHtml(complaintCategoryLabel(complaint.category)) + '</span></div>' +
+                    '</div>' +
+                    '<p class="cd-complaint-modal-message">' + escHtml(complaint.message) + '</p>' +
+                    ctx +
+                    '<div class="cd-complaint-modal-field">' +
+                        '<label for="complaint-modal-status">Status</label>' +
+                        '<select id="complaint-modal-status" class="cd-complaint-modal-status-select">' + complaintModalStatusOptions(complaint.status) + '</select>' +
+                    '</div>' +
+                    '<div class="cd-complaint-modal-responses">' +
+                        '<h4>Responses</h4>' +
+                        '<div class="cd-complaint-modal-responses-list">' + html + '</div>' +
+                    '</div>' +
+                    '<div class="cd-complaint-modal-new-response">' +
+                        '<label for="complaint-modal-new-response-text">Add a response</label>' +
+                        '<textarea id="complaint-modal-new-response-text" maxlength="1000" placeholder="Write a response the passenger will see on their dashboard\u2026"></textarea>' +
+                        '<p class="cd-complaint-modal-error" role="alert" hidden></p>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="cd-complaint-modal-actions">' +
+                    '<button type="button" id="complaint-modal-cancel" class="btn">Close</button>' +
+                    '<button type="button" id="complaint-modal-save" class="btn btn-primary">Save changes</button>' +
+                '</div>' +
+            '</div>';
+        modal.hidden = false;
+    }
+
+    function openComplaintModal(id) {
+        activeComplaintModalId = Number(id);
+        complaintModalEditingResponseId = null;
+        renderComplaintModal();
+    }
+
+    function closeComplaintModal() {
+        var modal = byId('complaint-modal');
+        if (modal) { modal.hidden = true; }
+        activeComplaintModalId = null;
+        complaintModalEditingResponseId = null;
+    }
+
+    function showComplaintModalError(message) {
+        var err = byId('complaint-modal-error') || document.querySelector('.cd-complaint-modal-error');
+        if (!err) { return; }
+        err.textContent = message;
+        err.hidden = false;
     }
 
     function submitComplaintUpdate(id) {
         var complaint = currentComplaintById(id);
         if (!complaint) { return; }
-        var card = document.querySelector('.cd-complaint-card[data-complaint-id="' + id + '"]');
-        var statusEl = byId('complaint-status-' + id);
-        var status = statusEl ? statusEl.value : complaint.status;
-        var payload = 'complaint_id=' + encodeURIComponent(id) + '&status=' + encodeURIComponent(status);
-        var editor = card ? card.querySelector('.cd-complaint-reply-editor') : null;
-        if (editor) {
-            var input = editor.querySelector('.cd-complaint-reply-input');
-            payload += '&reply=' + encodeURIComponent(input ? input.value.trim() : '');
+
+        var statusEl = byId('complaint-modal-status');
+        var newRespEl = byId('complaint-modal-new-response-text');
+        var editInput = document.querySelector('[data-complaint-response-edit-input]');
+        var editingIdEl = editInput ? editInput.closest('[data-response-id]') : null;
+
+        var payload = 'complaint_id=' + encodeURIComponent(id) + '&status=' + encodeURIComponent(statusEl ? statusEl.value : complaint.status);
+
+        /* If editing an existing response, send response_id + response. */
+        if (editInput && editingIdEl) {
+            var editText = editInput.value.trim();
+            if (!editText) { showComplaintModalError('Write the response message first.'); return; }
+            payload += '&response_id=' + encodeURIComponent(editingIdEl.getAttribute('data-response-id')) +
+                       '&response=' + encodeURIComponent(editText);
+        } else if (newRespEl && newRespEl.value.trim()) {
+            /* Otherwise a non-empty new-response box adds to the thread. */
+            payload += '&response=' + encodeURIComponent(newRespEl.value.trim());
         }
 
         fetch('api/company.php?action=complaint_update', {
@@ -4358,15 +4440,15 @@ var reviewEditingReplyId = null;
             .then(function (result) {
                 var data = result.data || {};
                 if (!result.ok || result.status !== 200 || !data.success) {
-                    showComplaintActionMessage(data.message || 'Unable to update the complaint.');
+                    showComplaintModalError(data.message || 'Unable to update the complaint.');
                     return;
                 }
-                complaintEditingReplyId = null;
+                closeComplaintModal();
                 showComplaintActionMessage('Complaint updated. The passenger sees your response on their dashboard.');
                 loadComplaints();
             })
             .catch(function () {
-                showComplaintActionMessage('Network error while updating the complaint.');
+                showComplaintModalError('Network error while updating the complaint.');
             });
     }
 
@@ -6201,21 +6283,28 @@ function submitBranchForm() {
 
         var complaintListEl = byId('complaint-list');
         if (complaintListEl) {
-            complaintListEl.addEventListener('input', function (ev) {
-                var input = ev.target;
-                if (!input || !input.classList || !input.classList.contains('cd-complaint-reply-input')) { return; }
-                var card = input.closest ? input.closest('.cd-complaint-card') : null;
-                var count = card ? card.querySelector('[data-complaint-reply-count]') : null;
-                if (count) { count.textContent = input.value.length + ' / 1000'; }
-            });
             complaintListEl.addEventListener('click', function (ev) {
-                var target = ev.target.closest ? ev.target.closest('.cd-complaint-reply-btn, .cd-complaint-reply-cancel, .cd-complaint-reply-save, .cd-complaint-save') : null;
+                var target = ev.target.closest ? ev.target.closest('.cd-complaint-handle-btn') : null;
                 if (!target) { return; }
                 var id = target.getAttribute('data-complaint-id');
-                if (!id) { return; }
-                if (target.classList.contains('cd-complaint-reply-btn')) { beginComplaintReply(id); return; }
-                if (target.classList.contains('cd-complaint-reply-cancel')) { cancelComplaintReply(); return; }
-                if (target.classList.contains('cd-complaint-reply-save') || target.classList.contains('cd-complaint-save')) { submitComplaintUpdate(id); }
+                if (id) { openComplaintModal(id); }
+            });
+        }
+
+        var complaintModal = byId('complaint-modal');
+        if (complaintModal) {
+            complaintModal.addEventListener('click', function (ev) {
+                if (ev.target === complaintModal) { closeComplaintModal(); return; }
+                var closeBtn = ev.target.closest ? ev.target.closest('#complaint-modal-close, #complaint-modal-cancel') : null;
+                if (closeBtn) { closeComplaintModal(); return; }
+                var editBtn = ev.target.closest ? ev.target.closest('.cd-complaint-modal-response-edit') : null;
+                if (editBtn) { beginComplaintModalResponseEdit(editBtn.getAttribute('data-response-id')); return; }
+                var cancelEdit = ev.target.closest ? ev.target.closest('.cd-complaint-modal-response-cancel') : null;
+                if (cancelEdit) { cancelComplaintModalResponseEdit(); return; }
+                var saveEdit = ev.target.closest ? ev.target.closest('.cd-complaint-modal-response-save') : null;
+                if (saveEdit) { submitComplaintUpdate(activeComplaintModalId); return; }
+                var save = ev.target.closest ? ev.target.closest('#complaint-modal-save') : null;
+                if (save) { submitComplaintUpdate(activeComplaintModalId); }
             });
         }
 
