@@ -4315,10 +4315,16 @@ var reviewEditingReplyId = null;
                 '</div>' +
             '</div>';
         }
+        /* Legacy fallback responses (id = -1) have no real thread row — editing
+           them would insert a duplicate instead of updating, so only real rows
+           get an Edit button. */
+        var editButton = Number(r.id) > 0
+            ? '<button type="button" class="btn btn-sm btn-secondary cd-complaint-modal-response-edit" data-response-id="' + r.id + '">Edit response</button>'
+            : '';
         return '<div class="cd-complaint-modal-response" data-response-id="' + r.id + '">' +
             '<div class="cd-complaint-modal-response-head"><span class="cd-complaint-modal-response-label">Company response</span><span class="cd-complaint-modal-response-meta">' + (formatReviewDate(r.created_at) || '') + '</span></div>' +
             '<p>' + escHtml(r.message) + '</p>' +
-            '<button type="button" class="btn btn-sm btn-secondary cd-complaint-modal-response-edit" data-response-id="' + r.id + '">Edit response</button>' +
+            editButton +
         '</div>';
     }
 
@@ -4380,6 +4386,8 @@ var reviewEditingReplyId = null;
                 '</div>' +
             '</div>';
         modal.hidden = false;
+        var closeBtn = byId('complaint-modal-close');
+        if (closeBtn && closeBtn.focus) { closeBtn.focus(); }
     }
 
     function openComplaintModal(id) {
@@ -4400,6 +4408,24 @@ var reviewEditingReplyId = null;
         if (!err) { return; }
         err.textContent = message;
         err.hidden = false;
+    }
+
+    /* Switch the modal into "editing" mode for one response thread row. The
+       re-render swaps the row's message for a textarea (see
+       complaintModalResponseHtml) and the Save action then sends
+       response_id + response to api/company.php?action=complaint_update. */
+    function beginComplaintModalResponseEdit(id) {
+        complaintModalEditingResponseId = Number(id);
+        var err = byId('complaint-modal-error');
+        if (err) { err.hidden = true; }
+        renderComplaintModal();
+    }
+
+    function cancelComplaintModalResponseEdit() {
+        complaintModalEditingResponseId = null;
+        var err = byId('complaint-modal-error');
+        if (err) { err.hidden = true; }
+        renderComplaintModal();
     }
 
     function submitComplaintUpdate(id) {
@@ -6783,6 +6809,8 @@ function submitBranchForm() {
                 if (parcelModal && !parcelModal.hidden) { hideParcelForm(); }
                 var prModal = byId('parcel-receipt-modal');
                 if (prModal && !prModal.hidden) { closeParcelReceipt(); }
+                var complaintModalEl = byId('complaint-modal');
+                if (complaintModalEl && !complaintModalEl.hidden) { closeComplaintModal(); }
             }
         });
 
