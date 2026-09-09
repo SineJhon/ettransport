@@ -1426,10 +1426,235 @@ function closeTicket() {
         el.innerHTML = html;
     }
 
+    /* ============================================================
+       Complaints — real complaint filing + tracking for passengers
+       (api/complaint.php). Guests/demo never call the protected
+       endpoint; the server enforces ownership per passenger.
+       ============================================================ */
+    var currentComplaints = [];
+    var complaintState = 'idle'; // idle | loading | loaded | error
+
+    function complaintBadgeHtml(status) {
+        var s = String(status || 'open').replace(/[^a-z_]/g, '');
+        return '<span class="dash-complaint-badge ' + s + '">' + escapeHtml(s.replace('_', ' ')) + '</span>';
+    }
+
+    var COMPLAINT_CATEGORY_LABELS = {
+        late_departure: 'Late departure',
+        cancelled_trip: 'Trip cancelled',
+        refund_issue: 'Refund problem',
+        missed_bus: 'Missed the bus',
+        lost_parcel: 'Lost parcel',
+        rude_staff: 'Staff behaviour',
+        other: 'Other'
+    };
+
+    function complaintCategoryLabel(category) {
+        return COMPLAINT_CATEGORY_LABELS[category] || 'Other';
+    }
+
+    function formatComplaintDate(value) {
+        if (!value) { return ''; }
+        var iso = String(value).replace(' ', 'T');
+        var d = new Date(iso);
+        if (isNaN(d.getTime())) { return String(value).slice(0, 10); }
+        try {
+            return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+        } catch (e) { return String(value).slice(0, 10); }
+    }
+
+    function renderComplaints() {
+        var list = document.getElementById('complaint-list');
+        var empty = document.getElementById('complaint-empty');
+        if (!list) { return; }
+
+        if (complaintState === 'loading') {
+            list.innerHTML = '';
+            if (empty) { empty.textContent = 'Loading your complaints\u2026'; empty.hidden = false; }
+            return;
+        }
+
+        if (currentComplaints.length) {
+            var html = '';
+            for (var i = 0; i < currentComplaints.length; i++) {
+                var c = currentComplaints[i];
+                var ctx = '';
+                if (c.route || c.departure || c.booking_reference) {
+                    var parts = [];
+                    if (c.route) { parts.push(c.route); }
+                    if (c.departure) { parts.push('Departs ' + c.departure); }
+                    if (c.booking_reference) { parts.push('Booking ' + c.booking_reference); }
+                    ctx = '<p class="dash-complaint-meta">' + escapeHtml(parts.join(' \u00b7 ')) + '</p>';
+                }
+                html += '<article class="dash-complaint-card">' +
+                    '<div class="dash-complaint-card-head">' +
+                        '<span class="dash-complaint-company">' + escapeHtml(c.company_name || 'Company') + '</span>' +
+                        '<span class="dash-complaint-category">' + escapeHtml(complaintCategoryLabel(c.category)) + '</span>' +
+                        complaintBadgeHtml(c.status) +
+                        '<span class="dash-complaint-date">' + formatComplaintDate(c.created_at) + '</span>' +
+                    '</div>' +
+                    '<h4 class="dash-complaint-subject">' + escapeHtml(c.subject) + '</h4>' +
+                    '<p class="dash-complaint-message">' + escapeHtml(c.message) + '</p>' +
+                    ctx +
+                    (c.response ? '<div class="dash-complaint-reply"><span class="dash-complaint-reply-label">Company response</span><p>' + escapeHtml(c.response) + '</p></div>' : '') +
+                '</article>';
+            }
+            list.innerHTML = html;
+            if (empty) { empty.hidden = true; }
+            return;
+        }
+
+        list.innerHTML = '';
+        if (empty) {
+            empty.hidden = false;
+            empty.textContent = complaintState === 'error'
+                ? 'Could not load your complaints. Please try again later.'
+                : 'No complaints filed yet. Found an issue with a journey? Use the form above to file one and track the company\u2019s response here.';
+        }
+    }
+
+    function applyComplaintAccess() {
+        var form = document.getElementById('complaint-form');
+        var btn = document.getElementById('complaint-submit-btn');
+        var guestNote = document.getElementById('complaint-guest-note');
+        if (!window.ETAuth || !window.ETAuth.getCurrentUser) { return; }
+        window.ETAuth.getCurrentUser().then(function (user) {
+            var loggedIn = !!(user && user.role === 'passenger');
+            if (form) { form.hidden = !loggedIn; }
+            if (btn) { btn.disabled = !loggedIn; }
+            if (guestNote) { guestNote.hidden = loggedIn; }
+        }).catch(function () { /* keep form visible by default */ });
+    }
+
+    function syncRealComplaints() {
+        if (!window.ETAuth || !window.ETAuth.getCurrentUser) { return; }
+        window.ETAuth.getCurrentUser().then(function (user) {
+            if (!user || user.role !== 'passenger') {
+                currentComplaints = [];
+                complaintState = 'idle';
+                renderComplaints();
+                return;
+            }
+            if (!window.fetch) { complaintState = 'error'; renderComplaints(); return; }
+            complaintState = 'loading';
+            renderComplaints();
+            window.fetch('api/complaint.php?action=list', {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' }
+            })
+                .then(function (res) { return res.json().catch(function () { return { success: false }; }); })
+                .then(function (json) {
+                    if (!json || !json.success || !Array.isArray(json.complaints)) {
+                        complaintState = 'error';
+                    } else {
+                        currentComplaints = json.complaints;
+                        complaintState = 'loaded';
+                    }
+                    renderComplaints();
+                })
+                .catch(function () {
+                    complaintState = 'error';
+                    renderComplaints();
+                });
+        }).catch(function () { /* stay in demo empty state */ });
+    }
+
+    function loadComplaintCompanies() {
+        var select = document.getElementById('complaint-company');
+        if (!select) { return; }
+        function fill(companies) {
+            if (!Array.isArray(companies)) { return; }
+            select.innerHTML = '<option value="">Select a company\u2026</option>';
+            for (var i = 0; i < companies.length; i++) {
+                var c = companies[i];
+                if (!c || !c.id) { continue; }
+                var opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = c.name + (c.slug ? ' (@' + c.slug + ')' : '');
+                select.appendChild(opt);
+            }
+        }
+        var demo = (window.ETTransportCompanies || []).slice();
+        if (!window.fetch) { fill(demo); return; }
+        window.fetch('api/company.php?action=list', {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(function (res) { return res.json().catch(function () { return null; }); })
+            .then(function (json) {
+                if (json && json.success && Array.isArray(json.companies)) { fill(json.companies); }
+                else { fill(demo); }
+            })
+            .catch(function () { fill(demo); });
+    }
+
+    function submitComplaint(event) {
+        event.preventDefault();
+        var form = document.getElementById('complaint-form');
+        var company = document.getElementById('complaint-company');
+        var subject = document.getElementById('complaint-subject');
+        var message = document.getElementById('complaint-message');
+        var category = document.getElementById('complaint-category');
+        var booking = document.getElementById('complaint-booking');
+        var msg = document.getElementById('complaint-form-msg');
+        if (!form || !company || !subject || !message) { return; }
+
+        if (msg) { msg.hidden = true; }
+        var ok = true;
+        if (!company.value) { setFieldError('complaint-company', 'Choose a bus company.'); ok = false; }
+        else { clearFieldError('complaint-company'); }
+        if (!subject.value.trim()) { setFieldError('complaint-subject', 'A subject is required.'); ok = false; }
+        else { clearFieldError('complaint-subject'); }
+        if (!message.value.trim()) { setFieldError('complaint-message', 'Describe what happened.'); ok = false; }
+        else { clearFieldError('complaint-message'); }
+        if (!ok) { return; }
+
+        var btn = document.getElementById('complaint-submit-btn');
+        if (btn) { btn.disabled = true; btn.textContent = 'Submitting\u2026'; }
+
+        var body = new URLSearchParams();
+        body.append('company_id', company.value);
+        body.append('subject', subject.value.trim());
+        body.append('message', message.value.trim());
+        body.append('category', category ? category.value : 'other');
+        if (booking && booking.value.trim()) { body.append('booking_reference', booking.value.trim()); }
+
+        window.fetch('api/complaint.php?action=create', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'Accept': 'application/json' },
+            body: body.toString()
+        })
+            .then(function (res) { return res.json().catch(function () { return { success: false, message: 'Invalid server response.' }; }); })
+            .then(function (json) {
+                if (btn) { btn.disabled = false; btn.textContent = 'Submit Complaint'; }
+                if (!json || !json.success) {
+                    if (msg) {
+                        msg.textContent = (json && json.message) || 'Unable to submit the complaint. Please try again.';
+                        msg.hidden = false;
+                    }
+                    return;
+                }
+                form.reset();
+                if (msg) {
+                    msg.textContent = 'Complaint submitted. The company will respond here soon.';
+                    msg.hidden = false;
+                }
+                syncRealComplaints();
+            })
+            .catch(function () {
+                if (btn) { btn.disabled = false; btn.textContent = 'Submit Complaint'; }
+                if (msg) {
+                    msg.textContent = 'Network error while submitting the complaint.';
+                    msg.hidden = false;
+                }
+            });
+    }
+
 /* ============================================================
        Navigation — sidebar section switching + My Trips tabs
        ============================================================ */
-    var SECTIONS = ['overview', 'trips', 'tickets', 'favorites', 'notifications', 'profile', 'support'];
+    var SECTIONS = ['overview', 'trips', 'tickets', 'favorites', 'notifications', 'profile', 'support', 'complaints'];
 
     function showSection(name) {
         if (SECTIONS.indexOf(name) === -1) { name = 'overview'; }
@@ -1449,6 +1674,7 @@ function closeTicket() {
            opened, so newly created booking/payment/review notifications show up
            without requiring a full page reload. Guests/demo are unaffected. */
         if (name === 'notifications') { syncRealNotifications(); }
+        if (name === 'complaints') { applyComplaintAccess(); syncRealComplaints(); loadComplaintCompanies(); }
     }
 
     function setTripTab(tab) {
@@ -2188,9 +2414,16 @@ var supportForm = document.getElementById('support-form');
         renderNotifications();
         renderProfile();
         renderSupport();
+        renderComplaints();
+        applyComplaintAccess();
+        loadComplaintCompanies();
         updateCounts();
         syncRealBookings();
         syncRealNotifications();
+        syncRealComplaints();
+
+        var complaintForm = document.getElementById('complaint-form');
+        if (complaintForm) { complaintForm.addEventListener('submit', submitComplaint); }
 
         var hash = window.location.hash ? window.location.hash.slice(1) : 'overview';
         showSection(hash);

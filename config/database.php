@@ -237,6 +237,44 @@ function ensure_schema_columns(PDO $pdo): void
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
         );
 
+        /* complaints — passenger complaints about a company's service, triaged
+           by the company from the company dashboard (idempotent, same pattern
+           as parcels). Schema.sql is the source of truth for fresh installs;
+           this back-fills the table for databases created before complaints
+           existed and matches the existing live table exactly. */
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS complaints (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                passenger_id BIGINT UNSIGNED NOT NULL,
+                company_id BIGINT UNSIGNED NOT NULL,
+                booking_id BIGINT UNSIGNED DEFAULT NULL,
+                category VARCHAR(40) NOT NULL DEFAULT 'other',
+                subject VARCHAR(120) DEFAULT NULL,
+                message TEXT NOT NULL,
+                status ENUM('open', 'in_progress', 'resolved', 'closed') NOT NULL DEFAULT 'open',
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                response TEXT DEFAULT NULL,
+                response_at TIMESTAMP NULL DEFAULT NULL,
+                PRIMARY KEY (id),
+                KEY idx_complaints_company (company_id),
+                KEY idx_complaints_company_status (company_id, status),
+                KEY idx_complaints_company_created (company_id, created_at),
+                CONSTRAINT fk_complaints_passenger
+                    FOREIGN KEY (passenger_id) REFERENCES users(id)
+                    ON DELETE CASCADE
+                    ON UPDATE CASCADE,
+                CONSTRAINT fk_complaints_company
+                    FOREIGN KEY (company_id) REFERENCES companies(id)
+                    ON DELETE CASCADE
+                    ON UPDATE CASCADE,
+                CONSTRAINT fk_complaints_booking
+                    FOREIGN KEY (booking_id) REFERENCES bookings(id)
+                    ON DELETE SET NULL
+                    ON UPDATE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+
         /* Parcel lifecycle: the "in transit" status was renamed to "sent".
            Migrate any rows created with the previous ENUM (and existing
            databases whose parcels.status column still holds that ENUM), then

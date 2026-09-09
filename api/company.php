@@ -63,6 +63,12 @@ declare(strict_types=1);
  *                                                     (authenticated company role only; partial edit / status change)
  *   POST api/company.php?action=parcel_delete     -> { success, message }
  *                                                     (authenticated company role only)
+ *   GET  api/company.php?action=complaints        -> { success, company_id, complaints, counts }
+ *                                                     (authenticated company role only; this company's
+ *                                                      passenger complaints, optional ?status= filter)
+ *   POST api/company.php?action=complaint_update  -> { success, message, complaint }
+ *                                                     (authenticated company role only; triage status
+ *                                                      and/or write a reply the passenger sees)
  *
  * Only approved companies are exposed publicly through list/get. Ratings and
  * review counts are computed from the reviews table. Destinations / fleet /
@@ -4892,6 +4898,231 @@ function handle_parcel_delete(PDO $pdo): void
     auth_response(200, ['success' => true, 'message' => 'Parcel deleted.']);
 }
 
+/* ============================================================
+   Company complaints — passengers file complaints against this
+   company; the operator triages them (status) and can write a
+   response the passenger sees on their own dashboard.
+   ============================================================ */
+
+/** The complaint category catalog (also used by api/complaint.php). */
+const COMPLAINT_CATEGORIES = [
+    'late_departure',
+    'cancelled_trip',
+    'refund_issue',
+    'missed_bus',
+    'lost_parcel',
+    'rude_staff',
+    'other',
+];
+
+/** True when the value is one of the schema's complaint status ENUM values. */
+function valid_complaint_status(string $value): bool
+{
+    return in_array($value, ['open', 'in_progress', 'resolved', 'closed'], true);
+}
+
+/** True when the value is one of the complaint category catalog values. */
+function valid_complaint_category(string $value): bool
+{
+    return in_array($value, COMPLAINT_CATEGORIES, true);
+}
+
+/** Safe presentation payload for one complaint row (never internal data). */
+function complaint_payload(array $row): array
+{
+    $departure = '';
+    if (($row['departure_date'] ?? null) !== null) {
+        $departure = (string) $row['departure_date'];
+        if (($row['departure_time'] ?? null) !== null) {
+            $departure .= ' ' . $row['departure_time'];
+        }
+    }
+
+    return [
+        'id' => (int) $row['id'],
+        'passenger_id' => isset($row['passenger_id']) && $row['passenger_id'] !== null ? (int) $row['passenger_id'] : null,
+        'passenger_name' => $row['passenger_name'] ?? null,
+        'booking_id' => isset($row['booking_id']) && $row['booking_id'] !== null ? (int) $row['booking_id'] : null,
+        'booking_reference' => $row['booking_reference'] ?? null,
+        'category' => $row['category'] ?? 'other',
+        'subject' => $row['subject'],
+        'message' => $row['message'],
+        'status' => $row['status'],
+        'response' => $row['response'] !== null && $row['response'] !== '' ? (string) $row['response'] : null,
+        'response_at' => $row['response_at'] ?? null,
+        'route' => $row['route'] ?? null,
+        'departure' => $departure === '' ? null : $departure,
+        'created_at' => $row['created_at'] ?? '',
+        'updated_at' => $row['updated_at'] ?? '',
+    ];
+}
+
+/** This company's own complaints, newest first; open ones float to the top. */
+function fetch_company_complaints(PDO $pdo, int $companyId, ?string $status = null): array
+{
+    $sql = "
+        SELECT c.id, c.passenger_id, c.booking_id, c.category,
+               c.subject, c.message, c.status,
+               c.response, c.response_at, c.created_at, c.updated_at,
+               u.name AS passenger_name,
+               b.booking_reference,
+               CONCAT(r.from_city, ' → ', r.to_city) AS route,
+               t.departure_date, t.departure_time
+        FROM complaints c
+        LEFT JOIN users u ON u.id = c.passenger_id
+        LEFT JOIN bookings b ON b.id = c.booking_id
+        LEFT JOIN trips t ON t.id = b.trip_id
+        LEFT JOIN routes r ON r.id = t.route_id
+        WHERE c.company_id = :company_id
+    ";
+    $params = [':company_id' => $companyId];
+
+    if ($status !== null) {
+        $sql .= ' AND c.status = :status';
+        $params[':status'] = $status;
+    }
+
+    $sql .= " ORDER BY (c.status = 'open') DESC, (c.status = 'in_progress') DESC, c.created_at DESC, c.id DESC";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+
+    $out = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $out[] = complaint_payload($row);
+    }
+    return $out;
+}
+
+/** One owned complaint row (company scoped), or a 404 response. */
+function fetch_company_complaint_row(PDO $pdo, int $companyId, int $complaintId): array
+{
+    $stmt = $pdo->prepare('
+        SELECT id, company_id, passenger_id, booking_id, category,
+               subject, message, status,
+               response, response_at, created_at, updated_at
+        FROM complaints
+        WHERE id = :id AND company_id = :company_id
+        LIMIT 1
+    ');
+    $stmt->execute([':id' => $complaintId, ':company_id' => $companyId]);
+    $row = $stmt->fetch();
+    if ($row === false) {
+        auth_response(404, [
+            'success' => false,
+            'message' => 'Complaint not found.',
+        ]);
+    }
+    return $row;
+}
+
+/** Complaint status counts for this company (powers the filter bar). */
+function company_complaint_counts(PDO $pdo, int $companyId): array
+{
+    $stmt = $pdo->prepare('
+        SELECT status, COUNT(*) AS n
+        FROM complaints
+        WHERE company_id = :company_id
+        GROUP BY status
+    ');
+    $stmt->execute([':company_id' => $companyId]);
+
+    $counts = ['open' => 0, 'in_progress' => 0, 'resolved' => 0, 'closed' => 0];
+    foreach ($stmt->fetchAll() as $row) {
+        $counts[(string) $row['status']] = (int) $row['n'];
+    }
+    return $counts;
+}
+
+/** GET /api/company.php?action=complaints — this company's own complaints. */
+function handle_complaints(PDO $pdo): void
+{
+    $user = requireRole('company');
+    $company = require_company_scope($pdo, (int) $user['id']);
+    $companyId = (int) $company['id'];
+
+    $status = trim((string) ($_GET['status'] ?? ''));
+    if ($status !== '' && !valid_complaint_status($status)) {
+        auth_response(422, ['success' => false, 'message' => 'Unknown complaint status filter.']);
+    }
+
+    auth_response(200, [
+        'success' => true,
+        'company_id' => $companyId,
+        'complaints' => fetch_company_complaints($pdo, $companyId, $status === '' ? null : $status),
+        'counts' => company_complaint_counts($pdo, $companyId),
+    ]);
+}
+
+/** POST /api/company.php?action=complaint_update — triage one owned complaint:
+ *  change its status and/or write a reply for the passenger. Ownership is
+ *  enforced by the company-scoped WHERE clause — another company's complaint
+ *  simply does not match (404). */
+function handle_complaint_update(PDO $pdo): void
+{
+    require_company_post();
+    $user = requireRole('company');
+    $company = require_company_scope($pdo, (int) $user['id']);
+    $companyId = (int) $company['id'];
+
+    $input = company_input();
+    $complaintId = positive_int_or_error($input['complaint_id'] ?? null, 'A complaint id is required.');
+    $row = fetch_company_complaint_row($pdo, $companyId, $complaintId);
+
+    $statusInput = trim((string) ($input['status'] ?? ''));
+    $status = $statusInput === '' ? (string) $row['status'] : $statusInput;
+    if (!valid_complaint_status($status)) {
+        auth_response(422, ['success' => false, 'message' => 'Unknown complaint status.']);
+    }
+
+    $reply = $input['reply'] ?? null;
+    if ($reply !== null) {
+        $reply = trim((string) $reply);
+        if (strlen($reply) > 1000) {
+            auth_response(422, ['success' => false, 'message' => 'Reply must be 1000 characters or fewer.']);
+        }
+    }
+
+    $hasReply = $reply !== null && $reply !== '';
+    $sql = 'UPDATE complaints SET status = :status';
+    $params = [':status' => $status, ':id' => $complaintId, ':company_id' => $companyId];
+
+    if ($reply !== null) {
+        $sql .= ', response = :reply';
+        $params[':reply'] = $hasReply ? $reply : null;
+    }
+    if ($hasReply) {
+        $sql .= ', response_at = NOW()';
+    }
+
+    $sql .= ' WHERE id = :id AND company_id = :company_id';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+
+    /* Best-effort notification to the passenger when the company responds. */
+    if ($hasReply && (int) ($row['passenger_id'] ?? 0) > 0) {
+        try {
+            createNotification(
+                $pdo,
+                (int) $row['passenger_id'],
+                'complaint',
+                'Complaint Update',
+                'The company responded to your complaint "' . $row['subject'] . '".',
+                'complaint-replied:' . $complaintId
+            );
+        } catch (Throwable $e) {
+            /* Best-effort only — never let a notification failure alter the response. */
+        }
+    }
+
+    $updated = fetch_company_complaint_row($pdo, $companyId, $complaintId);
+    auth_response(200, [
+        'success' => true,
+        'message' => 'Complaint updated.',
+        'complaint' => complaint_payload($updated),
+    ]);
+}
+
     try {
     $pdo = db();
     $action = company_action();
@@ -5060,10 +5291,16 @@ function handle_parcel_delete(PDO $pdo): void
     if ($action === 'parcel_delete') {
         handle_parcel_delete($pdo);
     }
+    if ($action === 'complaints') {
+        handle_complaints($pdo);
+    }
+    if ($action === 'complaint_update') {
+        handle_complaint_update($pdo);
+    }
 
     auth_response(400, [
         'success' => false,
-        'message' => 'Unsupported action. Use action=list, action=get, action=overview, action=buses, action=bus_create, action=bus_update, action=trips, action=trip_create, action=trip_update, action=trip_status, action=trip_delete, action=bookings, action=booking_create, action=booking_cancel, action=manifest, action=revenue, action=revenue_breakdown, action=payments, action=profile, action=profile_update, action=branches, action=branch_create, action=branch_update, action=branch_delete, action=parcels, action=parcel_create, action=parcel_update, action=parcel_delete, action=routes, action=route_create, action=route_update or action=route_delete.',
+        'message' => 'Unsupported action. Use action=list, action=get, action=overview, action=buses, action=bus_create, action=bus_update, action=trips, action=trip_create, action=trip_update, action=trip_status, action=trip_delete, action=bookings, action=booking_create, action=booking_cancel, action=manifest, action=revenue, action=revenue_breakdown, action=payments, action=profile, action=profile_update, action=branches, action=branch_create, action=branch_update, action=branch_delete, action=parcels, action=parcel_create, action=parcel_update, action=parcel_delete, action=complaints, action=complaint_update, action=routes, action=route_create, action=route_update or action=route_delete.',
     ]);
 } catch (Throwable $e) {
     auth_response(500, [

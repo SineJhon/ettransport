@@ -171,7 +171,7 @@
         var nodes = {
             identity: byId('auth-identity'), loading: byId('company-loading'), error: byId('company-error'),
             banner: byId('company-banner'), stats: byId('company-stats'), fleet: byId('company-fleet'),
-            trips: byId('company-trips'), bookings: byId('company-bookings'), revenue: byId('company-revenue'), profile: byId('company-profile'), routes: byId('company-routes'), reviews: byId('company-reviews'), parcel: byId('company-parcel')
+            trips: byId('company-trips'), bookings: byId('company-bookings'), revenue: byId('company-revenue'), profile: byId('company-profile'), routes: byId('company-routes'), reviews: byId('company-reviews'), parcel: byId('company-parcel'), complaints: byId('company-complaints')
         };
         var icon = {
             overview: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
@@ -181,7 +181,8 @@
             route: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/></svg>',
             profile: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.4-4 4-6 8-6s6.6 2 8 6"/></svg>',
             reviews: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2  L14.25 8.91  L21.51 8.91  L15.63 13.18  L17.88 20.09  L12 15.82  L6.12 20.09  L8.37 13.18  L2.49 8.91  L9.75 8.91  Z"/></svg>',
-            parcel: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>'
+            parcel: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>',
+            complaint: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13c0 4-4 6-8 6-1.5 0-3-.2-4-.6L4 20l1-3.2C3.6 15.4 3 13.8 3 12 3 7.5 7 4 12 4s9 3.5 9 8c0 .4 0 .7-.1 1Z"/><path d="M8 10h8M8 13h5"/></svg>'
         };
         main.className = 'container cd-page';
         main.innerHTML =
@@ -197,6 +198,7 @@
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-parcel" data-cd-view="parcel">' + icon.parcel + '<span>Parcel</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-revenue" data-cd-view="revenue">' + icon.revenue + '<span>Revenue</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-reviews" data-cd-view="reviews">' + icon.reviews + '<span>Reviews</span></button>' +
+                  '<button type="button" role="tab" aria-selected="false" aria-controls="cd-complaints" data-cd-view="complaints">' + icon.complaint + '<span>Complaints</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-profile" data-cd-view="profile">' + icon.profile + '<span>Public profile</span></button>' +
                 '</nav></aside><div class="cd-content">' +
                   '<section id="cd-overview" class="cd-pane" role="tabpanel"><div id="cd-overview-slot"></div><div class="cd-quick-actions"><button type="button" class="cd-quick-action" data-cd-go="fleet" data-cd-action="btn-add-bus"><b class="cd-quick-icon">+</b><span>Add a bus<small>Expand your active fleet</small></span></button><button type="button" class="cd-quick-action" data-cd-go="trips" data-cd-action="btn-add-trip"><b class="cd-quick-icon">↗</b><span>Schedule a trip<small>Open a new departure</small></span></button><button type="button" class="cd-quick-action" data-cd-go="routes" data-cd-action="btn-add-route"><b class="cd-quick-icon">⇄</b><span>Add Routes<small>Add and update city pairs</small></span></button><button type="button" class="cd-quick-action" data-cd-go="profile" data-cd-action="btn-edit-profile"><b class="cd-quick-icon">✦</b><span>Update public profile<small>Keep passenger details current</small></span></button><button type="button" class="cd-quick-action" data-cd-go="parcel" data-cd-action="btn-add-parcel"><b class="cd-quick-icon">▣</b><span>Ship a parcel<small>Register freight with a bus</small></span></button></div></section>' +
@@ -207,6 +209,7 @@
                   '<section id="cd-revenue" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Revenue &amp; payments</h2><p>Review paid and refunded passenger payments.</p></div></div></section>' +
                   '<section id="cd-routes" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Routes</h2></div></div></section>' +
                   '<section id="cd-reviews" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Reviews</h2><p>What passengers say about travelling with your company.</p></div></div></section>' +
+                  '<section id="cd-complaints" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Complaints</h2><p>Passenger complaints about your service — triage, reply and close them out.</p></div></div></section>' +
                   '<section id="cd-profile" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Your passenger-facing profile</h2><p>This is the information passengers use to decide who they travel with.</p></div><a id="cd-passenger-preview" class="cd-passenger-preview" href="company.html" target="_blank" rel="noopener">View passenger page ↗</a></div></section>' +
                 '</div></div></div>';
 
@@ -226,6 +229,7 @@
             if (reviewsRefresh && reviewsTitle) { reviewsTitle.appendChild(reviewsRefresh); }
         }
         if (nodes.profile) { byId('cd-profile').appendChild(nodes.profile); }
+        if (nodes.complaints) { byId('cd-complaints').appendChild(nodes.complaints); }
 
         function selectView(view) {
             var panes = document.querySelectorAll('.cd-content > .cd-pane');
@@ -239,7 +243,7 @@
         var quickActions = document.querySelectorAll('[data-cd-go]');
         for (var q = 0; q < quickActions.length; q++) { quickActions[q].addEventListener('click', function () { selectView(this.getAttribute('data-cd-go')); var target = byId(this.getAttribute('data-cd-action')); if (target) { target.click(); } }); }
         var requested = window.location.hash.replace('#', '');
-        if (requested === 'fleet' || requested === 'trips' || requested === 'passengers' || requested === 'parcel' || requested === 'revenue' || requested === 'routes' || requested === 'reviews' || requested === 'profile') { selectView(requested); }
+        if (requested === 'fleet' || requested === 'trips' || requested === 'passengers' || requested === 'parcel' || requested === 'revenue' || requested === 'routes' || requested === 'reviews' || requested === 'complaints' || requested === 'profile') { selectView(requested); }
 
         var busForm = byId('bus-form');
         if (busForm) {
@@ -4080,6 +4084,277 @@ var reviewEditingReplyId = null;
             .catch(function () { showReviewActionMessage('Network error while saving the reply.'); });
     }
 
+    /* ===== Complaints: passenger feedback triage (real backend) =====
+       Passengers file complaints about this company (api/complaint.php).
+       The operator loads them here (api/company.php?action=complaints),
+       filters by status, moves them through open → in_progress →
+       resolved/closed and can write a response the passenger sees on
+       their own dashboard (api/company.php?action=complaint_update). */
+    var complaintsRequestId = 0;
+    var complaintFilter = null;         // 'open' | 'in_progress' | 'resolved' | 'closed' | null
+    var complaintEditingReplyId = null; // complaint id whose reply editor is open
+    var complaintsCounts = {};          // status → count, fed by the API
+    var currentComplaints = [];
+
+    var COMPLAINT_STATUSES = [
+        ['open', 'Open'],
+        ['in_progress', 'In progress'],
+        ['resolved', 'Resolved'],
+        ['closed', 'Closed']
+    ];
+
+    var COMPLAINT_CATEGORY_LABELS = {
+        late_departure: 'Late departure',
+        cancelled_trip: 'Trip cancelled',
+        refund_issue: 'Refund problem',
+        missed_bus: 'Missed the bus',
+        lost_parcel: 'Lost parcel',
+        rude_staff: 'Staff behaviour',
+        other: 'Other'
+    };
+
+    function complaintStatusLabel(status) {
+        for (var i = 0; i < COMPLAINT_STATUSES.length; i++) {
+            if (COMPLAINT_STATUSES[i][0] === status) { return COMPLAINT_STATUSES[i][1]; }
+        }
+        return 'Open';
+    }
+
+    function complaintCategoryLabel(category) {
+        return COMPLAINT_CATEGORY_LABELS[category] || 'Other';
+    }
+
+    function complaintReplyBlockHtml(c) {
+        if (!c.response) { return ''; }
+        return '<div class="cd-complaint-reply" data-complaint-id="' + c.id + '">' +
+            '<span class="cd-complaint-reply-label">Company response</span>' +
+            '<p>' + escHtml(c.response) + '</p>' +
+            '<span class="cd-complaint-reply-meta">Published ' + (formatReviewDate(c.response_at) || '') + '</span>' +
+        '</div>';
+    }
+
+    function complaintReplyEditorHtml(c) {
+        return '<div class="cd-complaint-reply-editor" data-complaint-id="' + c.id + '">' +
+            '<div class="cd-complaint-reply-editor-head"><span>Reply to passenger</span><small data-complaint-reply-count>' + String(c.response || '').length + ' / 1000</small></div>' +
+            '<textarea class="cd-complaint-reply-input" maxlength="1000" placeholder="Write a reply the passenger will see on their dashboard\u2026">' + escHtml(c.response || '') + '</textarea>' +
+            '<div class="cd-complaint-reply-editor-actions">' +
+                '<button type="button" class="btn btn-sm btn-secondary cd-complaint-reply-cancel" data-complaint-id="' + c.id + '">Cancel</button>' +
+                '<button type="button" class="btn btn-sm btn-primary cd-complaint-reply-save" data-complaint-id="' + c.id + '">' + (c.response ? 'Update reply' : 'Post reply') + '</button>' +
+            '</div>' +
+        '</div>';
+    }
+
+    function complaintCardHtml(c) {
+        var editing = Number(complaintEditingReplyId) === Number(c.id);
+        var initial = String(c.passenger_name || 'P').trim().charAt(0).toUpperCase() || 'P';
+        var context = '';
+        if (c.booking_reference || c.route || c.departure) {
+            if (c.booking_reference) { context += '<span>Booking ' + escHtml(c.booking_reference) + '</span>'; }
+            if (c.route) { context += '<span>' + escHtml(c.route) + '</span>'; }
+            if (c.departure) { context += '<span>Departs ' + escHtml(c.departure) + '</span>'; }
+        }
+        var statusOptions = '';
+        for (var i = 0; i < COMPLAINT_STATUSES.length; i++) {
+            var val = COMPLAINT_STATUSES[i][0]; var label = COMPLAINT_STATUSES[i][1];
+            statusOptions += '<option value="' + val + '"' + (c.status === val ? ' selected' : '') + '>' + label + '</option>';
+        }
+        return '<article class="cd-complaint-card' + (c.status === 'open' ? ' is-new' : '') + '" data-complaint-id="' + c.id + '">' +
+            '<div class="cd-complaint-card-head">' +
+                '<span class="cd-complaint-avatar" aria-hidden="true">' + escHtml(initial) + '</span>' +
+                '<div class="cd-complaint-person"><strong>' + escHtml(c.passenger_name || 'Passenger') + '</strong><span class="cd-complaint-meta">' + (formatReviewDate(c.created_at) || 'Recent complaint') + '</span></div>' +
+                '<span class="cd-complaint-category">' + escHtml(complaintCategoryLabel(c.category)) + '</span>' +
+            '</div>' +
+            '<h4 class="cd-complaint-subject">' + escHtml(c.subject) + '</h4>' +
+            '<p class="cd-complaint-text">' + escHtml(c.message) + '</p>' +
+            (context ? '<div class="cd-complaint-context">' + context + '</div>' : '') +
+            complaintReplyBlockHtml(c) +
+            (editing ? complaintReplyEditorHtml(c) : '') +
+            '<div class="cd-complaint-actions">' +
+                '<label class="cd-complaint-status-label" for="complaint-status-' + c.id + '">Status</label>' +
+                '<select id="complaint-status-' + c.id + '" class="cd-complaint-status-select" data-complaint-status>' + statusOptions + '</select>' +
+                (!editing ? '<button type="button" class="btn btn-secondary btn-sm cd-complaint-reply-btn" data-complaint-id="' + c.id + '">' + (c.response ? 'Edit response' : 'Respond') + '</button>' : '') +
+                '<button type="button" class="btn btn-primary btn-sm cd-complaint-save" data-complaint-id="' + c.id + '">Save changes</button>' +
+            '</div>' +
+        '</article>';
+    }
+
+    function renderComplaintFilterBar() {
+        var bar = byId('complaint-filterbar');
+        if (!bar) { return; }
+        if (!currentComplaints.length) { bar.hidden = true; bar.innerHTML = ''; return; }
+        var options = [[null, 'All'], ['open', 'Open'], ['in_progress', 'In progress'], ['resolved', 'Resolved'], ['closed', 'Closed']];
+        var html = '';
+        var total = 0;
+        for (var statusKey in complaintsCounts) { total += Number(complaintsCounts[statusKey]) || 0; }
+        for (var i = 0; i < options.length; i++) {
+            var val = options[i][0]; var label = options[i][1];
+            var active = complaintFilter === val;
+            var count = val === null ? total : (Number(complaintsCounts[val]) || 0);
+            html += '<button type="button" class="cd-complaint-filter' + (active ? ' is-active' : '') + '" data-complaint-filter="' + (val === null ? '' : val) + '" aria-pressed="' + (active ? 'true' : 'false') + '">' + label + ' <span class="cd-complaint-filter-count">' + count + '</span></button>';
+        }
+        bar.innerHTML = html;
+        bar.hidden = false;
+    }
+
+    function complaintStatusActive(c) {
+        return complaintFilter === null || c.status === complaintFilter;
+    }
+
+    function renderComplaintCards() {
+        var list = byId('complaint-list');
+        var empty = byId('complaint-empty');
+        var filtered = currentComplaints.filter(complaintStatusActive);
+        if (filtered.length) {
+            var html = filtered.map(complaintCardHtml).join('');
+            if (list) { list.innerHTML = html; list.hidden = false; }
+            if (empty) { empty.hidden = true; }
+        } else {
+            if (list) { list.innerHTML = ''; list.hidden = true; }
+            if (empty) {
+                empty.hidden = false;
+                empty.textContent = complaintFilter === null ? 'No complaints yet. Passenger feedback will appear here as soon as it is filed.' : 'No ' + complaintStatusLabel(complaintFilter).toLowerCase() + ' complaints match this filter.';
+            }
+        }
+    }
+
+    function renderComplaints(data) {
+        var sec = byId('company-complaints'); if (sec) { sec.hidden = false; }
+        var loading = byId('complaint-loading'); if (loading) { loading.hidden = true; }
+        var error = byId('complaint-error'); if (error) { error.hidden = true; }
+
+        complaintsCounts = data.counts || {};
+        var total = 0;
+        for (var statusKey in complaintsCounts) { total += Number(complaintsCounts[statusKey]) || 0; }
+
+        var summary = byId('complaint-summary');
+        if (summary) {
+            summary.hidden = false;
+            summary.innerHTML =
+                '<div class="cd-complaint-summary-stat"><b>' + total + '</b><span>Total</span></div>' +
+                '<div class="cd-complaint-summary-stat is-open"><b>' + (Number(complaintsCounts.open) || 0) + '</b><span>Open</span></div>' +
+                '<div class="cd-complaint-summary-stat is-in_progress"><b>' + (Number(complaintsCounts.in_progress) || 0) + '</b><span>In progress</span></div>' +
+                '<div class="cd-complaint-summary-stat is-resolved"><b>' + (Number(complaintsCounts.resolved) || 0) + '</b><span>Resolved</span></div>' +
+                '<div class="cd-complaint-summary-stat is-closed"><b>' + (Number(complaintsCounts.closed) || 0) + '</b><span>Closed</span></div>';
+        }
+
+        currentComplaints = data.complaints || [];
+        renderComplaintFilterBar();
+        renderComplaintCards();
+    }
+
+    function showComplaintsError(message) {
+        var loading = byId('complaint-loading'); if (loading) { loading.hidden = true; }
+        var list = byId('complaint-list'); if (list) { list.innerHTML = ''; list.hidden = true; }
+        var empty = byId('complaint-empty'); if (empty) { empty.hidden = true; }
+        var error = byId('complaint-error');
+        if (error) {
+            error.hidden = false;
+            error.textContent = message || 'Unable to load your complaints. Please try again later.';
+        }
+    }
+
+    function showComplaintActionMessage(message) {
+        var error = byId('complaint-error');
+        if (!error || !message) { return; }
+        error.textContent = message;
+        error.hidden = false;
+        setTimeout(function () { if (error.textContent === message) { error.hidden = true; } }, 4000);
+    }
+
+    function loadComplaints() {
+        var loading = byId('complaint-loading'); if (loading) { loading.hidden = false; }
+        var error = byId('complaint-error'); if (error) { error.hidden = true; }
+        var empty = byId('complaint-empty'); if (empty) { empty.hidden = true; }
+        var list = byId('complaint-list'); if (list) { list.innerHTML = ''; list.hidden = true; }
+        if (!currentCompanyId) { if (loading) { loading.hidden = true; } return; }
+
+        var rid = ++complaintsRequestId;
+        fetch('api/company.php?action=complaints', {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(function (res) {
+                return res.json().catch(function () {
+                    return { success: false, message: 'Invalid server response.' };
+                }).then(function (json) {
+                    return { ok: res.ok, status: res.status, data: json };
+                });
+            })
+            .then(function (result) {
+                if (rid !== complaintsRequestId) { return; }
+                var loadEl = byId('complaint-loading'); if (loadEl) { loadEl.hidden = true; }
+                var data = result.data || {};
+                if (!result.ok || result.status !== 200 || !data.success) {
+                    showComplaintsError(data.message || 'Unable to load your complaints.');
+                    return;
+                }
+                renderComplaints(data);
+            })
+            .catch(function () {
+                if (rid !== complaintsRequestId) { return; }
+                showComplaintsError('Network error while loading your complaints.');
+            });
+    }
+
+    function currentComplaintById(id) {
+        for (var i = 0; i < currentComplaints.length; i++) {
+            if (currentComplaints[i].id === Number(id)) { return currentComplaints[i]; }
+        }
+        return null;
+    }
+
+    function beginComplaintReply(id) {
+        complaintEditingReplyId = Number(id);
+        renderComplaintCards();
+    }
+
+    function cancelComplaintReply() {
+        complaintEditingReplyId = null;
+        renderComplaintCards();
+    }
+
+    function submitComplaintUpdate(id) {
+        var complaint = currentComplaintById(id);
+        if (!complaint) { return; }
+        var card = document.querySelector('.cd-complaint-card[data-complaint-id="' + id + '"]');
+        var statusEl = byId('complaint-status-' + id);
+        var status = statusEl ? statusEl.value : complaint.status;
+        var payload = 'complaint_id=' + encodeURIComponent(id) + '&status=' + encodeURIComponent(status);
+        var editor = card ? card.querySelector('.cd-complaint-reply-editor') : null;
+        if (editor) {
+            var input = editor.querySelector('.cd-complaint-reply-input');
+            payload += '&reply=' + encodeURIComponent(input ? input.value.trim() : '');
+        }
+
+        fetch('api/company.php?action=complaint_update', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'Accept': 'application/json' },
+            body: payload
+        })
+            .then(function (res) {
+                return res.json().catch(function () {
+                    return { success: false, message: 'Invalid server response.' };
+                }).then(function (json) {
+                    return { ok: res.ok, status: res.status, data: json };
+                });
+            })
+            .then(function (result) {
+                var data = result.data || {};
+                if (!result.ok || result.status !== 200 || !data.success) {
+                    showComplaintActionMessage(data.message || 'Unable to update the complaint.');
+                    return;
+                }
+                complaintEditingReplyId = null;
+                showComplaintActionMessage('Complaint updated. The passenger sees your response on their dashboard.');
+                loadComplaints();
+            })
+            .catch(function () {
+                showComplaintActionMessage('Network error while updating the complaint.');
+            });
+    }
+
     function renderProfile(company) {
         var sec = byId('company-profile'); if (sec) { sec.hidden = false; }
         var loading = byId('profile-loading'); if (loading) { loading.hidden = true; }
@@ -5854,6 +6129,7 @@ function submitBranchForm() {
         loadPayments();
         loadProfile();
         loadBranches();
+        loadComplaints();
         initParcel();
 
         var refreshReviews = byId('btn-refresh-reviews');
@@ -5895,6 +6171,38 @@ function submitBranchForm() {
                     if (!text) { showReviewActionMessage('Write a reply message first.'); return; }
                     submitReviewReply(id, text);
                 }
+            });
+        }
+
+        var complaintFilterBar = byId('complaint-filterbar');
+        if (complaintFilterBar) {
+            complaintFilterBar.addEventListener('click', function (ev) {
+                var btn = ev.target.closest ? ev.target.closest('.cd-complaint-filter') : null;
+                if (!btn) { return; }
+                var raw = btn.getAttribute('data-complaint-filter');
+                complaintFilter = raw === '' ? null : raw;
+                renderComplaintFilterBar();
+                renderComplaintCards();
+            });
+        }
+
+        var complaintListEl = byId('complaint-list');
+        if (complaintListEl) {
+            complaintListEl.addEventListener('input', function (ev) {
+                var input = ev.target;
+                if (!input || !input.classList || !input.classList.contains('cd-complaint-reply-input')) { return; }
+                var card = input.closest ? input.closest('.cd-complaint-card') : null;
+                var count = card ? card.querySelector('[data-complaint-reply-count]') : null;
+                if (count) { count.textContent = input.value.length + ' / 1000'; }
+            });
+            complaintListEl.addEventListener('click', function (ev) {
+                var target = ev.target.closest ? ev.target.closest('.cd-complaint-reply-btn, .cd-complaint-reply-cancel, .cd-complaint-reply-save, .cd-complaint-save') : null;
+                if (!target) { return; }
+                var id = target.getAttribute('data-complaint-id');
+                if (!id) { return; }
+                if (target.classList.contains('cd-complaint-reply-btn')) { beginComplaintReply(id); return; }
+                if (target.classList.contains('cd-complaint-reply-cancel')) { cancelComplaintReply(); return; }
+                if (target.classList.contains('cd-complaint-reply-save') || target.classList.contains('cd-complaint-save')) { submitComplaintUpdate(id); }
             });
         }
 

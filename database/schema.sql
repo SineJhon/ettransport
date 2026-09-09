@@ -620,6 +620,47 @@ CREATE TABLE IF NOT EXISTS notifications (
     ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ------------------------------------------------------------
+-- complaints — passengers file a complaint about a company's
+-- service (e.g. a cancelled bus, a lost parcel, late departure).
+-- The company operator triages every complaint from the company
+-- dashboard: move it through open → in_progress → resolved/closed
+-- and optionally write a response the passenger sees on their
+-- own dashboard. booking_id is optional context that passengers
+-- may attach (via a booking reference) so staff can cross-check
+-- the journey.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS complaints (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  passenger_id BIGINT UNSIGNED NOT NULL,
+  company_id BIGINT UNSIGNED NOT NULL,
+  booking_id BIGINT UNSIGNED DEFAULT NULL,
+  category VARCHAR(40) NOT NULL DEFAULT 'other',
+  subject VARCHAR(120) DEFAULT NULL,
+  message TEXT NOT NULL,
+  status ENUM('open', 'in_progress', 'resolved', 'closed') NOT NULL DEFAULT 'open',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  response TEXT DEFAULT NULL,
+  response_at TIMESTAMP NULL DEFAULT NULL,
+  PRIMARY KEY (id),
+  KEY idx_complaints_company (company_id),
+  KEY idx_complaints_company_status (company_id, status),
+  KEY idx_complaints_company_created (company_id, created_at),
+  CONSTRAINT fk_complaints_passenger
+    FOREIGN KEY (passenger_id) REFERENCES users(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
+  CONSTRAINT fk_complaints_company
+    FOREIGN KEY (company_id) REFERENCES companies(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
+  CONSTRAINT fk_complaints_booking
+    FOREIGN KEY (booking_id) REFERENCES bookings(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ============================================================
 -- Bootstrap admin
 -- Do NOT insert a password hash here. On a fresh database the app
