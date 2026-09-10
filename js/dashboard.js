@@ -1612,7 +1612,7 @@ function closeTicket() {
                 }
                 html += '<article class="dash-complaint-card">' +
                     '<div class="dash-complaint-card-head">' +
-                        '<span class="dash-complaint-company">' + escapeHtml(c.company_name || 'Company') + '</span>' +
+                        '<span class="dash-complaint-company">' + escapeHtml((c.target === 'platform' ? 'ET Transport' : (c.company_name || 'Company'))) + '</span>' +
                         '<span class="dash-complaint-category">' + escapeHtml(complaintCategoryLabel(c.category)) + '</span>' +
                         complaintBadgeHtml(c.status) +
                         '<span class="dash-complaint-date">' + formatComplaintDate(c.created_at) + '</span>' +
@@ -1632,7 +1632,7 @@ function closeTicket() {
             empty.hidden = false;
             empty.textContent = complaintState === 'error'
                 ? 'Could not load your complaints. Please try again later.'
-                : 'No complaints filed yet. Found an issue with a journey? Use the form above to file one and track the company\u2019s response here.';
+                : 'No complaints filed yet. Found an issue with a journey or the site itself? Use the form above to file one and track the response here.';
         }
     }
 
@@ -1711,21 +1711,40 @@ function closeTicket() {
             .catch(function () { fill(demo); });
     }
 
+    /* Toggle the company picker based on the chosen complaint target. */
+    function syncComplaintTargetUI() {
+        var target = document.getElementById('complaint-target');
+        var companyField = document.getElementById('complaint-company-field');
+        var company = document.getElementById('complaint-company');
+        if (!target || !companyField) { return; }
+        var isPlatform = target.value === 'platform';
+        companyField.hidden = isPlatform;
+        if (isPlatform) {
+            if (company) { company.value = ''; }
+            clearFieldError('complaint-company');
+        }
+    }
+
     function submitComplaint(event) {
         event.preventDefault();
         var form = document.getElementById('complaint-form');
+        var target = document.getElementById('complaint-target');
         var company = document.getElementById('complaint-company');
         var subject = document.getElementById('complaint-subject');
         var message = document.getElementById('complaint-message');
         var category = document.getElementById('complaint-category');
         var booking = document.getElementById('complaint-booking');
         var msg = document.getElementById('complaint-form-msg');
-        if (!form || !company || !subject || !message) { return; }
+        if (!form || !target || !subject || !message) { return; }
+
+        var isPlatform = target.value === 'platform';
 
         if (msg) { msg.hidden = true; }
         var ok = true;
-        if (!company.value) { setFieldError('complaint-company', 'Choose a bus company.'); ok = false; }
-        else { clearFieldError('complaint-company'); }
+        if (!isPlatform) {
+            if (!company || !company.value) { setFieldError('complaint-company', 'Choose a bus company.'); ok = false; }
+            else { clearFieldError('complaint-company'); }
+        }
         if (!subject.value.trim()) { setFieldError('complaint-subject', 'A subject is required.'); ok = false; }
         else { clearFieldError('complaint-subject'); }
         if (!message.value.trim()) { setFieldError('complaint-message', 'Describe what happened.'); ok = false; }
@@ -1736,7 +1755,8 @@ function closeTicket() {
         if (btn) { btn.disabled = true; btn.textContent = 'Submitting\u2026'; }
 
         var body = new URLSearchParams();
-        body.append('company_id', company.value);
+        body.append('target', isPlatform ? 'platform' : 'company');
+        if (!isPlatform) { body.append('company_id', company.value); }
         body.append('subject', subject.value.trim());
         body.append('message', message.value.trim());
         body.append('category', category ? category.value : 'other');
@@ -1759,8 +1779,9 @@ function closeTicket() {
                     return;
                 }
                 form.reset();
+                syncComplaintTargetUI();
                 if (msg) {
-                    msg.textContent = 'Complaint submitted. The company will respond here soon.';
+                    msg.textContent = isPlatform ? 'Complaint submitted. ET Transport support will respond here soon.' : 'Complaint submitted. The company will respond here soon.';
                     msg.hidden = false;
                 }
                 syncRealComplaints();
@@ -2547,6 +2568,12 @@ var supportForm = document.getElementById('support-form');
 
         var complaintForm = document.getElementById('complaint-form');
         if (complaintForm) { complaintForm.addEventListener('submit', submitComplaint); }
+
+        var complaintTarget = document.getElementById('complaint-target');
+        if (complaintTarget) {
+            complaintTarget.addEventListener('change', syncComplaintTargetUI);
+            syncComplaintTargetUI();
+        }
 
         /* Complaint card lifecycle actions: confirm / reopen / reply / escalate. */
         var complaintList = document.getElementById('complaint-list');

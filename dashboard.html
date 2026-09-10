@@ -233,13 +233,21 @@
                 <!-- ============ Complaints ============ -->
                 <section class="dash-section" id="section-complaints" aria-labelledby="complaints-title" hidden>
                     <h2 id="complaints-title" class="dash-section-title">Complaints</h2>
-                    <p class="dash-section-note">Had a problem with a journey or a company? File a complaint and the company responds here — replies are tracked against your account.</p>
+                    <p class="dash-section-note">Had a problem with a journey, a company, or the ET Transport site itself? File a complaint and the company — or our support team — responds here, all tracked against your account.</p>
                     <p id="complaint-guest-note" class="complaint-guest-note" hidden>Log in as a passenger to file and track complaints.</p>
 
                     <div class="card support-contact">
                         <h3 class="dash-card-title">File a Complaint</h3>
                         <form id="complaint-form" novalidate>
                             <div class="form-group">
+                                <label for="complaint-target">Complaint about *</label>
+                                <select id="complaint-target" name="target">
+                                    <option value="company">A bus company</option>
+                                    <option value="platform">ET Transport platform</option>
+                                </select>
+                                <span class="field-error" id="complaint-target-err" role="alert"></span>
+                            </div>
+                            <div class="form-group" id="complaint-company-field">
                                 <label for="complaint-company">Bus Company *</label>
                                 <select id="complaint-company" name="company_id" required></select>
                                 <span class="field-error" id="complaint-company-err" role="alert"></span>

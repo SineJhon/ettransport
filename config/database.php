@@ -237,18 +237,21 @@ function ensure_schema_columns(PDO $pdo): void
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
         );
 
-        /* complaints — passenger complaints about a company's service, triaged
-           by the company from the company dashboard (idempotent, same pattern
-           as parcels). Schema.sql is the source of truth for fresh installs;
-           this back-fills the table for databases created before complaints
+        /* complaints — passenger complaints about a company's service,
+           triaged by the company from the company dashboard, plus platform
+           complaints about ET Transport itself (target='platform', company_id
+           NULL) handled by admins. Idempotent, same pattern as parcels.
+           Schema.sql is the source of truth for fresh installs; this
+           back-fills the table for databases created before complaints
            existed and matches the existing live table exactly. */
         $pdo->exec(
             "CREATE TABLE IF NOT EXISTS complaints (
                 id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
                 passenger_id BIGINT UNSIGNED NOT NULL,
-                company_id BIGINT UNSIGNED NOT NULL,
+                company_id BIGINT UNSIGNED DEFAULT NULL,
                 booking_id BIGINT UNSIGNED DEFAULT NULL,
                 category VARCHAR(40) NOT NULL DEFAULT 'other',
+                target ENUM('company', 'platform') NOT NULL DEFAULT 'company',
                 subject VARCHAR(120) DEFAULT NULL,
                 message TEXT NOT NULL,
                 status ENUM('open', 'in_progress', 'resolved_pending', 'resolved', 'closed', 'escalated') NOT NULL DEFAULT 'open',
@@ -260,6 +263,7 @@ function ensure_schema_columns(PDO $pdo): void
                 KEY idx_complaints_company (company_id),
                 KEY idx_complaints_company_status (company_id, status),
                 KEY idx_complaints_company_created (company_id, created_at),
+                KEY idx_complaints_target (target),
                 CONSTRAINT fk_complaints_passenger
                     FOREIGN KEY (passenger_id) REFERENCES users(id)
                     ON DELETE CASCADE
@@ -336,6 +340,37 @@ function ensure_schema_columns(PDO $pdo): void
         $stmt->execute();
         if ((int) $stmt->fetchColumn() === 0) {
             $pdo->exec("ALTER TABLE complaint_responses ADD COLUMN actor ENUM('passenger', 'company', 'admin', 'system') NOT NULL DEFAULT 'company' AFTER kind");
+        }
+
+        /* Platform complaints added later: give the complaints table a
+           target column ('company' | 'platform') and let company_id be NULL
+           so a passenger can complain about ET Transport itself instead of
+           a specific bus company. Idempotent — each statement only runs
+           when the target is missing / company_id is still NOT NULL. */
+        $stmt = $pdo->prepare(
+            "SELECT COUNT(*)
+               FROM information_schema.columns
+              WHERE table_schema = DATABASE()
+                AND table_name = 'complaints'
+                AND column_name = 'target'"
+        );
+        $stmt->execute();
+        if ((int) $stmt->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE complaints ADD COLUMN target ENUM('company', 'platform') NOT NULL DEFAULT 'company' AFTER category");
+            $pdo->exec("ALTER TABLE complaints ADD KEY idx_complaints_target (target)");
+        }
+
+        $stmt = $pdo->prepare(
+            "SELECT COUNT(*)
+               FROM information_schema.columns
+              WHERE table_schema = DATABASE()
+                AND table_name = 'complaints'
+                AND column_name = 'company_id'
+                AND IS_NULLABLE = 'NO'"
+        );
+        $stmt->execute();
+        if ((int) $stmt->fetchColumn() > 0) {
+            $pdo->exec("ALTER TABLE complaints MODIFY company_id BIGINT UNSIGNED DEFAULT NULL");
         }
 
         /* Parcel lifecycle: the "in transit" status was renamed to "sent".

@@ -622,9 +622,12 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 -- ------------------------------------------------------------
 -- complaints — passengers file a complaint about a company's
--- service (e.g. a cancelled bus, a lost parcel, late departure).
--- The company operator triages every complaint from the company
--- dashboard. Status flow:
+-- service (e.g. a cancelled bus, a lost parcel, late departure)
+-- or about the ET Transport platform itself. target distinguishes
+-- the two: 'company' complaints carry a company_id (the company
+-- triages them from the company dashboard), 'platform' complaints
+-- have company_id NULL and are handled by ET Transport support in
+-- the admin dashboard. Status flow:
 --   open → in_progress → resolved_pending → resolved (passenger
 --   must confirm) OR back to in_progress. Company may close
 --   (closed); a passenger can escalate (escalated) when the
@@ -635,9 +638,10 @@ CREATE TABLE IF NOT EXISTS notifications (
 CREATE TABLE IF NOT EXISTS complaints (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   passenger_id BIGINT UNSIGNED NOT NULL,
-  company_id BIGINT UNSIGNED NOT NULL,
+  company_id BIGINT UNSIGNED DEFAULT NULL,
   booking_id BIGINT UNSIGNED DEFAULT NULL,
   category VARCHAR(40) NOT NULL DEFAULT 'other',
+  target ENUM('company', 'platform') NOT NULL DEFAULT 'company',
   subject VARCHAR(120) DEFAULT NULL,
   message TEXT NOT NULL,
   status ENUM('open', 'in_progress', 'resolved_pending', 'resolved', 'closed', 'escalated') NOT NULL DEFAULT 'open',
@@ -649,6 +653,7 @@ CREATE TABLE IF NOT EXISTS complaints (
   KEY idx_complaints_company (company_id),
   KEY idx_complaints_company_status (company_id, status),
   KEY idx_complaints_company_created (company_id, created_at),
+  KEY idx_complaints_target (target),
   CONSTRAINT fk_complaints_passenger
     FOREIGN KEY (passenger_id) REFERENCES users(id)
     ON DELETE CASCADE

@@ -137,8 +137,9 @@ function passenger_complaint_payload(array $row, array $responses = []): array
 
     return [
         'id' => (int) $row['id'],
-        'company_id' => (int) $row['company_id'],
+        'company_id' => isset($row['company_id']) && $row['company_id'] !== null ? (int) $row['company_id'] : null,
         'company_name' => $row['company_name'] ?? '',
+        'target' => ($row['target'] ?? 'company') === 'platform' ? 'platform' : 'company',
         'booking_id' => isset($row['booking_id']) && $row['booking_id'] !== null ? (int) $row['booking_id'] : null,
         'booking_reference' => $row['booking_reference'] ?? null,
         'category' => $row['category'] ?? 'other',
@@ -205,7 +206,7 @@ function insert_passenger_status_teller(PDO $pdo, int $complaintId, string $text
 function complaint_select_sql(): string
 {
     return "
-        SELECT c.id, c.company_id, c.booking_id, c.category,
+        SELECT c.id, c.company_id, c.booking_id, c.category, c.target,
                c.subject, c.message, c.status,
                c.response, c.response_at, c.created_at,
                co.name AS company_name,
@@ -213,7 +214,7 @@ function complaint_select_sql(): string
                CONCAT(r.from_city, ' → ', r.to_city) AS route,
                t.departure_date, t.departure_time
         FROM complaints c
-        JOIN companies co ON co.id = c.company_id
+        LEFT JOIN companies co ON co.id = c.company_id
         LEFT JOIN bookings b ON b.id = c.booking_id
         LEFT JOIN trips t ON t.id = b.trip_id
         LEFT JOIN routes r ON r.id = t.route_id
@@ -246,7 +247,7 @@ function passenger_complaint_mutation(PDO $pdo, string $mode): array
         if (in_array($currentStatus, ['resolved', 'closed'], true)) {
             auth_response(422, ['success' => false, 'message' => 'This complaint is ' . $currentStatus . ' and can no longer be replied to.']);
         }
-        $ins = $pdo->prepare('INSERT INTO complaint_responses (complaint_id, message, kind, actor) VALUES (:cid, :msg, \'message\', \'passenger\')');
+        $ins = $pdo->prepare('INSERT INTO complaint_responses (complaint_id, message, kind, actor) VALUES (:cid, :message, \'message\', \'passenger\')');
         $ins->execute([':cid' => $complaintId, ':message' => $message]);
         $targetStatus = $currentStatus;
         $notify = true;
@@ -279,30 +280,53 @@ function passenger_complaint_mutation(PDO $pdo, string $mode): array
     $upd->execute([':status' => $targetStatus, ':id' => $complaintId, ':uid' => (int) $user['id']]);
 
     if ($notify) {
-        /* Notify the company operator so they can react. */
-        $companyStmt = $pdo->prepare('SELECT user_id FROM companies WHERE id = :cid LIMIT 1');
-        $companyStmt->execute([':cid' => (int) $row['company_id']]);
-        $company = $companyStmt->fetch();
-        $companyUserId = (int) ($company['user_id'] ?? 0);
-        if ($companyUserId > 0) {
-            try {
-                $titleMsg = match ($mode) {
-                    'reply' => 'A passenger replied to your complaint thread.',
-                    'confirm_resolution' => 'A passenger confirmed a complaint is resolved.',
-                    'reopen' => 'A passenger reopened a complaint.',
-                    'escalate' => 'A passenger requested admin help on a complaint.',
-                    default => 'A complaint was updated.',
-                };
-                createNotification(
-                    $pdo,
-                    $companyUserId,
-                    'complaint',
-                    'Complaint Update',
-                    $titleMsg . ' ("' . $row['subject'] . '")',
-                    'complaint-activity:' . $complaintId
-                );
-            } catch (Throwable $e) {
-                /* Best-effort only. */
+        $titleMsg = match ($mode) {
+            'reply' => 'A passenger replied to your complaint thread.',
+            'confirm_resolution' => 'A passenger confirmed a complaint is resolved.',
+            'reopen' => 'A passenger reopened a complaint.',
+            'escalate' => 'A passenger requested admin help on a complaint.',
+            default => 'A complaint was updated.',
+        };
+
+        if (($row['company_id'] ?? 0) > 0) {
+            /* Notify the company operator so they can react. */
+            $companyStmt = $pdo->prepare('SELECT user_id FROM companies WHERE id = :cid LIMIT 1');
+            $companyStmt->execute([':cid' => (int) $row['company_id']]);
+            $company = $companyStmt->fetch();
+            $companyUserId = (int) ($company['user_id'] ?? 0);
+            if ($companyUserId > 0) {
+                try {
+                    createNotification(
+                        $pdo,
+                        $companyUserId,
+                        'complaint',
+                        'Complaint Update',
+                        $titleMsg . ' ("' . $row['subject'] . '")',
+                        'complaint-activity:' . $complaintId
+                    );
+                } catch (Throwable $e) {
+                    /* Best-effort only. */
+                }
+            }
+        } else {
+            /* A platform complaint has no company operator — alert ET Transport
+               support (every active admin) instead. */
+            $admins = $pdo->query("SELECT id FROM users WHERE role = 'admin' AND status = 'active'")->fetchAll();
+            foreach ($admins as $adminRow) {
+                $adminId = (int) ($adminRow['id'] ?? 0);
+                if ($adminId <= 0) { continue; }
+                try {
+                    createNotification(
+                        $pdo,
+                        $adminId,
+                        'complaint',
+                        'Complaint Update',
+                        $titleMsg . ' ("' . $row['subject'] . '")',
+                        'complaint-activity:' . $complaintId
+                    );
+                } catch (Throwable $e) {
+                    /* Best-effort only. */
+                }
             }
         }
     }
@@ -313,7 +337,9 @@ function passenger_complaint_mutation(PDO $pdo, string $mode): array
     ];
 }
 /* ============================================================
-   POST create — file a complaint against a public company.
+   POST create — file a complaint against a public company
+   (target=company) or against the ET Transport platform itself
+   (target=platform, no company). 
    ============================================================ */
 function handle_create(): void
 {
@@ -321,9 +347,19 @@ function handle_create(): void
     $user = require_active_passenger();
     $input = complaint_input();
 
-    $companyId = (int) ($input['company_id'] ?? 0);
-    if ($companyId <= 0) {
-        auth_response(422, ['success' => false, 'message' => 'A company is required.']);
+    /* target: 'company' (against a bus company) or 'platform' (against
+       ET Transport itself). The client is never trusted — anything that
+       is not exactly 'platform' is treated as a company complaint. */
+    $target = trim((string) ($input['target'] ?? ''));
+    $isPlatform = $target === 'platform';
+
+    $companyId = 0;
+    $company = null;
+    if (!$isPlatform) {
+        $companyId = (int) ($input['company_id'] ?? 0);
+        if ($companyId <= 0) {
+            auth_response(422, ['success' => false, 'message' => 'A company is required, or file the complaint about ET Transport.']);
+        }
     }
 
     $category = trim((string) ($input['category'] ?? 'other'));
@@ -353,42 +389,53 @@ function handle_create(): void
     }
 
     $pdo = db();
-    $company = complaint_target_company($pdo, $companyId);
+    if (!$isPlatform) {
+        $company = complaint_target_company($pdo, $companyId);
+    }
 
     /* An optional booking reference must resolve to a booking the passenger
-       owns on THIS company — ownership is part of the WHERE clause. */
+       owns. Company complaints constrain it to THIS company; platform
+       complaints accept any of the passenger's own bookings. Ownership is
+       part of the WHERE clause either way. */
     $bookingId = 0;
     if ($bookingRef !== '') {
-        $bStmt = $pdo->prepare('
-            SELECT b.id
-            FROM bookings b
-            JOIN trips t ON t.id = b.trip_id
-            WHERE b.booking_reference = :ref
-              AND b.passenger_id = :uid
-              AND t.company_id = :company_id
-            LIMIT 1
-        ');
-        $bStmt->execute([
+        $bookingSql = $isPlatform
+            ? "SELECT b.id FROM bookings b
+               WHERE b.booking_reference = :ref AND b.passenger_id = :uid LIMIT 1"
+            : "SELECT b.id
+               FROM bookings b
+               JOIN trips t ON t.id = b.trip_id
+               WHERE b.booking_reference = :ref
+                 AND b.passenger_id = :uid
+                 AND t.company_id = :company_id
+               LIMIT 1";
+        $bStmt = $pdo->prepare($bookingSql);
+        $bParams = [
             ':ref' => $bookingRef,
             ':uid' => (int) $user['id'],
-            ':company_id' => $companyId,
-        ]);
+        ];
+        if (!$isPlatform) { $bParams[':company_id'] = $companyId; }
+        $bStmt->execute($bParams);
         $bookingRow = $bStmt->fetch();
         if ($bookingRow === false) {
-            auth_response(422, ['success' => false, 'message' => 'Booking reference not found for your account on this company.']);
+            $bookingMsg = $isPlatform
+                ? 'Booking reference not found for your account.'
+                : 'Booking reference not found for your account on this company.';
+            auth_response(422, ['success' => false, 'message' => $bookingMsg]);
         }
         $bookingId = (int) $bookingRow['id'];
     }
 
     $stmt = $pdo->prepare('
-        INSERT INTO complaints (company_id, passenger_id, booking_id, category, subject, message)
-        VALUES (:company_id, :passenger_id, :booking_id, :category, :subject, :message)
+        INSERT INTO complaints (company_id, passenger_id, booking_id, category, target, subject, message)
+        VALUES (:company_id, :passenger_id, :booking_id, :category, :target, :subject, :message)
     ');
     $stmt->execute([
-        ':company_id' => $companyId,
+        ':company_id' => $isPlatform ? null : $companyId,
         ':passenger_id' => (int) $user['id'],
         ':booking_id' => $bookingId > 0 ? $bookingId : null,
         ':category' => $category,
+        ':target' => $isPlatform ? 'platform' : 'company',
         ':subject' => $subject,
         ':message' => $message,
     ]);
@@ -398,24 +445,42 @@ function handle_create(): void
     insert_passenger_status_teller($pdo, $newId, 'Customer opened this complaint.', 'passenger');
 
     /* Best-effort notifications: confirm to the passenger and alert the
-       company operator. Neither ever alters the response on failure. */
+       company operator (or ET Transport support for platform complaints).
+       Neither ever alters the response on failure. */
     try {
+        $responder = $isPlatform ? 'ET Transport support' : 'The company';
         createNotification(
             $pdo,
             (int) $user['id'],
             'complaint',
             'Complaint Submitted',
-            'Your complaint "' . $subject . '" for ' . $company['name'] . ' has been submitted. The company will respond soon.',
+            'Your complaint "' . $subject . '"' . ($isPlatform ? '' : ' for ' . $company['name']) . ' has been submitted. ' . $responder . ' will respond soon.',
             'complaint-created:' . $newId
         );
-        createNotification(
-            $pdo,
-            (int) $company['user_id'],
-            'complaint',
-            'Complaint Received',
-            'A passenger submitted a complaint: "' . $subject . '".',
-            'complaint-received:' . $newId
-        );
+        if ($isPlatform) {
+            $admins = $pdo->query("SELECT id FROM users WHERE role = 'admin' AND status = 'active'")->fetchAll();
+            foreach ($admins as $adminRow) {
+                $adminId = (int) ($adminRow['id'] ?? 0);
+                if ($adminId <= 0) { continue; }
+                createNotification(
+                    $pdo,
+                    $adminId,
+                    'complaint',
+                    'Platform Complaint Received',
+                    'A passenger submitted a platform complaint: "' . $subject . '".',
+                    'complaint-received:' . $newId
+                );
+            }
+        } else {
+            createNotification(
+                $pdo,
+                (int) $company['user_id'],
+                'complaint',
+                'Complaint Received',
+                'A passenger submitted a complaint: "' . $subject . '".',
+                'complaint-received:' . $newId
+            );
+        }
     } catch (Throwable $e) {
         /* Best-effort only. */
     }
@@ -426,7 +491,7 @@ function handle_create(): void
 
     auth_response(201, [
         'success' => true,
-        'message' => 'Complaint submitted. The company will respond soon.',
+        'message' => $isPlatform ? 'Complaint submitted. ET Transport support will respond soon.' : 'Complaint submitted. The company will respond soon.',
         'complaint' => passenger_complaint_payload($row, fetch_passenger_complaint_responses($pdo, $newId)),
     ]);
 }

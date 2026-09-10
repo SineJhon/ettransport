@@ -338,6 +338,11 @@
         .ad-complaint-tag.is-resolved { color:#166534; background:#e6f5ea; }
         .ad-complaint-tag.is-escalated { color:#b02f2f; background:#fdeaea; }
         .ad-complaint-tag.is-closed { color:#55606a; background:#e9edf0; }
+        .ad-complaint-group-head { display:flex; align-items:center; gap:.6rem; margin:.2rem 0 .65rem; padding:.38rem .75rem; color:#245944; background:#eef5f0; border:1px solid #d8e6dc; border-radius:9px; }
+        .ad-complaint-group-avatar { display:grid; place-items:center; flex:0 0 auto; width:1.7rem; height:1.7rem; border-radius:50%; color:#245d49; background:#e2f3e9; border:1px solid #cce5d7; font:800 .8rem/1 var(--font-sans); text-transform:uppercase; }
+        .ad-complaint-group-head strong { font-size:.92rem; }
+        .ad-complaint-group-head small { color:#5f766d; font-size:.75rem; }
+        .ad-complaint-group-count { margin-left:auto; padding:.12rem .5rem; border-radius:99px; color:#187653; background:rgba(24,118,83,.1); font:700 .72rem/1.4 var(--font-sans); white-space:nowrap; }
         .ad-complaint-open { margin-top:auto; align-self:flex-end; }
         /* Admin complaint chat modal. */
         .ad-complaint-modal-box { width:min(100%,660px); max-height:min(90vh,760px); display:flex; flex-direction:column; padding:0; overflow:hidden; background:#fff; border-radius:16px; box-shadow:0 25px 70px rgba(5,26,20,.28); }
@@ -671,22 +676,17 @@
             <div class="ad-card-head">
                 <div>
                     <h2>Complaints</h2>
-                    <p class="ad-card-desc">Passenger complaints across the platform — intervene, reply and steer the status when a company closes or stops responding.</p>
+                    <p class="ad-card-desc">Passenger complaints about bus companies and about ET Transport itself — review company issues or handle platform complaints, then reply and steer the status.</p>
                 </div>
                 <button type="button" id="btn-refresh-complaints" class="btn btn-secondary btn-sm">Refresh</button>
             </div>
-            <div class="ad-status-toolbar" role="group" aria-label="Filter complaints by status" id="ad-complaint-toolbar">
-                <button type="button" class="ad-status-filter is-active" data-complaint-filter="" aria-pressed="true">All</button>
-                <button type="button" class="ad-status-filter" data-complaint-filter="open" aria-pressed="false">Open</button>
-                <button type="button" class="ad-status-filter" data-complaint-filter="in_progress" aria-pressed="false">In progress</button>
-                <button type="button" class="ad-status-filter" data-complaint-filter="resolved_pending" aria-pressed="false">Awaiting confirmation</button>
-                <button type="button" class="ad-status-filter" data-complaint-filter="resolved" aria-pressed="false">Resolved</button>
-                <button type="button" class="ad-status-filter" data-complaint-filter="escalated" aria-pressed="false">Escalated</button>
-                <button type="button" class="ad-status-filter" data-complaint-filter="closed" aria-pressed="false">Closed</button>
+            <div class="ad-status-toolbar" role="group" aria-label="Filter complaints by type" id="ad-complaint-scope-bar">
+                <button type="button" class="ad-status-filter is-active" data-complaint-target="company" aria-pressed="true">Company</button>
+                <button type="button" class="ad-status-filter" data-complaint-target="platform" aria-pressed="false">Platform</button>
             </div>
             <p id="ad-complaints-loading" class="auth-identity" hidden>Loading complaints&hellip;</p>
             <div id="ad-complaints-error" class="auth-message" hidden></div>
-            <div id="ad-complaints-empty" class="ad-empty" hidden>No complaints match the current filter.</div>
+            <div id="ad-complaints-empty" class="ad-empty" hidden>No complaints yet.</div>
             <div id="ad-complaints-list" class="ad-complaint-list" hidden></div>
         </section>
         </div></div>

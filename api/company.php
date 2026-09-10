@@ -5220,7 +5220,7 @@ function handle_complaint_update(PDO $pdo): void
     /* A non-empty ?response= appends a new chat message (actor = company). */
     $notify = false;
     if ($hasResponse) {
-        $ins = $pdo->prepare('INSERT INTO complaint_responses (complaint_id, message, kind, actor) VALUES (:cid, :msg, \'message\', \'company\')');
+        $ins = $pdo->prepare('INSERT INTO complaint_responses (complaint_id, message, kind, actor) VALUES (:cid, :message, \'message\', \'company\')');
         $ins->execute([':cid' => $complaintId, ':message' => $response]);
         $notify = true;
     }
