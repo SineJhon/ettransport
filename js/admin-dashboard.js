@@ -2251,7 +2251,9 @@ function renderDetail(c) {
     }
 
     /* Company overview card: avatar, name, the complaint count, and open /
-       escalated chips. Returns '' when the status filter hides every complaint. */
+       escalated chips. Returns '' when the status filter hides every complaint.
+       The card is fully clickable and carries an explicit “Enter” button in
+       the footer that drills into that company's complaints. */
     function adminComplaintCompanyCardHtml(group, isPlatform) {
         var matched = [];
         for (var i = 0; i < group.list.length; i++) {
@@ -2271,7 +2273,7 @@ function renderDetail(c) {
         if (!chips) {
             chips = '<span class="ad-complaint-co-chip is-total">' + matched.length + ' complaint' + (matched.length === 1 ? '' : 's') + '</span>';
         }
-        return '<button type="button" class="ad-complaint-co-card" data-admin-complaint-company="' + escHtml(group.id) + '">' +
+        return '<article class="ad-complaint-co-card" tabindex="0" role="button" aria-label="Open complaints for ' + escHtml(group.name) + '" data-admin-complaint-company="' + escHtml(group.id) + '">' +
             '<div class="ad-complaint-co-top">' +
                 '<span class="ad-complaint-co-avatar" aria-hidden="true">' + escHtml(initial) + '</span>' +
                 '<span class="ad-complaint-co-info">' +
@@ -2281,17 +2283,31 @@ function renderDetail(c) {
                 '<span class="ad-complaint-co-count">' + matched.length + '</span>' +
             '</div>' +
             '<div class="ad-complaint-co-chips">' + chips + '</div>' +
-            '<span class="ad-complaint-co-card-hint">View complaints &rarr;</span>' +
-        '</button>';
+            '<div class="ad-complaint-co-foot">' +
+                '<span class="ad-complaint-co-foot-meta">' + matched.length + ' complaint' + (matched.length === 1 ? '' : 's') + '</span>' +
+                '<button type="button" class="ad-complaint-co-enter" data-admin-complaint-company="' + escHtml(group.id) + '">Enter ' +
+                    '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>' +
+                '</button>' +
+            '</div>' +
+        '</article>';
     }
 
-    /* Detail header shown when drilled into one company's complaints. */
+    /* Detail header — back control on the left, company identity in the
+       middle, and the live complaint count on the right. */
     function adminComplaintDetailHeadHtml(group, count, isPlatform) {
         var initial = String(group.name || '?').trim().charAt(0).toUpperCase() || '?';
         return '<div class="ad-complaint-detail-head">' +
-            '<button type="button" class="ad-complaint-back" data-admin-complaint-back="1">&larr; ' + (isPlatform ? 'Overview' : 'All companies') + '</button>' +
-            '<span class="ad-complaint-co-avatar" aria-hidden="true">' + escHtml(initial) + '</span>' +
-            '<strong>' + escHtml(group.name) + '</strong>' +
+            '<button type="button" class="ad-complaint-back" data-admin-complaint-back="1">' +
+                '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m11 18-6-6 6-6"/></svg>' +
+                (isPlatform ? 'Overview' : 'All companies') +
+            '</button>' +
+            '<div class="ad-complaint-detail-id">' +
+                '<span class="ad-complaint-co-avatar" aria-hidden="true">' + escHtml(initial) + '</span>' +
+                '<span class="ad-complaint-co-info">' +
+                    '<strong>' + escHtml(group.name) + '</strong>' +
+                    '<small>' + (isPlatform ? 'Platform complaints' : 'Complaint details') + '</small>' +
+                '</span>' +
+            '</div>' +
             '<span class="ad-complaint-detail-count">' + Number(count) + ' complaint' + (Number(count) === 1 ? '' : 's') + '</span>' +
         '</div>';
     }
@@ -2329,18 +2345,14 @@ function renderDetail(c) {
         /* Level 1 — companies overview: one card per company with its count. */
         if (adminComplaintCompanyId === null) {
             var cards = '';
-            var cardCount = 0;
             for (var g0 = 0; g0 < groups.length; g0++) {
                 var card = adminComplaintCompanyCardHtml(groups[g0], isPlatform);
-                if (card) { cards += card; cardCount++; }
+                if (card) { cards += card; }
             }
             if (!cards) {
                 list.innerHTML = ''; list.hidden = true;
                 if (empty) { empty.hidden = false; empty.textContent = 'No complaints match the selected status.'; }
                 return;
-            }
-            if (!isPlatform) {
-                html += adminComplaintGroupHeadHtml('Companies', 'Complaints by company', cardCount);
             }
             html += '<div class="ad-complaint-co-grid">' + cards + '</div>';
             list.innerHTML = html;
@@ -2973,6 +2985,16 @@ function adminComplaintTime(value) {
                     adminComplaintCompanyId = coCard.getAttribute('data-admin-complaint-company');
                     renderAdminComplaints();
                 }
+            });
+            /* Company cards are keyboard-focusable (role=button) — Enter or
+               Space drills into that company. */
+            adminComplaintList.addEventListener('keydown', function (e) {
+                if (e.key !== 'Enter' && e.key !== ' ') { return; }
+                var coCard = e.target.closest ? e.target.closest('[data-admin-complaint-company]') : null;
+                if (!coCard) { return; }
+                e.preventDefault();
+                adminComplaintCompanyId = coCard.getAttribute('data-admin-complaint-company');
+                renderAdminComplaints();
             });
         }
 
