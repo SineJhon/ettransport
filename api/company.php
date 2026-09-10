@@ -68,7 +68,7 @@ declare(strict_types=1);
  *                                                      passenger complaints, optional ?status= filter)
  *   POST api/company.php?action=complaint_update  -> { success, message, complaint }
  *                                                     (authenticated company role only; triage status
- *                                                      and/or write a reply the passenger sees)
+ *                                                      and/or append a reply; responses are append-only)
  *
  * Only approved companies are exposed publicly through list/get. Ratings and
  * review counts are computed from the reviews table. Destinations / fleet /
@@ -5127,8 +5127,9 @@ function handle_complaints(PDO $pdo): void
 }
 
 /** POST /api/company.php?action=complaint_update — handle one owned complaint
- *  from the complaint modal: change its status AND/OR write, edit or extend
- *  the response thread. Ownership is enforced by the company-scoped WHERE
+ *  from the chat modal: change its status AND/OR append a new response
+ *  message. The thread is append-only — once sent, a response cannot be
+ *  edited or deleted. Ownership is enforced by the company-scoped WHERE
  *  clause — another company's complaint simply does not match (404). */
 function handle_complaint_update(PDO $pdo): void
 {
@@ -5157,27 +5158,22 @@ function handle_complaint_update(PDO $pdo): void
     $hasResponse = $response !== null && $response !== '';
     $responseId = (int) ($input['response_id'] ?? 0);
 
+    /* Sent responses are append-only: the chat UI never offers an edit or
+       delete, and this guard rejects any attempt to rewrite an earlier
+       message so the thread stays exactly as the passenger saw it. */
+    if ($responseId > 0) {
+        auth_response(422, [
+            'success' => false,
+            'message' => 'Sent responses cannot be edited or deleted.',
+        ]);
+    }
+
     $upd = $pdo->prepare('UPDATE complaints SET status = :status WHERE id = :id AND company_id = :company_id');
     $upd->execute([':status' => $status, ':id' => $complaintId, ':company_id' => $companyId]);
 
-    /* Response handling:
-       - response_id + response  → edit an existing response
-       - response only           → add a new response (append to the thread) */
+    /* A non-empty ?response= appends a new message to the thread. */
     $notify = false;
-    if ($responseId > 0) {
-        $rStmt = $pdo->prepare('SELECT id FROM complaint_responses WHERE id = :rid AND complaint_id = :cid LIMIT 1');
-        $rStmt->execute([':rid' => $responseId, ':cid' => $complaintId]);
-        if ($rStmt->fetch() === false) {
-            auth_response(404, [
-                'success' => false,
-                'message' => 'Response not found.',
-            ]);
-        }
-        if ($hasResponse) {
-            $rUpd = $pdo->prepare('UPDATE complaint_responses SET message = :message WHERE id = :rid');
-            $rUpd->execute([':message' => $response, ':rid' => $responseId]);
-        }
-    } elseif ($hasResponse) {
+    if ($hasResponse) {
         $ins = $pdo->prepare('INSERT INTO complaint_responses (complaint_id, message) VALUES (:cid, :message)');
         $ins->execute([':cid' => $complaintId, ':message' => $response]);
         $notify = true;

@@ -662,11 +662,12 @@ CREATE TABLE IF NOT EXISTS complaints (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
--- complaint_responses — a real response thread on a complaint.
--- The company can write a response, edit any earlier response and
--- add as many follow-up responses as needed. complaints.response /
--- response_at stay as a denormalized copy of the LATEST response
--- so legacy read paths keep working.
+-- complaint_responses — a real chat thread on a complaint.
+-- The company replies from the complaint chat and can add as many
+-- follow-up messages as needed. Once a response is sent it cannot be
+-- edited or deleted (enforced by api/company.php?action=complaint_update).
+-- complaints.response / response_at stay as a denormalized copy of the
+-- LATEST response so legacy read paths keep working.
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS complaint_responses (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

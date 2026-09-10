@@ -446,43 +446,39 @@
         .cd-complaint-actions { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-top: auto; padding-top: .75rem; border-top: 1px solid #eef2ef; }
         .cd-complaint-handle-btn { white-space: nowrap; }
         .cd-complaint-empty { margin-top: 1rem; padding: 2.4rem 1rem; border: 1px dashed #cfe1d6; border-radius: 14px; background: #f8fbf9; color: #668078; text-align: center; font-size: .9rem; }
-        /* ===== Handle-complaint modal ===== */
+        /* ===== Handle-complaint modal — passenger chat thread ===== */
         .cd-complaint-modal { position: fixed; inset: 0; z-index: 102; display: grid; place-items: center; padding: 1rem; background: rgba(8, 31, 25, .58); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
         .cd-complaint-modal[hidden] { display: none; }
-        .cd-complaint-modal-box { width: min(100%, 720px); max-height: min(92vh, 820px); overflow: auto; display: flex; flex-direction: column; padding: 1.4rem; background: #fff; border: 1px solid #dfe9e3; border-radius: 18px; box-shadow: 0 25px 70px rgba(5, 26, 20, .28); }
-        .cd-complaint-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid #e5ede8; }
-        .cd-complaint-modal-head h3 { margin: 0; color: #163a33; font: 800 1.35rem/1 'Outfit', sans-serif; letter-spacing: -.02em; }
-        .cd-complaint-modal-subject { margin: .3rem 0 0; color: #647a71; font-size: .85rem; }
-        .cd-complaint-modal-close { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; padding: 0; color: #275147; background: #edf5f0; border: 0; border-radius: 50%; cursor: pointer; font-size: 1.25rem; line-height: 1; }
-        .cd-complaint-modal-content { display: grid; gap: 1rem; }
-        .cd-complaint-modal-person { display: flex; align-items: center; gap: .65rem; }
-        .cd-complaint-modal-person strong { color: #193c35; font-size: .92rem; }
-        .cd-complaint-modal-person .cd-complaint-category { margin-left: .25rem; }
-        .cd-complaint-modal-meta { margin: 0; color: #6b7c76; font-size: .78rem; }
-        .cd-complaint-modal-message { margin: 0; padding: .85rem 1rem; color: #385148; background: #f2f7f4; border: 1px solid #dce9e1; border-radius: 10px; font-size: .9rem; line-height: 1.6; }
-        .cd-complaint-modal-field { display: grid; grid-template-columns: auto 1fr; gap: .75rem; align-items: center; }
-        .cd-complaint-modal-field label { color: #5f766d; font-size: .7rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
-        .cd-complaint-modal-status-select { width: 100%; min-height: 2.6rem; padding: .45rem .6rem; color: #1d483d; background: #fff; border: 1px solid #cfe0d6; border-radius: 8px; font: 700 .84rem 'DM Sans', sans-serif; }
-        .cd-complaint-modal-responses { border-top: 1px solid #e5ede8; padding-top: 1rem; }
-        .cd-complaint-modal-responses h4 { margin: 0 0 .7rem; color: #2d5649; font-size: .8rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
-        .cd-complaint-modal-responses-list { display: grid; gap: .7rem; }
-        .cd-complaint-modal-response { display: grid; gap: .35rem; padding: .8rem .9rem; background: #f0f8f3; border: 1px solid #d7eade; border-left: 3px solid #58a275; border-radius: 10px; }
-        .cd-complaint-modal-response.is-editing { background: #fbfefb; border-color: #c6e0d0; border-left-color: #3f976a; }
-        .cd-complaint-modal-response-head { display: flex; align-items: center; justify-content: space-between; gap: .6rem; }
-        .cd-complaint-modal-response-label { color: #2a7054; font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
-        .cd-complaint-modal-response-meta { color: #6f857c; font-size: .72rem; }
-        .cd-complaint-modal-response p { margin: 0; color: #335248; font-size: .88rem; line-height: 1.55; }
-        .cd-complaint-modal-response-input { width: 100%; min-height: 5.5rem; resize: vertical; padding: .55rem .65rem; border: 1px solid #c8ded1; border-radius: 8px; background: #fff; font: inherit; font-size: .86rem; line-height: 1.5; }
-        .cd-complaint-modal-response-input:focus { outline: 3px solid rgba(49,164,118,.16); border-color: #3f976a; }
-        .cd-complaint-modal-response-editor-actions { display: flex; justify-content: flex-end; gap: .5rem; }
-        .cd-complaint-modal-no-responses { margin: 0; color: #6b7c76; font-size: .85rem; }
-        .cd-complaint-modal-new-response { border-top: 1px solid #e5ede8; padding-top: 1rem; display: grid; gap: .5rem; }
-        .cd-complaint-modal-new-response label { color: #2d5649; font-size: .78rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
-        .cd-complaint-modal-new-response textarea { width: 100%; min-height: 6rem; resize: vertical; padding: .6rem .7rem; border: 1px solid #c8ded1; border-radius: 8px; background: #fff; font: inherit; font-size: .88rem; line-height: 1.5; }
-        .cd-complaint-modal-new-response textarea:focus { outline: 3px solid rgba(49,164,118,.16); border-color: #3f976a; }
-        .cd-complaint-modal-error { margin: 0; color: #b91c1c; font-size: .85rem; }
-        .cd-complaint-modal-actions { display: flex; justify-content: flex-end; gap: .6rem; margin-top: 1rem; }
-        @media (max-width: 600px) { .cd-complaint-list { grid-template-columns: 1fr; }.cd-complaint-modal { align-items: end; padding: .5rem; }.cd-complaint-modal-box { max-height: 94vh; border-radius: 16px 16px 10px 10px; padding: 1.1rem; }.cd-complaint-modal-field { grid-template-columns: 1fr; } }
+        .cd-complaint-modal-box { width: min(100%, 660px); height: min(92vh, 720px); display: flex; flex-direction: column; padding: 0; background: #fff; border: 1px solid #dfe9e3; border-radius: 18px; box-shadow: 0 25px 70px rgba(5, 26, 20, .28); }
+        .cd-chat-head { display: flex; align-items: center; gap: .9rem; padding: .85rem 1.15rem; border-bottom: 1px solid #e5ede8; background: linear-gradient(120deg, #f2f7f4, #fbfdfb); }
+        .cd-chat-head-person { display: flex; align-items: center; gap: .65rem; min-width: 0; }
+        .cd-chat-head-info { display: grid; gap: .1rem; min-width: 0; }
+        .cd-chat-head-info strong { color: #193c35; font-size: .95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .cd-chat-head-info small { color: #647a71; font-size: .76rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .cd-chat-head-meta { display: grid; gap: .15rem; justify-items: start; margin-left: auto; }
+        .cd-chat-head-meta label { color: #5f766d; font-size: .62rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+        .cd-chat-head-meta select { min-width: 8.25rem; padding: .32rem .5rem; color: #1d483d; background: #fff; border: 1px solid #cfe0d6; border-radius: 8px; font: 700 .8rem 'DM Sans', sans-serif; }
+        .cd-complaint-modal-close { display: grid; place-items: center; flex: 0 0 2.25rem; width: 2.25rem; height: 2.25rem; padding: 0; color: #275147; background: #edf5f0; border: 0; border-radius: 50%; cursor: pointer; font-size: 1.25rem; line-height: 1; }
+        .cd-chat-thread { flex: 1 1 auto; overflow-y: auto; display: flex; flex-direction: column; gap: .8rem; padding: 1rem 1.15rem; background: #f6f9f6; }
+        .cd-chat-bubble { max-width: min(78%, 30rem); padding: .6rem .8rem; border-radius: 16px; font-size: .88rem; line-height: 1.55; }
+        .cd-chat-bubble p { margin: 0 0 .35rem; white-space: pre-wrap; overflow-wrap: break-word; }
+        .cd-chat-bubble-meta { display: block; font-size: .66rem; font-weight: 700; }
+        .cd-chat-bubble.is-passenger { align-self: flex-start; background: #fff; border: 1px solid #dfe9e3; border-bottom-left-radius: 5px; color: #2e4a3f; box-shadow: 0 1px 0 rgba(17,61,45,.04); }
+        .cd-chat-bubble.is-passenger .cd-chat-bubble-meta { color: #5f766d; }
+        .cd-chat-bubble.is-company { align-self: flex-end; background: #187653; border-bottom-right-radius: 5px; color: #fff; box-shadow: 0 2px 0 rgba(14,74,50,.18); }
+        .cd-chat-bubble.is-company .cd-chat-bubble-meta { color: #cfe9dc; }
+        .cd-chat-context { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .35rem; }
+        .cd-chat-context span { padding: .22rem .5rem; color: #547067; background: #f1f6f3; border: 1px solid #e0ebe4; border-radius: 7px; font-size: .68rem; font-weight: 700; }
+        .cd-chat-composer { display: grid; gap: .45rem; padding: .7rem 1.15rem .85rem; border-top: 1px solid #e5ede8; background: #fff; }
+        .cd-chat-composer textarea { width: 100%; min-height: 3.2rem; max-height: 8rem; resize: vertical; padding: .55rem .7rem; color: #24493c; background: #fbfefb; border: 1px solid #c8ded1; border-radius: 10px; font: inherit; font-size: .88rem; line-height: 1.5; }
+        .cd-chat-composer textarea:focus { outline: 3px solid rgba(49,164,118,.16); border-color: #3f976a; }
+        .cd-chat-composer-foot { display: flex; align-items: center; justify-content: flex-end; gap: .6rem; flex-wrap: wrap; }
+        .cd-chat-composer-foot .cd-complaint-modal-error { margin: 0; color: #b91c1c; font-size: .82rem; }
+        .cd-chat-sent-note { margin: 0; color: #1d8a4e; font-size: .78rem; }
+        .cd-chat-hint { color: #6f857c; font-size: .72rem; }
+        .cd-chat-send { white-space: nowrap; }
+        .cd-chat-send:disabled { opacity: .6; cursor: not-allowed; }
+        @media (max-width: 600px) { .cd-complaint-list { grid-template-columns: 1fr; }.cd-complaint-modal { align-items: end; padding: .5rem; }.cd-complaint-modal-box { max-height: 94vh; border-radius: 16px 16px 10px 10px; }.cd-chat-head { flex-wrap: wrap; gap: .6rem; }.cd-chat-head-meta { margin-left: 0; }.cd-chat-bubble { max-width: 92%; } }
 
         .cd-profile { margin-top: var(--space-md); }
         .cd-profile-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
