@@ -4108,6 +4108,8 @@ var reviewEditingReplyId = null;
     var activeComplaintModalComplaint = null;      // in-flight copy shown in the chat modal
     var complaintSending = false;                  // guard: one chat send at a time
     var complaintSentNoteTimer = 0;                // fades the "message sent" note
+    var complaintLocalMessages = [];               // optimistic bubbles awaiting confirmation
+    var complaintLocalMessageSeq = 0;              // unique key for optimistic bubbles
 
     var COMPLAINT_STATUSES = [
         ['open', 'Open'],
@@ -4299,19 +4301,21 @@ var reviewEditingReplyId = null;
         return html;
     }
 
-    /* The company's side of the chat: right-aligned green bubbles. Responses
-       are append-only, so no edit/delete affordances are ever rendered. */
-    function complaintChatBubbleHtml(r) {
-        var when = formatReviewDate(r.created_at);
-        return '<div class="cd-chat-bubble is-company">' +
-            '<span class="cd-chat-bubble-meta">You' + (when ? ' \u00b7 ' + escHtml(when) : '') + '</span>' +
-            '<p>' + escHtml(r.message) + '</p>' +
-        '</div>';
+    /* Chat time label like "Sep 9 · 10:05 AM". Falls back to the date-only
+       formatter when the value cannot be parsed. */
+    function chatTimeLabel(value) {
+        if (!value) { return ''; }
+        var iso = String(value).indexOf(' ') > 0 ? String(value).replace(' ', 'T') : String(value);
+        var d = new Date(iso);
+        if (isNaN(d.getTime())) { return formatReviewDate(value); }
+        try {
+            return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+        } catch (e) { return formatReviewDate(value); }
     }
 
     /* The passenger's original complaint opens the conversation (left side). */
     function complaintIntroBubbleHtml(c) {
-        var when = formatReviewDate(c.created_at) || 'Recent complaint';
+        var when = chatTimeLabel(c.created_at) || 'Recent complaint';
         var chips = '';
         var parts = [];
         if (c.booking_reference) { parts.push('Booking ' + c.booking_reference); }
@@ -4319,10 +4323,69 @@ var reviewEditingReplyId = null;
         if (c.departure) { parts.push('Departs ' + c.departure); }
         for (var i = 0; i < parts.length; i++) { chips += '<span>' + escHtml(parts[i]) + '</span>'; }
         return '<div class="cd-chat-bubble is-passenger">' +
-            '<span class="cd-chat-bubble-meta">' + escHtml(c.passenger_name || 'Passenger') + ' \u00b7 ' + escHtml(when) + '</span>' +
             '<p>' + escHtml(c.message) + '</p>' +
             (chips ? '<div class="cd-chat-context">' + chips + '</div>' : '') +
+            '<span class="cd-chat-bubble-meta">' + escHtml(c.passenger_name || 'Passenger') + ' \u00b7 ' + escHtml(when) + '</span>' +
         '</div>';
+    }
+
+    /* Confirmed company replies (right-aligned green bubbles). */
+    function complaintChatBubbleHtml(r) {
+        return '<div class="cd-chat-bubble is-company">' +
+            '<p>' + escHtml(r.message) + '</p>' +
+            '<span class="cd-chat-bubble-meta">You' + (r.created_at ? ' \u00b7 ' + escHtml(chatTimeLabel(r.created_at)) : '') + '</span>' +
+        '</div>';
+    }
+
+    /* Optimistic company bubble shown the instant Send is pressed. While the
+       request is in flight it reads "Sending…"; if it fails it becomes a
+       red bubble that can be tapped to retry. */
+    function complaintLocalBubbleHtml(lm) {
+        var cls = lm.state === 'sending' ? ' is-sending' : ' is-failed';
+        var meta = lm.state === 'sending' ? 'Sending\u2026' : 'Didn\u2019t send \u00b7 tap to retry';
+        return '<div class="cd-chat-bubble is-company' + cls + '" data-complaint-local-key="' + lm.key + '"' +
+            (lm.state === 'failed' ? ' role="button" tabindex="0" title="Tap to retry" aria-label="Failed message, tap to retry"' : '') + '>' +
+            '<p>' + escHtml(lm.message) + '</p>' +
+            '<span class="cd-chat-bubble-meta">' + escHtml(meta) + '</span>' +
+        '</div>';
+    }
+
+    /* One ordered chat stream: the passenger's complaint, every confirmed
+       response, then any locally-optimistic bubbles — newest last. */
+    function buildComplaintThread() {
+        var complaint = activeComplaintModalComplaint;
+        var lines = [{
+            side: 'passenger',
+            avatar: String(complaint.passenger_name || 'P').trim().charAt(0).toUpperCase() || 'P',
+            html: complaintIntroBubbleHtml(complaint)
+        }];
+        var responses = (Array.isArray(complaint.responses) && complaint.responses.length)
+            ? complaint.responses
+            : (complaint.response ? [{ id: -1, message: complaint.response, created_at: complaint.response_at, updated_at: complaint.response_at }] : []);
+        for (var i = 0; i < responses.length; i++) {
+            lines.push({ side: 'company', avatar: 'You', html: complaintChatBubbleHtml(responses[i]) });
+        }
+        for (var j = 0; j < complaintLocalMessages.length; j++) {
+            lines.push({ side: 'company', avatar: 'You', html: complaintLocalBubbleHtml(complaintLocalMessages[j]) });
+        }
+        return lines;
+    }
+
+    /* Render the thread with grouped bubbles; consecutive messages from one
+       side stack tightly and reuse the avatar row. */
+    function renderComplaintThread() {
+        var lines = buildComplaintThread();
+        var html = '';
+        var prevSide = null;
+        for (var i = 0; i < lines.length; i++) {
+            var cont = prevSide === lines[i].side;
+            html += '<div class="cd-chat-row is-' + lines[i].side + (cont ? ' is-continuation' : '') + '">' +
+                '<span class="cd-chat-avatar' + (lines[i].side === 'company' ? ' is-company' : '') + '" aria-hidden="true">' + escHtml(lines[i].avatar) + '</span>' +
+                lines[i].html +
+            '</div>';
+            prevSide = lines[i].side;
+        }
+        return html;
     }
 
     function scrollComplaintThreadToBottom() {
@@ -4335,12 +4398,6 @@ var reviewEditingReplyId = null;
         if (!modal) { return; }
         var complaint = activeComplaintModalComplaint;
         if (!complaint) { closeComplaintModal(); return; }
-
-        var responses = (Array.isArray(complaint.responses) && complaint.responses.length)
-            ? complaint.responses
-            : (complaint.response ? [{ id: -1, message: complaint.response, created_at: complaint.response_at, updated_at: complaint.response_at }] : []);
-        var threadHtml = complaintIntroBubbleHtml(complaint);
-        for (var i = 0; i < responses.length; i++) { threadHtml += complaintChatBubbleHtml(responses[i]); }
 
         var body = byId('complaint-modal-body');
         if (!body) { return; }
@@ -4361,15 +4418,16 @@ var reviewEditingReplyId = null;
                     '</div>' +
                     '<button type="button" id="complaint-modal-close" class="cd-complaint-modal-close" aria-label="Close complaint">\u00d7</button>' +
                 '</div>' +
-                '<div id="complaint-chat-thread" class="cd-chat-thread" aria-live="polite">' + threadHtml + '</div>' +
+                '<div id="complaint-chat-thread" class="cd-chat-thread" aria-live="polite">' + renderComplaintThread() + '</div>' +
                 '<div class="cd-chat-composer">' +
-                    '<textarea id="complaint-modal-new-response-text" maxlength="1000" rows="1" placeholder="Type a message to the passenger\u2026"></textarea>' +
-                    '<div class="cd-complaint-modal-error" role="alert" hidden></div>' +
-                    '<div class="cd-chat-composer-foot">' +
-                        '<p id="complaint-chat-sent" class="cd-chat-sent-note" role="status" hidden></p>' +
-                        '<span class="cd-chat-hint">Enter to send \u00b7 Shift+Enter for a new line</span>' +
-                        '<button type="button" id="complaint-chat-send" class="btn btn-primary btn-sm cd-chat-send">Send</button>' +
+                    '<div class="cd-chat-composer-row">' +
+                        '<textarea id="complaint-modal-new-response-text" maxlength="1000" rows="1" placeholder="Type a message\u2026"></textarea>' +
+                        '<button type="button" id="complaint-chat-send" class="cd-chat-send-btn" aria-label="Send message" disabled>' +
+                            '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>' +
+                        '</button>' +
                     '</div>' +
+                    '<div class="cd-complaint-modal-error" role="alert" hidden></div>' +
+                    '<p id="complaint-chat-sent" class="cd-chat-sent-note" role="status" hidden></p>' +
                 '</div>' +
             '</div>';
         modal.hidden = false;
@@ -4378,6 +4436,8 @@ var reviewEditingReplyId = null;
         if (composer && composer.focus) {
             try { composer.focus(); } catch (e) { /* non-critical */ }
         }
+        syncComplaintSendButton();
+        autoResizeComplaintComposer();
     }
 
     function openComplaintModal(id) {
@@ -4386,6 +4446,8 @@ var reviewEditingReplyId = null;
         activeComplaintModalId = Number(id);
         activeComplaintModalComplaint = complaint;
         complaintSending = false;
+        complaintLocalMessages = [];
+        complaintLocalMessageSeq = 0;
         renderComplaintModal();
     }
 
@@ -4395,6 +4457,8 @@ var reviewEditingReplyId = null;
         activeComplaintModalId = null;
         activeComplaintModalComplaint = null;
         complaintSending = false;
+        complaintLocalMessages = [];
+        complaintLocalMessageSeq = 0;
     }
 
     function showComplaintModalError(message) {
@@ -4407,12 +4471,12 @@ var reviewEditingReplyId = null;
     /* Sent responses are append-only — there is deliberately no editing or
        deleting in the chat UI (and the API rejects response_id edits too). */
 
-    /* Send from the chat composer (optionally with a status change). On
-       success the modal stays open like a chat: the fresh thread and status
-       come back from the server, the composer clears and the pending list
-       behind the modal refreshes in the background. */
+    /* Send from the chat composer (optionally with a status change). The
+       message appears in the thread the instant Send is pressed (optimistic),
+       then the server confirms it and the bubble becomes permanent. */
     function submitComplaintUpdate(id) {
         var complaint = activeComplaintModalComplaint;
+
         if (!complaint || complaintSending) { return; }
 
         var statusEl = byId('complaint-modal-status');
@@ -4425,12 +4489,25 @@ var reviewEditingReplyId = null;
             return;
         }
 
+        var localKey = 0;
+        if (text) {
+            localKey = ++complaintLocalMessageSeq;
+
+            complaintLocalMessages.push({ key: localKey, message: text, state: 'sending' });
+            if (newRespEl) { newRespEl.value = ''; }
+            renderComplaintModal();
+            scrollComplaintThreadToBottom();
+        }
+        performComplaintSend(id, status, text, localKey);
+    }
+
+    /* The actual POST; shared by the composer and by retrying a failed bubble. */
+    function performComplaintSend(id, status, text, localKey) {
         var payload = 'complaint_id=' + encodeURIComponent(id) + '&status=' + encodeURIComponent(status);
         if (text) { payload += '&response=' + encodeURIComponent(text); }
 
         complaintSending = true;
-        var sendBtn = byId('complaint-chat-send');
-        if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Sending\u2026'; }
+        syncComplaintSendButton();
         var err = byId('complaint-modal-error'); if (err) { err.hidden = true; }
 
         fetch('api/company.php?action=complaint_update', {
@@ -4448,28 +4525,76 @@ var reviewEditingReplyId = null;
             })
             .then(function (result) {
                 complaintSending = false;
-                var sendBtn = byId('complaint-chat-send');
-                if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Send'; }
                 var data = result.data || {};
                 if (!result.ok || result.status !== 200 || !data.success) {
-                    showComplaintModalError(data.message || 'Unable to send your message.');
+                    if (localKey) { markComplaintLocalFailed(localKey); renderComplaintModal(); }
+                    else { showComplaintModalError(data.message || 'Unable to send your message.'); }
+                    syncComplaintSendButton();
                     return;
                 }
+                if (localKey) { removeComplaintLocalMessage(localKey); }
                 if (data.complaint) {
                     activeComplaintModalComplaint = data.complaint;
                     upsertComplaintLocally(data.complaint);
                 }
-                if (newRespEl) { newRespEl.value = ''; }
                 renderComplaintModal();
+                scrollComplaintThreadToBottom();
                 showComplaintSentNote();
                 loadComplaints();
             })
             .catch(function () {
                 complaintSending = false;
-                var sendBtn = byId('complaint-chat-send');
-                if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Send'; }
-                showComplaintModalError('Network error while sending your message.');
+                if (localKey) { markComplaintLocalFailed(localKey); renderComplaintModal(); }
+                else showComplaintModalError('Network error while sending your message.');
+                syncComplaintSendButton();
             });
+    }
+
+    /* ---- Optimistic-message helpers ---- */
+
+    function complaintLocalMessageIndex(key) {
+        for (var i = 0; i < complaintLocalMessages.length; i++) {
+            if (complaintLocalMessages[i].key === Number(key)) { return i; }
+        }
+        return -1;
+    }
+
+    function removeComplaintLocalMessage(key) {
+        var i = complaintLocalMessageIndex(key);
+        if (i >= 0) { complaintLocalMessages.splice(i, 1); }
+    }
+
+    function markComplaintLocalFailed(key) {
+        var i = complaintLocalMessageIndex(key);
+        if (i >= 0) { complaintLocalMessages[i].state = 'failed'; }
+    }
+
+    /* Tap a failed bubble (or press Enter) to re-send that exact message. */
+    function retryComplaintLocalMessage(key) {
+        var i = complaintLocalMessageIndex(key);
+        if (i < 0 || complaintSending) { return; }
+
+        var msg = complaintLocalMessages[i].message;
+        var complaint = activeComplaintModalComplaint;
+
+        complaintLocalMessages[i].state = 'sending';
+        renderComplaintModal();
+        scrollComplaintThreadToBottom();
+        performComplaintSend(activeComplaintModalId, complaint ? complaint.status : 'open', msg, key);
+    }
+
+    function syncComplaintSendButton() {
+        var input = byId('complaint-modal-new-response-text');
+        var btn = byId('complaint-chat-send');
+        if (!input || !btn) { return; }
+        btn.disabled = complaintSending || !input.value.trim();
+    }
+
+    function autoResizeComplaintComposer() {
+        var input = byId('complaint-modal-new-response-text');
+        if (!input) { return; }
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 128) + 'px';
     }
 
     /* Replace the live copy of a complaint with the server's fresh payload so
@@ -6335,16 +6460,37 @@ function submitBranchForm() {
                 if (ev.target === complaintModal) { closeComplaintModal(); return; }
                 var closeBtn = ev.target.closest ? ev.target.closest('#complaint-modal-close') : null;
                 if (closeBtn) { closeComplaintModal(); return; }
+                var failed = ev.target.closest ? ev.target.closest('.cd-chat-bubble.is-failed') : null;
+                if (failed) {
+                    var key = failed.getAttribute('data-complaint-local-key');
+                    if (key) { retryComplaintLocalMessage(key); }
+                    return;
+                }
                 var sendBtn = ev.target.closest ? ev.target.closest('#complaint-chat-send') : null;
                 if (sendBtn) { submitComplaintUpdate(activeComplaintModalId); }
             });
             complaintModal.addEventListener('keydown', function (ev) {
-                /* Enter sends the chat message; Shift+Enter inserts a new line. */
-                if (ev.key !== 'Enter' || ev.shiftKey || ev.isComposing) { return; }
+                if (ev.key === 'Escape') { closeComplaintModal(); return; }
                 var composer = ev.target.closest ? ev.target.closest('#complaint-modal-new-response-text') : null;
-                if (!composer) { return; }
-                ev.preventDefault();
-                submitComplaintUpdate(activeComplaintModalId);
+                if (composer) {
+                    if (ev.key === 'Enter' && !ev.shiftKey && !ev.isComposing) {
+                        ev.preventDefault();
+                        submitComplaintUpdate(activeComplaintModalId);
+                    }
+                    return;
+                }
+                var failed = ev.target.closest ? ev.target.closest('.cd-chat-bubble.is-failed') : null;
+                if (failed && (ev.key === 'Enter' || ev.key === ' ')) {
+                    ev.preventDefault();
+                    var key = failed.getAttribute('data-complaint-local-key');
+                    if (key) { retryComplaintLocalMessage(key); }
+                }
+            });
+            complaintModal.addEventListener('input', function (ev) {
+                if (ev.target && ev.target.id === 'complaint-modal-new-response-text') {
+                    syncComplaintSendButton();
+                    autoResizeComplaintComposer();
+                }
             });
         }
 
