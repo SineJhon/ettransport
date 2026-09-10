@@ -4501,6 +4501,56 @@ var reviewEditingReplyId = null;
         performComplaintSend(id, status, text, localKey);
     }
 
+    /* Merge a fresh server payload into the currently-open complaint so the
+       thread never loses messages. Instead of wholesale replacing the
+       responses array (which could collapse the thread if a payload ever came
+       back incomplete), we union by message text — keeping every response we
+       already know and appending any new ones — in arrival order. */
+    function reconcileComplaintPayload(serverComplaint) {
+        var base = activeComplaintModalComplaint || {};
+        var next = {
+            id: (serverComplaint && serverComplaint.id) || base.id,
+            passenger_id: (serverComplaint && serverComplaint.passenger_id) || base.passenger_id,
+            passenger_name: (serverComplaint && serverComplaint.passenger_name) || base.passenger_name,
+            booking_id: (serverComplaint && serverComplaint.booking_id) || base.booking_id,
+            booking_reference: (serverComplaint && serverComplaint.booking_reference) || base.booking_reference,
+            category: (serverComplaint && serverComplaint.category) || base.category,
+            subject: (serverComplaint && serverComplaint.subject) || base.subject,
+            message: (serverComplaint && serverComplaint.message) || base.message,
+            status: (serverComplaint && serverComplaint.status) || base.status,
+            response: (serverComplaint && serverComplaint.response) || base.response,
+            response_at: (serverComplaint && serverComplaint.response_at) || base.response_at,
+            route: (serverComplaint && serverComplaint.route) || base.route,
+            departure: (serverComplaint && serverComplaint.departure) || base.departure,
+            created_at: (serverComplaint && serverComplaint.created_at) || base.created_at,
+            updated_at: (serverComplaint && serverComplaint.updated_at) || base.updated_at,
+            responses: []
+        };
+        var seen = {};
+        function pushResponse(r) {
+            if (!r) { return; }
+            var key = String(r.message).trim();
+            if (!key || seen[key]) { return; }
+            seen[key] = 1;
+            next.responses.push(r);
+        }
+        var oldList = (Array.isArray(base.responses)) ? base.responses : [];
+        for (var i = 0; i < oldList.length; i++) { pushResponse(oldList[i]); }
+        var freshList = (serverComplaint && Array.isArray(serverComplaint.responses)) ? serverComplaint.responses : [];
+        for (var j = 0; j < freshList.length; j++) { pushResponse(freshList[j]); }
+        return next;
+    }
+
+    /* True when the open thread already contains a response with this text. */
+    function complaintThreadHasText(text) {
+        var list = (activeComplaintModalComplaint && Array.isArray(activeComplaintModalComplaint.responses))
+            ? activeComplaintModalComplaint.responses : [];
+        for (var i = 0; i < list.length; i++) {
+            if (String(list[i].message) === String(text)) { return true; }
+        }
+        return false;
+    }
+
     /* The actual POST; shared by the composer and by retrying a failed bubble. */
     function performComplaintSend(id, status, text, localKey) {
         var payload = 'complaint_id=' + encodeURIComponent(id) + '&status=' + encodeURIComponent(status);
@@ -4532,10 +4582,31 @@ var reviewEditingReplyId = null;
                     syncComplaintSendButton();
                     return;
                 }
-                if (localKey) { removeComplaintLocalMessage(localKey); }
+                /* Merge the server payload into the open thread instead of
+                   replacing it, so earlier messages are never lost. */
                 if (data.complaint) {
-                    activeComplaintModalComplaint = data.complaint;
+                    activeComplaintModalComplaint = reconcileComplaintPayload(data.complaint);
                     upsertComplaintLocally(data.complaint);
+                }
+                /* If the server did not echo back the message we just sent
+                   (e.g. an incomplete payload), keep it as a confirmed bubble
+                   so it never silently disappears from the chat. */
+                if (localKey) {
+                    var sentText = '';
+                    for (var k = 0; k < complaintLocalMessages.length; k++) {
+                        if (complaintLocalMessages[k].key === Number(localKey)) {
+                            sentText = complaintLocalMessages[k].message;
+                            break;
+                        }
+                    }
+                    removeComplaintLocalMessage(localKey);
+                    if (sentText && !complaintThreadHasText(sentText)) {
+                        activeComplaintModalComplaint.responses.push({
+                            id: -1,
+                            message: sentText,
+                            created_at: new Date().toISOString()
+                        });
+                    }
                 }
                 renderComplaintModal();
                 scrollComplaintThreadToBottom();
