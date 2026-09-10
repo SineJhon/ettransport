@@ -2076,6 +2076,7 @@ function renderDetail(c) {
     var adminPlatformComplaintCounts = {};// status → count for platform-targeted complaints
     var activeAdminComplaint = null;
     var adminComplaintSending = false;    // guard: one composer send at a time
+    var adminComplaintCompanyId = null;   // null = company overview; set = drilled into one company
 
     var ADMIN_COMPLAINT_STATUSES = [
         ['open', 'Open'],
@@ -2219,6 +2220,82 @@ function renderDetail(c) {
         bar.hidden = false;
     }
 
+    function adminComplaintMatchesFilter(c) {
+        return adminComplaintFilter === null || String(c.status) === adminComplaintFilter;
+    }
+
+    /* Group complaints by company (or a single 'platform' group). */
+    function adminComplaintGroups(shown) {
+        var isPlatform = adminComplaintTarget === 'platform';
+        var groups = {};
+        var order = [];
+        for (var i = 0; i < shown.length; i++) {
+            var c = shown[i];
+            var key = isPlatform ? 'platform' : String(c.company_id || '0');
+            if (!groups[key]) {
+                groups[key] = {
+                    id: key,
+                    name: isPlatform ? 'ET Transport' : (c.company_name || 'Company'),
+                    list: []
+                };
+                order.push(key);
+            }
+            groups[key].list.push(c);
+        }
+        order.sort(function (a, b) {
+            return String(groups[a].name).toLowerCase().localeCompare(String(groups[b].name).toLowerCase());
+        });
+        var out = [];
+        for (var g = 0; g < order.length; g++) { out.push(groups[order[g]]); }
+        return out;
+    }
+
+    /* Company overview card: avatar, name, the complaint count, and open /
+       escalated chips. Returns '' when the status filter hides every complaint. */
+    function adminComplaintCompanyCardHtml(group, isPlatform) {
+        var matched = [];
+        for (var i = 0; i < group.list.length; i++) {
+            if (adminComplaintMatchesFilter(group.list[i])) { matched.push(group.list[i]); }
+        }
+        if (adminComplaintFilter !== null && !matched.length) { return ''; }
+
+        var initial = String(group.name || '?').trim().charAt(0).toUpperCase() || '?';
+        var openN = 0; var escN = 0;
+        for (var j = 0; j < matched.length; j++) {
+            if (matched[j].status === 'open') { openN++; }
+            else if (matched[j].status === 'escalated') { escN++; }
+        }
+        var chips = '';
+        if (openN) { chips += '<span class="ad-complaint-co-chip is-open">' + openN + ' open</span>'; }
+        if (escN) { chips += '<span class="ad-complaint-co-chip is-escalated">' + escN + ' escalated</span>'; }
+        if (!chips) {
+            chips = '<span class="ad-complaint-co-chip is-total">' + matched.length + ' complaint' + (matched.length === 1 ? '' : 's') + '</span>';
+        }
+        return '<button type="button" class="ad-complaint-co-card" data-admin-complaint-company="' + escHtml(group.id) + '">' +
+            '<div class="ad-complaint-co-top">' +
+                '<span class="ad-complaint-co-avatar" aria-hidden="true">' + escHtml(initial) + '</span>' +
+                '<span class="ad-complaint-co-info">' +
+                    '<strong>' + escHtml(group.name) + '</strong>' +
+                    '<small>' + (isPlatform ? 'Platform complaints' : 'Bus company') + '</small>' +
+                '</span>' +
+                '<span class="ad-complaint-co-count">' + matched.length + '</span>' +
+            '</div>' +
+            '<div class="ad-complaint-co-chips">' + chips + '</div>' +
+            '<span class="ad-complaint-co-card-hint">View complaints &rarr;</span>' +
+        '</button>';
+    }
+
+    /* Detail header shown when drilled into one company's complaints. */
+    function adminComplaintDetailHeadHtml(group, count, isPlatform) {
+        var initial = String(group.name || '?').trim().charAt(0).toUpperCase() || '?';
+        return '<div class="ad-complaint-detail-head">' +
+            '<button type="button" class="ad-complaint-back" data-admin-complaint-back="1">&larr; ' + (isPlatform ? 'Overview' : 'All companies') + '</button>' +
+            '<span class="ad-complaint-co-avatar" aria-hidden="true">' + escHtml(initial) + '</span>' +
+            '<strong>' + escHtml(group.name) + '</strong>' +
+            '<span class="ad-complaint-detail-count">' + Number(count) + ' complaint' + (Number(count) === 1 ? '' : 's') + '</span>' +
+        '</div>';
+    }
+
     function renderAdminComplaints() {
         var list = byId('ad-complaints-list'); if (!list) { return; }
         var empty = byId('ad-complaints-empty');
@@ -2226,63 +2303,82 @@ function renderDetail(c) {
         hide(byId('ad-complaints-error'));
 
         var target = adminComplaintTarget === 'platform' ? 'platform' : 'company';
+        var isPlatform = target === 'platform';
         var shown = [];
         for (var i = 0; i < adminComplaints.length; i++) {
             var c = adminComplaints[i];
-            var isPlatform = c.target === 'platform' || !c.company_id;
-            if ((isPlatform && target === 'platform') || (!isPlatform && target === 'company')) {
-                shown.push(c);
-            }
+            var isPlat = c.target === 'platform' || !c.company_id;
+            if ((isPlat && isPlatform) || (!isPlat && !isPlatform)) { shown.push(c); }
         }
 
         renderAdminComplaintSummary();
         renderAdminComplaintFilterBar();
 
-        var filtered = [];
-        for (var f = 0; f < shown.length; f++) {
-            if (adminComplaintFilter === null || shown[f].status === adminComplaintFilter) { filtered.push(shown[f]); }
-        }
-
-        if (!filtered.length) {
+        if (!shown.length) {
             list.innerHTML = ''; list.hidden = true;
             if (empty) {
                 empty.hidden = false;
-                empty.textContent = !shown.length
-                    ? (target === 'platform' ? 'No platform complaints yet.' : 'No company complaints yet.')
+                empty.textContent = isPlatform ? 'No platform complaints yet.' : 'No company complaints yet.';
+            }
+            return;
+        }
+
+        var groups = adminComplaintGroups(shown);
+        var html = '';
+
+        /* Level 1 — companies overview: one card per company with its count. */
+        if (adminComplaintCompanyId === null) {
+            var cards = '';
+            var cardCount = 0;
+            for (var g0 = 0; g0 < groups.length; g0++) {
+                var card = adminComplaintCompanyCardHtml(groups[g0], isPlatform);
+                if (card) { cards += card; cardCount++; }
+            }
+            if (!cards) {
+                list.innerHTML = ''; list.hidden = true;
+                if (empty) { empty.hidden = false; empty.textContent = 'No complaints match the selected status.'; }
+                return;
+            }
+            if (!isPlatform) {
+                html += adminComplaintGroupHeadHtml('Companies', 'Complaints by company', cardCount);
+            }
+            html += '<div class="ad-complaint-co-grid">' + cards + '</div>';
+            list.innerHTML = html;
+            list.hidden = false;
+            if (empty) { empty.hidden = true; }
+            return;
+        }
+
+        /* Level 2 — one company's complaints. */
+        var current = null;
+        for (var gi = 0; gi < groups.length; gi++) {
+            if (String(groups[gi].id) === String(adminComplaintCompanyId)) { current = groups[gi]; break; }
+        }
+        if (!current) {
+            adminComplaintCompanyId = null;
+            renderAdminComplaints();
+            return;
+        }
+        var filtered = [];
+        for (var fi = 0; fi < current.list.length; fi++) {
+            if (adminComplaintMatchesFilter(current.list[fi])) { filtered.push(current.list[fi]); }
+        }
+        html = adminComplaintDetailHeadHtml(current, filtered.length, isPlatform);
+        if (!filtered.length) {
+            list.innerHTML = html;
+            list.hidden = false;
+            if (empty) {
+                empty.hidden = false;
+                empty.textContent = adminComplaintFilter === null
+                    ? 'No complaints for this company yet.'
                     : 'No complaints match the selected status.';
             }
             return;
         }
-        if (empty) { empty.hidden = true; }
-
-        var html = '';
-        if (target === 'platform') {
-            html += adminComplaintGroupHeadHtml('ET Transport', 'Platform complaints handled by support', filtered.length);
-            html += adminComplaintCardsHtml(filtered);
-        } else {
-            /* Group each company's complaints into its own section. */
-            var groups = {};
-            var order = [];
-            for (var j = 0; j < filtered.length; j++) {
-                var cj = filtered[j];
-                var key = String(cj.company_id || '0');
-                if (!groups[key]) {
-                    groups[key] = { name: cj.company_name || 'Company', list: [] };
-                    order.push(key);
-                }
-                groups[key].list.push(cj);
-            }
-            order.sort(function (a, b) {
-                return String(groups[a].name).toLowerCase().localeCompare(String(groups[b].name).toLowerCase());
-            });
-            for (var g = 0; g < order.length; g++) {
-                var grp = groups[order[g]];
-                html += adminComplaintGroupHeadHtml(grp.name, '', grp.list.length);
-                html += adminComplaintCardsHtml(grp.list);
-            }
-        }
+        html += adminComplaintCardsHtml(filtered);
         list.innerHTML = html;
         list.hidden = false;
+        if (empty) { empty.hidden = true; }
     }
 
     function loadAdminComplaints() {
@@ -2843,6 +2939,7 @@ function adminComplaintTime(value) {
                 var btn = e.target.closest ? e.target.closest('.ad-status-filter[data-complaint-target]') : null;
                 if (!btn) { return; }
                 adminComplaintTarget = btn.getAttribute('data-complaint-target') === 'platform' ? 'platform' : 'company';
+                adminComplaintCompanyId = null;
                 var btns = complaintScopeBar.querySelectorAll('.ad-status-filter');
                 for (var i = 0; i < btns.length; i++) {
                     var active = (btns[i].getAttribute('data-complaint-target') || '') === adminComplaintTarget;
@@ -2867,8 +2964,15 @@ function adminComplaintTime(value) {
         var adminComplaintList = byId('ad-complaints-list');
         if (adminComplaintList) {
             adminComplaintList.addEventListener('click', function (e) {
-                var btn = e.target.closest ? e.target.closest('[data-admin-complaint-open]') : null;
-                if (btn) { openAdminComplaint(btn.getAttribute('data-admin-complaint-open')); }
+                var openBtn = e.target.closest ? e.target.closest('[data-admin-complaint-open]') : null;
+                if (openBtn) { openAdminComplaint(openBtn.getAttribute('data-admin-complaint-open')); return; }
+                var backBtn = e.target.closest ? e.target.closest('[data-admin-complaint-back]') : null;
+                if (backBtn) { adminComplaintCompanyId = null; renderAdminComplaints(); return; }
+                var coCard = e.target.closest ? e.target.closest('[data-admin-complaint-company]') : null;
+                if (coCard) {
+                    adminComplaintCompanyId = coCard.getAttribute('data-admin-complaint-company');
+                    renderAdminComplaints();
+                }
             });
         }
 

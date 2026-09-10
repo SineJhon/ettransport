@@ -377,6 +377,31 @@
         .ad-complaint-actions { display:flex; align-items:center; justify-content:space-between; gap:.5rem; margin-top:auto; padding-top:.75rem; border-top:1px solid #eef2ef; }
         .ad-complaint-handle-btn { white-space:nowrap; }
         .ad-complaint-empty { margin-top:1rem; padding:2.4rem 1rem; border:1px dashed #cfe1d6; border-radius:14px; background:#f8fbf9; color:#668078; text-align:center; font-size:.9rem; }
+        /* Company overview — one prominent card per company with its complaint
+           count; clicking a card drills into that company's complaints. */
+        .ad-complaint-co-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:1rem; margin-top:1rem; }
+        .ad-complaint-co-card { position:relative; display:flex; flex-direction:column; gap:.65rem; padding:1.05rem 1.15rem; background:#fff; border:1px solid #e0eae4; border-bottom:3px solid #d6e3dc; border-radius:14px; box-shadow:0 1px 0 rgba(17,61,45,.02); text-align:left; cursor:pointer; transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+        .ad-complaint-co-card:hover { border-color:#b8d8c5; box-shadow:0 12px 24px rgba(25,71,54,.08); transform:translateY(-2px); }
+        .ad-complaint-co-card:focus-visible { outline:3px solid rgba(49,164,118,.22); border-color:#3f976a; }
+        .ad-complaint-co-top { display:flex; align-items:center; gap:.75rem; }
+        .ad-complaint-co-avatar { display:grid; place-items:center; flex:0 0 2.5rem; width:2.5rem; height:2.5rem; border-radius:50%; color:#fff; background:#2c765a; font:800 .95rem/1 var(--font-sans); text-transform:uppercase; }
+        .ad-complaint-co-info { display:grid; gap:.12rem; min-width:0; }
+        .ad-complaint-co-info strong { color:#193c35; font-size:.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .ad-complaint-co-info small { color:#5f766d; font-size:.72rem; }
+        .ad-complaint-co-count { margin-left:auto; display:grid; place-items:center; min-width:2.5rem; height:2.5rem; padding:0 .4rem; border-radius:99px; color:#187653; background:rgba(24,118,83,.1); font:800 1rem/1 var(--font-sans); }
+        .ad-complaint-co-chips { display:flex; flex-wrap:wrap; gap:.4rem; }
+        .ad-complaint-co-chip { display:inline-block; padding:.2rem .55rem; border-radius:99px; font:800 .66rem/1 var(--font-sans); }
+        .ad-complaint-co-chip.is-open { color:#9f5a06; background:#fff4d6; }
+        .ad-complaint-co-chip.is-escalated { color:#b02f2f; background:#fdeaea; }
+        .ad-complaint-co-chip.is-total { color:#55606a; background:#e9edf0; }
+        .ad-complaint-co-card-hint { color:#72877f; font-size:.72rem; }
+        /* Company detail header — back link + name + live count. */
+        .ad-complaint-detail-head { display:flex; align-items:center; gap:.65rem; flex-wrap:wrap; margin:.1rem 0 .9rem; padding:.45rem .8rem; color:#245944; background:#eef5f0; border:1px solid #d8e6dc; border-radius:10px; }
+        .ad-complaint-back { display:inline-flex; align-items:center; gap:.25rem; padding:.32rem .6rem; color:#245944; background:#fff; border:1px solid #cfe0d6; border-radius:7px; cursor:pointer; font:700 .72rem/1 var(--font-sans); }
+        .ad-complaint-back:hover { color:#fff; background:#187653; border-color:#187653; }
+        .ad-complaint-detail-head .ad-complaint-co-avatar { width:2.2rem; height:2.2rem; font-size:.84rem; }
+        .ad-complaint-detail-head strong { font-size:.92rem; }
+        .ad-complaint-detail-count { margin-left:auto; padding:.12rem .55rem; border-radius:99px; color:#187653; background:rgba(24,118,83,.1); font:700 .74rem/1.4 var(--font-sans); white-space:nowrap; }
         /* Handle-complaint modal — passenger chat thread. */
         .ad-complaint-modal-box { width:min(100%,660px); height:min(78vh,700px); display:flex; flex-direction:column; padding:0; background:#fff; border:1px solid #dfe9e3; border-radius:18px; box-shadow:0 25px 70px rgba(5,26,20,.28); }
         .ad-chat-head { display:flex; align-items:center; gap:.9rem; padding:.85rem 1.15rem; border-bottom:1px solid #e5ede8; background:linear-gradient(120deg,#f2f7f4,#fbfdfb); }
@@ -439,7 +464,7 @@
         .ad-chat-teller { display:grid; gap:.1rem; align-self:center; justify-items:center; max-width:86%; margin:.2rem auto; padding:.3rem .8rem; background:#e8f1ec; border:1px solid #d3e3d9; border-radius:999px; text-align:center; }
         .ad-chat-teller-text { color:#38624f; font-size:.74rem; font-weight:700; line-height:1.4; }
         .ad-chat-teller-meta { color:#7d9189; font-size:.62rem; font-weight:700; }
-        @media (max-width:600px) { .ad-complaint-list { grid-template-columns:1fr; }.ad-complaint-modal-box { max-height:94vh; border-radius:16px 16px 10px 10px; }.ad-chat-head { flex-wrap:wrap; gap:.6rem; }.ad-chat-row { max-width:94%; } }
+        @media (max-width:600px) { .ad-complaint-list { grid-template-columns:1fr; }.ad-complaint-co-grid { grid-template-columns:1fr; }.ad-complaint-modal-box { max-height:94vh; border-radius:16px 16px 10px 10px; }.ad-chat-head { flex-wrap:wrap; gap:.6rem; }.ad-chat-row { max-width:94%; } }
         .ad-review-card { position:relative; padding:1.1rem; display:flex; flex-direction:column; gap:.8rem; border:1px solid #dfeae4; border-radius:14px; background:#fff; box-shadow:0 1px 0 rgba(17,61,45,.02); transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
         .ad-review-card:hover { border-color:#b8d8c5; box-shadow:0 12px 24px rgba(25,71,54,.08); transform:translateY(-2px); }
         .ad-review-card.is-editing { grid-column:span 2; border-color:#82b89a; background:#fbfefc; box-shadow:0 12px 30px rgba(25,71,54,.1); }
@@ -1092,6 +1117,6 @@
 
     <script src="js/main.js"></script>
     <script src="js/auth.js?v=20260904-password-toggle"></script>
-    <script src="js/admin-dashboard.js?v=20260911-complaint-fix-v1"></script>
+    <script src="js/admin-dashboard.js?v=20260911-complaint-drilldown-v2"></script>
 </body>
 </html>
