@@ -322,59 +322,124 @@
         .ad-review-filter.is-active .ad-review-filter-count { background:rgba(255,255,255,.18); }
         .ad-review-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(310px,1fr)); gap:.9rem; margin-top:1rem; }
         .ad-review-list[hidden] { display:none; }
-        /* ---------- Admin complaint oversight (list + chat modal) ---------- */
-        .ad-complaint-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(330px,1fr)); gap:.9rem; margin-top:1rem; }
+        /* ============================================================
+           Complaints — platform oversight (UI/UX migrated from the
+           company dashboard's .cd-complaint-* module, scoped to .ad-*).
+           Company vs Platform scope, a per-status toolbar with live
+           counts, and a chat-thread modal for each complaint.
+           ============================================================ */
+        .ad-complaints-error { margin-top:.5rem; }
+        .ad-complaint-summary { display:flex; flex-wrap:wrap; gap:.6rem; margin-top:1rem; padding:.9rem 1rem; background:#f2f7f4; border:1px solid #dce9e1; border-radius:12px; }
+        .ad-complaint-summary[hidden] { display:none; }
+        .ad-complaint-summary-stat { display:grid; gap:.1rem; min-width:5.5rem; padding:.45rem .75rem; background:#fff; border:1px solid #e0eae4; border-radius:10px; }
+        .ad-complaint-summary-stat b { color:#153a31; font:800 1.25rem/1 var(--font-sans); }
+        .ad-complaint-summary-stat span { color:#647a71; font-size:.68rem; font-weight:800; letter-spacing:.05em; text-transform:uppercase; }
+        .ad-complaint-summary-stat.is-open b { color:#b7791f; }
+        .ad-complaint-summary-stat.is-in_progress b { color:#2c6fae; }
+        .ad-complaint-summary-stat.is-resolved_pending b { color:#7c3aed; }
+        .ad-complaint-summary-stat.is-resolved b { color:#1d8a4e; }
+        .ad-complaint-summary-stat.is-escalated b { color:#b02f2f; }
+        .ad-complaint-summary-stat.is-closed b { color:#6b7680; }
+        .ad-complaint-toolbar { display:flex; flex-wrap:wrap; gap:.45rem; padding:.6rem 0 .95rem; margin-top:.2rem; border-bottom:1px solid #e5eee9; }
+        .ad-complaint-toolbar[hidden] { display:none; }
+        .ad-complaint-filter { flex:0 0 auto; padding:.52rem .78rem; color:#5c736a; background:#f2f7f4; border:1px solid #dceae2; border-radius:8px; cursor:pointer; font:800 .74rem/1 var(--font-sans); }
+        .ad-complaint-filter:hover { color:#245944; background:#e7f4ec; }
+        .ad-complaint-filter.is-active { color:#fff; background:#187653; border-color:#187653; box-shadow:0 4px 10px rgba(24,118,83,.17); }
+        .ad-complaint-filter-count { display:inline-block; min-width:1.2rem; padding:0 .25rem; margin-left:.3rem; border-radius:99px; background:rgba(20,65,50,.1); font-size:.68rem; line-height:1.3rem; text-align:center; }
+        .ad-complaint-filter.is-active .ad-complaint-filter-count { background:rgba(255,255,255,.2); }
+        .ad-complaint-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:1rem; margin-top:1rem; }
         .ad-complaint-list[hidden] { display:none; }
-        .ad-complaint-card { padding:1.05rem 1.1rem; display:flex; flex-direction:column; gap:.7rem; border:1px solid #dfeae4; border-radius:14px; background:#fff; box-shadow:0 1px 0 rgba(17,61,45,.02); transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
-        .ad-complaint-card:hover { border-color:#b8d8c5; box-shadow:0 12px 24px rgba(25,71,54,.08); transform:translateY(-2px); }
-        .ad-complaint-card.is-escalated { border-color:#efc3c0; background:#fffbfb; }
-        .ad-complaint-card-head { display:flex; align-items:center; gap:.55rem; flex-wrap:wrap; }
-        .ad-complaint-subject { margin:0; color:#163a33; font:800 .98rem/1.3 var(--font-sans); }
-        .ad-complaint-preview { margin:0; color:#70847c; font-size:.84rem; line-height:1.55; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-        .ad-complaint-tag { display:inline-block; padding:.15rem .5rem; border-radius:99px; font-size:.68rem; font-weight:700; }
-        .ad-complaint-tag.is-open { color:#9f5a06; background:#fff4d6; }
-        .ad-complaint-tag.is-in_progress { color:#245f9e; background:#e7f1fb; }
-        .ad-complaint-tag.is-resolved_pending { color:#6d28d9; background:#f1e9fd; }
-        .ad-complaint-tag.is-resolved { color:#166534; background:#e6f5ea; }
-        .ad-complaint-tag.is-escalated { color:#b02f2f; background:#fdeaea; }
-        .ad-complaint-tag.is-closed { color:#55606a; background:#e9edf0; }
         .ad-complaint-group-head { display:flex; align-items:center; gap:.6rem; margin:.2rem 0 .65rem; padding:.38rem .75rem; color:#245944; background:#eef5f0; border:1px solid #d8e6dc; border-radius:9px; }
-        .ad-complaint-group-avatar { display:grid; place-items:center; flex:0 0 auto; width:1.7rem; height:1.7rem; border-radius:50%; color:#245d49; background:#e2f3e9; border:1px solid #cce5d7; font:800 .8rem/1 var(--font-sans); text-transform:uppercase; }
+        .ad-complaint-group-avatar { display:grid; place-items:center; flex:0 0 auto; width:1.8rem; height:1.8rem; border-radius:50%; color:#245d49; background:#e2f3e9; border:1px solid #cce5d7; font:800 .82rem/1 var(--font-sans); text-transform:uppercase; }
         .ad-complaint-group-head strong { font-size:.92rem; }
         .ad-complaint-group-head small { color:#5f766d; font-size:.75rem; }
         .ad-complaint-group-count { margin-left:auto; padding:.12rem .5rem; border-radius:99px; color:#187653; background:rgba(24,118,83,.1); font:700 .72rem/1.4 var(--font-sans); white-space:nowrap; }
-        .ad-complaint-open { margin-top:auto; align-self:flex-end; }
-        /* Admin complaint chat modal. */
-        .ad-complaint-modal-box { width:min(100%,660px); max-height:min(90vh,760px); display:flex; flex-direction:column; padding:0; overflow:hidden; background:#fff; border-radius:16px; box-shadow:0 25px 70px rgba(5,26,20,.28); }
-        .ad-complaint-head { display:flex; align-items:center; justify-content:space-between; gap:.8rem; padding:.9rem 1.15rem; border-bottom:1px solid #e3ece7; background:linear-gradient(120deg,#f2f7f4,#fbfdfb); }
-        .ad-complaint-head-info { display:grid; gap:.15rem; min-width:0; }
-        .ad-complaint-head-info strong { color:#163a33; font-size:.98rem; }
-        .ad-complaint-head-info small { color:#70847c; font-size:.78rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .ad-complaint-head .ad-complaint-tag { align-self:center; }
-        .ad-complaint-close { display:grid; place-items:center; flex:0 0 2.25rem; width:2.25rem; height:2.25rem; padding:0; color:#275147; background:#edf5f0; border:0; border-radius:50%; cursor:pointer; font-size:1.25rem; line-height:1; }
-        .ad-complaint-thread { flex:1 1 auto; overflow-y:auto; display:flex; flex-direction:column; gap:.45rem; padding:.9rem 1rem; background:#f4f8f5; }
-        .ad-complaint-teller { align-self:center; max-width:88%; padding:.26rem .75rem; text-align:center; background:#e8f1ec; border:1px solid #d3e3d9; border-radius:999px; }
-        .ad-complaint-teller-text { display:block; font-size:.72rem; font-weight:700; color:#38624f; line-height:1.4; }
-        .ad-complaint-teller-meta { display:block; font-size:.62rem; font-weight:700; color:#7d9189; }
-        .ad-complaint-bubble { max-width:80%; padding:.55rem .8rem; border-radius:12px; font-size:.88rem; line-height:1.5; }
-        .ad-complaint-bubble p { margin:.15rem 0 0; white-space:pre-wrap; overflow-wrap:break-word; color:inherit; }
-        .ad-complaint-bubble-who { display:block; font-size:.66rem; font-weight:800; text-transform:uppercase; letter-spacing:.04em; }
-        .ad-complaint-bubble-meta { display:block; margin-top:.25rem; font-size:.62rem; font-weight:700; }
-        .ad-complaint-bubble.is-passenger { align-self:flex-start; background:#fff; border:1px solid #e3ebe6; border-bottom-left-radius:4px; color:#2b3a33; }
-        .ad-complaint-bubble.is-passenger .ad-complaint-bubble-who { color:#547067; }
-        .ad-complaint-bubble.is-company { align-self:flex-end; background:#187653; border-bottom-right-radius:4px; color:#fff; }
-        .ad-complaint-bubble.is-company .ad-complaint-bubble-who, .ad-complaint-bubble.is-company .ad-complaint-bubble-meta { color:#d2ecdf; }
-        .ad-complaint-bubble.is-admin { align-self:flex-end; background:#182448; border-bottom-right-radius:4px; color:#fff; }
-        .ad-complaint-bubble.is-admin .ad-complaint-bubble-who, .ad-complaint-bubble.is-admin .ad-complaint-bubble-meta { color:#c6d3f0; }
-        .ad-complaint-form { padding:.8rem 1rem .9rem; border-top:1px solid #e3ece7; background:#fff; display:grid; gap:.5rem; }
-        .ad-complaint-status-row { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; }
-        .ad-complaint-status-row label { font-size:.7rem; font-weight:800; color:#5f766d; text-transform:uppercase; letter-spacing:.04em; }
-        .ad-complaint-status-row select { flex:1 1 auto; min-height:2.4rem; padding:.4rem .6rem; color:#1d483d; background:#fff; border:1px solid #cfe0d6; border-radius:8px; font:700 .82rem var(--font-sans); }
-        .ad-complaint-form-row { display:flex; align-items:flex-end; gap:.55rem; }
-        .ad-complaint-form-row textarea { flex:1 1 auto; min-height:3.2rem; max-height:8rem; resize:vertical; padding:.55rem .7rem; color:#24493c; background:#fbfefb; border:1px solid #c8ded1; border-radius:10px; font:inherit; font-size:.88rem; line-height:1.5; }
-        .ad-complaint-form-row textarea:focus { outline:3px solid rgba(49,164,118,.16); border-color:#3f976a; }
-        .ad-complaint-msg { margin:0; color:#b91c1c; font-size:.82rem; }
-        .ad-complaint-sent { margin:0; color:#1d8a4e; font-size:.78rem; }
+        .ad-complaint-card { position:relative; display:flex; flex-direction:column; gap:.75rem; padding:1.1rem 1.15rem 1rem; background:#fff; border:1px solid #e0eae4; border-bottom:3px solid #d6e3dc; border-radius:14px; box-shadow:0 1px 0 rgba(17,61,45,.02); transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+        .ad-complaint-card:hover { border-color:#b8d8c5; box-shadow:0 12px 24px rgba(25,71,54,.08); transform:translateY(-2px); }
+        .ad-complaint-card.is-new { border-bottom-color:#e2a83f; }
+        .ad-complaint-card-head { display:flex; align-items:center; gap:.65rem; }
+        .ad-complaint-avatar { display:inline-grid; flex:0 0 2.35rem; width:2.35rem; height:2.35rem; place-items:center; color:#fff; background:#2c765a; border-radius:50%; font:800 .86rem/1 var(--font-sans); text-transform:uppercase; }
+        .ad-complaint-person { display:grid; gap:.12rem; min-width:0; }
+        .ad-complaint-person strong { color:#193c35; font-size:.92rem; }
+        .ad-complaint-meta { color:#72877f; font-size:.73rem; }
+        .ad-complaint-status-badge { margin-left:auto; padding:.3rem .55rem; border-radius:99px; font:800 .68rem/1 var(--font-sans); text-transform:uppercase; letter-spacing:.05em; }
+        .ad-complaint-status-badge.is-open { color:#9f5a06; background:#fff4d6; }
+        .ad-complaint-status-badge.is-in_progress { color:#245f9e; background:#e7f1fb; }
+        .ad-complaint-status-badge.is-resolved_pending { color:#6d28d9; background:#f1e9fd; }
+        .ad-complaint-status-badge.is-resolved { color:#166534; background:#e6f5ea; }
+        .ad-complaint-status-badge.is-escalated { color:#b02f2f; background:#fdeaea; }
+        .ad-complaint-status-badge.is-closed { color:#55606a; background:#e9edf0; }
+        .ad-complaint-category { padding:.3rem .55rem; border-radius:99px; font:800 .68rem/1 var(--font-sans); text-transform:uppercase; letter-spacing:.05em; color:#245f8a; background:#e7f1f8; }
+        .ad-complaint-subject { margin:0; color:#153a31; font:800 1rem/1.3 var(--font-sans); letter-spacing:-.01em; }
+        .ad-complaint-text { margin:0; color:#385148; font-size:.9rem; line-height:1.6; }
+        .ad-complaint-context { display:flex; flex-wrap:wrap; gap:.4rem; }
+        .ad-complaint-context span { padding:.28rem .55rem; color:#547067; background:#f1f6f3; border:1px solid #e0ebe4; border-radius:7px; font-size:.72rem; font-weight:700; }
+        .ad-complaint-actions { display:flex; align-items:center; justify-content:space-between; gap:.5rem; margin-top:auto; padding-top:.75rem; border-top:1px solid #eef2ef; }
+        .ad-complaint-handle-btn { white-space:nowrap; }
+        .ad-complaint-empty { margin-top:1rem; padding:2.4rem 1rem; border:1px dashed #cfe1d6; border-radius:14px; background:#f8fbf9; color:#668078; text-align:center; font-size:.9rem; }
+        /* Handle-complaint modal — passenger chat thread. */
+        .ad-complaint-modal-box { width:min(100%,660px); height:min(78vh,700px); display:flex; flex-direction:column; padding:0; background:#fff; border:1px solid #dfe9e3; border-radius:18px; box-shadow:0 25px 70px rgba(5,26,20,.28); }
+        .ad-chat-head { display:flex; align-items:center; gap:.9rem; padding:.85rem 1.15rem; border-bottom:1px solid #e5ede8; background:linear-gradient(120deg,#f2f7f4,#fbfdfb); }
+        .ad-chat-head-person { display:flex; align-items:center; gap:.65rem; min-width:0; }
+        .ad-chat-head-info { display:grid; gap:.1rem; min-width:0; }
+        .ad-chat-head-info strong { color:#193c35; font-size:.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .ad-chat-head-info small { color:#647a71; font-size:.76rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .ad-complaint-modal-close { display:grid; place-items:center; flex:0 0 2.25rem; width:2.25rem; height:2.25rem; padding:0; color:#275147; background:#edf5f0; border:0; border-radius:50%; cursor:pointer; font-size:1.25rem; line-height:1; }
+        /* Status changer panel — dedicated control with its own submit. */
+        .ad-chat-statusbar { display:grid; gap:.45rem; padding:.65rem 1.15rem; background:#fbfdfb; border-bottom:1px solid #e5ede8; }
+        .ad-chat-statusbar-top { display:flex; align-items:center; gap:.55rem; flex-wrap:wrap; }
+        .ad-chat-statusbar-label { color:#5f766d; font-size:.62rem; font-weight:800; text-transform:uppercase; letter-spacing:.06em; }
+        .ad-chat-status-pill { display:inline-flex; align-items:center; gap:.35rem; padding:.24rem .65rem; border-radius:99px; font:800 .68rem/1 var(--font-sans); text-transform:uppercase; letter-spacing:.05em; }
+        .ad-chat-status-pill.is-open { color:#9f5a06; background:#fff4d6; }
+        .ad-chat-status-pill.is-in_progress { color:#245f9e; background:#e7f1fb; }
+        .ad-chat-status-pill.is-resolved_pending { color:#6d28d9; background:#f1e9fd; }
+        .ad-chat-status-pill.is-resolved { color:#166534; background:#e6f5ea; }
+        .ad-chat-status-pill.is-escalated { color:#b02f2f; background:#fdeaea; }
+        .ad-chat-status-pill.is-closed { color:#55606a; background:#e9edf0; }
+        .ad-chat-statusbar-hint { color:#72877f; font-size:.68rem; font-weight:700; }
+        .ad-chat-statusbar-row { display:flex; align-items:center; gap:.55rem; flex-wrap:wrap; }
+        .ad-chat-statusbar select { flex:1 1 auto; min-width:10rem; min-height:2.5rem; padding:.42rem 2rem .42rem .7rem; color:#1d483d; background:#fff url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2368746f' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") no-repeat right .65rem center/0.75rem; border:1px solid #c8ded1; border-radius:9px; font:700 .82rem var(--font-sans); appearance:none; -webkit-appearance:none; transition:border-color .15s ease, background-color .15s ease, box-shadow .15s ease; }
+        .ad-chat-statusbar select:focus { outline:3px solid rgba(49,164,118,.16); border-color:#3f976a; }
+        .ad-chat-statusbar select.is-changed { border-color:#3f976a; background-color:#eefaf3; color:#0f5c3d; }
+        .ad-chat-status-apply { white-space:nowrap; }
+        .ad-chat-status-apply:disabled { opacity:.5; cursor:not-allowed; }
+        .ad-chat-status-msg { margin:0; font-size:.78rem; font-weight:700; }
+        .ad-chat-status-msg.is-ok { color:#1d8a4e; }
+        .ad-chat-status-msg.is-err { color:#b91c1c; }
+        .ad-chat-thread { flex:1 1 auto; overflow-y:auto; display:flex; flex-direction:column; padding:1rem 1rem .5rem; background:#f4f8f5; }
+        .ad-chat-row { display:flex; align-items:flex-end; gap:.45rem; max-width:86%; margin-bottom:.8rem; }
+        .ad-chat-row.is-passenger { align-self:flex-start; }
+        .ad-chat-row.is-company, .ad-chat-row.is-admin { align-self:flex-end; }
+        .ad-chat-row.is-continuation { margin-bottom:.35rem; }
+        .ad-chat-row.is-continuation .ad-chat-avatar { visibility:hidden; }
+        .ad-chat-avatar { display:grid; place-items:center; flex:0 0 1.7rem; width:1.7rem; height:1.7rem; color:#fff; background:#2c765a; border-radius:50%; font:800 .6rem/1 var(--font-sans); text-transform:uppercase; }
+        .ad-chat-avatar.is-company { background:#cfe9dc; color:#187653; }
+        .ad-chat-avatar.is-admin { background:#dfe7fb; color:#243b7f; }
+        .ad-chat-bubble { padding:.55rem .8rem .5rem; border-radius:14px; font-size:.88rem; line-height:1.55; animation:ad-chat-pop .22s ease; }
+        .ad-chat-bubble p { margin:0; white-space:pre-wrap; overflow-wrap:break-word; }
+        .ad-chat-bubble-meta { display:block; margin-top:.28rem; font-size:.62rem; font-weight:700; letter-spacing:.01em; }
+        .ad-chat-bubble.is-passenger { background:#fff; border:1px solid #e3ebe6; border-bottom-left-radius:4px; color:#2b3a33; box-shadow:0 1px 0 rgba(17,61,45,.04); }
+        .ad-chat-bubble.is-passenger .ad-chat-bubble-meta { color:#81948b; }
+        .ad-chat-bubble.is-company { background:#187653; border-bottom-right-radius:4px; color:#fff; box-shadow:0 2px 8px rgba(15,74,50,.18); }
+        .ad-chat-bubble.is-company .ad-chat-bubble-meta { color:#d2ecdf; }
+        .ad-chat-bubble.is-admin { background:#182448; border-bottom-right-radius:4px; color:#fff; box-shadow:0 2px 8px rgba(13,23,66,.18); }
+        .ad-chat-bubble.is-admin .ad-chat-bubble-meta { color:#c6d3f0; }
+        @keyframes ad-chat-pop { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:none; } }
+        .ad-chat-composer { display:grid; gap:.5rem; padding:.7rem 1.15rem .9rem; border-top:1px solid #e5ede8; background:#fff; }
+        .ad-chat-composer-row { display:flex; align-items:flex-end; gap:.55rem; }
+        .ad-chat-composer textarea { flex:1 1 auto; min-height:2.6rem; max-height:8rem; resize:none; overflow-y:auto; padding:.6rem .85rem; color:#24493c; background:#fbfefb; border:1px solid #c8ded1; border-radius:15px; font:inherit; font-size:.88rem; line-height:1.5; }
+        .ad-chat-composer textarea:focus { outline:3px solid rgba(49,164,118,.16); border-color:#3f976a; }
+        .ad-chat-send-btn { display:grid; place-items:center; flex:0 0 2.6rem; width:2.6rem; height:2.6rem; padding:0; color:#fff; background:#187653; border:0; border-radius:50%; cursor:pointer; box-shadow:0 4px 10px rgba(24,118,83,.25); transition:transform .15s ease, background .15s ease, box-shadow .15s ease; }
+        .ad-chat-send-btn svg { width:1.05rem; height:1.05rem; }
+        .ad-chat-send-btn:hover:not(:disabled) { background:#0f6340; box-shadow:0 5px 14px rgba(24,118,83,.32); transform:translateY(-1px); }
+        .ad-chat-send-btn:disabled { background:#b6ccc1; box-shadow:none; cursor:not-allowed; }
+        .ad-complaint-modal-error { margin:0; color:#b91c1c; font-size:.82rem; }
+        .ad-chat-sent-note { margin:0; color:#1d8a4e; font-size:.78rem; }
+        /* Status tellers — centered chips in the chat thread. */
+        .ad-chat-teller { display:grid; gap:.1rem; align-self:center; justify-items:center; max-width:86%; margin:.2rem auto; padding:.3rem .8rem; background:#e8f1ec; border:1px solid #d3e3d9; border-radius:999px; text-align:center; }
+        .ad-chat-teller-text { color:#38624f; font-size:.74rem; font-weight:700; line-height:1.4; }
+        .ad-chat-teller-meta { color:#7d9189; font-size:.62rem; font-weight:700; }
+        @media (max-width:600px) { .ad-complaint-list { grid-template-columns:1fr; }.ad-complaint-modal-box { max-height:94vh; border-radius:16px 16px 10px 10px; }.ad-chat-head { flex-wrap:wrap; gap:.6rem; }.ad-chat-row { max-width:94%; } }
         .ad-review-card { position:relative; padding:1.1rem; display:flex; flex-direction:column; gap:.8rem; border:1px solid #dfeae4; border-radius:14px; background:#fff; box-shadow:0 1px 0 rgba(17,61,45,.02); transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
         .ad-review-card:hover { border-color:#b8d8c5; box-shadow:0 12px 24px rgba(25,71,54,.08); transform:translateY(-2px); }
         .ad-review-card.is-editing { grid-column:span 2; border-color:#82b89a; background:#fbfefc; box-shadow:0 12px 30px rgba(25,71,54,.1); }
@@ -685,8 +750,10 @@
                 <button type="button" class="ad-status-filter" data-complaint-target="platform" aria-pressed="false">Platform</button>
             </div>
             <p id="ad-complaints-loading" class="auth-identity" hidden>Loading complaints&hellip;</p>
-            <div id="ad-complaints-error" class="auth-message" hidden></div>
-            <div id="ad-complaints-empty" class="ad-empty" hidden>No complaints yet.</div>
+            <div id="ad-complaints-error" class="ad-complaints-error auth-message" hidden></div>
+            <div id="ad-complaints-summary" class="ad-complaint-summary" hidden></div>
+            <div id="ad-complaints-filterbar" class="ad-complaint-toolbar" role="group" aria-label="Filter complaints by status" hidden></div>
+            <div id="ad-complaints-empty" class="ad-complaint-empty" hidden>No complaints yet.</div>
             <div id="ad-complaints-list" class="ad-complaint-list" hidden></div>
         </section>
         </div></div>
@@ -1025,6 +1092,6 @@
 
     <script src="js/main.js"></script>
     <script src="js/auth.js?v=20260904-password-toggle"></script>
-    <script src="js/admin-dashboard.js?v=20260910-statusflow-v1"></script>
+    <script src="js/admin-dashboard.js?v=20260911-complaint-fix-v1"></script>
 </body>
 </html>

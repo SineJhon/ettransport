@@ -2067,6 +2067,489 @@ function renderDetail(c) {
             });
     }
 
+ /* ---------- Admin complaint oversight ---------- */
+    var adminComplaintTarget = 'company'; // 'company' | 'platform' — which scope the list shows
+    var adminComplaintFilter = null;      // status filter; null shows every status
+    var adminComplaints = [];
+    var adminComplaintCounts = {};        // status → count across both scopes
+    var adminCompanyComplaintCounts = {}; // status → count for company-targeted complaints
+    var adminPlatformComplaintCounts = {};// status → count for platform-targeted complaints
+    var activeAdminComplaint = null;
+    var adminComplaintSending = false;    // guard: one composer send at a time
+
+    var ADMIN_COMPLAINT_STATUSES = [
+        ['open', 'Open'],
+        ['in_progress', 'In progress'],
+        ['resolved_pending', 'Awaiting confirmation'],
+        ['resolved', 'Resolved'],
+        ['closed', 'Closed'],
+        ['escalated', 'Escalated']
+    ];
+
+    var ADMIN_COMPLAINT_CATEGORY_LABELS = {
+        refund_issue: 'Refund Problem',
+        lost_parcel: 'Lost Parcel',
+        crew_behavior: 'Crew Behavior',
+        comfort: 'Comfort',
+        luggage: 'Luggage',
+        late_departure: 'Late Departure',
+        cancelled_trip: 'Canceled Trip',
+        missed_bus: 'Missed Bus',
+        other: 'Other'
+    };
+
+    function adminComplaintStatusLabel(status) {
+        for (var i = 0; i < ADMIN_COMPLAINT_STATUSES.length; i++) {
+            if (ADMIN_COMPLAINT_STATUSES[i][0] === status) { return ADMIN_COMPLAINT_STATUSES[i][1]; }
+        }
+        return 'Open';
+    }
+
+    function adminComplaintCategoryLabel(category) {
+        return ADMIN_COMPLAINT_CATEGORY_LABELS[category] || 'Other';
+    }
+
+    /* Display name for the other side of a complaint. Platform complaints are
+       against ET Transport itself, so there is no bus company to name. */
+    function adminComplaintCounterparty(c) {
+        if (!c) { return 'ET Transport'; }
+        if (c.target === 'platform' || !c.company_id) { return 'ET Transport'; }
+        return c.company_name || 'Company';
+    }
+
+    function adminComplaintBadge(status) {
+        var safe = String(status || 'open').replace(/[^a-z_]/g, '');
+        return '<span class="ad-complaint-status-badge is-' + escHtml(safe) + '">' + escHtml(adminComplaintStatusLabel(status)) + '</span>';
+    }
+
+    function adminComplaintPillHtml(status) {
+        var safe = String(status || 'open').replace(/[^a-z_]/g, '');
+        return '<span class="ad-chat-status-pill is-' + escHtml(safe) + '">' + escHtml(adminComplaintStatusLabel(status)) + '</span>';
+    }
+
+    function adminComplaintCardsHtml(complaints) {
+        var html = '';
+        for (var i = 0; i < complaints.length; i++) {
+            var c = complaints[i];
+            var isPlatform = c.target === 'platform' || !c.company_id;
+            var initial = String(c.passenger_name || 'P').trim().charAt(0).toUpperCase() || 'P';
+            var context = '';
+            if (c.booking_reference || c.route || c.departure) {
+                if (c.booking_reference) { context += '<span>Booking ' + escHtml(c.booking_reference) + '</span>'; }
+                if (c.route) { context += '<span>' + escHtml(c.route) + '</span>'; }
+                if (c.departure) { context += '<span>Departs ' + escHtml(c.departure) + '</span>'; }
+            }
+            var responseCount = (Array.isArray(c.responses) && c.responses.length) ? c.responses.length : 0;
+            html += '<article class="ad-complaint-card' + (c.status === 'open' ? ' is-new' : '') + '" data-admin-complaint-id="' + c.id + '">' +
+                '<div class="ad-complaint-card-head">' +
+                    '<span class="ad-complaint-avatar" aria-hidden="true">' + escHtml(initial) + '</span>' +
+                    '<div class="ad-complaint-person">' +
+                        '<strong>' + escHtml(c.passenger_name || 'Passenger') + '</strong>' +
+                        '<span class="ad-complaint-meta">' + escHtml(adminComplaintCounterparty(c)) + (formatReviewDate(c.created_at) ? ' &middot; ' + escHtml(formatReviewDate(c.created_at)) : '') + '</span>' +
+                    '</div>' +
+                    adminComplaintBadge(c.status) +
+                '</div>' +
+                '<h4 class="ad-complaint-subject">' + escHtml(c.subject) + '</h4>' +
+                '<p class="ad-complaint-text">' + escHtml(c.message) + '</p>' +
+                (context ? '<div class="ad-complaint-context">' + context + '</div>' : '') +
+                '<div class="ad-complaint-actions">' +
+                    '<span class="ad-complaint-category">' + escHtml(adminComplaintCategoryLabel(c.category)) + '</span>' +
+                    '<button type="button" class="btn btn-primary btn-sm ad-complaint-handle-btn" data-admin-complaint-open="' + c.id + '">' +
+                        (responseCount ? 'Handle complaint (' + responseCount + ')' : 'Handle complaint') +
+                    '</button>' +
+                '</div>' +
+            '</article>';
+        }
+        return html;
+    }
+
+    /* Section label shown above a group of complaints (one per company, or a
+       single block for ET Transport platform complaints). */
+    function adminComplaintGroupHeadHtml(label, sub, count) {
+        return '<div class="ad-complaint-group-head">' +
+            '<span class="ad-complaint-group-avatar" aria-hidden="true">' + escHtml(String(label || '?').charAt(0).toUpperCase()) + '</span>' +
+            '<strong>' + escHtml(label) + '</strong>' +
+            (sub ? '<small>' + escHtml(sub) + '</small>' : '') +
+            '<span class="ad-complaint-group-count">' + Number(count) + ' complaint' + (Number(count) === 1 ? '' : 's') + '</span>' +
+        '</div>';
+    }
+
+    function adminComplaintCountsForTarget() {
+        if (adminComplaintTarget === 'platform') { return adminPlatformComplaintCounts; }
+        return adminCompanyComplaintCounts;
+    }
+
+    function adminComplaintCountTotal(counts) {
+        var total = 0;
+        for (var statusKey in counts) { total += Number(counts[statusKey]) || 0; }
+        return total;
+    }
+
+    /* Summary chips — the active scope's status totals (company vs platform). */
+    function renderAdminComplaintSummary() {
+        var el = byId('ad-complaints-summary'); if (!el) { return; }
+        var counts = adminComplaintCountsForTarget();
+        var total = adminComplaintCountTotal(counts);
+        el.hidden = false;
+        el.innerHTML =
+            '<div class="ad-complaint-summary-stat"><b>' + total + '</b><span>Total</span></div>' +
+            '<div class="ad-complaint-summary-stat is-open"><b>' + (Number(counts.open) || 0) + '</b><span>Open</span></div>' +
+            '<div class="ad-complaint-summary-stat is-in_progress"><b>' + (Number(counts.in_progress) || 0) + '</b><span>In progress</span></div>' +
+            '<div class="ad-complaint-summary-stat is-resolved_pending"><b>' + (Number(counts.resolved_pending) || 0) + '</b><span>Awaiting confirmation</span></div>' +
+            '<div class="ad-complaint-summary-stat is-resolved"><b>' + (Number(counts.resolved) || 0) + '</b><span>Resolved</span></div>' +
+            '<div class="ad-complaint-summary-stat is-escalated"><b>' + (Number(counts.escalated) || 0) + '</b><span>Escalated</span></div>' +
+            '<div class="ad-complaint-summary-stat is-closed"><b>' + (Number(counts.closed) || 0) + '</b><span>Closed</span></div>';
+    }
+
+    /* Status pill toolbar with per-status counts for the active scope. */
+    function renderAdminComplaintFilterBar() {
+        var bar = byId('ad-complaints-filterbar'); if (!bar) { return; }
+        if (!adminComplaints.length && adminComplaintFilter === null) { bar.hidden = true; bar.innerHTML = ''; return; }
+        var options = [[null, 'All'], ['open', 'Open'], ['in_progress', 'In progress'], ['resolved_pending', 'Awaiting confirmation'], ['escalated', 'Escalated'], ['resolved', 'Resolved'], ['closed', 'Closed']];
+        var counts = adminComplaintCountsForTarget();
+        var total = adminComplaintCountTotal(counts);
+        var html = '';
+        for (var i = 0; i < options.length; i++) {
+            var val = options[i][0]; var label = options[i][1];
+            var active = adminComplaintFilter === val;
+            var count = val === null ? total : (Number(counts[val]) || 0);
+            html += '<button type="button" class="ad-complaint-filter' + (active ? ' is-active' : '') + '" data-complaint-filter="' + (val === null ? '' : val) + '" aria-pressed="' + (active ? 'true' : 'false') + '">' + label + ' <span class="ad-complaint-filter-count">' + count + '</span></button>';
+        }
+        bar.innerHTML = html;
+        bar.hidden = false;
+    }
+
+    function renderAdminComplaints() {
+        var list = byId('ad-complaints-list'); if (!list) { return; }
+        var empty = byId('ad-complaints-empty');
+        hide(byId('ad-complaints-loading'));
+        hide(byId('ad-complaints-error'));
+
+        var target = adminComplaintTarget === 'platform' ? 'platform' : 'company';
+        var shown = [];
+        for (var i = 0; i < adminComplaints.length; i++) {
+            var c = adminComplaints[i];
+            var isPlatform = c.target === 'platform' || !c.company_id;
+            if ((isPlatform && target === 'platform') || (!isPlatform && target === 'company')) {
+                shown.push(c);
+            }
+        }
+
+        renderAdminComplaintSummary();
+        renderAdminComplaintFilterBar();
+
+        var filtered = [];
+        for (var f = 0; f < shown.length; f++) {
+            if (adminComplaintFilter === null || shown[f].status === adminComplaintFilter) { filtered.push(shown[f]); }
+        }
+
+        if (!filtered.length) {
+            list.innerHTML = ''; list.hidden = true;
+            if (empty) {
+                empty.hidden = false;
+                empty.textContent = !shown.length
+                    ? (target === 'platform' ? 'No platform complaints yet.' : 'No company complaints yet.')
+                    : 'No complaints match the selected status.';
+            }
+            return;
+        }
+        if (empty) { empty.hidden = true; }
+
+        var html = '';
+        if (target === 'platform') {
+            html += adminComplaintGroupHeadHtml('ET Transport', 'Platform complaints handled by support', filtered.length);
+            html += adminComplaintCardsHtml(filtered);
+        } else {
+            /* Group each company's complaints into its own section. */
+            var groups = {};
+            var order = [];
+            for (var j = 0; j < filtered.length; j++) {
+                var cj = filtered[j];
+                var key = String(cj.company_id || '0');
+                if (!groups[key]) {
+                    groups[key] = { name: cj.company_name || 'Company', list: [] };
+                    order.push(key);
+                }
+                groups[key].list.push(cj);
+            }
+            order.sort(function (a, b) {
+                return String(groups[a].name).toLowerCase().localeCompare(String(groups[b].name).toLowerCase());
+            });
+            for (var g = 0; g < order.length; g++) {
+                var grp = groups[order[g]];
+                html += adminComplaintGroupHeadHtml(grp.name, '', grp.list.length);
+                html += adminComplaintCardsHtml(grp.list);
+            }
+        }
+        list.innerHTML = html;
+        list.hidden = false;
+    }
+
+    function loadAdminComplaints() {
+        var loading = byId('ad-complaints-loading'); if (loading) { loading.hidden = false; }
+        var error = byId('ad-complaints-error'); if (error) { error.hidden = true; }
+        fetch('api/admin.php?action=complaints', {
+            method: 'GET', credentials: 'same-origin', headers: { 'Accept': 'application/json' }
+        })
+            .then(parseJson)
+            .then(function (result) {
+                hide(byId('ad-complaints-loading'));
+                var data = result.data || {};
+                if (!result.ok || result.status !== 200 || !data.success) {
+                    var e = byId('ad-complaints-error');
+                    if (e) { e.textContent = data.message || 'Unable to load complaints.'; show(e); }
+                    return;
+                }
+                adminComplaints = Array.isArray(data.complaints) ? data.complaints : [];
+                adminComplaintCounts = data.counts || {};
+                adminCompanyComplaintCounts = data.company_counts || {};
+                adminPlatformComplaintCounts = data.platform_counts || {};
+                renderAdminComplaints();
+            })
+            .catch(function () {
+                hide(byId('ad-complaints-loading'));
+                var e = byId('ad-complaints-error');
+                if (e) { e.textContent = 'Network error while loading complaints.'; show(e); }
+            });
+    }
+
+function adminComplaintTime(value) {
+        if (!value) { return ''; }
+        var iso = String(value).indexOf(' ') > 0 ? String(value).replace(' ', 'T') : String(value);
+        var d = new Date(iso);
+        if (isNaN(d.getTime())) { return ''; }
+        try { return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); }
+        catch (e) { return ''; }
+    }
+
+    function adminComplaintBubbleMeta(who, when) {
+        return '<span class="ad-chat-bubble-meta">' + escHtml(who) + (when ? ' \u00b7 ' + escHtml(when) : '') + '</span>';
+    }
+
+    /* Ordered chat stream: the passenger's original complaint as the opening
+       bubble, then every thread entry (status tellers render as centered
+       chips; messages align by actor — passenger left, company/admin right). */
+    function adminComplaintThreadHtml(c) {
+        var html = '';
+        var initial = String(c.passenger_name || 'P').trim().charAt(0).toUpperCase() || 'P';
+        html += '<div class="ad-chat-row is-passenger">' +
+            '<span class="ad-chat-avatar" aria-hidden="true">' + escHtml(initial) + '</span>' +
+            '<div class="ad-chat-bubble is-passenger">' +
+                '<p>' + escHtml(c.message) + '</p>' +
+                adminComplaintBubbleMeta(c.passenger_name || 'Passenger', adminComplaintTime(c.created_at)) +
+            '</div>' +
+        '</div>';
+        var entries = (Array.isArray(c.responses) && c.responses.length) ? c.responses : [];
+        var prevSide = 'passenger';
+        for (var i = 0; i < entries.length; i++) {
+            var e = entries[i];
+            if (e.kind === 'status') {
+                html += '<div class="ad-chat-teller"><span class="ad-chat-teller-text">' + escHtml(e.message) + '</span>' +
+                    (e.created_at ? '<span class="ad-chat-teller-meta">' + escHtml(adminComplaintTime(e.created_at)) + '</span>' : '') + '</div>';
+                prevSide = null;
+                continue;
+            }
+            var side = e.actor === 'passenger' ? 'passenger' : (e.actor === 'admin' ? 'admin' : 'company');
+            var who = e.actor === 'passenger' ? (c.passenger_name || 'Passenger') : (e.actor === 'admin' ? 'ET Transport Support' : adminComplaintCounterparty(c));
+            var avatar = side === 'passenger' ? initial : (side === 'admin' ? 'ET' : String(adminComplaintCounterparty(c) || 'C').trim().charAt(0).toUpperCase() || 'C');
+            var cont = prevSide === side;
+            html += '<div class="ad-chat-row is-' + side + (cont ? ' is-continuation' : '') + '">' +
+                '<span class="ad-chat-avatar' + (side === 'company' ? ' is-company' : '') + (side === 'admin' ? ' is-admin' : '') + '" aria-hidden="true">' + escHtml(avatar) + '</span>' +
+                '<div class="ad-chat-bubble is-' + side + '">' +
+                    '<p>' + escHtml(e.message) + '</p>' +
+                    adminComplaintBubbleMeta(who, adminComplaintTime(e.created_at)) +
+                '</div>' +
+            '</div>';
+            prevSide = side;
+        }
+        return html || '<div class="ad-chat-teller"><span class="ad-chat-teller-text">' + escHtml(c.message) + '</span></div>';
+    }
+
+    function adminComplaintStatusOptions(selected) {
+        var opts = [['open','Open'],['in_progress','In progress'],['resolved_pending','Awaiting confirmation'],['resolved','Resolved'],['closed','Closed'],['escalated','Escalated']];
+        var html = '';
+        for (var i = 0; i < opts.length; i++) {
+            html += '<option value="' + opts[i][0] + '"' + (selected === opts[i][0] ? ' selected' : '') + '>' + opts[i][1] + '</option>';
+        }
+        return html;
+    }
+
+    function renderAdminComplaintModal() {
+        var c = activeAdminComplaint; if (!c) { return; }
+        var box = byId('ad-complaint-modal-box'); if (!box) { return; }
+        var initial = String(c.passenger_name || 'P').trim().charAt(0).toUpperCase() || 'P';
+        box.innerHTML =
+            '<div class="ad-chat-head">' +
+                '<div class="ad-chat-head-person">' +
+                    '<span class="ad-complaint-avatar" aria-hidden="true">' + escHtml(initial) + '</span>' +
+                    '<div class="ad-chat-head-info">' +
+                        '<strong id="ad-complaint-modal-title">' + escHtml(c.subject) + '</strong>' +
+                        '<small>' + escHtml(c.passenger_name || 'Passenger') + ' \u00b7 ' + escHtml(adminComplaintCounterparty(c)) + '</small>' +
+                    '</div>' +
+                '</div>' +
+                '<button type="button" id="ad-complaint-close" class="ad-complaint-modal-close" aria-label="Close complaint">\u00d7</button>' +
+            '</div>' +
+            '<div class="ad-chat-statusbar">' +
+                '<div class="ad-chat-statusbar-top">' +
+                    '<span class="ad-chat-statusbar-label">Status</span>' +
+                    adminComplaintPillHtml(c.status) +
+                    '<span class="ad-chat-statusbar-hint">Set where the complaint stands</span>' +
+                '</div>' +
+                '<div class="ad-chat-statusbar-row">' +
+                    '<select id="ad-complaint-status">' + adminComplaintStatusOptions(c.status) + '</select>' +
+                    '<button type="button" id="ad-complaint-status-apply" class="btn btn-sm ad-chat-status-apply" disabled>Update status</button>' +
+                '</div>' +
+                '<p id="ad-complaint-status-msg" class="ad-chat-status-msg" hidden></p>' +
+            '</div>' +
+            '<div class="ad-chat-thread">' + adminComplaintThreadHtml(c) + '</div>' +
+            '<div class="ad-chat-composer">' +
+                '<div class="ad-chat-composer-row">' +
+                    '<textarea id="ad-complaint-response" maxlength="1000" rows="1" placeholder="Write a message to the passenger and company\u2026"></textarea>' +
+                    '<button type="button" id="ad-complaint-send" class="ad-chat-send-btn" aria-label="Send message" disabled>' +
+                        '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>' +
+                    '</button>' +
+                '</div>' +
+                '<div id="ad-complaint-modal-error" class="ad-complaint-modal-error" role="alert" hidden></div>' +
+                '<p id="ad-complaint-sent" class="ad-chat-sent-note" role="status" hidden></p>' +
+            '</div>';
+        var modal = byId('ad-complaint-modal');
+        if (modal) { modal.hidden = false; }
+        var thread = box.querySelector('.ad-chat-thread');
+        if (thread) { thread.scrollTop = thread.scrollHeight; }
+        var composer = byId('ad-complaint-response');
+        if (composer && composer.focus) { try { composer.focus(); } catch (e) { } }
+
+        /* Complaints modal — the status changer and composer live in the modal
+           content, which is rebuilt on every open, so these listeners are
+           attached here (re-run each render), not once at init time. */
+        var statusSel = byId('ad-complaint-status');
+        var statusApply = byId('ad-complaint-status-apply');
+        if (statusSel && statusApply) {
+            var keepChanged = statusSel.value !== (c.status || '');
+            statusSel.classList.toggle('is-changed', keepChanged);
+            statusApply.disabled = !keepChanged;
+            statusSel.addEventListener('change', function () {
+                var changed = statusSel.value !== (activeAdminComplaint ? activeAdminComplaint.status : '');
+                statusSel.classList.toggle('is-changed', changed);
+                if (statusApply) { statusApply.disabled = !changed; }
+            });
+        }
+        var respTa = byId('ad-complaint-response');
+        var sendBtn = byId('ad-complaint-send');
+        if (respTa && sendBtn) {
+            sendBtn.disabled = respTa.value.trim().length === 0;
+            respTa.addEventListener('input', function () {
+                sendBtn.disabled = respTa.value.trim().length === 0;
+                var err = byId('ad-complaint-modal-error'); if (err) { err.hidden = true; }
+            });
+            respTa.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (!sendBtn.disabled) { submitAdminComplaintResponse(); }
+                }
+            });
+        }
+    }
+
+    function openAdminComplaint(id) {
+        var match = adminComplaints.filter(function (c) { return Number(c.id) === Number(id); })[0];
+        if (!match) { return; }
+        activeAdminComplaint = match;
+        adminComplaintSending = false;
+        renderAdminComplaintModal();
+    }
+
+    function closeAdminComplaintModal() {
+        var modal = byId('ad-complaint-modal');
+        if (modal) { modal.hidden = true; }
+        activeAdminComplaint = null;
+        adminComplaintSending = false;
+    }
+
+    /* Shared POST to api/admin.php?action=complaint_update. */
+    function adminComplaintPost(payload, onDone) {
+        var body = new URLSearchParams();
+        body.append('complaint_id', activeAdminComplaint.id);
+        for (var key in payload) { body.append(key, payload[key]); }
+        fetch('api/admin.php?action=complaint_update', {
+            method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'Accept': 'application/json' },
+            body: body.toString()
+        })
+            .then(parseJson)
+            .then(function (result) {
+                var data = result.data || {};
+                if (!result.ok || result.status !== 200 || !data.success) {
+                    onDone(false, data.message || 'Unable to update the complaint.');
+                    return;
+                }
+                if (data.complaint) {
+                    activeAdminComplaint = data.complaint;
+                    for (var i = 0; i < adminComplaints.length; i++) {
+                        if (Number(adminComplaints[i].id) === Number(data.complaint.id)) { adminComplaints[i] = data.complaint; }
+                    }
+                }
+                onDone(true, '');
+            })
+            .catch(function () {
+                onDone(false, 'Network error while updating the complaint.');
+            });
+    }
+
+    function adminComplaintShowError(message) {
+        var err = byId('ad-complaint-modal-error');
+        if (err) { err.textContent = message; err.hidden = false; }
+    }
+
+    /* Send a chat message (composer only). Status changes are a separate
+       action via the status changer — mirroring the company dashboard. */
+    function submitAdminComplaintResponse() {
+        var c = activeAdminComplaint; if (!c || adminComplaintSending) { return; }
+        var respEl = byId('ad-complaint-response');
+        var response = respEl ? respEl.value.trim() : '';
+        if (!response) { adminComplaintShowError('Type a message first.'); return; }
+        adminComplaintSending = true;
+        var btn = byId('ad-complaint-send');
+        if (btn) { btn.disabled = true; }
+        var err = byId('ad-complaint-modal-error'); if (err) { err.hidden = true; }
+        adminComplaintPost({ response: response }, function (ok, message) {
+            adminComplaintSending = false;
+            if (!ok) {
+                if (btn) { btn.disabled = false; }
+                if (respEl) { respEl.value = response; }
+                adminComplaintShowError(message || 'Unable to send the message.');
+                return;
+            }
+            if (respEl) { respEl.value = ''; }
+            renderAdminComplaintModal();
+            var sent = byId('ad-complaint-sent');
+            if (sent) { sent.textContent = 'Message sent \u2014 the passenger and company can see it.'; sent.hidden = false; setTimeout(function () { sent.hidden = true; }, 3000); }
+            loadAdminComplaints();
+        });
+    }
+
+    /* Update only the complaint status from the status changer. */
+    function submitAdminComplaintStatus() {
+        var c = activeAdminComplaint; if (!c) { return; }
+        var statusEl = byId('ad-complaint-status');
+        var status = statusEl ? statusEl.value : c.status;
+        if (status === c.status) { return; }
+        var btn = byId('ad-complaint-status-apply');
+        var msg = byId('ad-complaint-status-msg');
+        if (btn) { btn.disabled = true; }
+        if (msg) { msg.hidden = true; }
+        adminComplaintPost({ status: status }, function (ok, message) {
+            if (!ok) {
+                if (btn) { btn.disabled = false; }
+                if (msg) { msg.textContent = message || 'Unable to update the status.'; msg.className = 'ad-chat-status-msg is-err'; msg.hidden = false; }
+                return;
+            }
+            renderAdminComplaintModal();
+            if (msg) { msg.textContent = 'Status updated.'; msg.className = 'ad-chat-status-msg is-ok'; msg.hidden = false; setTimeout(function () { msg.hidden = true; }, 3000); }
+            loadAdminComplaints();
+        });
+    }
+
     /* ---------- Wiring ---------- */
     function init() {
         loadIdentity();
@@ -2257,272 +2740,6 @@ function renderDetail(c) {
             });
         }
 
- /* ---------- Admin complaint oversight ---------- */
-    var adminComplaintTarget = 'company'; // 'company' | 'platform' — which scope the list shows
-    var adminComplaints = [];
-    var activeAdminComplaint = null;
-
-    /* Display name for the other side of a complaint. Platform complaints are
-       against ET Transport itself, so there is no bus company to name. */
-    function adminComplaintCounterparty(c) {
-        if (!c) { return 'ET Transport'; }
-        if (c.target === 'platform' || !c.company_id) { return 'ET Transport'; }
-        return c.company_name || 'Company';
-    }
-
-    function adminComplaintBadge(status) {
-        var label = {
-            open: 'Open', in_progress: 'In progress', resolved_pending: 'Awaiting confirmation',
-            resolved: 'Resolved', closed: 'Closed', escalated: 'Escalated'
-        }[status] || status;
-        return '<span class="ad-complaint-tag is-' + escHtml(status) + '">' + escHtml(label) + '</span>';
-    }
-
-    function adminComplaintCardsHtml(complaints) {
-        var html = '';
-        for (var i = 0; i < complaints.length; i++) {
-            var c = complaints[i];
-            var isPlatform = c.target === 'platform' || !c.company_id;
-            html += '<article class="ad-complaint-card' + (c.status === 'escalated' ? ' is-escalated' : '') + '" data-admin-complaint-id="' + c.id + '">' +
-                '<div class="ad-complaint-card-head">' +
-                    '<span class="ad-review-avatar">' + escHtml(String(c.passenger_name || 'P').charAt(0).toUpperCase()) + '</span>' +
-                    '<span class="ad-review-person"><strong>' + escHtml(c.passenger_name || 'Passenger') + '</strong>' +
-                    (isPlatform ? '<span class="ad-review-badge ad-review-company">Platform complaint</span>' : '') +
-                    '<span class="ad-review-meta">' + escHtml(adminComplaintCounterparty(c)) + '</span></span>' +
-                    adminComplaintBadge(c.status) +
-                '</div>' +
-                '<h4 class="ad-complaint-subject">' + escHtml(c.subject) + '</h4>' +
-                '<p class="ad-complaint-preview">' + escHtml(c.message) + '</p>' +
-                '<button type="button" class="ad-complaint-open btn btn-primary btn-sm" data-admin-complaint-open="' + c.id + '">Open thread</button>' +
-            '</article>';
-        }
-        return html;
-    }
-
-    /* Section label shown above a group of complaints (one per company, or a
-       single block for ET Transport platform complaints). */
-    function adminComplaintGroupHeadHtml(label, sub, count) {
-        return '<div class="ad-complaint-group-head">' +
-            '<span class="ad-complaint-group-avatar" aria-hidden="true">' + escHtml(String(label || '?').charAt(0).toUpperCase()) + '</span>' +
-            '<strong>' + escHtml(label) + '</strong>' +
-            (sub ? '<small>' + escHtml(sub) + '</small>' : '') +
-            '<span class="ad-complaint-group-count">' + Number(count) + ' complaint' + (Number(count) === 1 ? '' : 's') + '</span>' +
-        '</div>';
-    }
-
-    function renderAdminComplaints() {
-        var list = byId('ad-complaints-list'); if (!list) { return; }
-        var empty = byId('ad-complaints-empty');
-        hide(byId('ad-complaints-loading'));
-        hide(byId('ad-complaints-error'));
-
-        var target = adminComplaintTarget === 'platform' ? 'platform' : 'company';
-        var shown = [];
-        for (var i = 0; i < adminComplaints.length; i++) {
-            var c = adminComplaints[i];
-            var isPlatform = c.target === 'platform' || !c.company_id;
-            if ((isPlatform && target === 'platform') || (!isPlatform && target === 'company')) {
-                shown.push(c);
-            }
-        }
-
-        if (!shown.length) {
-            list.innerHTML = ''; list.hidden = true;
-            if (empty) {
-                empty.hidden = false;
-                empty.textContent = target === 'platform' ? 'No platform complaints yet.' : 'No company complaints yet.';
-            }
-            return;
-        }
-        if (empty) { empty.hidden = true; }
-
-        var html = '';
-        if (target === 'platform') {
-            html += adminComplaintGroupHeadHtml('ET Transport', 'Platform complaints handled by support', shown.length);
-            html += adminComplaintCardsHtml(shown);
-        } else {
-            /* Group each company's complaints into its own section. */
-            var groups = {};
-            var order = [];
-            for (var j = 0; j < shown.length; j++) {
-                var cj = shown[j];
-                var key = String(cj.company_id || '0');
-                if (!groups[key]) {
-                    groups[key] = { name: cj.company_name || 'Company', list: [] };
-                    order.push(key);
-                }
-                groups[key].list.push(cj);
-            }
-            order.sort(function (a, b) {
-                return String(groups[a].name).toLowerCase().localeCompare(String(groups[b].name).toLowerCase());
-            });
-            for (var g = 0; g < order.length; g++) {
-                var grp = groups[order[g]];
-                html += adminComplaintGroupHeadHtml(grp.name, '', grp.list.length);
-                html += adminComplaintCardsHtml(grp.list);
-            }
-        }
-        list.innerHTML = html;
-        list.hidden = false;
-    }
-
-    function loadAdminComplaints() {
-        var loading = byId('ad-complaints-loading'); if (loading) { loading.hidden = false; }
-        var error = byId('ad-complaints-error'); if (error) { error.hidden = true; }
-        fetch('api/admin.php?action=complaints', {
-            method: 'GET', credentials: 'same-origin', headers: { 'Accept': 'application/json' }
-        })
-            .then(parseJson)
-            .then(function (result) {
-                hide(byId('ad-complaints-loading'));
-                var data = result.data || {};
-                if (!result.ok || result.status !== 200 || !data.success) {
-                    var e = byId('ad-complaints-error');
-                    if (e) { e.textContent = data.message || 'Unable to load complaints.'; show(e); }
-                    return;
-                }
-                adminComplaints = Array.isArray(data.complaints) ? data.complaints : [];
-                renderAdminComplaints();
-            })
-            .catch(function () {
-                hide(byId('ad-complaints-loading'));
-                var e = byId('ad-complaints-error');
-                if (e) { e.textContent = 'Network error while loading complaints.'; show(e); }
-            });
-    }
-
-function adminComplaintTime(value) {
-        if (!value) { return ''; }
-        var iso = String(value).indexOf(' ') > 0 ? String(value).replace(' ', 'T') : String(value);
-        var d = new Date(iso);
-        if (isNaN(d.getTime())) { return ''; }
-        try { return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); }
-        catch (e) { return ''; }
-    }
-
-    function adminComplaintThreadHtml(c) {
-        var entries = (Array.isArray(c.responses) && c.responses.length) ? c.responses : [];
-        var html = '';
-        for (var i = 0; i < entries.length; i++) {
-            var e = entries[i];
-            if (e.kind === 'status') {
-                html += '<div class="ad-complaint-teller"><span class="ad-complaint-teller-text">' + escHtml(e.message) + '</span>' +
-                    (e.created_at ? '<span class="ad-complaint-teller-meta">' + escHtml(adminComplaintTime(e.created_at)) + '</span>' : '') + '</div>';
-                continue;
-            }
-            var side = e.actor === 'passenger' ? 'passenger' : (e.actor === 'admin' ? 'admin' : 'company');
-            var who = e.actor === 'passenger' ? (c.passenger_name || 'Passenger') : (e.actor === 'admin' ? 'ET Transport Support' : adminComplaintCounterparty(c));
-            html += '<div class="ad-complaint-bubble is-' + side + '">' +
-                '<span class="ad-complaint-bubble-who">' + escHtml(who) + '</span>' +
-                '<p>' + escHtml(e.message) + '</p>' +
-                (e.created_at ? '<span class="ad-complaint-bubble-meta">' + escHtml(adminComplaintTime(e.created_at)) + '</span>' : '') +
-            '</div>';
-        }
-        return html || '<div class="ad-complaint-teller"><span class="ad-complaint-teller-text">No messages yet.</span></div>';
-    }
-
-    function adminComplaintStatusOptions(selected) {
-        var opts = [['open','Open'],['in_progress','In progress'],['resolved_pending','Awaiting confirmation'],['resolved','Resolved'],['closed','Closed'],['escalated','Escalated']];
-        var html = '';
-        for (var i = 0; i < opts.length; i++) {
-            html += '<option value="' + opts[i][0] + '"' + (selected === opts[i][0] ? ' selected' : '') + '>' + opts[i][1] + '</option>';
-        }
-        return html;
-    }
-
-    function renderAdminComplaintModal() {
-        var c = activeAdminComplaint; if (!c) { return; }
-        var box = byId('ad-complaint-modal-box'); if (!box) { return; }
-        box.innerHTML =
-            '<div class="ad-complaint-head">' +
-                '<div class="ad-complaint-head-info">' +
-                    '<strong id="ad-complaint-modal-title">' + escHtml(c.subject) + '</strong>' +
-                    '<small>' + escHtml(c.passenger_name || 'Passenger') + ' \u00b7 ' + escHtml(adminComplaintCounterparty(c)) + '</small>' +
-                '</div>' +
-                adminComplaintBadge(c.status) +
-                '<button type="button" id="ad-complaint-close" class="ad-complaint-close" aria-label="Close complaint">\u00d7</button>' +
-            '</div>' +
-            '<div class="ad-complaint-thread">' + adminComplaintThreadHtml(c) + '</div>' +
-            '<div class="ad-complaint-form">' +
-                '<div class="ad-complaint-status-row"><label for="ad-complaint-status">Status</label>' +
-                '<select id="ad-complaint-status">' + adminComplaintStatusOptions(c.status) + '</select></div>' +
-                '<div class="ad-complaint-form-row">' +
-                    '<textarea id="ad-complaint-response" maxlength="1000" placeholder="Write a message to both the passenger and the company\u2026"></textarea>' +
-                    '<button type="button" id="ad-complaint-send" class="btn btn-primary">Send</button>' +
-                '</div>' +
-                '<p id="ad-complaint-msg" class="ad-complaint-msg" role="alert" hidden></p>' +
-                '<p id="ad-complaint-sent" class="ad-complaint-sent" role="status" hidden></p>' +
-            '</div>';
-        var modal = byId('ad-complaint-modal');
-        if (modal) { modal.hidden = false; }
-        var thread = box.querySelector('.ad-complaint-thread');
-        if (thread) { thread.scrollTop = thread.scrollHeight; }
-    }
-
-    function openAdminComplaint(id) {
-        var match = adminComplaints.filter(function (c) { return Number(c.id) === Number(id); })[0];
-        if (!match) { return; }
-        activeAdminComplaint = match;
-        renderAdminComplaintModal();
-    }
-
-    function closeAdminComplaintModal() {
-        var modal = byId('ad-complaint-modal');
-        if (modal) { modal.hidden = true; }
-        activeAdminComplaint = null;
-    }
-
-    function submitAdminComplaintUpdate() {
-        var c = activeAdminComplaint; if (!c) { return; }
-        var statusEl = byId('ad-complaint-status');
-        var respEl = byId('ad-complaint-response');
-        var status = statusEl ? statusEl.value : c.status;
-        var response = respEl ? respEl.value.trim() : '';
-        if (status === c.status && !response) {
-            var m = byId('ad-complaint-msg');
-            if (m) { m.textContent = 'Type a message or change the status first.'; m.hidden = false; }
-            return;
-        }
-        var body = new URLSearchParams();
-        body.append('complaint_id', c.id);
-        body.append('status', status);
-        if (response) { body.append('response', response); }
-        var btn = byId('ad-complaint-send');
-        if (btn) { btn.disabled = true; btn.textContent = 'Sending\u2026'; }
-        var err = byId('ad-complaint-msg'); if (err) { err.hidden = true; }
-        fetch('api/admin.php?action=complaint_update', {
-            method: 'POST', credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'Accept': 'application/json' },
-            body: body.toString()
-        })
-            .then(parseJson)
-            .then(function (result) {
-                if (btn) { btn.disabled = false; btn.textContent = 'Send'; }
-                var data = result.data || {};
-                if (!result.ok || result.status !== 200 || !data.success) {
-                    var m = byId('ad-complaint-msg');
-                    if (m) { m.textContent = data.message || 'Unable to update the complaint.'; m.hidden = false; }
-                    return;
-                }
-                if (data.complaint) {
-                    activeAdminComplaint = data.complaint;
-                    for (var i = 0; i < adminComplaints.length; i++) {
-                        if (Number(adminComplaints[i].id) === Number(data.complaint.id)) { adminComplaints[i] = data.complaint; }
-                    }
-                }
-                if (respEl) { respEl.value = ''; }
-                renderAdminComplaintModal();
-                var sent = byId('ad-complaint-sent');
-                if (sent) { sent.textContent = 'Message sent \u2014 the passenger and company can see it.'; sent.hidden = false; setTimeout(function () { sent.hidden = true; }, 3000); }
-                loadAdminComplaints();
-            })
-            .catch(function () {
-                if (btn) { btn.disabled = false; btn.textContent = 'Send'; }
-                var m = byId('ad-complaint-msg');
-                if (m) { m.textContent = 'Network error while updating the complaint.'; m.hidden = false; }
-            });
-    }
-
 /* ---- wiring: tabs, filters, refresh, manifest ---- */
         var tabBtns = document.querySelectorAll('#ad-tabs .ad-tab');
         for (var ti = 0; ti < tabBtns.length; ti++) {
@@ -2636,6 +2853,17 @@ function adminComplaintTime(value) {
             });
         }
 
+        /* Status filter pills (All / Open / In progress / ...). */
+        var complaintFilterBar = byId('ad-complaints-filterbar');
+        if (complaintFilterBar) {
+            complaintFilterBar.addEventListener('click', function (e) {
+                var btn = e.target.closest ? e.target.closest('.ad-complaint-filter') : null;
+                if (!btn) { return; }
+                adminComplaintFilter = btn.getAttribute('data-complaint-filter') || null;
+                renderAdminComplaints();
+            });
+        }
+
         var adminComplaintList = byId('ad-complaints-list');
         if (adminComplaintList) {
             adminComplaintList.addEventListener('click', function (e) {
@@ -2651,9 +2879,15 @@ function adminComplaintTime(value) {
                 var closeBtn = e.target.closest ? e.target.closest('#ad-complaint-close') : null;
                 if (closeBtn) { closeAdminComplaintModal(); }
                 var send = e.target.closest ? e.target.closest('#ad-complaint-send') : null;
-                if (send) { submitAdminComplaintUpdate(); }
+                if (send) { submitAdminComplaintResponse(); }
+                var apply = e.target.closest ? e.target.closest('#ad-complaint-status-apply') : null;
+                if (apply) { submitAdminComplaintStatus(); }
             });
         }
+
+        /* Complaints modal — modal-inner listeners are attached inside
+           renderAdminComplaintModal (the modal content is rebuilt on each
+           open), so there is nothing else to wire at init time. */
 
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
