@@ -322,6 +322,54 @@
         .ad-review-filter.is-active .ad-review-filter-count { background:rgba(255,255,255,.18); }
         .ad-review-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(310px,1fr)); gap:.9rem; margin-top:1rem; }
         .ad-review-list[hidden] { display:none; }
+        /* ---------- Admin complaint oversight (list + chat modal) ---------- */
+        .ad-complaint-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(330px,1fr)); gap:.9rem; margin-top:1rem; }
+        .ad-complaint-list[hidden] { display:none; }
+        .ad-complaint-card { padding:1.05rem 1.1rem; display:flex; flex-direction:column; gap:.7rem; border:1px solid #dfeae4; border-radius:14px; background:#fff; box-shadow:0 1px 0 rgba(17,61,45,.02); transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+        .ad-complaint-card:hover { border-color:#b8d8c5; box-shadow:0 12px 24px rgba(25,71,54,.08); transform:translateY(-2px); }
+        .ad-complaint-card.is-escalated { border-color:#efc3c0; background:#fffbfb; }
+        .ad-complaint-card-head { display:flex; align-items:center; gap:.55rem; flex-wrap:wrap; }
+        .ad-complaint-subject { margin:0; color:#163a33; font:800 .98rem/1.3 var(--font-sans); }
+        .ad-complaint-preview { margin:0; color:#70847c; font-size:.84rem; line-height:1.55; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+        .ad-complaint-tag { display:inline-block; padding:.15rem .5rem; border-radius:99px; font-size:.68rem; font-weight:700; }
+        .ad-complaint-tag.is-open { color:#9f5a06; background:#fff4d6; }
+        .ad-complaint-tag.is-in_progress { color:#245f9e; background:#e7f1fb; }
+        .ad-complaint-tag.is-resolved_pending { color:#6d28d9; background:#f1e9fd; }
+        .ad-complaint-tag.is-resolved { color:#166534; background:#e6f5ea; }
+        .ad-complaint-tag.is-escalated { color:#b02f2f; background:#fdeaea; }
+        .ad-complaint-tag.is-closed { color:#55606a; background:#e9edf0; }
+        .ad-complaint-open { margin-top:auto; align-self:flex-end; }
+        /* Admin complaint chat modal. */
+        .ad-complaint-modal-box { width:min(100%,660px); max-height:min(90vh,760px); display:flex; flex-direction:column; padding:0; overflow:hidden; background:#fff; border-radius:16px; box-shadow:0 25px 70px rgba(5,26,20,.28); }
+        .ad-complaint-head { display:flex; align-items:center; justify-content:space-between; gap:.8rem; padding:.9rem 1.15rem; border-bottom:1px solid #e3ece7; background:linear-gradient(120deg,#f2f7f4,#fbfdfb); }
+        .ad-complaint-head-info { display:grid; gap:.15rem; min-width:0; }
+        .ad-complaint-head-info strong { color:#163a33; font-size:.98rem; }
+        .ad-complaint-head-info small { color:#70847c; font-size:.78rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .ad-complaint-head .ad-complaint-tag { align-self:center; }
+        .ad-complaint-close { display:grid; place-items:center; flex:0 0 2.25rem; width:2.25rem; height:2.25rem; padding:0; color:#275147; background:#edf5f0; border:0; border-radius:50%; cursor:pointer; font-size:1.25rem; line-height:1; }
+        .ad-complaint-thread { flex:1 1 auto; overflow-y:auto; display:flex; flex-direction:column; gap:.45rem; padding:.9rem 1rem; background:#f4f8f5; }
+        .ad-complaint-teller { align-self:center; max-width:88%; padding:.26rem .75rem; text-align:center; background:#e8f1ec; border:1px solid #d3e3d9; border-radius:999px; }
+        .ad-complaint-teller-text { display:block; font-size:.72rem; font-weight:700; color:#38624f; line-height:1.4; }
+        .ad-complaint-teller-meta { display:block; font-size:.62rem; font-weight:700; color:#7d9189; }
+        .ad-complaint-bubble { max-width:80%; padding:.55rem .8rem; border-radius:12px; font-size:.88rem; line-height:1.5; }
+        .ad-complaint-bubble p { margin:.15rem 0 0; white-space:pre-wrap; overflow-wrap:break-word; color:inherit; }
+        .ad-complaint-bubble-who { display:block; font-size:.66rem; font-weight:800; text-transform:uppercase; letter-spacing:.04em; }
+        .ad-complaint-bubble-meta { display:block; margin-top:.25rem; font-size:.62rem; font-weight:700; }
+        .ad-complaint-bubble.is-passenger { align-self:flex-start; background:#fff; border:1px solid #e3ebe6; border-bottom-left-radius:4px; color:#2b3a33; }
+        .ad-complaint-bubble.is-passenger .ad-complaint-bubble-who { color:#547067; }
+        .ad-complaint-bubble.is-company { align-self:flex-end; background:#187653; border-bottom-right-radius:4px; color:#fff; }
+        .ad-complaint-bubble.is-company .ad-complaint-bubble-who, .ad-complaint-bubble.is-company .ad-complaint-bubble-meta { color:#d2ecdf; }
+        .ad-complaint-bubble.is-admin { align-self:flex-end; background:#182448; border-bottom-right-radius:4px; color:#fff; }
+        .ad-complaint-bubble.is-admin .ad-complaint-bubble-who, .ad-complaint-bubble.is-admin .ad-complaint-bubble-meta { color:#c6d3f0; }
+        .ad-complaint-form { padding:.8rem 1rem .9rem; border-top:1px solid #e3ece7; background:#fff; display:grid; gap:.5rem; }
+        .ad-complaint-status-row { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; }
+        .ad-complaint-status-row label { font-size:.7rem; font-weight:800; color:#5f766d; text-transform:uppercase; letter-spacing:.04em; }
+        .ad-complaint-status-row select { flex:1 1 auto; min-height:2.4rem; padding:.4rem .6rem; color:#1d483d; background:#fff; border:1px solid #cfe0d6; border-radius:8px; font:700 .82rem var(--font-sans); }
+        .ad-complaint-form-row { display:flex; align-items:flex-end; gap:.55rem; }
+        .ad-complaint-form-row textarea { flex:1 1 auto; min-height:3.2rem; max-height:8rem; resize:vertical; padding:.55rem .7rem; color:#24493c; background:#fbfefb; border:1px solid #c8ded1; border-radius:10px; font:inherit; font-size:.88rem; line-height:1.5; }
+        .ad-complaint-form-row textarea:focus { outline:3px solid rgba(49,164,118,.16); border-color:#3f976a; }
+        .ad-complaint-msg { margin:0; color:#b91c1c; font-size:.82rem; }
+        .ad-complaint-sent { margin:0; color:#1d8a4e; font-size:.78rem; }
         .ad-review-card { position:relative; padding:1.1rem; display:flex; flex-direction:column; gap:.8rem; border:1px solid #dfeae4; border-radius:14px; background:#fff; box-shadow:0 1px 0 rgba(17,61,45,.02); transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
         .ad-review-card:hover { border-color:#b8d8c5; box-shadow:0 12px 24px rgba(25,71,54,.08); transform:translateY(-2px); }
         .ad-review-card.is-editing { grid-column:span 2; border-color:#82b89a; background:#fbfefc; box-shadow:0 12px 30px rgba(25,71,54,.1); }
@@ -390,6 +438,7 @@
                 <button type="button" class="ad-tab" data-section="passengers" aria-selected="false"><span class="ad-tab-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20c.8-3.5 2.8-5.5 6-5.5s5.2 2 6 5.5"/><path d="M16.5 5.5a2.9 2.9 0 0 1 0 5"/><path d="M18.6 14.6c1.4.9 2.2 2.5 2.4 4.9"/></svg></span><span class="ad-tab-label">Passenger List</span></button>
                 <button type="button" class="ad-tab" data-section="revenue" aria-selected="false"><span class="ad-tab-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5"/><path d="M4 19h16"/><path d="m7 15 4-4 3 2 4-6"/></svg></span><span class="ad-tab-label">Revenue</span></button>
                 <button type="button" class="ad-tab" data-section="reviews" aria-selected="false"><span class="ad-tab-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3.5 2.6 5.6 6.1.9-4.4 4.3 1 6.1-5.3-2.9-5.3 2.9 1-6.1L3.3 10l6.1-.9Z"/></svg></span><span class="ad-tab-label">Reviews</span></button>
+                <button type="button" class="ad-tab" data-section="complaints" aria-selected="false"><span class="ad-tab-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 4-4 6-8 6-1.5 0-3-.2-4-.6L4 20l1-3.2C3.6 15.4 3 13.8 3 12 3 7.5 7 4 12 4s9 3.5 9 8c0 .4 0 .7-.1 1Z"/><path d="M8 10h8M8 13h5"/></svg></span><span class="ad-tab-label">Complaints</span></button>
             </nav></aside><div class="ad-content">
 
         <section id="section-overview" class="ad-card" hidden>
@@ -618,6 +667,28 @@
             <div id="ad-reviews-empty" class="ad-empty" hidden></div>
             <div id="ad-reviews-list" class="ad-review-list" hidden></div>
         </section>
+        <section id="section-complaints" class="ad-card" hidden>
+            <div class="ad-card-head">
+                <div>
+                    <h2>Complaints</h2>
+                    <p class="ad-card-desc">Passenger complaints across the platform — intervene, reply and steer the status when a company closes or stops responding.</p>
+                </div>
+                <button type="button" id="btn-refresh-complaints" class="btn btn-secondary btn-sm">Refresh</button>
+            </div>
+            <div class="ad-status-toolbar" role="group" aria-label="Filter complaints by status" id="ad-complaint-toolbar">
+                <button type="button" class="ad-status-filter is-active" data-complaint-filter="" aria-pressed="true">All</button>
+                <button type="button" class="ad-status-filter" data-complaint-filter="open" aria-pressed="false">Open</button>
+                <button type="button" class="ad-status-filter" data-complaint-filter="in_progress" aria-pressed="false">In progress</button>
+                <button type="button" class="ad-status-filter" data-complaint-filter="resolved_pending" aria-pressed="false">Awaiting confirmation</button>
+                <button type="button" class="ad-status-filter" data-complaint-filter="resolved" aria-pressed="false">Resolved</button>
+                <button type="button" class="ad-status-filter" data-complaint-filter="escalated" aria-pressed="false">Escalated</button>
+                <button type="button" class="ad-status-filter" data-complaint-filter="closed" aria-pressed="false">Closed</button>
+            </div>
+            <p id="ad-complaints-loading" class="auth-identity" hidden>Loading complaints&hellip;</p>
+            <div id="ad-complaints-error" class="auth-message" hidden></div>
+            <div id="ad-complaints-empty" class="ad-empty" hidden>No complaints match the current filter.</div>
+            <div id="ad-complaints-list" class="ad-complaint-list" hidden></div>
+        </section>
         </div></div>
     </main>
 
@@ -642,6 +713,10 @@
                 <button type="button" id="ad-modal-confirm" class="btn btn-primary" disabled>Confirm</button>
             </div>
         </div>
+    </div>
+
+    <div id="ad-complaint-modal" class="ad-modal ad-complaint-modal" hidden role="dialog" aria-modal="true" aria-labelledby="ad-complaint-modal-title">
+        <div id="ad-complaint-modal-box" class="ad-complaint-modal-box"></div>
     </div>
 
     <div id="ad-add-company-modal" class="ad-add" hidden role="dialog" aria-modal="true" aria-labelledby="ad-add-company-title">
@@ -950,6 +1025,6 @@
 
     <script src="js/main.js"></script>
     <script src="js/auth.js?v=20260904-password-toggle"></script>
-    <script src="js/admin-dashboard.js?v=20260908-parcel-revenue-v2"></script>
+    <script src="js/admin-dashboard.js?v=20260910-statusflow-v1"></script>
 </body>
 </html>

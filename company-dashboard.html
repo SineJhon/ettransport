@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Company operator dashboard for ET Transport">
     <title>Company Dashboard | ET Transport</title>
-    <link rel="stylesheet" href="css/style.css?v=20260909-complaints-v4">
+    <link rel="stylesheet" href="css/style.css?v=20260910-statusflow-v1">
     <link rel="stylesheet" href="css/walkin-booking.css?v=20260904-inline-validation-2">
     <link rel="stylesheet" href="css/city-picker.css?v=20260907-swap-fix">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -416,7 +416,9 @@
         .cd-complaint-summary-stat span { color: #647a71; font-size: .68rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
         .cd-complaint-summary-stat.is-open b { color: #b7791f; }
         .cd-complaint-summary-stat.is-in_progress b { color: #2c6fae; }
+        .cd-complaint-summary-stat.is-resolved_pending b { color: #7c3aed; }
         .cd-complaint-summary-stat.is-resolved b { color: #1d8a4e; }
+        .cd-complaint-summary-stat.is-escalated b { color: #b02f2f; }
         .cd-complaint-summary-stat.is-closed b { color: #6b7680; }
         .cd-complaint-toolbar { display: flex; flex-wrap: wrap; gap: .45rem; padding: .6rem 0 .95rem; margin-top: .2rem; border-bottom: 1px solid #e5eee9; }
         .cd-complaint-filter { flex: 0 0 auto; padding: .52rem .78rem; color: #5c736a; background: #f2f7f4; border: 1px solid #dceae2; border-radius: 8px; cursor: pointer; font: 800 .74rem/1 'DM Sans', sans-serif; }
@@ -436,7 +438,9 @@
         .cd-complaint-status-badge { margin-left: auto; padding: .3rem .55rem; border-radius: 99px; font: 800 .68rem/1 'DM Sans', sans-serif; text-transform: uppercase; letter-spacing: .05em; }
         .cd-complaint-status-badge.is-open { color: #9f5a06; background: #fff4d6; }
         .cd-complaint-status-badge.is-in_progress { color: #245f9e; background: #e7f1fb; }
+        .cd-complaint-status-badge.is-resolved_pending { color: #6d28d9; background: #f1e9fd; }
         .cd-complaint-status-badge.is-resolved { color: #166534; background: #e6f5ea; }
+        .cd-complaint-status-badge.is-escalated { color: #b02f2f; background: #fdeaea; }
         .cd-complaint-status-badge.is-closed { color: #55606a; background: #e9edf0; }
         .cd-complaint-category { padding: .3rem .55rem; border-radius: 99px; font: 800 .68rem/1 'DM Sans', sans-serif; text-transform: uppercase; letter-spacing: .05em; color: #245f8a; background: #e7f1f8; }
         .cd-complaint-subject { margin: 0; color: #153a31; font: 800 1rem/1.3 'Outfit', sans-serif; letter-spacing: -.01em; }
@@ -492,6 +496,15 @@
         .cd-chat-send-btn:disabled { background: #b6ccc1; box-shadow: none; cursor: not-allowed; }
         .cd-chat-composer .cd-complaint-modal-error { margin: 0; color: #b91c1c; font-size: .82rem; }
         .cd-chat-sent-note { margin: 0; color: #1d8a4e; font-size: .78rem; }
+        /* Status tellers — centered chips in the chat thread. */
+        .cd-chat-teller { display: grid; gap: .1rem; align-self: center; justify-items: center; max-width: 86%; margin: .2rem auto; padding: .3rem .8rem; background: #e8f1ec; border: 1px solid #d3e3d9; border-radius: 999px; text-align: center; }
+        .cd-chat-teller-text { color: #38624f; font-size: .74rem; font-weight: 700; line-height: 1.4; }
+        .cd-chat-teller-meta { color: #7d9189; font-size: .62rem; font-weight: 700; }
+        .cd-chat-status-note-row { padding: .45rem 1.15rem; background: #fbfbef; border-bottom: 1px solid #edf0df; }
+        .cd-chat-status-note { margin: 0; font-size: .78rem; font-weight: 700; line-height: 1.45; }
+        .cd-chat-status-note.is-escalated { color: #a2551a; }
+        .cd-chat-status-note.is-resolved { color: #1d8a4e; }
+        .cd-chat-status-note.is-pending { color: #245f9e; }
         @media (max-width: 600px) { .cd-complaint-list { grid-template-columns: 1fr; }.cd-complaint-modal { align-items: end; padding: .5rem; }.cd-complaint-modal-box { max-height: 94vh; border-radius: 16px 16px 10px 10px; }.cd-chat-head { flex-wrap: wrap; gap: .6rem; }.cd-chat-head-meta { margin-left: 0; }.cd-chat-row { max-width: 94%; } }
 
         .cd-profile { margin-top: var(--space-md); }
@@ -2286,6 +2299,6 @@
     <script src="js/auth.js"></script>
     <script src="js/cities.js"></script>
     <script src="js/city-picker.js?v=20260907-swap-fix-3-dispatch"></script>
-    <script src="js/company-dashboard.js?v=20260910-chat-v3"></script>
+    <script src="js/company-dashboard.js?v=20260910-statusflow-v1"></script>
 </body>
 </html>

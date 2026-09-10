@@ -4114,8 +4114,20 @@ var reviewEditingReplyId = null;
     var COMPLAINT_STATUSES = [
         ['open', 'Open'],
         ['in_progress', 'In progress'],
+        ['resolved_pending', 'Awaiting confirmation'],
         ['resolved', 'Resolved'],
-        ['closed', 'Closed']
+        ['closed', 'Closed'],
+        ['escalated', 'Escalated']
+    ];
+
+    /* Statuses the company may choose directly. \"resolved\" requires the
+       passenger to confirm (two-way resolution) and \"escalated\" is raised by
+       the passenger, so neither appears in the company's status dropdown. */
+    var COMPANY_COMPLAINT_STATUSES = [
+        ['open', 'Open'],
+        ['in_progress', 'In progress'],
+        ['resolved_pending', 'Mark as resolved for confirmation'],
+        ['closed', 'Close complaint']
     ];
 
     var COMPLAINT_CATEGORY_LABELS = {
@@ -4172,7 +4184,7 @@ var reviewEditingReplyId = null;
         var bar = byId('complaint-filterbar');
         if (!bar) { return; }
         if (!currentComplaints.length && complaintFilter === null) { bar.hidden = true; bar.innerHTML = ''; return; }
-        var options = [[null, 'All'], ['open', 'Open'], ['in_progress', 'In progress'], ['resolved', 'Resolved'], ['closed', 'Closed']];
+        var options = [[null, 'All'], ['open', 'Open'], ['in_progress', 'In progress'], ['resolved_pending', 'Awaiting confirmation'], ['resolved', 'Resolved'], ['escalated', 'Escalated'], ['closed', 'Closed']];
         var html = '';
         var total = 0;
         for (var statusKey in complaintsCounts) { total += Number(complaintsCounts[statusKey]) || 0; }
@@ -4225,7 +4237,9 @@ var reviewEditingReplyId = null;
                 '<div class="cd-complaint-summary-stat"><b>' + total + '</b><span>Total</span></div>' +
                 '<div class="cd-complaint-summary-stat is-open"><b>' + (Number(complaintsCounts.open) || 0) + '</b><span>Open</span></div>' +
                 '<div class="cd-complaint-summary-stat is-in_progress"><b>' + (Number(complaintsCounts.in_progress) || 0) + '</b><span>In progress</span></div>' +
+                '<div class="cd-complaint-summary-stat is-resolved_pending"><b>' + (Number(complaintsCounts.resolved_pending) || 0) + '</b><span>Awaiting confirmation</span></div>' +
                 '<div class="cd-complaint-summary-stat is-resolved"><b>' + (Number(complaintsCounts.resolved) || 0) + '</b><span>Resolved</span></div>' +
+                '<div class="cd-complaint-summary-stat is-escalated"><b>' + (Number(complaintsCounts.escalated) || 0) + '</b><span>Escalated</span></div>' +
                 '<div class="cd-complaint-summary-stat is-closed"><b>' + (Number(complaintsCounts.closed) || 0) + '</b><span>Closed</span></div>';
         }
 
@@ -4292,13 +4306,41 @@ var reviewEditingReplyId = null;
 
     /* ===== Handle-complaint modal ===== */
 
+    /* Statuses a company can choose; resolved/escalated are locked for the
+       company and shown as a disabled placeholder so the current state is
+       always visible in the dropdown. */
     function complaintModalStatusOptions(selected) {
         var html = '';
-        for (var i = 0; i < COMPLAINT_STATUSES.length; i++) {
-            var val = COMPLAINT_STATUSES[i][0]; var label = COMPLAINT_STATUSES[i][1];
+        var found = false;
+        for (var i = 0; i < COMPANY_COMPLAINT_STATUSES.length; i++) {
+            var val = COMPANY_COMPLAINT_STATUSES[i][0]; var label = COMPANY_COMPLAINT_STATUSES[i][1];
+            if (val === selected) { found = true; }
             html += '<option value="' + val + '"' + (selected === val ? ' selected' : '') + '>' + label + '</option>';
         }
+        if (!found && selected) {
+            var lockedLabel = {
+                resolved: 'Resolved (customer confirmed)',
+                escalated: 'Escalated to support'
+            }[selected] || String(selected).replace('_', ' ');
+            html = '<option value="' + selected + '" selected disabled>' + lockedLabel + '</option>' + html;
+        }
         return html;
+    }
+
+    /* When the passenger escalated or confirmed, the company dropdown shows the
+       current state as a read-only hint so the operator does not try to set it. */
+    function complaintStatusLockedNote(complaint) {
+        var status = complaint.status;
+        if (status === 'escalated') {
+            return '<p class="cd-chat-status-note is-escalated">Escalated to ET Transport support — the admin is reviewing this complaint.</p>';
+        }
+        if (status === 'resolved') {
+            return '<p class="cd-chat-status-note is-resolved">Resolved — the customer confirmed this complaint is closed.</p>';
+        }
+        if (status === 'resolved_pending') {
+            return '<p class="cd-chat-status-note is-pending">Awaiting confirmation — the customer needs to agree this complaint is resolved.</p>';
+        }
+        return '';
     }
 
     /* Chat time label like "Sep 9 · 10:05 AM". Falls back to the date-only
@@ -4350,8 +4392,15 @@ var reviewEditingReplyId = null;
         '</div>';
     }
 
-    /* One ordered chat stream: the passenger's complaint, every confirmed
-       response, then any locally-optimistic bubbles — newest last. */
+    /* Status teller chip — centered in the chat, not a message bubble. */
+    function complaintStatusTellerHtml(r) {
+        return '<div class="cd-chat-teller"><span class="cd-chat-teller-text">' + escHtml(r.message) + '</span>' +
+            '<span class="cd-chat-teller-meta">' + (r.created_at ? escHtml(chatTimeLabel(r.created_at)) : '') + '</span></div>';
+    }
+
+    /* One ordered chat stream: the passenger's original complaint, every
+       thread entry (status tellers render as centered chips; chat messages
+       align by actor), then any locally-optimistic bubbles. */
     function buildComplaintThread() {
         var complaint = activeComplaintModalComplaint;
         var lines = [{
@@ -4361,14 +4410,37 @@ var reviewEditingReplyId = null;
         }];
         var responses = (Array.isArray(complaint.responses) && complaint.responses.length)
             ? complaint.responses
-            : (complaint.response ? [{ id: -1, message: complaint.response, created_at: complaint.response_at, updated_at: complaint.response_at }] : []);
+            : (complaint.response ? [{ id: -1, message: complaint.response, created_at: complaint.response_at, updated_at: complaint.response_at, kind: 'message', actor: 'company' }] : []);
         for (var i = 0; i < responses.length; i++) {
-            lines.push({ side: 'company', avatar: 'You', html: complaintChatBubbleHtml(responses[i]) });
+            var r = responses[i];
+            if (r.kind === 'status') {
+                lines.push({ side: 'teller', avatar: '', html: complaintStatusTellerHtml(r) });
+            } else {
+                var actorIsPassenger = r.actor === 'passenger';
+                lines.push({
+                    side: actorIsPassenger ? 'passenger' : 'company',
+                    avatar: actorIsPassenger
+                        ? String(complaint.passenger_name || 'P').trim().charAt(0).toUpperCase() || 'P'
+                        : 'You',
+                    html: actorIsPassenger
+                        ? complaintPassengerReplyHtml(r, complaint)
+                        : complaintChatBubbleHtml(r)
+                });
+            }
         }
         for (var j = 0; j < complaintLocalMessages.length; j++) {
             lines.push({ side: 'company', avatar: 'You', html: complaintLocalBubbleHtml(complaintLocalMessages[j]) });
         }
         return lines;
+    }
+
+    /* Passenger reply bubble (left side, same styling as the intro). */
+    function complaintPassengerReplyHtml(r, complaint) {
+        var when = r.created_at ? chatTimeLabel(r.created_at) : '';
+        return '<div class="cd-chat-bubble is-passenger">' +
+            '<p>' + escHtml(r.message) + '</p>' +
+            '<span class="cd-chat-bubble-meta">' + escHtml(complaint.passenger_name || 'Passenger') + (when ? ' \u00b7 ' + escHtml(when) : '') + '</span>' +
+        '</div>';
     }
 
     /* Render the thread with grouped bubbles; consecutive messages from one
@@ -4378,6 +4450,11 @@ var reviewEditingReplyId = null;
         var html = '';
         var prevSide = null;
         for (var i = 0; i < lines.length; i++) {
+            if (lines[i].side === 'teller') {
+                html += lines[i].html;
+                prevSide = null;
+                continue;
+            }
             var cont = prevSide === lines[i].side;
             html += '<div class="cd-chat-row is-' + lines[i].side + (cont ? ' is-continuation' : '') + '">' +
                 '<span class="cd-chat-avatar' + (lines[i].side === 'company' ? ' is-company' : '') + '" aria-hidden="true">' + escHtml(lines[i].avatar) + '</span>' +
@@ -4414,10 +4491,11 @@ var reviewEditingReplyId = null;
                     '</div>' +
                     '<div class="cd-chat-head-meta">' +
                         '<label for="complaint-modal-status">Status</label>' +
-                        '<select id="complaint-modal-status" class="cd-complaint-modal-status-select">' + complaintModalStatusOptions(complaint.status) + '</select>' +
+                        '<select id="complaint-modal-status" class="cd-complaint-modal-status-select"' + (complaint.status === 'escalated' || complaint.status === 'resolved' ? ' disabled' : '') + '>' + complaintModalStatusOptions(complaint.status) + '</select>' +
                     '</div>' +
                     '<button type="button" id="complaint-modal-close" class="cd-complaint-modal-close" aria-label="Close complaint">\u00d7</button>' +
                 '</div>' +
+                (complaintStatusLockedNote(complaint) ? '<div class="cd-chat-status-note-row">' + complaintStatusLockedNote(complaint) + '</div>' : '') +
                 '<div id="complaint-chat-thread" class="cd-chat-thread" aria-live="polite">' + renderComplaintThread() + '</div>' +
                 '<div class="cd-chat-composer">' +
                     '<div class="cd-chat-composer-row">' +
@@ -4504,8 +4582,9 @@ var reviewEditingReplyId = null;
     /* Merge a fresh server payload into the currently-open complaint so the
        thread never loses messages. Instead of wholesale replacing the
        responses array (which could collapse the thread if a payload ever came
-       back incomplete), we union by message text — keeping every response we
-       already know and appending any new ones — in arrival order. */
+       back incomplete), we union by row id — keeping every response we
+       already know and appending any new ones — in arrival order. Rows
+       without an id (local optimistic bubbles) dedupe by message text. */
     function reconcileComplaintPayload(serverComplaint) {
         var base = activeComplaintModalComplaint || {};
         var next = {
@@ -4526,12 +4605,16 @@ var reviewEditingReplyId = null;
             updated_at: (serverComplaint && serverComplaint.updated_at) || base.updated_at,
             responses: []
         };
-        var seen = {};
+        var seenIds = {};
+        var seenTexts = {};
         function pushResponse(r) {
             if (!r) { return; }
-            var key = String(r.message).trim();
-            if (!key || seen[key]) { return; }
-            seen[key] = 1;
+            var idKey = r.id != null ? 'id:' + r.id : null;
+            if (idKey && seenIds[idKey]) { return; }
+            if (idKey) { seenIds[idKey] = 1; }
+            var textKey = String(r.message || '').trim();
+            if (textKey && !idKey && seenTexts[textKey]) { return; }
+            if (textKey && !idKey) { seenTexts[textKey] = 1; }
             next.responses.push(r);
         }
         var oldList = (Array.isArray(base.responses)) ? base.responses : [];

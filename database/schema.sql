@@ -624,11 +624,13 @@ CREATE TABLE IF NOT EXISTS notifications (
 -- complaints — passengers file a complaint about a company's
 -- service (e.g. a cancelled bus, a lost parcel, late departure).
 -- The company operator triages every complaint from the company
--- dashboard: move it through open → in_progress → resolved/closed
--- and optionally write a response the passenger sees on their
--- own dashboard. booking_id is optional context that passengers
--- may attach (via a booking reference) so staff can cross-check
--- the journey.
+-- dashboard. Status flow:
+--   open → in_progress → resolved_pending → resolved (passenger
+--   must confirm) OR back to in_progress. Company may close
+--   (closed); a passenger can escalate (escalated) when the
+--   company closes or stops responding, and an admin intervenes.
+-- booking_id is optional context that passengers may attach (via
+-- a booking reference) so staff can cross-check the journey.
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS complaints (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -638,7 +640,7 @@ CREATE TABLE IF NOT EXISTS complaints (
   category VARCHAR(40) NOT NULL DEFAULT 'other',
   subject VARCHAR(120) DEFAULT NULL,
   message TEXT NOT NULL,
-  status ENUM('open', 'in_progress', 'resolved', 'closed') NOT NULL DEFAULT 'open',
+  status ENUM('open', 'in_progress', 'resolved_pending', 'resolved', 'closed', 'escalated') NOT NULL DEFAULT 'open',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   response TEXT DEFAULT NULL,
@@ -666,13 +668,18 @@ CREATE TABLE IF NOT EXISTS complaints (
 -- The company replies from the complaint chat and can add as many
 -- follow-up messages as needed. Once a response is sent it cannot be
 -- edited or deleted (enforced by api/company.php?action=complaint_update).
+-- kind='status' rows are system status tellers ("Customer opened
+-- complaint", "Company marked this as resolved"...) rendered as
+-- centered chips in the chat; actor records who wrote the entry.
 -- complaints.response / response_at stay as a denormalized copy of the
--- LATEST response so legacy read paths keep working.
+-- LATEST message so legacy read paths keep working.
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS complaint_responses (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   complaint_id BIGINT UNSIGNED NOT NULL,
   message TEXT NOT NULL,
+  kind ENUM('message', 'status') NOT NULL DEFAULT 'message',
+  actor ENUM('passenger', 'company', 'admin', 'system') NOT NULL DEFAULT 'company',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),

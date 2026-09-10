@@ -158,7 +158,7 @@ function passenger_complaint_payload(array $row, array $responses = []): array
 function fetch_passenger_complaint_responses(PDO $pdo, int $complaintId): array
 {
     $stmt = $pdo->prepare('
-        SELECT id, complaint_id, message, created_at, updated_at
+        SELECT id, complaint_id, message, kind, actor, created_at, updated_at
         FROM complaint_responses
         WHERE complaint_id = :complaint_id
         ORDER BY id ASC
@@ -170,11 +170,35 @@ function fetch_passenger_complaint_responses(PDO $pdo, int $complaintId): array
         $out[] = [
             'id' => (int) $row['id'],
             'message' => $row['message'],
+            'kind' => ($row['kind'] ?? 'message') === 'status' ? 'status' : 'message',
+            'actor' => $row['actor'] ?? 'company',
             'created_at' => $row['created_at'] ?? '',
             'updated_at' => $row['updated_at'] ?? '',
         ];
     }
     return $out;
+}
+
+/** One complaint row owned by the passenger, or a 404 response. */
+function fetch_passenger_complaint_row(PDO $pdo, int $passengerId, int $complaintId): array
+{
+    $stmt = $pdo->prepare(complaint_select_sql() . ' WHERE c.id = :id AND c.passenger_id = :uid LIMIT 1');
+    $stmt->execute([':id' => $complaintId, ':uid' => $passengerId]);
+    $row = $stmt->fetch();
+    if ($row === false) {
+        auth_response(404, [
+            'success' => false,
+            'message' => 'Complaint not found.',
+        ]);
+    }
+    return $row;
+}
+
+/** Insert a status teller row into the thread. */
+function insert_passenger_status_teller(PDO $pdo, int $complaintId, string $text, string $actor = 'system'): void
+{
+    $ins = $pdo->prepare('INSERT INTO complaint_responses (complaint_id, message, kind, actor) VALUES (:cid, :msg, \'status\', :actor)');
+    $ins->execute([':cid' => $complaintId, ':msg' => $text, ':actor' => $actor]);
 }
 
 /** The one booking JOIN shared by insert/readback/list (keeps shape identical). */
@@ -194,6 +218,99 @@ function complaint_select_sql(): string
         LEFT JOIN trips t ON t.id = b.trip_id
         LEFT JOIN routes r ON r.id = t.route_id
     ";
+}
+/** Passenger-owned post-complaint lifecycle actions.
+ *  mode: reply | confirm_resolution | reopen | escalate.
+ *  Ownership is part of the WHERE clause — only the passenger's own rows match. */
+function passenger_complaint_mutation(PDO $pdo, string $mode): array
+{
+    $user = require_active_passenger();
+    $input = complaint_input();
+
+    $complaintId = (int) ($input['complaint_id'] ?? 0);
+    if ($complaintId <= 0) {
+        auth_response(422, ['success' => false, 'message' => 'A complaint id is required.']);
+    }
+    $row = fetch_passenger_complaint_row($pdo, (int) $user['id'], $complaintId);
+    $currentStatus = (string) $row['status'];
+    $notify = false;
+
+    if ($mode === 'reply') {
+        $message = trim((string) ($input['message'] ?? ''));
+        if ($message === '') {
+            auth_response(422, ['success' => false, 'message' => 'A message is required.']);
+        }
+        if (mb_strlen($message) > COMPLAINT_MESSAGE_MAX) {
+            auth_response(422, ['success' => false, 'message' => 'Message must be ' . COMPLAINT_MESSAGE_MAX . ' characters or fewer.']);
+        }
+        if (in_array($currentStatus, ['resolved', 'closed'], true)) {
+            auth_response(422, ['success' => false, 'message' => 'This complaint is ' . $currentStatus . ' and can no longer be replied to.']);
+        }
+        $ins = $pdo->prepare('INSERT INTO complaint_responses (complaint_id, message, kind, actor) VALUES (:cid, :msg, \'message\', \'passenger\')');
+        $ins->execute([':cid' => $complaintId, ':message' => $message]);
+        $targetStatus = $currentStatus;
+        $notify = true;
+    } elseif ($mode === 'confirm_resolution') {
+        if ($currentStatus !== 'resolved_pending') {
+            auth_response(422, ['success' => false, 'message' => 'There is no resolution waiting for your confirmation.']);
+        }
+        $targetStatus = 'resolved';
+        insert_passenger_status_teller($pdo, $complaintId, 'Customer confirmed this complaint is resolved.', 'passenger');
+        $notify = true;
+    } elseif ($mode === 'reopen') {
+        if ($currentStatus !== 'resolved_pending') {
+            auth_response(422, ['success' => false, 'message' => 'There is no resolution to reopen.']);
+        }
+        $targetStatus = 'in_progress';
+        insert_passenger_status_teller($pdo, $complaintId, 'Customer reopened this complaint — it needs more attention.', 'passenger');
+        $notify = true;
+    } elseif ($mode === 'escalate') {
+        if (in_array($currentStatus, ['resolved', 'escalated'], true)) {
+            auth_response(422, ['success' => false, 'message' => 'This complaint cannot be escalated.']);
+        }
+        $targetStatus = 'escalated';
+        insert_passenger_status_teller($pdo, $complaintId, 'Customer requested admin assistance for this complaint.', 'passenger');
+        $notify = true;
+    } else {
+        auth_response(400, ['success' => false, 'message' => 'Unknown complaint action.']);
+    }
+
+    $upd = $pdo->prepare('UPDATE complaints SET status = :status WHERE id = :id AND passenger_id = :uid');
+    $upd->execute([':status' => $targetStatus, ':id' => $complaintId, ':uid' => (int) $user['id']]);
+
+    if ($notify) {
+        /* Notify the company operator so they can react. */
+        $companyStmt = $pdo->prepare('SELECT user_id FROM companies WHERE id = :cid LIMIT 1');
+        $companyStmt->execute([':cid' => (int) $row['company_id']]);
+        $company = $companyStmt->fetch();
+        $companyUserId = (int) ($company['user_id'] ?? 0);
+        if ($companyUserId > 0) {
+            try {
+                $titleMsg = match ($mode) {
+                    'reply' => 'A passenger replied to your complaint thread.',
+                    'confirm_resolution' => 'A passenger confirmed a complaint is resolved.',
+                    'reopen' => 'A passenger reopened a complaint.',
+                    'escalate' => 'A passenger requested admin help on a complaint.',
+                    default => 'A complaint was updated.',
+                };
+                createNotification(
+                    $pdo,
+                    $companyUserId,
+                    'complaint',
+                    'Complaint Update',
+                    $titleMsg . ' ("' . $row['subject'] . '")',
+                    'complaint-activity:' . $complaintId
+                );
+            } catch (Throwable $e) {
+                /* Best-effort only. */
+            }
+        }
+    }
+
+    $updated = fetch_passenger_complaint_row($pdo, (int) $user['id'], $complaintId);
+    return [
+        'complaint' => passenger_complaint_payload($updated, fetch_passenger_complaint_responses($pdo, $complaintId)),
+    ];
 }
 /* ============================================================
    POST create — file a complaint against a public company.
@@ -277,6 +394,9 @@ function handle_create(): void
     ]);
     $newId = (int) $pdo->lastInsertId();
 
+    /* Opening teller — the first entry in the chat thread. */
+    insert_passenger_status_teller($pdo, $newId, 'Customer opened this complaint.', 'passenger');
+
     /* Best-effort notifications: confirm to the passenger and alert the
        company operator. Neither ever alters the response on failure. */
     try {
@@ -346,10 +466,18 @@ try {
     if ($action === 'list') {
         handle_list();
     }
+    if (in_array($action, ['reply', 'confirm_resolution', 'reopen', 'escalate'], true)) {
+        require_complaint_post();
+        $result = passenger_complaint_mutation($pdo, $action);
+        auth_response(200, array_merge([
+            'success' => true,
+            'message' => 'Complaint updated.',
+        ], $result));
+    }
 
     auth_response(400, [
         'success' => false,
-        'message' => 'Unsupported action. Use action=create or action=list.',
+        'message' => 'Unsupported action. Use action=create, action=list, action=reply, action=confirm_resolution, action=reopen or action=escalate.',
     ]);
 } catch (Throwable $e) {
     auth_response(500, [

@@ -1699,6 +1699,249 @@ function require_admin_mutation(PDO $pdo, string $action): void
 
     apply_company_status($pdo, $input, $action, $adminUserId);
 }
+
+/* ============================================================
+   Complaints — admin intervention on escalated / stuck complaints.
+   A passenger can escalate (api/complaint.php?action=escalate)
+   when the company closes a complaint or stops responding; the
+   admin can read the full thread, reply, and steer the status.
+   ============================================================ */
+
+function admin_complaint_payload(array $row, array $responses = []): array
+{
+    return [
+        'id' => (int) $row['id'],
+        'company_id' => (int) $row['company_id'],
+        'company_name' => $row['company_name'] ?? '',
+        'passenger_id' => isset($row['passenger_id']) && $row['passenger_id'] !== null ? (int) $row['passenger_id'] : null,
+        'passenger_name' => $row['passenger_name'] ?? '',
+        'booking_reference' => $row['booking_reference'] ?? null,
+        'category' => $row['category'] ?? 'other',
+        'subject' => $row['subject'],
+        'message' => $row['message'],
+        'status' => $row['status'],
+        'route' => $row['route'] ?? null,
+        'departure' => $row['departure'] ?? null,
+        'responses' => $responses,
+        'created_at' => $row['created_at'] ?? '',
+        'updated_at' => $row['updated_at'] ?? '',
+    ];
+}
+
+function admin_fetch_complaint_rows(PDO $pdo, ?string $status = null): array
+{
+    $sql = "
+        SELECT c.id, c.passenger_id, c.company_id, c.booking_id, c.category,
+               c.subject, c.message, c.status,
+               c.created_at, c.updated_at,
+               u.name AS passenger_name,
+               co.name AS company_name,
+               b.booking_reference,
+               CONCAT(r.from_city, ' → ', r.to_city) AS route,
+               t.departure_date, t.departure_time
+        FROM complaints c
+        LEFT JOIN users u ON u.id = c.passenger_id
+        LEFT JOIN companies co ON co.id = c.company_id
+        LEFT JOIN bookings b ON b.id = c.booking_id
+        LEFT JOIN trips t ON t.id = b.trip_id
+        LEFT JOIN routes r ON r.id = t.route_id
+    ";
+    $params = [];
+    if ($status !== null && $status !== '') {
+        $sql .= ' WHERE c.status = :status';
+        $params[':status'] = $status;
+    }
+    $sql .= ' ORDER BY c.created_at DESC, c.id DESC LIMIT 200';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll();
+}
+
+function admin_fetch_complaint_thread(PDO $pdo, int $complaintId): array
+{
+    $stmt = $pdo->prepare('
+        SELECT id, complaint_id, message, kind, actor, created_at, updated_at
+        FROM complaint_responses
+        WHERE complaint_id = :cid
+        ORDER BY id ASC
+    ');
+    $stmt->execute([':cid' => $complaintId]);
+    $out = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $out[] = [
+            'id' => (int) $row['id'],
+            'message' => $row['message'],
+            'kind' => ($row['kind'] ?? 'message') === 'status' ? 'status' : 'message',
+            'actor' => $row['actor'] ?? 'company',
+            'created_at' => $row['created_at'] ?? '',
+            'updated_at' => $row['updated_at'] ?? '',
+        ];
+    }
+    return $out;
+}
+
+function admin_insert_status_teller(PDO $pdo, int $complaintId, string $text): void
+{
+    $ins = $pdo->prepare('INSERT INTO complaint_responses (complaint_id, message, kind, actor) VALUES (:cid, :msg, \'status\', \'admin\')');
+    $ins->execute([':cid' => $complaintId, ':msg' => $text]);
+}
+
+/** GET /api/admin.php?action=complaints — complaint oversight. */
+function handle_admin_complaints(PDO $pdo): void
+{
+    requireRole('admin');
+    $status = strtolower(trim((string) ($_GET['status'] ?? '')));
+    if ($status !== '' && !in_array($status, ['open', 'in_progress', 'resolved_pending', 'resolved', 'closed', 'escalated'], true)) {
+        auth_response(422, ['success' => false, 'message' => 'Unknown complaint status filter.']);
+    }
+
+    $complaints = [];
+    foreach (admin_fetch_complaint_rows($pdo, $status === '' ? null : $status) as $row) {
+        $departure = '';
+        if (($row['departure_date'] ?? null) !== null) {
+            $departure = (string) $row['departure_date'];
+            if (($row['departure_time'] ?? null) !== null) {
+                $departure .= ' ' . $row['departure_time'];
+            }
+        }
+        $payload = admin_complaint_payload($row);
+        $payload['departure'] = $departure === '' ? null : $departure;
+        $complaints[] = $payload;
+    }
+
+    $counts = ['open' => 0, 'in_progress' => 0, 'resolved_pending' => 0, 'resolved' => 0, 'closed' => 0, 'escalated' => 0];
+    $cStmt = $pdo->query('SELECT status, COUNT(*) AS n FROM complaints GROUP BY status');
+    foreach ($cStmt->fetchAll() as $row) {
+        $statusKey = (string) $row['status'];
+        if (array_key_exists($statusKey, $counts)) {
+            $counts[$statusKey] = (int) $row['n'];
+        }
+    }
+
+    auth_response(200, ['success' => true, 'complaints' => $complaints, 'counts' => $counts]);
+}
+
+/** GET /api/admin.php?action=complaint&id=N — one complaint with its thread. */
+function handle_admin_complaint(PDO $pdo): void
+{
+    requireRole('admin');
+    $id = admin_company_id_or_error($_GET['id'] ?? null, 'A complaint id is required.');
+    $stmt = $pdo->prepare("
+        SELECT c.id, c.passenger_id, c.company_id, c.booking_id, c.category,
+               c.subject, c.message, c.status,
+               c.created_at, c.updated_at,
+               u.name AS passenger_name,
+               co.name AS company_name,
+               b.booking_reference,
+               CONCAT(r.from_city, ' → ', r.to_city) AS route,
+               t.departure_date, t.departure_time
+        FROM complaints c
+        LEFT JOIN users u ON u.id = c.passenger_id
+        LEFT JOIN companies co ON co.id = c.company_id
+        LEFT JOIN bookings b ON b.id = c.booking_id
+        LEFT JOIN trips t ON t.id = b.trip_id
+        LEFT JOIN routes r ON r.id = t.route_id
+        WHERE c.id = :id
+        LIMIT 1
+    ");
+    $stmt->execute([':id' => $id]);
+    $row = $stmt->fetch();
+    if ($row === false) {
+        auth_response(404, ['success' => false, 'message' => 'Complaint not found.']);
+    }
+    $departure = '';
+    if (($row['departure_date'] ?? null) !== null) {
+        $departure = (string) $row['departure_date'];
+        if (($row['departure_time'] ?? null) !== null) {
+            $departure .= ' ' . $row['departure_time'];
+        }
+    }
+    $payload = admin_complaint_payload($row, admin_fetch_complaint_thread($pdo, $id));
+    $payload['departure'] = $departure === '' ? null : $departure;
+    auth_response(200, ['success' => true, 'complaint' => $payload]);
+}
+
+/** POST /api/admin.php?action=complaint_update — reply + steer the status. */
+function handle_admin_complaint_update(PDO $pdo): void
+{
+    require_admin_post();
+    $user = requireRole('admin');
+    $input = admin_input();
+    $complaintId = admin_company_id_or_error($input['complaint_id'] ?? null, 'A complaint id is required.');
+
+    $rowStmt = $pdo->prepare('SELECT id, passenger_id, company_id, subject, status FROM complaints WHERE id = :id LIMIT 1');
+    $rowStmt->execute([':id' => $complaintId]);
+    $row = $rowStmt->fetch();
+    if ($row === false) {
+        auth_response(404, ['success' => false, 'message' => 'Complaint not found.']);
+    }
+
+    $response = $input['response'] ?? null;
+    $hasResponse = $response !== null && trim((string) $response) !== '';
+    if ($hasResponse) {
+        $response = trim((string) $response);
+        if (mb_strlen($response) > 1000) {
+            auth_response(422, ['success' => false, 'message' => 'Response must be 1000 characters or fewer.']);
+        }
+        $ins = $pdo->prepare('INSERT INTO complaint_responses (complaint_id, message, kind, actor) VALUES (:cid, :msg, \'message\', \'admin\')');
+        $ins->execute([':cid' => $complaintId, ':message' => $response]);
+    }
+
+    $statusInput = trim((string) ($input['status'] ?? ''));
+    if ($statusInput !== '') {
+        if (!in_array($statusInput, ['open', 'in_progress', 'resolved_pending', 'resolved', 'closed', 'escalated'], true)) {
+            auth_response(422, ['success' => false, 'message' => 'Unknown complaint status.']);
+        }
+        if ($statusInput !== (string) $row['status']) {
+            $upd = $pdo->prepare('UPDATE complaints SET status = :status WHERE id = :id');
+            $upd->execute([':status' => $statusInput, ':id' => $complaintId]);
+            if ($statusInput === 'resolved') {
+                admin_insert_status_teller($pdo, $complaintId, 'Admin resolved this complaint.');
+            } elseif ($statusInput === 'in_progress') {
+                admin_insert_status_teller($pdo, $complaintId, 'Admin reopened this complaint for the company.');
+            } elseif ($statusInput === 'closed') {
+                admin_insert_status_teller($pdo, $complaintId, 'Admin closed this complaint.');
+            } elseif ($statusInput === 'escalated') {
+                admin_insert_status_teller($pdo, $complaintId, 'Admin is intervening on this complaint.');
+            }
+        }
+    }
+
+    /* Best-effort notifications to the passenger and the company. */
+    $targets = [(int) ($row['passenger_id'] ?? 0)];
+    if (($row['company_id'] ?? 0) > 0) {
+        $cu = $pdo->prepare('SELECT user_id FROM companies WHERE id = :id LIMIT 1');
+        $cu->execute([':id' => (int) $row['company_id']]);
+        if (($cuRow = $cu->fetch()) !== false) {
+            $targets[] = (int) ($cuRow['user_id'] ?? 0);
+        }
+    }
+    foreach ($targets as $targetUserId) {
+        if ((int) $targetUserId <= 0) { continue; }
+        try {
+            createNotification(
+                $pdo,
+                (int) $targetUserId,
+                'complaint',
+                'Admin Support',
+                'An administrator updated your complaint "' . $row['subject'] . '".',
+                'admin-complaint:' . $complaintId
+            );
+        } catch (Throwable $e) {
+            /* Best-effort only. */
+        }
+    }
+
+    $refetch = $pdo->prepare('SELECT id, passenger_id, company_id, booking_id, category, subject, message, status, created_at, updated_at, NULL AS response, NULL AS response_at, NULL AS passenger_name, NULL AS company_name, NULL AS booking_reference, NULL AS route, NULL AS departure_date, NULL AS departure_time FROM complaints WHERE id = :id LIMIT 1');
+    $refetch->execute([':id' => $complaintId]);
+    $updated = $refetch->fetch();
+
+    auth_response(200, [
+        'success' => true,
+        'message' => 'Complaint updated.',
+        'complaint' => admin_complaint_payload($updated, admin_fetch_complaint_thread($pdo, $complaintId)),
+    ]);
+}
 try {
     $pdo = db();
     $action = admin_action();
@@ -1741,6 +1984,18 @@ try {
 
     if ($action === 'reviews') {
         handle_admin_reviews($pdo);
+    }
+
+    if ($action === 'complaints') {
+        handle_admin_complaints($pdo);
+    }
+
+    if ($action === 'complaint') {
+        handle_admin_complaint($pdo);
+    }
+
+    if ($action === 'complaint_update') {
+        handle_admin_complaint_update($pdo);
     }
 
     if ($action === 'manifest') {

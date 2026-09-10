@@ -4907,7 +4907,37 @@ function handle_parcel_delete(PDO $pdo): void
 /** True when the value is one of the schema's complaint status ENUM values. */
 function valid_complaint_status(string $value): bool
 {
-    return in_array($value, ['open', 'in_progress', 'resolved', 'closed'], true);
+    return in_array($value, ['open', 'in_progress', 'resolved_pending', 'resolved', 'closed', 'escalated'], true);
+}
+
+/** Statuses a company operator may set directly. \"resolved\" and \"escalated\"
+ *  are NOT company-settable: resolved requires the passenger's confirmation
+ *  (two-way resolution) and escalated is triggered by the passenger, after
+ *  which only an admin intervenes. */
+function company_settable_complaint_status(string $value): bool
+{
+    return in_array($value, ['open', 'in_progress', 'resolved_pending', 'closed'], true);
+}
+
+/** Insert a status teller row into the thread (actor = system unless given). */
+function insert_complaint_status_teller(PDO $pdo, int $complaintId, string $text, string $actor = 'system'): void
+{
+    $ins = $pdo->prepare('INSERT INTO complaint_responses (complaint_id, message, kind, actor) VALUES (:cid, :msg, \'status\', :actor)');
+    $ins->execute([':cid' => $complaintId, ':msg' => $text, ':actor' => $actor]);
+}
+
+/** Human-readable status label used only for status tellers. */
+function complaint_status_label(string $status): string
+{
+    return match ($status) {
+        'open' => 'Open',
+        'in_progress' => 'In progress',
+        'resolved_pending' => 'Awaiting confirmation',
+        'resolved' => 'Resolved',
+        'closed' => 'Closed',
+        'escalated' => 'Escalated',
+        default => 'Open',
+    };
 }
 
 /** Safe presentation payload for one complaint row (never internal data). */
@@ -4945,7 +4975,7 @@ function complaint_payload(array $row, array $responses = []): array
 function fetch_complaint_responses(PDO $pdo, int $complaintId): array
 {
     $stmt = $pdo->prepare('
-        SELECT id, complaint_id, message, created_at, updated_at
+        SELECT id, complaint_id, message, kind, actor, created_at, updated_at
         FROM complaint_responses
         WHERE complaint_id = :complaint_id
         ORDER BY id ASC
@@ -4954,14 +4984,22 @@ function fetch_complaint_responses(PDO $pdo, int $complaintId): array
 
     $out = [];
     foreach ($stmt->fetchAll() as $row) {
-        $out[] = [
-            'id' => (int) $row['id'],
-            'message' => $row['message'],
-            'created_at' => $row['created_at'] ?? '',
-            'updated_at' => $row['updated_at'] ?? '',
-        ];
+        $out[] = complaint_response_payload($row);
     }
     return $out;
+}
+
+/** Safe payload for one complaint thread entry. */
+function complaint_response_payload(array $row): array
+{
+    return [
+        'id' => (int) $row['id'],
+        'message' => $row['message'],
+        'kind' => ($row['kind'] ?? 'message') === 'status' ? 'status' : 'message',
+        'actor' => $row['actor'] ?? 'company',
+        'created_at' => $row['created_at'] ?? '',
+        'updated_at' => $row['updated_at'] ?? '',
+    ];
 }
 
 /** Attach the response thread to every payload in a list (one query). */
@@ -4977,7 +5015,7 @@ function attach_complaint_responses(PDO $pdo, array $complaints): array
     }
 
     $stmt = $pdo->prepare('
-        SELECT id, complaint_id, message, created_at, updated_at
+        SELECT id, complaint_id, message, kind, actor, created_at, updated_at
         FROM complaint_responses
         WHERE complaint_id IN (' . implode(',', $ids) . ')
         ORDER BY id ASC
@@ -4986,12 +5024,7 @@ function attach_complaint_responses(PDO $pdo, array $complaints): array
 
     $map = [];
     foreach ($stmt->fetchAll() as $row) {
-        $map[(int) $row['complaint_id']][] = [
-            'id' => (int) $row['id'],
-            'message' => $row['message'],
-            'created_at' => $row['created_at'] ?? '',
-            'updated_at' => $row['updated_at'] ?? '',
-        ];
+        $map[(int) $row['complaint_id']][] = complaint_response_payload($row);
     }
 
     $out = [];
@@ -5003,13 +5036,16 @@ function attach_complaint_responses(PDO $pdo, array $complaints): array
     return $out;
 }
 
-/** Keep the denormalized complaints.response/response_at = LATEST response. */
+/** Keep the denormalized complaints.response/response_at = LATEST chat message.
+ *  Status tellers are excluded so the stored \"last response\" stays an actual
+ *  reply the card badge / passenger sees. */
 function sync_latest_complaint_response(PDO $pdo, int $complaintId): void
 {
     $stmt = $pdo->prepare('
         SELECT message, created_at
         FROM complaint_responses
         WHERE complaint_id = :complaint_id
+          AND kind = \'message\'
         ORDER BY id DESC
         LIMIT 1
     ');
@@ -5099,9 +5135,12 @@ function company_complaint_counts(PDO $pdo, int $companyId): array
     ');
     $stmt->execute([':company_id' => $companyId]);
 
-    $counts = ['open' => 0, 'in_progress' => 0, 'resolved' => 0, 'closed' => 0];
+    $counts = ['open' => 0, 'in_progress' => 0, 'resolved_pending' => 0, 'resolved' => 0, 'closed' => 0, 'escalated' => 0];
     foreach ($stmt->fetchAll() as $row) {
-        $counts[(string) $row['status']] = (int) $row['n'];
+        $status = (string) $row['status'];
+        if (array_key_exists($status, $counts)) {
+            $counts[$status] = (int) $row['n'];
+        }
     }
     return $counts;
 }
@@ -5147,6 +5186,14 @@ function handle_complaint_update(PDO $pdo): void
     if (!valid_complaint_status($status)) {
         auth_response(422, ['success' => false, 'message' => 'Unknown complaint status.']);
     }
+    /* A company may not set resolved (needs the passenger to confirm — two-way
+       resolution) nor escalated (the passenger triggers admin help). The lock
+       applies to a status CHANGE only — the company can still reply to an
+       escalated complaint while the status stays escalated. */
+    $statusChanged = $status !== (string) $row['status'];
+    if ($statusChanged && !company_settable_complaint_status($status)) {
+        auth_response(422, ['success' => false, 'message' => 'You cannot set this status directly. Please mark the complaint for confirmation or ask the passenger to escalate.']);
+    }
 
     $response = $input['response'] ?? null;
     if ($response !== null) {
@@ -5168,29 +5215,54 @@ function handle_complaint_update(PDO $pdo): void
         ]);
     }
 
-    $upd = $pdo->prepare('UPDATE complaints SET status = :status WHERE id = :id AND company_id = :company_id');
-    $upd->execute([':status' => $status, ':id' => $complaintId, ':company_id' => $companyId]);
+    $statusChanged = $status !== (string) $row['status'];
 
-    /* A non-empty ?response= appends a new message to the thread. */
+    /* A non-empty ?response= appends a new chat message (actor = company). */
     $notify = false;
     if ($hasResponse) {
-        $ins = $pdo->prepare('INSERT INTO complaint_responses (complaint_id, message) VALUES (:cid, :message)');
+        $ins = $pdo->prepare('INSERT INTO complaint_responses (complaint_id, message, kind, actor) VALUES (:cid, :msg, \'message\', \'company\')');
         $ins->execute([':cid' => $complaintId, ':message' => $response]);
         $notify = true;
     }
 
-    /* complaints.response/response_at stay in sync with the latest response. */
+    /* If the status changed, record a status teller in the thread so both
+       sides can see the transition ("Company marked this as resolved…"). */
+    if ($statusChanged) {
+        $upd = $pdo->prepare('UPDATE complaints SET status = :status WHERE id = :id AND company_id = :company_id');
+        $upd->execute([':status' => $status, ':id' => $complaintId, ':company_id' => $companyId]);
+
+        if ($status === 'resolved_pending') {
+            insert_complaint_status_teller($pdo, $complaintId, 'Company marked this complaint as resolved — awaiting your confirmation.', 'company');
+            $notify = true;
+        } elseif ($status === 'in_progress') {
+            insert_complaint_status_teller($pdo, $complaintId, 'Company is now working on this complaint.', 'company');
+            $notify = true;
+        } elseif ($status === 'open') {
+            insert_complaint_status_teller($pdo, $complaintId, 'Company reopened this complaint.', 'company');
+            $notify = true;
+        } elseif ($status === 'closed') {
+            insert_complaint_status_teller($pdo, $complaintId, 'Company closed this complaint.', 'company');
+            $notify = true;
+        }
+    }
+
+    /* complaints.response/response_at stay in sync with the latest chat message. */
     sync_latest_complaint_response($pdo, $complaintId);
 
-    /* Best-effort notification to the passenger when a NEW response is added. */
+    /* Best-effort notification to the passenger on a new reply or a status move. */
     if ($notify && (int) ($row['passenger_id'] ?? 0) > 0) {
         try {
+            $note = $statusChanged && $status === 'resolved_pending'
+                ? 'The company marked your complaint "' . $row['subject'] . '" as resolved. Please confirm or reopen it.'
+                : ($statusChanged
+                    ? 'The company updated the status of your complaint "' . $row['subject'] . '".'
+                    : 'The company responded to your complaint "' . $row['subject'] . '".');
             createNotification(
                 $pdo,
                 (int) $row['passenger_id'],
                 'complaint',
                 'Complaint Update',
-                'The company responded to your complaint "' . $row['subject'] . '".',
+                $note,
                 'complaint-replied:' . $complaintId
             );
         } catch (Throwable $e) {

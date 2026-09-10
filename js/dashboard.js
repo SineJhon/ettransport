@@ -1436,7 +1436,86 @@ function closeTicket() {
 
     function complaintBadgeHtml(status) {
         var s = String(status || 'open').replace(/[^a-z_]/g, '');
-        return '<span class="dash-complaint-badge ' + s + '">' + escapeHtml(s.replace('_', ' ')) + '</span>';
+        var label = {
+            open: 'Open',
+            in_progress: 'In progress',
+            resolved_pending: 'Awaiting confirmation',
+            resolved: 'Resolved',
+            closed: 'Closed',
+            escalated: 'Escalated'
+        }[s] || s.replace('_', ' ');
+        return '<span class="dash-complaint-badge ' + s + '">' + escapeHtml(label) + '</span>';
+    }
+
+    function complaintChatTime(value) {
+        if (!value) { return ''; }
+        var iso = String(value).indexOf(' ') > 0 ? String(value).replace(' ', 'T') : String(value);
+        var d = new Date(iso);
+        if (isNaN(d.getTime())) { return ''; }
+        try {
+            return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+        } catch (e) { return ''; }
+    }
+
+    /* Full chat thread: status tellers as centered chips + messages aligned by
+       the actor (You / Company / Support). Company replies were previously a
+       plain bordered block; now they are a real timeline. */
+    function complaintThreadHtml(c) {
+        var entries = (Array.isArray(c.responses) && c.responses.length)
+            ? c.responses
+            : (c.response ? [{ id: -1, message: c.response, created_at: c.response_at, updated_at: c.response_at, kind: 'message', actor: 'company' }] : []);
+        if (!entries.length) { return ''; }
+        var html = '<div class="dash-complaint-thread">';
+        for (var i = 0; i < entries.length; i++) {
+            var e = entries[i];
+            if (e.kind === 'status') {
+                html += '<div class="dash-complaint-teller"><span class="dash-complaint-teller-text">' + escapeHtml(e.message) + '</span>' +
+                    (e.created_at ? '<span class="dash-complaint-teller-meta">' + escapeHtml(complaintChatTime(e.created_at)) + '</span>' : '') + '</div>';
+                continue;
+            }
+            var side = e.actor === 'passenger' ? 'you' : (e.actor === 'admin' ? 'support' : 'company');
+            var who = e.actor === 'passenger' ? 'You' : (e.actor === 'admin' ? 'ET Transport Support' : 'Company');
+            html += '<div class="dash-complaint-bubble is-' + side + '">' +
+                '<span class="dash-complaint-bubble-who">' + escapeHtml(who) + '</span>' +
+                '<p>' + escapeHtml(e.message) + '</p>' +
+                (e.created_at ? '<span class="dash-complaint-bubble-meta">' + escapeHtml(complaintChatTime(e.created_at)) + '</span>' : '') +
+            '</div>';
+        }
+        html += '</div>';
+        return html;
+    }
+
+    /* Passenger action row: confirm / reopen (when awaiting confirmation),
+       escalate (open/in_progress), or a read-only note for closed/resolved. */
+    function complaintActionsHtml(c) {
+        var id = c.id;
+        if (c.status === 'resolved_pending') {
+            return '<div class="dash-complaint-actions">' +
+                '<span class="dash-complaint-actions-hint">The company marked this as resolved. Please confirm, or reopen it if the issue continues.</span>' +
+                '<div class="dash-complaint-actions-btns">' +
+                    '<button type="button" class="btn btn-primary btn-sm" data-complaint-action="confirm" data-complaint-id="' + id + '">Confirm resolved</button>' +
+                    '<button type="button" class="btn btn-secondary btn-sm" data-complaint-action="reopen" data-complaint-id="' + id + '">Reopen complaint</button>' +
+                '</div>' +
+            '</div>';
+        }
+        if (c.status === 'resolved' || c.status === 'closed') {
+            return '<div class="dash-complaint-actions"><span class="dash-complaint-actions-hint">' +
+                (c.status === 'resolved' ? 'This complaint is resolved and confirmed.' : 'This complaint is closed.') +
+                '</span></div>';
+        }
+        if (c.status === 'escalated') {
+            return '<div class="dash-complaint-actions"><span class="dash-complaint-actions-hint is-escalated">Escalated — ET Transport support is reviewing your complaint.</span></div>';
+        }
+        /* open / in_progress: reply + escalate */
+        return '<div class="dash-complaint-actions">' +
+            '<div class="dash-complaint-reply-compose">' +
+                '<textarea class="dash-complaint-reply-input" data-complaint-reply="' + id + '" maxlength="1000" placeholder="Reply to the company\u2026"></textarea>' +
+                '<button type="button" class="btn btn-primary btn-sm" data-complaint-action="reply" data-complaint-id="' + id + '">Send reply</button>' +
+            '</div>' +
+            '<div class="dash-complaint-actions-btns">' +
+                '<button type="button" class="btn btn-secondary btn-sm" data-complaint-action="escalate" data-complaint-id="' + id + '">Escalate to support</button>' +
+            '</div>' +
+        '</div>';
     }
 
     var COMPLAINT_CATEGORY_LABELS = {
@@ -1465,16 +1544,47 @@ function closeTicket() {
         } catch (e) { return String(value).slice(0, 10); }
     }
 
-    function complaintRepliesHtml(c) {
-        var replies = (Array.isArray(c.responses) && c.responses.length)
-            ? c.responses
-            : (c.response ? [{ id: -1, message: c.response, created_at: c.response_at, updated_at: c.response_at }] : []);
-        if (!replies.length) { return ''; }
-        var html = '';
-        for (var i = 0; i < replies.length; i++) {
-            html += '<div class="dash-complaint-reply"><span class="dash-complaint-reply-label">Company response</span><p>' + escapeHtml(replies[i].message) + '</p></div>';
+    function complaintPostAction(id, action, message) {
+        var body = new URLSearchParams();
+        body.append('complaint_id', id);
+        if (message) { body.append('message', message); }
+        return window.fetch('api/complaint.php?action=' + encodeURIComponent(action), {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'Accept': 'application/json' },
+            body: body.toString()
+        }).then(function (res) {
+            return res.json().catch(function () { return { success: false, message: 'Invalid server response.' }; });
+        });
+    }
+
+    /* Passenger lifecycle actions from the complaint cards. */
+    function handleComplaintAction(btn) {
+        var action = btn.getAttribute('data-complaint-action');
+        var id = btn.getAttribute('data-complaint-id');
+        if (!action || !id) { return; }
+        var original = btn.textContent;
+        btn.disabled = true;
+
+        var message = '';
+        if (action === 'reply') {
+            var input = document.querySelector('[data-complaint-reply="' + id + '"]');
+            message = input ? input.value.trim() : '';
+            if (!message) { btn.disabled = false; return; }
         }
-        return html;
+
+        complaintPostAction(Number(id), action, message || null).then(function (json) {
+            btn.disabled = false;
+            if (!json || !json.success) {
+                toast((json && json.message) || 'Unable to update the complaint.');
+                return;
+            }
+            /* Refresh the complaint list so the thread + status are current. */
+            syncRealComplaints();
+        }).catch(function () {
+            btn.disabled = false;
+            toast('Network error while updating the complaint.');
+        });
     }
 
     function renderComplaints() {
@@ -1509,7 +1619,7 @@ function closeTicket() {
                     '</div>' +
                     '<h4 class="dash-complaint-subject">' + escapeHtml(c.subject) + '</h4>' +
                     '<p class="dash-complaint-message">' + escapeHtml(c.message) + '</p>' +
-                    ctx + complaintRepliesHtml(c) +
+                    ctx + complaintThreadHtml(c) + complaintActionsHtml(c) +
                 '</article>';
             }
             list.innerHTML = html;
@@ -2437,6 +2547,15 @@ var supportForm = document.getElementById('support-form');
 
         var complaintForm = document.getElementById('complaint-form');
         if (complaintForm) { complaintForm.addEventListener('submit', submitComplaint); }
+
+        /* Complaint card lifecycle actions: confirm / reopen / reply / escalate. */
+        var complaintList = document.getElementById('complaint-list');
+        if (complaintList) {
+            complaintList.addEventListener('click', function (ev) {
+                var btn = ev.target.closest ? ev.target.closest('[data-complaint-action]') : null;
+                if (btn && btn.getAttribute('data-complaint-action')) { handleComplaintAction(btn); }
+            });
+        }
 
         var hash = window.location.hash ? window.location.hash.slice(1) : 'overview';
         showSection(hash);

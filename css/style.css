@@ -4635,13 +4635,37 @@ body.modal-open { overflow: hidden; }
 .dash-complaint-badge { padding: 0.22rem 0.6rem; border-radius: 99px; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
 .dash-complaint-badge.open { color: #9f5a06; background: #fff4d6; }
 .dash-complaint-badge.in_progress { color: #245f9e; background: #e7f1fb; }
+.dash-complaint-badge.resolved_pending { color: #6d28d9; background: #f1e9fd; }
 .dash-complaint-badge.resolved { color: #166534; background: #e6f5ea; }
 .dash-complaint-badge.closed { color: #55606a; background: #e9edf0; }
+.dash-complaint-badge.escalated { color: #b02f2f; background: #fdeaea; }
 .dash-complaint-category { padding: 0.22rem 0.6rem; border-radius: 99px; font-size: 0.68rem; font-weight: 700; color: #245f9e; background: #e7f1fb; }
 .dash-complaint-subject { margin: 0.55rem 0 0.2rem; font-size: 1rem; color: var(--color-dark); }
 .dash-complaint-message { margin: 0; color: var(--color-muted); font-size: 0.9rem; line-height: 1.6; }
 .dash-complaint-meta { margin: 0 0 0.45rem; font-size: 0.78rem; color: var(--color-muted); }
-.dash-complaint-reply { margin-top: 0.65rem; padding: 0.7rem 0.9rem; border-left: 3px solid #6cb48c; background: #f0f8f3; border-radius: 8px; }
-.dash-complaint-reply-label { display: block; margin-bottom: 0.25rem; font-size: 0.68rem; font-weight: 800; color: #2a7054; text-transform: uppercase; letter-spacing: 0.05em; }
-.dash-complaint-reply p { margin: 0; font-size: 0.88rem; line-height: 1.55; color: var(--color-text); }
+/* Chat-style complaint thread (status tellers + actor bubbles). */
+.dash-complaint-thread { display: flex; flex-direction: column; gap: 0.45rem; margin-top: 0.7rem; }
+.dash-complaint-teller { align-self: center; max-width: 90%; padding: 0.28rem 0.8rem; text-align: center; background: #e8f1ec; border: 1px solid #d3e3d9; border-radius: 999px; }
+.dash-complaint-teller-text { display: block; font-size: 0.72rem; font-weight: 700; color: #38624f; line-height: 1.4; }
+.dash-complaint-teller-meta { display: block; font-size: 0.62rem; font-weight: 700; color: #7d9189; }
+.dash-complaint-bubble { max-width: 82%; padding: 0.55rem 0.8rem; border-radius: 12px; font-size: 0.88rem; line-height: 1.5; }
+.dash-complaint-bubble p { margin: 0.15rem 0 0; white-space: pre-wrap; overflow-wrap: break-word; color: inherit; }
+.dash-complaint-bubble-who { display: block; font-size: 0.66rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
+.dash-complaint-bubble-meta { display: block; margin-top: 0.25rem; font-size: 0.62rem; font-weight: 700; }
+.dash-complaint-bubble.is-you { align-self: flex-start; background: #f1f6f3; border: 1px solid #e0ebe4; border-bottom-left-radius: 4px; color: #2b3a33; }
+.dash-complaint-bubble.is-you .dash-complaint-bubble-who { color: #547067; }
+.dash-complaint-bubble.is-company { align-self: flex-end; background: #187653; border-bottom-right-radius: 4px; color: #fff; }
+.dash-complaint-bubble.is-company .dash-complaint-bubble-who { color: #d2ecdf; }
+.dash-complaint-bubble.is-company .dash-complaint-bubble-meta { color: #d2ecdf; }
+.dash-complaint-bubble.is-support { align-self: flex-end; background: #182448; border-bottom-right-radius: 4px; color: #fff; }
+.dash-complaint-bubble.is-support .dash-complaint-bubble-who { color: #c6d3f0; }
+.dash-complaint-bubble.is-support .dash-complaint-bubble-meta { color: #aebddd; }
+/* Complaint action row + reply composer. */
+.dash-complaint-actions { margin-top: 0.7rem; padding-top: 0.6rem; border-top: 1px solid #eef3f0; display: grid; gap: 0.55rem; }
+.dash-complaint-actions-hint { font-size: 0.8rem; color: var(--color-muted); }
+.dash-complaint-actions-hint.is-escalated { color: #a2551a; font-weight: 700; }
+.dash-complaint-actions-btns { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.dash-complaint-reply-compose { display: grid; gap: 0.4rem; }
+.dash-complaint-reply-input { width: 100%; min-height: 3.4rem; resize: vertical; padding: 0.55rem 0.7rem; border: 1px solid #c8ded1; border-radius: 8px; background: #fbfefb; font: inherit; font-size: 0.88rem; line-height: 1.5; }
+.dash-complaint-reply-input:focus { outline: 3px solid rgba(49,164,118,0.16); border-color: #3f976a; }
 .dash-complaint-empty { padding: 1.25rem; color: var(--color-muted); }

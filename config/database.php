@@ -251,7 +251,7 @@ function ensure_schema_columns(PDO $pdo): void
                 category VARCHAR(40) NOT NULL DEFAULT 'other',
                 subject VARCHAR(120) DEFAULT NULL,
                 message TEXT NOT NULL,
-                status ENUM('open', 'in_progress', 'resolved', 'closed') NOT NULL DEFAULT 'open',
+                status ENUM('open', 'in_progress', 'resolved_pending', 'resolved', 'closed', 'escalated') NOT NULL DEFAULT 'open',
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 response TEXT DEFAULT NULL,
@@ -277,12 +277,15 @@ function ensure_schema_columns(PDO $pdo): void
 
         /* complaint_responses — response thread on a complaint (idempotent).
            The company can add, edit and extend responses; complaints.response
-           stays as a denormalized latest copy. */
+           stays as a denormalized latest copy. kind/actor distinguish status
+           tellers from chat messages and record who wrote each entry. */
         $pdo->exec(
             "CREATE TABLE IF NOT EXISTS complaint_responses (
                 id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
                 complaint_id BIGINT UNSIGNED NOT NULL,
                 message TEXT NOT NULL,
+                kind ENUM('message', 'status') NOT NULL DEFAULT 'message',
+                actor ENUM('passenger', 'company', 'admin', 'system') NOT NULL DEFAULT 'company',
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 PRIMARY KEY (id),
@@ -293,6 +296,47 @@ function ensure_schema_columns(PDO $pdo): void
                     ON UPDATE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
         );
+
+        /* Live databases created before the two-way resolution flow: widen the
+           complaints.status ENUM (resolved_pending / escalated) and add the
+           kind/actor columns to complaint_responses. Idempotent — each check
+           only alters when the target is missing. */
+        $stmt = $pdo->prepare(
+            "SELECT COUNT(*)
+               FROM information_schema.columns
+              WHERE table_schema = DATABASE()
+                AND table_name = 'complaints'
+                AND column_name = 'status'
+                AND column_type LIKE '%resolved_pending%'"
+        );
+        $stmt->execute();
+        if ((int) $stmt->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE complaints MODIFY status ENUM('open', 'in_progress', 'resolved_pending', 'resolved', 'closed', 'escalated') NOT NULL DEFAULT 'open'");
+        }
+
+        $stmt = $pdo->prepare(
+            "SELECT COUNT(*)
+               FROM information_schema.columns
+              WHERE table_schema = DATABASE()
+                AND table_name = 'complaint_responses'
+                AND column_name = 'kind'"
+        );
+        $stmt->execute();
+        if ((int) $stmt->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE complaint_responses ADD COLUMN kind ENUM('message', 'status') NOT NULL DEFAULT 'message' AFTER message");
+        }
+
+        $stmt = $pdo->prepare(
+            "SELECT COUNT(*)
+               FROM information_schema.columns
+              WHERE table_schema = DATABASE()
+                AND table_name = 'complaint_responses'
+                AND column_name = 'actor'"
+        );
+        $stmt->execute();
+        if ((int) $stmt->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE complaint_responses ADD COLUMN actor ENUM('passenger', 'company', 'admin', 'system') NOT NULL DEFAULT 'company' AFTER kind");
+        }
 
         /* Parcel lifecycle: the "in transit" status was renamed to "sent".
            Migrate any rows created with the previous ENUM (and existing
