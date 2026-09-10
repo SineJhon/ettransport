@@ -459,10 +459,34 @@
         .cd-chat-head-info { display: grid; gap: .1rem; min-width: 0; }
         .cd-chat-head-info strong { color: #193c35; font-size: .95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .cd-chat-head-info small { color: #647a71; font-size: .76rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .cd-chat-head-meta { display: grid; gap: .15rem; justify-items: start; margin-left: auto; }
-        .cd-chat-head-meta label { color: #5f766d; font-size: .62rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
-        .cd-chat-head-meta select { min-width: 8.25rem; padding: .32rem .5rem; color: #1d483d; background: #fff; border: 1px solid #cfe0d6; border-radius: 8px; font: 700 .8rem 'DM Sans', sans-serif; }
         .cd-complaint-modal-close { display: grid; place-items: center; flex: 0 0 2.25rem; width: 2.25rem; height: 2.25rem; padding: 0; color: #275147; background: #edf5f0; border: 0; border-radius: 50%; cursor: pointer; font-size: 1.25rem; line-height: 1; }
+        /* Status changer panel — dedicated control with its own submit. */
+        .cd-chat-statusbar { display: grid; gap: .45rem; padding: .65rem 1.15rem; background: #fbfdfb; border-bottom: 1px solid #e5ede8; }
+        .cd-chat-statusbar.is-locked { padding-bottom: .7rem; }
+        .cd-chat-statusbar-top { display: flex; align-items: center; gap: .55rem; flex-wrap: wrap; }
+        .cd-chat-statusbar-label { color: #5f766d; font-size: .62rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+        .cd-chat-statusbar-hint { margin-left: auto; color: #7d9189; font-size: .72rem; transition: color .15s ease; }
+        .cd-chat-status-pill { display: inline-flex; align-items: center; gap: .35rem; padding: .24rem .65rem; border-radius: 99px; font: 800 .68rem/1 'DM Sans', sans-serif; text-transform: uppercase; letter-spacing: .05em; }
+        .cd-chat-status-pill.is-open { color: #9f5a06; background: #fff4d6; }
+        .cd-chat-status-pill.is-in_progress { color: #245f9e; background: #e7f1fb; }
+        .cd-chat-status-pill.is-resolved_pending { color: #6d28d9; background: #f1e9fd; }
+        .cd-chat-status-pill.is-resolved { color: #166534; background: #e6f5ea; }
+        .cd-chat-status-pill.is-escalated { color: #b02f2f; background: #fdeaea; }
+        .cd-chat-status-pill.is-closed { color: #55606a; background: #e9edf0; }
+        .cd-chat-statusbar-row { display: flex; align-items: center; gap: .55rem; flex-wrap: wrap; }
+        .cd-chat-statusbar select { flex: 1 1 auto; min-width: 10rem; min-height: 2.5rem; padding: .42rem 2rem .42rem .7rem; color: #1d483d; background: #fff url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2368746f' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") no-repeat right .65rem center/0.75rem; border: 1px solid #c8ded1; border-radius: 9px; font: 700 .82rem 'DM Sans', sans-serif; appearance: none; -webkit-appearance: none; transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease; }
+        .cd-chat-statusbar select:focus { outline: 3px solid rgba(49,164,118,.16); border-color: #3f976a; }
+        .cd-chat-statusbar select.is-changed { border-color: #3f976a; background-color: #eefaf3; color: #0f5c3d; }
+        .cd-chat-statusbar select:disabled { opacity: .6; cursor: not-allowed; }
+        .cd-chat-status-apply { white-space: nowrap; }
+        .cd-chat-status-apply:disabled { opacity: .5; cursor: not-allowed; }
+        .cd-chat-status-msg { margin: 0; font-size: .78rem; font-weight: 700; }
+        .cd-chat-status-msg.is-ok { color: #1d8a4e; }
+        .cd-chat-status-msg.is-err { color: #b91c1c; }
+        .cd-chat-status-note { margin: 0; font-size: .78rem; font-weight: 700; line-height: 1.45; }
+        .cd-chat-status-note.is-escalated { color: #a2551a; }
+        .cd-chat-status-note.is-resolved { color: #1d8a4e; }
+        .cd-chat-status-note.is-pending { color: #245f9e; }
         .cd-chat-thread { flex: 1 1 auto; overflow-y: auto; display: flex; flex-direction: column; padding: 1rem 1rem .5rem; background: #f4f8f5; }
         .cd-chat-row { display: flex; align-items: flex-end; gap: .45rem; max-width: 86%; margin-bottom: .8rem; }
         .cd-chat-row.is-company { align-self: flex-end; }
@@ -500,12 +524,7 @@
         .cd-chat-teller { display: grid; gap: .1rem; align-self: center; justify-items: center; max-width: 86%; margin: .2rem auto; padding: .3rem .8rem; background: #e8f1ec; border: 1px solid #d3e3d9; border-radius: 999px; text-align: center; }
         .cd-chat-teller-text { color: #38624f; font-size: .74rem; font-weight: 700; line-height: 1.4; }
         .cd-chat-teller-meta { color: #7d9189; font-size: .62rem; font-weight: 700; }
-        .cd-chat-status-note-row { padding: .45rem 1.15rem; background: #fbfbef; border-bottom: 1px solid #edf0df; }
-        .cd-chat-status-note { margin: 0; font-size: .78rem; font-weight: 700; line-height: 1.45; }
-        .cd-chat-status-note.is-escalated { color: #a2551a; }
-        .cd-chat-status-note.is-resolved { color: #1d8a4e; }
-        .cd-chat-status-note.is-pending { color: #245f9e; }
-        @media (max-width: 600px) { .cd-complaint-list { grid-template-columns: 1fr; }.cd-complaint-modal { align-items: end; padding: .5rem; }.cd-complaint-modal-box { max-height: 94vh; border-radius: 16px 16px 10px 10px; }.cd-chat-head { flex-wrap: wrap; gap: .6rem; }.cd-chat-head-meta { margin-left: 0; }.cd-chat-row { max-width: 94%; } }
+        @media (max-width: 600px) { .cd-complaint-list { grid-template-columns: 1fr; }.cd-complaint-modal { align-items: end; padding: .5rem; }.cd-complaint-modal-box { max-height: 94vh; border-radius: 16px 16px 10px 10px; }.cd-chat-head { flex-wrap: wrap; gap: .6rem; }.cd-chat-row { max-width: 94%; }.cd-chat-statusbar-hint { margin-left: 0; } }
 
         .cd-profile { margin-top: var(--space-md); }
         .cd-profile-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
@@ -2299,6 +2318,6 @@
     <script src="js/auth.js"></script>
     <script src="js/cities.js"></script>
     <script src="js/city-picker.js?v=20260907-swap-fix-3-dispatch"></script>
-    <script src="js/company-dashboard.js?v=20260910-statusflow-v1"></script>
+    <script src="js/company-dashboard.js?v=20260910-statusflow-v2"></script>
 </body>
 </html>

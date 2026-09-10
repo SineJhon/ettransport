@@ -4327,8 +4327,43 @@ var reviewEditingReplyId = null;
         return html;
     }
 
-    /* When the passenger escalated or confirmed, the company dropdown shows the
-       current state as a read-only hint so the operator does not try to set it. */
+    /* Small colored pill showing the current status. */
+    function complaintStatusPillHtml(status) {
+        var safe = String(status || 'open').replace(/[^a-z_]/g, '');
+        return '<span class="cd-chat-status-pill is-' + escHtml(safe) + '">' + escHtml(complaintStatusLabel(status)) + '</span>';
+    }
+
+    /* The status changer panel: current pill + a select to move the complaint
+       forward and a dedicated "Update status" submit. Locked states (customer
+       confirmed resolved / escalated to support) render a read-only pill with
+       an explanatory note instead of the control. */
+    function complaintStatusBarHtml(complaint) {
+        var status = complaint.status;
+        if (status === 'resolved' || status === 'escalated') {
+            return '<div class="cd-chat-statusbar is-locked">' +
+                '<div class="cd-chat-statusbar-top">' +
+                    '<span class="cd-chat-statusbar-label">Status</span>' +
+                    complaintStatusPillHtml(status) +
+                '</div>' +
+                complaintStatusLockedNote(complaint) +
+            '</div>';
+        }
+        return '<div class="cd-chat-statusbar">' +
+            '<div class="cd-chat-statusbar-top">' +
+                '<span class="cd-chat-statusbar-label">Status</span>' +
+                complaintStatusPillHtml(status) +
+                '<span class="cd-chat-statusbar-hint" id="complaint-status-hint">Set where the complaint stands</span>' +
+            '</div>' +
+            '<div class="cd-chat-statusbar-row">' +
+                '<select id="complaint-modal-status">' + complaintModalStatusOptions(status) + '</select>' +
+                '<button type="button" id="complaint-status-apply" class="btn btn-sm cd-chat-status-apply" disabled>Update status</button>' +
+            '</div>' +
+            '<p id="complaint-status-msg" class="cd-chat-status-msg" hidden></p>' +
+        '</div>';
+    }
+
+    /* When the passenger escalated or confirmed, the company sees a read-only
+       note instead of a status control. */
     function complaintStatusLockedNote(complaint) {
         var status = complaint.status;
         if (status === 'escalated') {
@@ -4489,13 +4524,9 @@ var reviewEditingReplyId = null;
                             '<small>' + escHtml(complaint.subject || complaintCategoryLabel(complaint.category)) + '</small>' +
                         '</div>' +
                     '</div>' +
-                    '<div class="cd-chat-head-meta">' +
-                        '<label for="complaint-modal-status">Status</label>' +
-                        '<select id="complaint-modal-status" class="cd-complaint-modal-status-select"' + (complaint.status === 'escalated' || complaint.status === 'resolved' ? ' disabled' : '') + '>' + complaintModalStatusOptions(complaint.status) + '</select>' +
-                    '</div>' +
                     '<button type="button" id="complaint-modal-close" class="cd-complaint-modal-close" aria-label="Close complaint">\u00d7</button>' +
                 '</div>' +
-                (complaintStatusLockedNote(complaint) ? '<div class="cd-chat-status-note-row">' + complaintStatusLockedNote(complaint) + '</div>' : '') +
+                complaintStatusBarHtml(complaint) +
                 '<div id="complaint-chat-thread" class="cd-chat-thread" aria-live="polite">' + renderComplaintThread() + '</div>' +
                 '<div class="cd-chat-composer">' +
                     '<div class="cd-chat-composer-row">' +
@@ -4515,6 +4546,7 @@ var reviewEditingReplyId = null;
             try { composer.focus(); } catch (e) { /* non-critical */ }
         }
         syncComplaintSendButton();
+        syncComplaintStatusApply();
         autoResizeComplaintComposer();
     }
 
@@ -4549,34 +4581,117 @@ var reviewEditingReplyId = null;
     /* Sent responses are append-only — there is deliberately no editing or
        deleting in the chat UI (and the API rejects response_id edits too). */
 
-    /* Send from the chat composer (optionally with a status change). The
-       message appears in the thread the instant Send is pressed (optimistic),
-       then the server confirms it and the bubble becomes permanent. */
+    /* Send from the chat composer — messages only. The message appears in the
+       thread the instant Send is pressed (optimistic), then the server
+       confirms it and the bubble becomes permanent. Status changes are a
+       separate action via the status changer (see applyComplaintStatus). */
     function submitComplaintUpdate(id) {
         var complaint = activeComplaintModalComplaint;
 
         if (!complaint || complaintSending) { return; }
 
-        var statusEl = byId('complaint-modal-status');
         var newRespEl = byId('complaint-modal-new-response-text');
         var text = newRespEl ? newRespEl.value.trim() : '';
-        var status = statusEl ? statusEl.value : complaint.status;
 
-        if (!text && status === complaint.status) {
-            showComplaintModalError('Type a message to the passenger, or change the status first.');
+        if (!text) {
+            showComplaintModalError('Type a message to the passenger first.');
             return;
         }
 
-        var localKey = 0;
-        if (text) {
-            localKey = ++complaintLocalMessageSeq;
+        var localKey = ++complaintLocalMessageSeq;
+        complaintLocalMessages.push({ key: localKey, message: text, state: 'sending' });
+        if (newRespEl) { newRespEl.value = ''; }
+        renderComplaintModal();
+        scrollComplaintThreadToBottom();
+        performComplaintSend(id, text, localKey);
+    }
 
-            complaintLocalMessages.push({ key: localKey, message: text, state: 'sending' });
-            if (newRespEl) { newRespEl.value = ''; }
-            renderComplaintModal();
-            scrollComplaintThreadToBottom();
+    /* ---- Status changer ---- */
+
+    /* Enable/disable the "Update status" submit whenever the selection
+       differs from the complaint's actual status, and surface a hint. */
+    function syncComplaintStatusApply() {
+        var complaint = activeComplaintModalComplaint;
+        var statusEl = byId('complaint-modal-status');
+        var btn = byId('complaint-status-apply');
+        if (!complaint || !statusEl || !btn) { return; }
+        var changed = statusEl.value !== complaint.status;
+        btn.disabled = complaintSending || !changed;
+        statusEl.classList.toggle('is-changed', changed);
+        var hint = byId('complaint-status-hint');
+        if (hint) {
+            hint.textContent = changed ? 'Pressing Update will notify the passenger.' : 'Set where the complaint stands';
         }
-        performComplaintSend(id, status, text, localKey);
+    }
+
+    function showComplaintStatusMsg(message, type) {
+        var el = byId('complaint-status-msg');
+        if (!el) { return; }
+        el.textContent = message;
+        el.className = 'cd-chat-status-msg' + (type === 'ok' ? ' is-ok' : ' is-err');
+        el.hidden = false;
+    }
+
+    /* Submit ONLY a status change (no message). The server records a status
+       teller in the thread so both sides see the transition. */
+    function applyComplaintStatus() {
+        var complaint = activeComplaintModalComplaint;
+        if (!complaint || complaintSending) { return; }
+
+        var statusEl = byId('complaint-modal-status');
+        var selected = statusEl ? statusEl.value : complaint.status;
+        if (!selected || selected === complaint.status) {
+            showComplaintStatusMsg('Choose a different status to update it.', 'err');
+            return;
+        }
+
+        var btn = byId('complaint-status-apply');
+        complaintSending = true;
+        if (btn) { btn.disabled = true; btn.textContent = 'Updating\u2026'; }
+
+        var payload = 'complaint_id=' + encodeURIComponent(complaint.id) + '&status=' + encodeURIComponent(selected);
+
+        fetch('api/company.php?action=complaint_update', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'Accept': 'application/json' },
+            body: payload
+        })
+            .then(function (res) {
+                return res.json().catch(function () {
+                    return { success: false, message: 'Invalid server response.' };
+                }).then(function (json) {
+                    return { ok: res.ok, status: res.status, data: json };
+                });
+            })
+            .then(function (result) {
+                complaintSending = false;
+                var data = result.data || {};
+                if (!result.ok || result.status !== 200 || !data.success) {
+                    if (btn) { btn.disabled = false; btn.textContent = 'Update status'; }
+                    showComplaintStatusMsg(data.message || 'Unable to update the status.', 'err');
+                    syncComplaintStatusApply();
+                    return;
+                }
+                if (data.complaint) {
+                    activeComplaintModalComplaint = reconcileComplaintPayload(data.complaint);
+                    upsertComplaintLocally(data.complaint);
+                }
+                renderComplaintModal();
+                scrollComplaintThreadToBottom();
+                showComplaintStatusMsg('Status updated to ' + complaintStatusLabel(selected) + ' \u2014 the passenger has been notified.', 'ok');
+                setTimeout(function () {
+                    var msg = byId('complaint-status-msg');
+                    if (msg) { msg.hidden = true; }
+                }, 4000);
+                loadComplaints();
+            })
+            .catch(function () {
+                complaintSending = false;
+                if (btn) { btn.disabled = false; btn.textContent = 'Update status'; }
+                showComplaintStatusMsg('Network error while updating the status.', 'err');
+                syncComplaintStatusApply();
+            });
     }
 
     /* Merge a fresh server payload into the currently-open complaint so the
@@ -4634,9 +4749,10 @@ var reviewEditingReplyId = null;
         return false;
     }
 
-    /* The actual POST; shared by the composer and by retrying a failed bubble. */
-    function performComplaintSend(id, status, text, localKey) {
-        var payload = 'complaint_id=' + encodeURIComponent(id) + '&status=' + encodeURIComponent(status);
+    /* The actual POST for a chat message only (status unchanged); shared by the
+       composer and by retrying a failed bubble. */
+    function performComplaintSend(id, text, localKey) {
+        var payload = 'complaint_id=' + encodeURIComponent(id);
         if (text) { payload += '&response=' + encodeURIComponent(text); }
 
         complaintSending = true;
@@ -4729,12 +4845,11 @@ var reviewEditingReplyId = null;
         if (i < 0 || complaintSending) { return; }
 
         var msg = complaintLocalMessages[i].message;
-        var complaint = activeComplaintModalComplaint;
 
         complaintLocalMessages[i].state = 'sending';
         renderComplaintModal();
         scrollComplaintThreadToBottom();
-        performComplaintSend(activeComplaintModalId, complaint ? complaint.status : 'open', msg, key);
+        performComplaintSend(activeComplaintModalId, msg, key);
     }
 
     function syncComplaintSendButton() {
@@ -6620,8 +6735,16 @@ function submitBranchForm() {
                     if (key) { retryComplaintLocalMessage(key); }
                     return;
                 }
+                var applyStatus = ev.target.closest ? ev.target.closest('#complaint-status-apply') : null;
+                if (applyStatus) { applyComplaintStatus(); return; }
                 var sendBtn = ev.target.closest ? ev.target.closest('#complaint-chat-send') : null;
                 if (sendBtn) { submitComplaintUpdate(activeComplaintModalId); }
+            });
+            /* Changing the status select live-updates the submit button and hint. */
+            complaintModal.addEventListener('change', function (ev) {
+                if (ev.target && ev.target.id === 'complaint-modal-status') {
+                    syncComplaintStatusApply();
+                }
             });
             complaintModal.addEventListener('keydown', function (ev) {
                 if (ev.key === 'Escape') { closeComplaintModal(); return; }
