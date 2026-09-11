@@ -208,6 +208,41 @@
         }
     }
 
+    /* Live password requirements checklist (below the password input). */
+    function updatePasswordRequirements() {
+        var pw = byId('register-password');
+        var value = pw ? pw.value : '';
+        var checks = {
+            length: value.length >= 6,
+            letter: /[A-Za-z]/.test(value),
+            number: /\d/.test(value)
+        };
+        var keys = Object.keys(checks);
+        for (var i = 0; i < keys.length; i++) {
+            var li = document.querySelector('.pw-reqs li[data-pw-req="' + keys[i] + '"]');
+            if (li) { li.classList.toggle('is-met', checks[keys[i]]); }
+        }
+        updateConfirmHint();
+    }
+
+    /* Live confirm-password match hint. */
+    function updateConfirmHint() {
+        var hint = byId('register-confirm-hint');
+        if (!hint) { return; }
+        var pw = byId('register-password') ? byId('register-password').value : '';
+        var confirm = byId('register-confirm') ? byId('register-confirm').value : '';
+        if (!confirm) {
+            hint.textContent = hint.getAttribute('data-default') || 'Passwords must match.';
+            hint.className = 'field-hint';
+        } else if (pw === confirm) {
+            hint.textContent = 'Passwords match.';
+            hint.className = 'field-hint ok';
+        } else {
+            hint.textContent = 'Passwords do not match.';
+            hint.className = 'field-hint bad';
+        }
+    }
+
     function bindRegisterForm() {
         var form = byId('register-form');
         if (!form) { return; }
@@ -224,6 +259,17 @@
         if (registerPhoneInput) {
             sanitizeRegisterPhone();
             registerPhoneInput.addEventListener('input', sanitizeRegisterPhone);
+        }
+
+        var registerPasswordInput = byId('register-password');
+        if (registerPasswordInput) {
+            updatePasswordRequirements();
+            registerPasswordInput.addEventListener('input', updatePasswordRequirements);
+        }
+
+        var registerConfirmInput = byId('register-confirm');
+        if (registerConfirmInput) {
+            registerConfirmInput.addEventListener('input', updateConfirmHint);
         }
 
         form.addEventListener('submit', function (e) {
@@ -250,6 +296,13 @@
                 password: byId('register-password').value,
                 role: (roleInput ? roleInput.value : 'passenger')
             };
+
+            /* Password strength must match the checklist and the server rule:
+               6+ characters, at least one letter, at least one number. */
+            if (payload.password.length < 6 || !/[A-Za-z]/.test(payload.password) || !/\d/.test(payload.password)) {
+                setMessage('Password must be at least 6 characters and include letters and numbers.', 'error');
+                return;
+            }
 
             var confirmInput = byId('register-confirm');
             if (confirmInput) {

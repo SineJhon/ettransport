@@ -135,10 +135,10 @@ function handle_register(): void
         $phone = $normalizedPhone;
     }
 
-    if (strlen($password) < 8 || !preg_match('/[A-Za-z]/', $password) || !preg_match('/\d/', $password)) {
+    if (strlen($password) < 6 || !preg_match('/[A-Za-z]/', $password) || !preg_match('/\d/', $password)) {
         auth_response(422, [
             'success' => false,
-            'message' => 'Password must be at least 8 characters and include letters and numbers.',
+            'message' => 'Password must be at least 6 characters and include letters and numbers.',
         ]);
     }
 

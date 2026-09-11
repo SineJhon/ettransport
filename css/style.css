@@ -287,6 +287,70 @@ ul {
     border: 0;
 }
 
+/* ---------- Live password requirements checklist (below the field) ---------- */
+.pw-reqs {
+    display: grid;
+    gap: 0.3rem;
+    margin: 0.45rem 0 0;
+    padding: 0.6rem 0.75rem;
+    list-style: none;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+}
+
+.pw-reqs li {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: #6b7280;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: color 0.15s ease;
+}
+
+.pw-reqs li::before {
+    content: '\2715';
+    display: inline-grid;
+    place-items: center;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    background: #eef2f7;
+    color: #94a3b8;
+    font-size: 0.6rem;
+    font-weight: 800;
+    flex: 0 0 auto;
+}
+
+.pw-reqs li.is-met {
+    color: #166534;
+}
+
+.pw-reqs li.is-met::before {
+    content: '\2713';
+    background: #16a34a;
+    color: #fff;
+}
+
+/* Live confirm-password match hint. */
+.field-hint {
+    margin: 0.35rem 0 0;
+    color: #6b7280;
+    font-size: 0.8rem;
+    line-height: 1.35;
+}
+
+.field-hint.ok {
+    color: #166534;
+    font-weight: 600;
+}
+
+.field-hint.bad {
+    color: #b91c1c;
+    font-weight: 600;
+}
+
 /* ------------------------------------------------------------
    4. Navigation Bar
 ------------------------------------------------------------ */

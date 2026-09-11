@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Register on ET Transport">
     <title>Register | ET Transport</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=20260911-password-checklist">
     <link rel="icon" type="image/x-icon" href="assets/icons/favicon.svg">
 </head>
 <body data-auth-guest-only="1">
@@ -58,13 +58,18 @@
 
                 <label for="register-password">Password</label>
                 <div class="password-field">
-                    <input id="register-password" name="password" type="password" required autocomplete="new-password" placeholder="At least 8 chars with letters and numbers">
+                    <input id="register-password" name="password" type="password" required autocomplete="new-password" placeholder="Create a password">
                     <button class="password-toggle" type="button" aria-controls="register-password" aria-pressed="false" aria-label="Show password">
                         <svg class="password-toggle-icon password-toggle-icon--show" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.75"/></svg>
                         <svg class="password-toggle-icon password-toggle-icon--hide" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18M10.6 6.2A10.8 10.8 0 0 1 12 6c6.1 0 9.5 6 9.5 6a18.2 18.2 0 0 1-3.3 3.8M6.1 6.1A18.5 18.5 0 0 0 2.5 12S5.9 18 12 18c1.3 0 2.5-.3 3.5-.7"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
                         <span class="sr-only">Show password</span>
                     </button>
                 </div>
+                <ul id="register-pw-reqs" class="pw-reqs" aria-label="Password requirements">
+                    <li data-pw-req="length">At least 6 characters</li>
+                    <li data-pw-req="letter">At least one letter</li>
+                    <li data-pw-req="number">At least one number</li>
+                </ul>
 
                 <label for="register-confirm">Confirm Password</label>
                 <div class="password-field">
@@ -76,6 +81,7 @@
                     </button>
                 </div>
 
+                <p id="register-confirm-hint" class="field-hint" data-default="Passwords must match.">Passwords must match.</p>
                 <div id="company-fields" hidden>
                     <label for="company-name">Company Name</label>
                     <input id="company-name" name="company_name" type="text" data-company-required="1" placeholder="Company legal name">
@@ -95,6 +101,6 @@
     </main>
 
     <script src="js/main.js"></script>
-    <script src="js/auth.js?v=20260911-phone-lock"></script>
+    <script src="js/auth.js?v=20260911-password-checklist"></script>
 </body>
 </html>
