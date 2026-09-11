@@ -29,6 +29,29 @@ function clean_text(?string $value): string
     return trim((string) $value);
 }
 
+/* Ethiopian phone numbers: strictly +251 + 9 local digits, where the first
+   local digit must be 7 or 9 (mobile) or 1 (landline, e.g. 11…). Accepts the
+   common written forms (+251…, 251…, 0…) and normalises them all to +251…. */
+function normalize_ethiopian_phone(string $raw): ?string
+{
+    $digits = preg_replace('/\D/', '', clean_text($raw)) ?? '';
+    if ($digits === '') {
+        return null;
+    }
+
+    if (strlen($digits) === 12 && preg_match('/^251[179]/', $digits) === 1) {
+        $digits = preg_replace('/^251/', '', $digits);
+    } elseif (strlen($digits) === 10 && preg_match('/^0[179]/', $digits) === 1) {
+        $digits = preg_replace('/^0/', '', $digits);
+    }
+
+    if (preg_match('/^[179][0-9]{8}$/', $digits) !== 1) {
+        return null;
+    }
+
+    return '+251' . $digits;
+}
+
 function slugify_company(string $name): string
 {
     $slug = strtolower(trim($name));
@@ -101,8 +124,15 @@ function handle_register(): void
         auth_response(422, ['success' => false, 'message' => 'Please enter a valid email address.']);
     }
 
-    if ($phone !== '' && !preg_match('/^[+0-9][0-9\-\s]{6,20}$/', $phone)) {
-        auth_response(422, ['success' => false, 'message' => 'Please enter a valid phone number.']);
+    if ($phone !== '') {
+        $normalizedPhone = normalize_ethiopian_phone($phone);
+        if ($normalizedPhone === null) {
+            auth_response(422, [
+                'success' => false,
+                'message' => 'Please enter a valid Ethiopian phone number: +251 followed by 9 digits (mobile 9X / 7X or landline 11X…).',
+            ]);
+        }
+        $phone = $normalizedPhone;
     }
 
     if (strlen($password) < 8 || !preg_match('/[A-Za-z]/', $password) || !preg_match('/\d/', $password)) {

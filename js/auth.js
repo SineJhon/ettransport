@@ -169,6 +169,45 @@
         }
     }
 
+    /* ---------- Ethiopian phone (locked +251) ----------
+       Same convention used across the site: keep only digits, drop a leading
+       0 (09X -> 9X) or a pasted 251 prefix, then require exactly 9 local
+       digits starting with 7 / 9 (mobile) or 1 (landline, e.g. 11…). */
+    function normalizeLocalPhone(raw) {
+        var digits = String(raw == null ? '' : raw).replace(/\D/g, '');
+        /* Lock the country code: a pasted "+251…" / "251…" prefix is stripped
+           as soon as it appears, and a leading 0 (09X) is dropped immediately,
+           so only the 9 local digits ever stay in the field. */
+        if (digits.indexOf('251') === 0) { digits = digits.slice(3); }
+        digits = digits.replace(/^0+/, '');
+        if (digits.length > 9) { digits = digits.slice(0, 9); }
+        return digits;
+    }
+
+    function validLocalPhone(digits) {
+        return /^[179][0-9]{8}$/.test(digits);
+    }
+
+    function sanitizeRegisterPhone() {
+        var input = byId('register-phone');
+        if (!input) { return; }
+
+        var digits = normalizeLocalPhone(input.value);
+        if (digits.length > 9) { digits = digits.slice(0, 9); }
+        input.value = digits;
+
+        var info = byId('register-phone-info');
+        if (!info) { return; }
+        if (validLocalPhone(digits)) {
+            info.textContent = 'Stored as +251' + digits;
+            info.classList.add('show');
+            input.classList.remove('field-invalid');
+        } else {
+            info.textContent = '';
+            info.classList.remove('show');
+        }
+    }
+
     function bindRegisterForm() {
         var form = byId('register-form');
         if (!form) { return; }
@@ -181,14 +220,33 @@
             });
         }
 
+        var registerPhoneInput = byId('register-phone');
+        if (registerPhoneInput) {
+            sanitizeRegisterPhone();
+            registerPhoneInput.addEventListener('input', sanitizeRegisterPhone);
+        }
+
         form.addEventListener('submit', function (e) {
             e.preventDefault();
             clearMessage();
 
+            /* Phone is locked to +251 in the UI; validate the 9 local digits
+               and store the full number as +251… (same rule as the rest of
+               the site: mobile 7X / 9X or landline 1X). */
+            var phoneDigits = normalizeLocalPhone(byId('register-phone').value);
+            if (!validLocalPhone(phoneDigits)) {
+                var invalidPhone = byId('register-phone');
+                if (invalidPhone) { invalidPhone.classList.add('field-invalid'); }
+                setMessage('Please enter a valid Ethiopian phone number: +251 followed by 9 digits (mobile 9X / 7X or landline 11X…).', 'error');
+                return;
+            }
+            var validPhone = byId('register-phone');
+            if (validPhone) { validPhone.classList.remove('field-invalid'); }
+
             var payload = {
                 name: byId('register-name').value.trim(),
                 email: byId('register-email').value.trim(),
-                phone: byId('register-phone').value.trim(),
+                phone: '+251' + phoneDigits,
                 password: byId('register-password').value,
                 role: (roleInput ? roleInput.value : 'passenger')
             };

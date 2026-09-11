@@ -50,7 +50,11 @@
                 <input id="register-email" name="email" type="email" required autocomplete="email" placeholder="you@example.com">
 
                 <label for="register-phone">Phone</label>
-                <input id="register-phone" name="phone" type="tel" required autocomplete="tel" placeholder="+2519XXXXXXXX / +25111XXXXXXX">
+                <div class="phone-field">
+                    <span class="phone-prefix" aria-hidden="true">+251</span>
+                    <input id="register-phone" name="phone" type="tel" class="field-input" required maxlength="9" minlength="9" inputmode="numeric" autocomplete="tel-national" pattern="[179][0-9]{8}" title="9-digit local number after +251 — starts with 7, 9, or 1" placeholder="7/9XXXXXXXX or 11XXXXXXX">
+                </div>
+                <div id="register-phone-info" class="phone-info" aria-live="polite"></div>
 
                 <label for="register-password">Password</label>
                 <div class="password-field">
@@ -91,6 +95,6 @@
     </main>
 
     <script src="js/main.js"></script>
-    <script src="js/auth.js?v=20260904-password-toggle"></script>
+    <script src="js/auth.js?v=20260911-phone-lock"></script>
 </body>
 </html>
