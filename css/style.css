@@ -1598,6 +1598,18 @@ ul {
     color: #b91c1c;
 }
 
+/* Register / login forms: keep inline errors close to their field and mark
+   invalid inputs with a red border. */
+.search-card form .field-error {
+    margin: 0.35rem 0 0;
+}
+
+.search-card form input[aria-invalid="true"],
+.search-card form select[aria-invalid="true"],
+.search-card form textarea[aria-invalid="true"] {
+    border-color: #b91c1c;
+}
+
 /* ---------- Phone field (locked +251 prefix) ---------- */
 .phone-field {
     display: flex;

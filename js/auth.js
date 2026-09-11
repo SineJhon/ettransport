@@ -208,6 +208,98 @@
         }
     }
 
+    /* ---------- Inline per-field validation (same pattern as admin add-company) ---------- */
+    function showFieldError(fieldId, message) {
+        var field = byId(fieldId);
+        var err = byId(fieldId + '-error');
+        if (field) { field.setAttribute('aria-invalid', 'true'); }
+        if (err) {
+            err.textContent = message;
+            err.hidden = false;
+        }
+    }
+
+    function clearFieldError(fieldId) {
+        var field = byId(fieldId);
+        var err = byId(fieldId + '-error');
+        if (field) { field.removeAttribute('aria-invalid'); }
+        if (err) {
+            err.textContent = '';
+            err.hidden = true;
+        }
+    }
+
+    function isCompanyRole() {
+        var role = byId('register-role');
+        return role && role.value === 'company';
+    }
+
+    /* Validate one field; returns true when it passes. Company fields are
+       only checked when the company account type is selected. */
+    function validateRegisterField(fieldId) {
+        var field = byId(fieldId);
+        if (!field) { return true; }
+
+        var value = field.value.trim();
+        var pass = true;
+        var message = '';
+
+        switch (fieldId) {
+        case 'register-name':
+            pass = value.length >= 2;
+            message = 'Please enter a valid full name.';
+            break;
+        case 'register-email':
+            pass = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value);
+            message = 'Please enter a valid email address.';
+            break;
+        case 'register-phone':
+            pass = validLocalPhone(normalizeLocalPhone(field.value));
+            message = 'Enter a valid Ethiopian phone: +251 followed by 9 digits (mobile 9X / 7X or landline 1X…).';
+            break;
+        case 'register-password':
+            pass = field.value.length >= 6 && /[A-Za-z]/.test(field.value) && /\d/.test(field.value);
+            message = 'Password must be at least 6 characters and include letters and numbers.';
+            break;
+        case 'company-name':
+            if (!isCompanyRole()) { clearFieldError(fieldId); return true; }
+            pass = value.length >= 2;
+            message = 'Company name is required.';
+            break;
+        case 'company-address':
+            if (!isCompanyRole()) { clearFieldError(fieldId); return true; }
+            pass = value !== '';
+            message = 'Company address is required.';
+            break;
+        default:
+            return true;
+        }
+
+        if (pass) {
+            clearFieldError(fieldId);
+            return true;
+        }
+
+        showFieldError(fieldId, message);
+        return false;
+    }
+
+    /* Confirm field: required and must match the password. Uses the existing
+       live hint for the message and marks the input invalid. */
+    function validateRegisterConfirm() {
+        var confirm = byId('register-confirm');
+        if (!confirm) { return true; }
+        var pw = byId('register-password') ? byId('register-password').value : '';
+        var valid = confirm.value !== '' && confirm.value === pw;
+        if (valid) {
+            confirm.removeAttribute('aria-invalid');
+            clearFieldError('register-confirm');
+        } else {
+            confirm.setAttribute('aria-invalid', 'true');
+        }
+        return valid;
+    }
+
     /* Live password requirements checklist (below the password input). */
     function updatePasswordRequirements() {
         var pw = byId('register-password');
@@ -255,6 +347,23 @@
             });
         }
 
+        /* Live per-field validation: show an error on blur, clear it as the
+           user types. The phone and password fields also keep their live
+           sanitize / checklist behaviours. */
+        ['register-name', 'register-email'].forEach(function (fieldId) {
+            var el = byId(fieldId);
+            if (!el) { return; }
+            el.addEventListener('blur', function () { validateRegisterField(fieldId); });
+            el.addEventListener('input', function () { clearFieldError(fieldId); });
+        });
+
+        ['register-phone', 'register-password', 'company-name', 'company-address'].forEach(function (fieldId) {
+            var el = byId(fieldId);
+            if (!el) { return; }
+            el.addEventListener('blur', function () { validateRegisterField(fieldId); });
+            el.addEventListener('input', function () { clearFieldError(fieldId); });
+        });
+
         var registerPhoneInput = byId('register-phone');
         if (registerPhoneInput) {
             sanitizeRegisterPhone();
@@ -264,7 +373,10 @@
         var registerPasswordInput = byId('register-password');
         if (registerPasswordInput) {
             updatePasswordRequirements();
-            registerPasswordInput.addEventListener('input', updatePasswordRequirements);
+            registerPasswordInput.addEventListener('input', function () {
+                updatePasswordRequirements();
+                clearFieldError('register-password');
+            });
         }
 
         var registerConfirmInput = byId('register-confirm');
@@ -276,18 +388,28 @@
             e.preventDefault();
             clearMessage();
 
-            /* Phone is locked to +251 in the UI; validate the 9 local digits
-               and store the full number as +251… (same rule as the rest of
-               the site: mobile 7X / 9X or landline 1X). */
-            var phoneDigits = normalizeLocalPhone(byId('register-phone').value);
-            if (!validLocalPhone(phoneDigits)) {
-                var invalidPhone = byId('register-phone');
-                if (invalidPhone) { invalidPhone.classList.add('field-invalid'); }
-                setMessage('Please enter a valid Ethiopian phone number: +251 followed by 9 digits (mobile 9X / 7X or landline 11X…).', 'error');
+            /* Validate every field; the first invalid one gets focus. Inline
+               errors are shown next to each field, so the top message is left
+               for server-side results only. */
+            var registerFields = ['register-name', 'register-email', 'register-phone', 'register-password'];
+            if (isCompanyRole()) { registerFields.push('company-name', 'company-address'); }
+
+            var firstInvalidField = null;
+            for (var i = 0; i < registerFields.length; i++) {
+                if (!validateRegisterField(registerFields[i]) && !firstInvalidField) {
+                    firstInvalidField = byId(registerFields[i]);
+                }
+            }
+            if (!validateRegisterConfirm() && !firstInvalidField) {
+                firstInvalidField = byId('register-confirm');
+            }
+
+            if (firstInvalidField) {
+                firstInvalidField.focus();
                 return;
             }
-            var validPhone = byId('register-phone');
-            if (validPhone) { validPhone.classList.remove('field-invalid'); }
+
+            var phoneDigits = normalizeLocalPhone(byId('register-phone').value);
 
             var payload = {
                 name: byId('register-name').value.trim(),
@@ -297,23 +419,8 @@
                 role: (roleInput ? roleInput.value : 'passenger')
             };
 
-            /* Password strength must match the checklist and the server rule:
-               6+ characters, at least one letter, at least one number. */
-            if (payload.password.length < 6 || !/[A-Za-z]/.test(payload.password) || !/\d/.test(payload.password)) {
-                setMessage('Password must be at least 6 characters and include letters and numbers.', 'error');
-                return;
-            }
-
             var confirmInput = byId('register-confirm');
             if (confirmInput) {
-                if (!confirmInput.value) {
-                    setMessage('Please confirm your password.', 'error');
-                    return;
-                }
-                if (confirmInput.value !== payload.password) {
-                    setMessage('Password confirmation does not match.', 'error');
-                    return;
-                }
                 payload.password_confirmation = confirmInput.value;
             }
 
@@ -335,6 +442,9 @@
                     form.reset();
                     toggleCompanyFields('passenger');
                     if (roleInput) { roleInput.value = 'passenger'; }
+                    ['register-name', 'register-email', 'register-phone', 'register-password',
+                     'company-name', 'company-address'].forEach(clearFieldError);
+                    updatePasswordRequirements();
                     return;
                 }
 
