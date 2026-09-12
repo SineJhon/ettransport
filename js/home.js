@@ -24,12 +24,89 @@
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
 
-    /* ---------- 2. Departure date minimum = today ---------- */
+    /* ---------- 2. Departure date ----------
+       Past dates are disabled via the min attribute.
+       A quick-pick strip shows the next 7 days from today (today through
+       the same weekday next week); any other date is picked from the
+       native calendar. */
     var dateInput = document.getElementById('date');
-    if (dateInput) {
-        var today = new Date();
+    var quickWrap = document.getElementById('hp-date-quick');
+
+    function toISODate(d) {
         var pad = function (n) { return (n < 10 ? '0' : '') + n; };
-        dateInput.min = today.getFullYear() + '-' + pad(today.getMonth() + 1) + '-' + pad(today.getDate());
+        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    }
+
+    if (dateInput) {
+        dateInput.min = toISODate(new Date());
+    }
+
+    if (quickWrap && dateInput) {
+        var DAY_ABBR = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+        var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
+                      'July', 'August', 'September', 'October', 'November', 'December'];
+        var todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        var weekEnd = new Date(todayStart);
+        weekEnd.setDate(todayStart.getDate() + 7); /* same weekday next week */
+
+        var chipsHtml = '';
+        var cursor = new Date(todayStart);
+        while (cursor.getTime() <= weekEnd.getTime()) {
+            var iso = toISODate(cursor);
+            var isToday = cursor.getTime() === todayStart.getTime();
+            var label = isToday ? 'Today' : DAY_ABBR[cursor.getDay()];
+            chipsHtml +=
+                '<button type="button" class="hp-date-chip' + (isToday ? ' is-today' : '') +
+                '" data-date="' + iso + '" aria-pressed="false"' +
+                ' aria-label="' + label + ', ' + DAY_ABBR[cursor.getDay()] + ' ' + cursor.getDate() + ' ' + MONTHS[cursor.getMonth()] + '">' +
+                    '<b>' + label + '</b>' +
+                    '<span>' + cursor.getDate() + '</span>' +
+                '</button>';
+            cursor = new Date(cursor);
+            cursor.setDate(cursor.getDate() + 1);
+        }
+        quickWrap.innerHTML = chipsHtml;
+
+        function highlightChip(iso) {
+            var chips = quickWrap.querySelectorAll('.hp-date-chip');
+            var matched = false;
+            for (var i = 0; i < chips.length; i++) {
+                var on = (iso && chips[i].getAttribute('data-date') === iso);
+                chips[i].classList.toggle('is-selected', on);
+                chips[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+                if (on) { matched = true; }
+            }
+            return matched;
+        }
+
+        function clearChips() {
+            var chips = quickWrap.querySelectorAll('.hp-date-chip');
+            for (var i = 0; i < chips.length; i++) {
+                chips[i].classList.remove('is-selected');
+                chips[i].setAttribute('aria-pressed', 'false');
+            }
+        }
+
+        quickWrap.addEventListener('click', function (event) {
+            var chip = event.target.closest ? event.target.closest('.hp-date-chip') : null;
+            if (!chip) { return; }
+            var iso = chip.getAttribute('data-date');
+            if (!iso) { return; }
+            dateInput.value = iso;
+            highlightChip(iso);
+        });
+
+        dateInput.addEventListener('change', function () {
+            if (!highlightChip(dateInput.value)) {
+                clearChips(); /* date came from the calendar (outside this week) */
+            }
+        });
+
+        /* default: pre-select today */
+        var todayISO = toISODate(todayStart);
+        dateInput.value = todayISO;
+        highlightChip(todayISO);
     }
 
     /* ---------- 3. Active nav link (by hash, else the first link = Home) ---------- */

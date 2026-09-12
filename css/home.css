@@ -297,6 +297,74 @@ body.home {
     gap: 0.6rem;
 }
 
+/* Quick departure-day chips (this week's remaining days) */
+.hp-date-quick {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.hp-date-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.12rem;
+    flex: 1 1 0;
+    min-width: 40px;
+    padding: 0.5rem 0;
+    border: 1.5px solid #e6ece9;
+    border-radius: 10px;
+    background: #f7faf8;
+    color: var(--hp-charcoal);
+    cursor: pointer;
+    font-family: inherit;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+
+.hp-date-chip b {
+    font-size: 0.66rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-muted);
+}
+
+.hp-date-chip span {
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.hp-date-chip:hover {
+    border-color: var(--hp-green);
+    transform: translateY(-2px);
+}
+
+.hp-date-chip.is-today {
+    border-color: var(--hp-gold);
+}
+
+.hp-date-chip.is-selected {
+    background: var(--hp-green);
+    border-color: var(--hp-green);
+    color: #ffffff;
+}
+
+.hp-date-chip.is-selected b,
+.hp-date-chip.is-selected span {
+    color: #ffffff;
+}
+
+.hp-date-chip.is-selected.is-today {
+    border-color: var(--hp-green-dark);
+}
+
+.hp-date-chip:focus-visible {
+    outline: 2px solid var(--hp-green);
+    outline-offset: 1px;
+}
+
 .hp-field {
     display: grid;
     gap: 0.4rem;
