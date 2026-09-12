@@ -3,17 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="ET Transport — Book comfortable intercity buses across Ethiopia. Search, compare, choose your seat and book your trip.">
+    <meta name="description" content="ET Transport — Compare Ethiopian bus trips, choose your seat and book your journey across Ethiopia. Search routes, compare companies and travel with confidence.">
     <title>ET Transport | Ethiopian Intercity Bus Booking</title>
 
     <!-- Styles -->
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/home.css?v=20260912-home-redesign">
     <link rel="stylesheet" href="css/city-picker.css?v=20260907-swap-fix">
 
     <!-- Favicon (placed in assets/icons) -->
     <link rel="icon" type="image/x-icon" href="assets/icons/favicon.svg">
 </head>
-<body>
+<body class="home">
 
     <!-- ============================================ -->
     <!-- Navigation Bar                               -->
@@ -34,7 +35,7 @@
                 <li><a href="about.html">About</a></li>
             </ul>
 
-            <!-- Login button -->
+            <!-- Auth actions (Login / Sign Up rendered by js/auth.js) -->
             <div class="nav-actions" data-nav-auth="1">
             </div>
 
@@ -49,119 +50,204 @@
 
     <main>
         <!-- ============================================ -->
-        <!-- Hero Section                                 -->
+        <!-- Hero + Search                                -->
         <!-- ============================================ -->
-        <section class="hero">
-            <div class="hero-overlay"></div>
-            <div class="container hero-content">
-                <h1>Travel Ethiopia the Easy Way</h1>
-                <p>
-                    Book comfortable intercity buses across Ethiopia in minutes.
-                    Search routes, compare companies, choose your seat and enjoy the ride.
-                </p>
-                <a href="#search" class="btn btn-primary">Plan Your Trip</a>
-            </div>
+        <section class="hp-hero" id="search">
+            <!-- Provided hero photography (Ethiopian landscape, highway, ET bus) -->
+            <div class="hp-hero-bg" role="img" aria-label="An ET Transport bus travelling a highway through the Ethiopian highlands, with mountains and a lake in the background"></div>
+            <!-- Localised gradients: left text scrim + top navbar scrim + bottom fade -->
+            <div class="hp-hero-scrim" aria-hidden="true"></div>
 
-            <!-- ============================================ -->
-            <!-- Search Form                                  -->
-            <!-- ============================================ -->
-            <div class="container search-wrap" id="search">
-                <form class="search-form" action="search.html" method="get">
-                    <div class="form-group">
-                        <label for="from">From</label>
-                        <input type="text" id="from" name="from" placeholder="e.g. Addis Ababa" required data-city-picker data-city-pair="home-search" data-city-role="from">
+            <div class="container hp-hero-inner">
+                <!-- Left: marketing copy -->
+                <div class="hp-hero-copy">
+                    <h1>Travel Across Ethiopia,<br><span class="hp-accent">Made Simple.</span></h1>
+                    <p class="hp-lead">
+                        Compare bus companies, find the right trip, choose your seat,
+                        and book your journey &mdash; all in one place.
+                    </p>
+                    <a href="#destinations" class="btn hp-hero-cta">
+                        Explore Routes
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+                    </a>
+                </div>
+
+                <!-- Right: search card -->
+                <aside class="hp-search" aria-label="Search your trip">
+                    <div class="hp-search-head">
+                        <h2>Search Your Trip</h2>
+                        <p>Find the best bus options for your journey.</p>
                     </div>
 
-                    <button type="button" class="city-swap" data-city-pair="home-search" aria-label="Swap from and to">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>
+                    <form class="hp-search-form" action="search.html" method="get">
+                        <div class="hp-route">
+
+                        <div class="hp-field">
+                            <label for="from">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                                From
+                            </label>
+                            <input type="text" id="from" name="from" placeholder="Addis Ababa" required
+                                   data-city-picker data-city-pair="home-search" data-city-role="from">
+                        </div>
+
+                        <button type="button" class="city-swap hp-swap" data-city-pair="home-search" aria-label="Swap from and to">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>
+                        </button>
+
+                        <div class="hp-field">
+                            <label for="to">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                                To
+                            </label>
+                            <input type="text" id="to" name="to" placeholder="Bahir Dar" required
+                                   data-city-picker data-city-pair="home-search" data-city-role="to">
+                        </div>
+                    </div>
+
+                    <div class="hp-field-row">
+                        <div class="hp-field">
+                            <label for="date">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4"/><path d="M8 3v4"/><path d="M3 10h18"/></svg>
+                                Departure Date
+                            </label>
+                            <input type="date" id="date" name="date" required>
+                        </div>
+
+                        <div class="hp-field">
+                            <label for="passengers">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>
+                                Passengers
+                            </label>
+                            <select id="passengers" name="passengers">
+                                <option value="1">1 Passenger</option>
+                                <option value="2">2 Passengers</option>
+                                <option value="3">3 Passengers</option>
+                                <option value="4">4 Passengers</option>
+                                <option value="5">5 Passengers</option>
+                                <option value="6">6 Passengers</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="hp-search-btn">
+                        Search Trips
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
                     </button>
-
-                    <div class="form-group">
-                        <label for="to">To</label>
-                        <input type="text" id="to" name="to" placeholder="e.g. Bahir Dar" required data-city-picker data-city-pair="home-search" data-city-role="to">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="date">Travel Date</label>
-                        <input type="date" id="date" name="date" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="passengers">Passengers</label>
-                        <select id="passengers" name="passengers">
-                            <option value="1">1 Passenger</option>
-                            <option value="2">2 Passengers</option>
-                            <option value="3">3 Passengers</option>
-                            <option value="4">4 Passengers</option>
-                            <option value="5">5 Passengers</option>
-                            <option value="6">6 Passengers</option>
-                        </select>
-                    </div>
-
-                    <button type="submit" class="btn btn-search">Search Buses</button>
                 </form>
-            </div>
-        </section>
+            </aside>
+        </div>
+
+        <a class="hp-scroll" href="#destinations" aria-label="Scroll to explore">
+            <span class="hp-scroll-mouse" aria-hidden="true"></span>
+            <span class="hp-scroll-text">Scroll to explore</span>
+        </a>
+    </section>
 
         <!-- ============================================ -->
-        <!-- How It Works / Features Section              -->
+        <!-- Why ET Transport (marketplace value props)   -->
         <!-- ============================================ -->
-        <section class="features" id="features">
+        <section class="hp-values">
             <div class="container">
-                <h2 class="section-title">How It Works</h2>
-                <p class="section-subtitle">Booking your next trip is simple — just four easy steps.</p>
+                <h2 class="hp-title">Why book with ET Transport?</h2>
+                <p class="hp-subtitle">Don't search one bus company at a time &mdash; compare your options in one place.</p>
 
-                <div class="feature-grid">
-                    <div class="feature-card">
-                        <span class="feature-icon" aria-hidden="true">&#128269;</span>
-                        <h3>Search</h3>
-                        <p>Search thousands of routes and schedules across Ethiopia.</p>
+                <div class="hp-values-grid">
+                    <div class="hp-value">
+                        <span class="hp-value-icon" aria-hidden="true">&#128269;</span>
+                        <h3>Compare Trips</h3>
+                        <p>See prices, departure times and operators side by side for the same route.</p>
                     </div>
 
-                    <div class="feature-card">
-                        <span class="feature-icon" aria-hidden="true">&#128196;</span>
-                        <h3>Compare</h3>
-                        <p>Compare prices and departure times from different bus companies.</p>
-                    </div>
-
-                    <div class="feature-card">
-                        <span class="feature-icon" aria-hidden="true">&#128099;</span>
+                    <div class="hp-value">
+                        <span class="hp-value-icon" aria-hidden="true">&#128099;</span>
                         <h3>Choose Your Seat</h3>
-                        <p>Pick the seat you want from an interactive seating map.</p>
+                        <p>Pick exactly where you sit from an interactive seating map before you pay.</p>
                     </div>
 
-                    <div class="feature-card">
-                        <span class="feature-icon" aria-hidden="true">&#9992;</span>
-                        <h3>Book Your Trip</h3>
-                        <p>Confirm your booking and get ready for a smooth journey.</p>
+                    <div class="hp-value">
+                        <span class="hp-value-icon" aria-hidden="true">&#9889;</span>
+                        <h3>Book in Minutes</h3>
+                        <p>Search, select and confirm your journey without long queues or phone calls.</p>
+                    </div>
+
+                    <div class="hp-value">
+                        <span class="hp-value-icon" aria-hidden="true">&#128737;</span>
+                        <h3>Travel With Confidence</h3>
+                        <p>Verified operators, clear schedules and a smooth journey from start to finish.</p>
                     </div>
                 </div>
             </div>
         </section>
+
         <!-- ============================================ -->
- <!-- Bus Companies Directory -->
+        <!-- Popular Destinations (real route data)        -->
         <!-- ============================================ -->
-                <!-- ============================================ -->
- <!-- Your Favorite Companies -->
+        <section class="hp-routes" id="destinations">
+            <div class="container">
+                <h2 class="hp-title">Popular Destinations</h2>
+                <p class="hp-subtitle">Frequently travelled routes across Ethiopia &mdash; find the right trip in a few clicks.</p>
+                <div id="hp-routes-grid" class="hp-routes-grid"></div>
+                <div class="hp-routes-cta">
+                    <a href="companies.html" class="btn hp-btn-primary">Browse All Bus Companies</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================ -->
+        <!-- How It Works                                  -->
+        <!-- ============================================ -->
+        <section class="hp-steps">
+            <div class="container">
+                <h2 class="hp-title">How It Works</h2>
+                <p class="hp-subtitle">Booking your next trip is simple &mdash; just four easy steps.</p>
+
+                <ol class="hp-steps-grid">
+                    <li class="hp-step">
+                        <h3>Search</h3>
+                        <p>Search routes and schedules across Ethiopia.</p>
+                    </li>
+                    <li class="hp-step">
+                        <h3>Compare</h3>
+                        <p>Compare prices and departure times from different bus companies.</p>
+                    </li>
+                    <li class="hp-step">
+                        <h3>Choose Your Seat</h3>
+                        <p>Pick the seat you want from an interactive seating map.</p>
+                    </li>
+                    <li class="hp-step">
+                        <h3>Book Your Trip</h3>
+                        <p>Confirm your booking and get ready for a smooth journey.</p>
+                    </li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- ============================================ -->
+        <!-- Your Favorite Companies (hidden when empty)   -->
         <!-- ============================================ -->
         <section class="favorite-companies" id="favorite-companies">
             <div class="container">
-                <h2 class="section-title">Your Favorite Companies</h2>
-                <p class="section-subtitle">Quickly revisit the companies you have saved.</p>
+                <h2 class="hp-title">Your Favorite Companies</h2>
+                <p class="hp-subtitle">Quickly revisit the companies you have saved.</p>
                 <div id="favorite-companies-grid" class="company-directory-grid"></div>
             </div>
         </section>
-        <div class="favorites-cta container" style="margin-bottom: var(--space-lg);">
-            <a href="companies.html" class="btn btn-primary btn-hero-cta">Explore All Bus Companies</a>
-        </div>
 
-        <section class="companies-directory" id="companies">
+        <!-- ============================================ -->
+        <!-- Bus Companies Directory                       -->
+        <!-- ============================================ -->
+        <section class="companies-directory hp-directory" id="companies">
             <div class="container">
-                <h2 class="section-title">Bus Companies</h2>
-                <p class="section-subtitle">Meet the operators behind the journeys — explore their routes, fleets and services.</p>
+                <h2 class="hp-title">Bus Companies</h2>
+                <p class="hp-subtitle">Meet the operators behind the journeys &mdash; explore their routes, fleets and services.</p>
                 <div id="company-directory-grid" class="company-directory-grid"></div>
+                <div class="hp-directory-cta">
+                    <a href="companies.html" class="btn hp-btn-primary">Explore All Bus Companies</a>
+                </div>
             </div>
         </section>
+
     </main>
 
     <!-- ============================================ -->
@@ -219,6 +305,7 @@
     <script src="js/cities.js"></script>
     <script src="js/city-picker.js?v=20260907-swap-fix-3-dispatch"></script>
     <script src="js/company.js"></script>
+    <script src="js/home.js?v=20260912-home-redesign"></script>
 </body>
 </html>
 
