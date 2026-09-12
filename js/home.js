@@ -46,6 +46,11 @@
     }
 
     /* ---------- 4. Popular Destinations from real data ---------- */
+    /* Inline icons used in the route cards (no extra dependencies). */
+    var ICON_TAG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41 12 22l-8-8V4h10l6.59 6.59a2 2 0 0 1 0 2.82Z"/><path d="M8 8h.01"/></svg>';
+    var ICON_CLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
+    var ICON_ARROW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>';
+
     var grid = document.getElementById('hp-routes-grid');
     var section = document.getElementById('destinations');
 
@@ -102,16 +107,20 @@
                 var price = (it.minPrice === Infinity) ? null : it.minPrice;
                 var dur = (it.minMinutes === Infinity) ? null : formatDuration(it.minMinutes);
                 var priceHtml = price !== null
-                    ? '<span>from <b>ETB ' + price.toLocaleString() + '</b></span>'
+                    ? '<span class="hp-route-price">' + ICON_TAG + '<b>ETB ' + price.toLocaleString() + '</b></span>'
                     : '';
-                var durHtml = dur ? '<span>' + dur + '</span>' : '';
+                var durHtml = dur
+                    ? '<span class="hp-route-dur">' + ICON_CLOCK + '<span>' + dur + '</span></span>'
+                    : '';
                 html +=
                     '<a class="hp-route" href="search.html?from=' + encodeURIComponent(it.from) +
                     '&to=' + encodeURIComponent(it.to) + '">' +
-                        '<span class="hp-route-cities">' + esc(it.from) + ' <b>&rarr;</b> ' + esc(it.to) + '</span>' +
-                        '<span class="hp-route-meta">' + priceHtml + durHtml +
-                            '<span class="hp-route-arrow" aria-hidden="true">&rarr;</span>' +
+                        '<span class="hp-route-route">' +
+                            '<span class="hp-route-city">' + esc(it.from) + '</span>' +
+                            '<span class="hp-route-arrow" aria-hidden="true">' + ICON_ARROW + '</span>' +
+                            '<span class="hp-route-city">' + esc(it.to) + '</span>' +
                         '</span>' +
+                        '<span class="hp-route-meta">' + priceHtml + durHtml + '</span>' +
                     '</a>';
             }
             grid.innerHTML = html;

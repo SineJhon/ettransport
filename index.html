@@ -6,6 +6,11 @@
     <meta name="description" content="ET Transport — Compare Ethiopian bus trips, choose your seat and book your journey across Ethiopia. Search routes, compare companies and travel with confidence.">
     <title>ET Transport | Ethiopian Intercity Bus Booking</title>
 
+    <!-- Fonts (project-wide DM Sans + Outfit pairing) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+
     <!-- Styles -->
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/home.css?v=20260912-home-redesign">
@@ -149,30 +154,41 @@
         <!-- ============================================ -->
         <section class="hp-values">
             <div class="container">
-                <h2 class="hp-title">Why book with ET Transport?</h2>
-                <p class="hp-subtitle">Don't search one bus company at a time &mdash; compare your options in one place.</p>
+                <div class="hp-section-head">
+                    <p class="hp-eyebrow">Why ET Transport</p>
+                    <h2 class="hp-title">Book smarter, not harder.</h2>
+                    <p class="hp-subtitle">Don't search one bus company at a time &mdash; compare all your options in one place.</p>
+                </div>
 
                 <div class="hp-values-grid">
                     <div class="hp-value">
-                        <span class="hp-value-icon" aria-hidden="true">&#128269;</span>
+                        <span class="hp-value-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/></svg>
+                        </span>
                         <h3>Compare Trips</h3>
                         <p>See prices, departure times and operators side by side for the same route.</p>
                     </div>
 
                     <div class="hp-value">
-                        <span class="hp-value-icon" aria-hidden="true">&#128099;</span>
+                        <span class="hp-value-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3"/><path d="M3 16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1H7v-1a2 2 0 0 0-4 0z"/><path d="M5 18v2"/><path d="M19 18v2"/></svg>
+                        </span>
                         <h3>Choose Your Seat</h3>
                         <p>Pick exactly where you sit from an interactive seating map before you pay.</p>
                     </div>
 
                     <div class="hp-value">
-                        <span class="hp-value-icon" aria-hidden="true">&#9889;</span>
+                        <span class="hp-value-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                        </span>
                         <h3>Book in Minutes</h3>
                         <p>Search, select and confirm your journey without long queues or phone calls.</p>
                     </div>
 
                     <div class="hp-value">
-                        <span class="hp-value-icon" aria-hidden="true">&#128737;</span>
+                        <span class="hp-value-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+                        </span>
                         <h3>Travel With Confidence</h3>
                         <p>Verified operators, clear schedules and a smooth journey from start to finish.</p>
                     </div>
@@ -185,8 +201,11 @@
         <!-- ============================================ -->
         <section class="hp-routes" id="destinations">
             <div class="container">
-                <h2 class="hp-title">Popular Destinations</h2>
-                <p class="hp-subtitle">Frequently travelled routes across Ethiopia &mdash; find the right trip in a few clicks.</p>
+                <div class="hp-section-head">
+                    <p class="hp-eyebrow">Popular Destinations</p>
+                    <h2 class="hp-title">Where are you heading?</h2>
+                    <p class="hp-subtitle">Frequently travelled routes across Ethiopia &mdash; find the right trip in a few clicks.</p>
+                </div>
                 <div id="hp-routes-grid" class="hp-routes-grid"></div>
                 <div class="hp-routes-cta">
                     <a href="companies.html" class="btn hp-btn-primary">Browse All Bus Companies</a>
@@ -199,23 +218,42 @@
         <!-- ============================================ -->
         <section class="hp-steps">
             <div class="container">
-                <h2 class="hp-title">How It Works</h2>
-                <p class="hp-subtitle">Booking your next trip is simple &mdash; just four easy steps.</p>
+                <div class="hp-section-head">
+                    <p class="hp-eyebrow">How It Works</p>
+                    <h2 class="hp-title">Book in four simple steps</h2>
+                    <p class="hp-subtitle">From search to seat &mdash; a smooth journey, every time.</p>
+                </div>
 
                 <ol class="hp-steps-grid">
                     <li class="hp-step">
+                        <span class="hp-step-num" aria-hidden="true">01</span>
+                        <span class="hp-step-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                        </span>
                         <h3>Search</h3>
                         <p>Search routes and schedules across Ethiopia.</p>
                     </li>
                     <li class="hp-step">
+                        <span class="hp-step-num" aria-hidden="true">02</span>
+                        <span class="hp-step-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/></svg>
+                        </span>
                         <h3>Compare</h3>
                         <p>Compare prices and departure times from different bus companies.</p>
                     </li>
                     <li class="hp-step">
+                        <span class="hp-step-num" aria-hidden="true">03</span>
+                        <span class="hp-step-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3"/><path d="M3 16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1H7v-1a2 2 0 0 0-4 0z"/><path d="M5 18v2"/><path d="M19 18v2"/></svg>
+                        </span>
                         <h3>Choose Your Seat</h3>
                         <p>Pick the seat you want from an interactive seating map.</p>
                     </li>
                     <li class="hp-step">
+                        <span class="hp-step-num" aria-hidden="true">04</span>
+                        <span class="hp-step-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2"/><path d="M3 15v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"/><path d="M13 9v6"/><path d="M16 9v6"/></svg>
+                        </span>
                         <h3>Book Your Trip</h3>
                         <p>Confirm your booking and get ready for a smooth journey.</p>
                     </li>
@@ -228,23 +266,12 @@
         <!-- ============================================ -->
         <section class="favorite-companies" id="favorite-companies">
             <div class="container">
-                <h2 class="hp-title">Your Favorite Companies</h2>
-                <p class="hp-subtitle">Quickly revisit the companies you have saved.</p>
-                <div id="favorite-companies-grid" class="company-directory-grid"></div>
-            </div>
-        </section>
-
-        <!-- ============================================ -->
-        <!-- Bus Companies Directory                       -->
-        <!-- ============================================ -->
-        <section class="companies-directory hp-directory" id="companies">
-            <div class="container">
-                <h2 class="hp-title">Bus Companies</h2>
-                <p class="hp-subtitle">Meet the operators behind the journeys &mdash; explore their routes, fleets and services.</p>
-                <div id="company-directory-grid" class="company-directory-grid"></div>
-                <div class="hp-directory-cta">
-                    <a href="companies.html" class="btn hp-btn-primary">Explore All Bus Companies</a>
+                <div class="hp-section-head">
+                    <p class="hp-eyebrow">Your Favorites</p>
+                    <h2 class="hp-title">Your Favorite Companies</h2>
+                    <p class="hp-subtitle">Quickly revisit the companies you have saved.</p>
                 </div>
+                <div id="favorite-companies-grid" class="company-directory-grid"></div>
             </div>
         </section>
 
