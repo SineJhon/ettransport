@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="companies">
 
     <!-- ============ Navigation Bar ============ -->
     <header class="site-header">
@@ -40,55 +40,70 @@
         </nav>
     </header>
 
-    <main class="results-page container">
-
-        <!-- Hero -->
-        <section class="companies-hero">
+    <main>
+        <!-- ============================================ -->
+        <!-- Operator directory                            -->
+        <!-- ============================================ -->
+        <section class="companies-directory" id="directory">
             <div class="container">
-                <h1>Bus Companies</h1>
-                <p class="section-subtitle">Browse, compare and favorite Ethiopia's trusted bus operators.</p>
+                <div class="companies-section-head">
+                    <p class="search-eyebrow">Operator Directory</p>
+                    <h2 class="companies-title">Browse every operator</h2>
+                    <p class="companies-subtitle">Search by name or destination, compare ratings and reviews, then pick a company you can trust.</p>
+                </div>
+
+                <!-- Search / filter / sort toolbar -->
+                <div class="company-directory-toolbar" role="search">
+                    <div class="company-toolbar-search">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                        <input type="search" id="company-search" class="company-search" placeholder="Search by company, route or destination..." autocomplete="off">
+                    </div>
+
+                    <label class="company-sort-control" for="company-sort">
+                        <span class="company-control-label">Sort by</span>
+                        <select id="company-sort" class="company-sort">
+                            <option value="rating">Rating</option>
+                            <option value="reviews">Most Reviewed</option>
+                            <option value="name">Name</option>
+                            <option value="destinations">Most Destinations</option>
+                            <option value="buses">Largest Fleet</option>
+                        </select>
+                    </label>
+
+                    <label class="company-sort-control" for="company-filter-rating">
+                        <span class="company-control-label">Min rating</span>
+                        <select id="company-filter-rating" class="company-filter-rating">
+                            <option value="">Any rating</option>
+                            <option value="4.5">4.5+ stars</option>
+                            <option value="4">4+ stars</option>
+                            <option value="3.5">3.5+ stars</option>
+                        </select>
+                    </label>
+
+                    <label class="company-verified-toggle" for="company-filter-verified">
+                        <input type="checkbox" id="company-filter-verified">
+                        <span class="company-verified-label"><span aria-hidden="true">&#10003;</span> Verified only</span>
+                    </label>
+
+                    <button type="button" id="company-clear-filters" class="btn company-clear-btn">Clear</button>
+                </div>
+
+                <!-- Results count (updated by js/companies.js) -->
+                <p id="company-stats-bar" class="company-stats-bar">Loading companies&hellip;</p>
+
+                <!-- Company grid (rendered by js/companies.js) -->
+                <div id="company-list" class="company-directory-grid"></div>
+
+                <div id="company-directory-empty" class="company-directory-empty" hidden>
+                    <span class="company-empty-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                    </span>
+                    <p class="company-empty-title">No companies match your search</p>
+                    <p class="company-empty-hint">Try a different keyword, loosen a filter, or clear them all to see every operator.</p>
+                    <button type="button" id="empty-clear" class="btn btn-primary">Clear Filters</button>
+                </div>
             </div>
         </section>
-
-        <!-- Search / filter / sort toolbar -->
-        <div class="company-directory-toolbar" role="search">
-            <input type="search" id="company-search" class="company-search" placeholder="Search companies by name, route or destination..." autocomplete="off">
-
-            <label class="sort-control" for="company-sort">Sort by
-                <select id="company-sort" class="company-sort">
-                    <option value="rating">Rating</option>
-                    <option value="reviews">Most Reviewed</option>
-                    <option value="name">Name</option>
-                    <option value="destinations">Most Destinations</option>
-                    <option value="buses">Largest Fleet</option>
-                </select>
-            </label>
-
-            <label class="sort-control" for="company-filter-rating">Min rating
-                <select id="company-filter-rating" class="company-filter-rating">
-                    <option value="">Any rating</option>
-                    <option value="4.5">4.5+ stars</option>
-                    <option value="4">4+ stars</option>
-                    <option value="3.5">3.5+ stars</option>
-                </select>
-            </label>
-
-            <label class="filter-option" for="company-filter-verified" style="white-space: nowrap;">
-                <input type="checkbox" id="company-filter-verified"> Verified only
-            </label>
-
-            <button type="button" id="company-clear-filters" class="btn chips-clear">Clear</button>
-        </div>
-
-        <!-- Results stats -->
-        <p id="company-stats-bar" class="company-stats-bar">Loading companies...</p>
-
-        <!-- Company grid (rendered by js/companies.js) -->
-        <div id="company-list" class="company-directory-grid"></div>
-        <div id="company-directory-empty" class="company-directory-empty" hidden>
-            <p>No companies match your search. Try adjusting the filters or clearing them.</p>
-            <button type="button" id="empty-clear" class="btn btn-primary" style="margin-top: var(--space-sm);">Clear Filters</button>
-        </div>
     </main>
 
     <!-- ============ Footer ============ -->

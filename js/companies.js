@@ -153,7 +153,7 @@
     }
     function render() {
         var list = applySort(applyFilter());
-        if (statsEl) { statsEl.textContent = list.length + ' companies found'; }
+        if (statsEl) { statsEl.innerHTML = '<b>' + list.length + '</b> companies found'; }
         if (emptyEl) { emptyEl.hidden = list.length !== 0; }
         var html = '';
         for (var i = 0; i < list.length; i++) { html += cardHtml(list[i]); }

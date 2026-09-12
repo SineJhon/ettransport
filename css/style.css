@@ -3894,6 +3894,290 @@ body.modal-open { overflow: hidden; }
     color: var(--color-muted);
 }
 
+/* ============================================================
+   15.5  Companies directory page — homepage-matched UI
+   Scoped under `body.companies` (companies.html only) so the
+   about.html hero (which shares the .companies-hero class) keeps
+   its classic look. Mirrors the design language in css/home.css:
+   eyebrow pills, Outfit display type, soft-green-tinted sections
+   and the same green/gold palette.
+   ============================================================ */
+body.companies {
+    --cp-green: #0b7a4b;          /* matches homepage --hp-green */
+    --cp-green-dark: #095e3a;
+    --cp-charcoal: #14221c;
+    background-color: #ffffff;
+}
+
+/* ---------- Directory section (soft green like homepage favorites) ---------- */
+body.companies .companies-directory {
+    padding: var(--space-lg) 0;
+    background: #f7faf8;
+    border-top: 1px solid #eef3ef;
+}
+
+body.companies .companies-section-head {
+    text-align: center;
+    margin-bottom: var(--space-md);
+}
+
+body.companies .companies-section-head .search-eyebrow {
+    margin-bottom: 1rem;
+}
+
+body.companies .companies-title {
+    font-size: clamp(1.8rem, 3vw, 2.3rem);
+    text-align: center;
+    color: var(--cp-charcoal);
+    margin-bottom: 0.7rem;
+    letter-spacing: -0.015em;
+}
+
+body.companies .companies-subtitle {
+    text-align: center;
+    color: var(--color-muted);
+    max-width: 580px;
+    margin: 0 auto;
+    font-size: 1.05rem;
+    line-height: 1.6;
+}
+
+/* ---------- Search + filter toolbar (homepage search-card language) ---------- */
+body.companies .company-directory-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem 0.9rem;
+    background: #ffffff;
+    border: 1px solid #e7ede9;
+    border-radius: 16px;
+    padding: 1rem 1.15rem;
+    box-shadow: 0 2px 8px rgba(11, 34, 24, 0.05);
+    margin-bottom: var(--space-md);
+}
+
+body.companies .company-toolbar-search {
+    position: relative;
+    flex: 1 1 300px;
+}
+
+body.companies .company-toolbar-search svg {
+    position: absolute;
+    left: 0.9rem;
+    top: 50%;
+    width: 18px;
+    height: 18px;
+    color: #8aa096;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+body.companies .company-toolbar-search .company-search {
+    width: 100%;
+    padding: 0.7rem 0.95rem 0.7rem 2.5rem;
+    border: 1px solid #d1d8df;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    color: var(--color-text);
+    background: #ffffff;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+body.companies .company-toolbar-search .company-search::placeholder { color: #8aa096; }
+
+body.companies .company-toolbar-search .company-search:focus {
+    outline: none;
+    border-color: var(--cp-green);
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(11, 122, 75, 0.14);
+}
+
+body.companies .company-sort-control {
+    display: grid;
+    gap: 0.28rem;
+    line-height: 1.15;
+}
+
+body.companies .company-control-label {
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-muted);
+}
+
+body.companies .company-sort-control .company-sort,
+body.companies .company-sort-control .company-filter-rating {
+    padding: 0.5rem 2rem 0.5rem 0.8rem;
+    border: 1px solid #d1d8df;
+    border-radius: 12px;
+    background: #ffffff;
+    color: var(--color-text);
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+body.companies .company-sort-control .company-sort:focus,
+body.companies .company-sort-control .company-filter-rating:focus {
+    outline: none;
+    border-color: var(--cp-green);
+    box-shadow: 0 0 0 4px rgba(11, 122, 75, 0.14);
+}
+
+/* Verified-only pill toggle */
+body.companies .company-verified-toggle {
+    position: relative;
+    cursor: pointer;
+}
+
+body.companies .company-verified-toggle input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+}
+
+body.companies .company-verified-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.54rem 0.95rem;
+    border: 1px solid #d1d8df;
+    border-radius: 999px;
+    background: #ffffff;
+    color: var(--color-text);
+    font-size: 0.88rem;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+}
+
+body.companies .company-verified-label span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: rgba(11, 122, 75, 0.1);
+    color: var(--cp-green);
+    font-size: 0.7rem;
+    font-weight: 900;
+    flex: 0 0 auto;
+}
+
+body.companies .company-verified-toggle input:checked + .company-verified-label {
+    border-color: var(--cp-green);
+    background: rgba(11, 122, 75, 0.08);
+    color: var(--cp-green-dark);
+}
+
+body.companies .company-verified-toggle input:focus-visible + .company-verified-label {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+body.companies .company-clear-btn {
+    background: transparent;
+    border: 1.5px solid #d1d8df;
+    color: var(--color-muted);
+    border-radius: 999px;
+    padding: 0.5rem 1.1rem;
+    font-size: 0.88rem;
+    font-weight: 700;
+    transition: border-color 0.18s ease, color 0.18s ease, background-color 0.18s ease;
+}
+
+body.companies .company-clear-btn:hover {
+    border-color: var(--cp-green);
+    color: var(--cp-green);
+    background: rgba(11, 122, 75, 0.06);
+}
+
+/* ---------- Result count chip ---------- */
+body.companies .company-stats-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: var(--space-md);
+    font-size: 0.95rem;
+    color: var(--color-muted);
+}
+
+body.companies .company-stats-bar::before {
+    content: "";
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--cp-green);
+    flex: 0 0 auto;
+}
+
+body.companies .company-stats-bar b {
+    color: var(--cp-charcoal);
+    font-weight: 800;
+}
+
+/* ---------- Empty state ---------- */
+body.companies .company-directory-empty {
+    text-align: center;
+    padding: var(--space-lg) 1rem;
+    background: #ffffff;
+    border: 1.5px dashed #d5dfd8;
+    border-radius: 16px;
+    color: var(--color-muted);
+}
+
+body.companies .company-empty-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: rgba(11, 122, 75, 0.09);
+    border: 1px solid rgba(11, 122, 75, 0.16);
+    color: var(--cp-green);
+    margin-bottom: 0.7rem;
+}
+
+body.companies .company-empty-icon svg {
+    width: 26px;
+    height: 26px;
+}
+
+body.companies .company-empty-title {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    color: var(--cp-charcoal);
+    margin-bottom: 0.2rem;
+}
+
+body.companies .company-empty-hint {
+    font-size: 0.95rem;
+    margin-bottom: var(--space-md);
+}
+
+/* ---------- responsive ---------- */
+@media (max-width: 768px) {
+    body.companies .company-toolbar-search {
+        flex: 1 1 100%;
+    }
+}
+
+@media (max-width: 600px) {
+    body.companies .companies-directory {
+        padding: var(--space-md) 0;
+    }
+    body.companies .company-sort-control {
+        flex: 1 1 100%;
+    }
+}
+
 /* ---------- Layout: sidebar + content ---------- */
 .dashboard-layout {
     display: grid;
