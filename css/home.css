@@ -682,11 +682,6 @@ body.home {
     font-weight: 800;
 }
 
-.hp-routes-cta {
-    text-align: center;
-    margin-top: var(--space-lg);
-}
-
 
 /* ------------------------------------------------------------
    8. How it works (steps)
@@ -791,27 +786,7 @@ body.home {
 }
 
 /* ------------------------------------------------------------
-   10. Buttons (used across homepage CTA links)
------------------------------------------------------------- */
-.hp-btn-primary {
-    display: inline-block;
-    background: var(--hp-green);
-    color: #ffffff;
-    font-weight: 700;
-    border-radius: 999px;
-    padding: 0.85rem 2rem;
-    transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
-}
-
-.hp-btn-primary:hover {
-    background: var(--hp-green-dark);
-    transform: translateY(-2px);
-    color: #ffffff;
-    box-shadow: 0 10px 24px rgba(11, 122, 75, 0.3);
-}
-
-/* ------------------------------------------------------------
-   10b. Footer (scoped to the homepage only)
+   10. Footer (scoped to the homepage only)
 ------------------------------------------------------------ */
 .home .site-footer {
     background:

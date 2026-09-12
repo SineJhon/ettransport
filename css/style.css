@@ -8,11 +8,11 @@
    1. CSS Variables & Reset
 ------------------------------------------------------------ */
 :root {
-    /* Color palette */
-    --color-primary: #1d6fb8;      /* Main brand blue */
-    --color-primary-dark: #155a94;
-    --color-accent: #f59e0b;       /* Accent / CTA */
-    --color-accent-dark: #d97706;
+    /* Color palette — deep transport green + warm Ethiopian gold */
+    --color-primary: #0b7a4b;
+    --color-primary-dark: #095e3a;
+    --color-accent: #e8a33d;
+    --color-accent-dark: #c9821f;
     --color-dark: #1f2937;         /* Dark text / footer */
     --color-dark-2: #111827;
     --color-text: #374151;
@@ -28,7 +28,8 @@
     --radius: 10px;
 
     /* Typography */
-    --font-sans: 'Segoe UI', Tahoma, Geneva, Verdana, Arial, sans-serif;
+    --font-sans: 'DM Sans', 'Segoe UI', Tahoma, Geneva, Verdana, Arial, sans-serif;
+    --font-display: 'Outfit', 'Segoe UI', Tahoma, Arial, sans-serif;
 }
 
 * {
@@ -67,9 +68,11 @@ img {
    3. Typography & Buttons
 ------------------------------------------------------------ */
 h1, h2, h3, h4 {
+    font-family: var(--font-display);
     color: var(--color-dark);
     line-height: 1.2;
     font-weight: 700;
+    letter-spacing: -0.01em;
 }
 
 a {
@@ -88,22 +91,30 @@ ul {
     border-radius: var(--radius);
     font-size: 1rem;
     font-weight: 600;
+    font-family: inherit;
+    letter-spacing: 0.01em;
     cursor: pointer;
     text-align: center;
-    transition: background-color 0.2s ease, transform 0.15s ease;
+    transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
 }
 
 .btn:hover {
     transform: translateY(-2px);
 }
 
+.btn:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
 .btn-primary {
-    background-color: var(--color-accent);
+    background-color: var(--color-primary);
     color: var(--color-white);
 }
 
 .btn-primary:hover {
-    background-color: var(--color-accent-dark);
+    background-color: var(--color-primary-dark);
+    box-shadow: 0 10px 24px rgba(11, 122, 75, 0.3);
 }
 
 .btn-search {
@@ -210,7 +221,7 @@ ul {
 .search-card form textarea:focus {
     outline: none;
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(29, 111, 184, 0.15);
+    box-shadow: 0 0 0 3px rgba(11, 122, 75, 0.15);
 }
 
 .search-card form button[type="submit"] {
@@ -248,7 +259,7 @@ ul {
 
 .password-toggle:hover {
     color: var(--color-primary);
-    background: rgba(29, 111, 184, 0.08);
+    background: rgba(11, 122, 75, 0.08);
 }
 
 .password-toggle:focus-visible {
@@ -518,7 +529,7 @@ ul {
 .form-group select:focus {
     outline: none;
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(29, 111, 184, 0.15);
+    box-shadow: 0 0 0 3px rgba(11, 122, 75, 0.15);
 }
 
 /* ------------------------------------------------------------
@@ -530,15 +541,18 @@ ul {
 }
 
 .section-title {
-    font-size: 2rem;
+    font-size: clamp(1.7rem, 3vw, 2.15rem);
+    font-family: var(--font-display);
     text-align: center;
     margin-bottom: var(--space-sm);
+    letter-spacing: -0.015em;
 }
 
 .section-subtitle {
     text-align: center;
     color: var(--color-muted);
     margin-bottom: var(--space-lg);
+    line-height: 1.6;
 }
 
 .feature-grid {
@@ -548,30 +562,37 @@ ul {
 }
 
 .feature-card {
-    background-color: var(--color-bg);
-    border: 1px solid #e5e7eb;
-    border-radius: var(--radius);
+    background-color: var(--color-white);
+    border: 1px solid #e7ede9;
+    border-radius: 18px;
     padding: var(--space-md);
     text-align: center;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
 }
 
 .feature-card:hover {
     transform: translateY(-6px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 18px 38px rgba(8, 34, 22, 0.12);
+    border-color: #cfded5;
 }
 
 .feature-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 64px;
-    height: 64px;
+    width: 66px;
+    height: 66px;
     margin-bottom: var(--space-sm);
     font-size: 2rem;
-    background-color: var(--color-primary);
+    background: linear-gradient(135deg, var(--color-primary), #2fa878);
     color: var(--color-white);
-    border-radius: 50%;
+    border-radius: 18px;
+    box-shadow: 0 10px 22px rgba(11, 122, 75, 0.28);
+}
+
+.feature-icon svg {
+    width: 28px;
+    height: 28px;
 }
 
 .feature-card h3 {
@@ -1319,7 +1340,7 @@ ul {
 .seat.selected {
     --seat-color: var(--color-primary);
     --seat-text:  #ffffff;
-    --seat-glow:  0 0 0 2px #ffffff, 0 0 0 3px var(--color-primary), 0 3px 8px rgba(29, 111, 184, 0.45);
+    --seat-glow:  0 0 0 2px #ffffff, 0 0 0 3px var(--color-primary), 0 3px 8px rgba(11, 122, 75, 0.45);
 }
 
 .seat.selected .seat-num {
@@ -1573,7 +1594,7 @@ ul {
 .field-input:focus {
     outline: none;
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(29, 111, 184, 0.15);
+    box-shadow: 0 0 0 3px rgba(11, 122, 75, 0.15);
 }
 
 .field-input.field-invalid {
@@ -1768,7 +1789,7 @@ ul {
 .pay-option.selected {
     border-color: var(--color-primary);
     background-color: #f0f6fc;
-    box-shadow: 0 0 0 3px rgba(29, 111, 184, 0.12);
+    box-shadow: 0 0 0 3px rgba(11, 122, 75, 0.12);
 }
 
 .pay-option.selected .pay-brand {
@@ -1782,7 +1803,7 @@ ul {
 }
 
 .pay-option input:focus-visible + .pay-option-body {
-    outline: 3px solid rgba(29, 111, 184, 0.45);
+    outline: 3px solid rgba(11, 122, 75, 0.45);
     outline-offset: -3px;
     border-radius: 8px;
 }
@@ -3105,19 +3126,20 @@ input:focus-visible {
 
 .company-card {
     background-color: var(--color-white);
-    border: 1px solid #e5e7eb;
-    border-radius: var(--radius);
+    border: 1px solid #e7ede9;
+    border-radius: 16px;
     padding: var(--space-md);
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
     color: var(--color-text);
-    transition: box-shadow 0.2s ease, transform 0.15s ease;
+    transition: box-shadow 0.22s ease, transform 0.22s ease, border-color 0.22s ease;
 }
 
 .company-card:hover {
-    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.09);
-    transform: translateY(-3px);
+    box-shadow: 0 18px 38px rgba(8, 34, 22, 0.13);
+    transform: translateY(-4px);
+    border-color: #cfded5;
 }
 
 .company-card-head {
@@ -3336,11 +3358,24 @@ input:focus-visible {
     color: var(--color-dark);
 }
 .search-eyebrow {
-    font-size: .75rem;
-    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    font-size: .76rem;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--color-muted);
+    letter-spacing: .14em;
+    color: var(--color-primary);
+    background: rgba(11, 122, 75, 0.07);
+    border: 1px solid rgba(11, 122, 75, 0.16);
+    padding: .35rem .9rem;
+    border-radius: 999px;
+}
+
+/* On the dark company / about heroes the eyebrow flips to light glass. */
+.companies-hero .search-eyebrow {
+    color: #ffe9b8;
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.22);
 }
 .search-meta { font-size: .9rem; color: var(--color-muted); }
 .search-availability {
@@ -3713,7 +3748,9 @@ body.modal-open { overflow: hidden; }
 
 /* ---------- Companies directory page ---------- */
 .companies-hero {
-    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+    background:
+        radial-gradient(800px 320px at 82% -20%, rgba(232, 163, 61, 0.18), transparent 60%),
+        linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
     color: var(--color-white);
     padding: var(--space-lg) 0;
     margin-bottom: var(--space-lg);
@@ -4587,7 +4624,7 @@ body.modal-open { overflow: hidden; }
 .dash-search-input:focus {
     outline: none;
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(29, 111, 184, 0.15);
+    box-shadow: 0 0 0 3px rgba(11, 122, 75, 0.15);
 }
 .dash-search-hint {
     color: var(--color-muted);
@@ -4690,7 +4727,7 @@ body.modal-open { overflow: hidden; }
 .dash-sort-select:focus-visible {
     outline: none;
     border-color: var(--color-primary, #0b5d8a);
-    box-shadow: 0 0 0 3px rgba(29, 111, 184, 0.15);
+    box-shadow: 0 0 0 3px rgba(11, 122, 75, 0.15);
 }
 .dash-sort-select:disabled { cursor: default; opacity: 0.65; }
 
