@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Bus company profile on ET Transport — routes, fleet, services and available trips.">
     <title>Bus Company | ET Transport</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=20260912-company-profile">
     <link rel="icon" type="image/x-icon" href="assets/icons/favicon.svg">
 <!-- Fonts (DM Sans + Outfit) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="company-page">
 
     <!-- ============ Navigation Bar ============ -->
     <header class="site-header">
@@ -42,95 +42,121 @@
         <!-- ============ Company profile app (rendered by js/company.js) ============ -->
         <div id="company-app">
 
-            <!-- 1. Company Hero -->
-            <section class="company-hero">
-                <img id="hero-cover" class="company-cover" alt="">
-                <div class="company-hero-overlay"></div>
-                <div class="container company-hero-content">
+            <!-- 1. Masthead: cover + profile id + tabs + quick stats (Facebook-style) -->
+            <header class="cp-masthead">
+                <div class="cp-cover-wrap">
+                    <img id="hero-cover" class="company-cover" alt="">
+                    <div class="company-hero-overlay"></div>
                     <p class="company-crumb" id="company-crumb"><a href="companies.html">&larr; All Bus Companies</a></p>
-                    <div class="company-hero-row">
+                </div>
+
+                <div class="container cp-id">
+                    <div class="cp-id-row">
                         <img id="hero-logo" class="company-logo-hero" alt="">
-                        <div class="company-hero-text">
-                            <div id="hero-verified"></div>
-                            <h1 id="hero-name" class="company-name"></h1>
+                        <div class="cp-id-copy">
+                            <div class="cp-name-line">
+                                <h1 id="hero-name" class="company-name"></h1>
+                                <div id="hero-verified"></div>
+                            </div>
                             <p id="hero-tagline" class="company-tagline"></p>
                             <p id="hero-rating" class="hero-rating"></p>
-                            <div class="hero-actions">
-                                <button id="hero-fav" class="fav-btn fav-btn-hero" type="button" hidden aria-pressed="false"></button>
-                                <a href="#company-trips" class="btn btn-primary btn-hero-cta">View Available Trips</a>
-                            </div>
                         </div>
+                        <div class="cp-id-actions">
+                            <button id="hero-fav" class="fav-btn fav-btn-hero" type="button" hidden aria-pressed="false"></button>
+                            <a href="#company-trips" class="btn btn-primary btn-hero-cta">View Available Trips</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="container cp-tabs-wrap">
+                    <nav class="cp-tabs" aria-label="Company sections">
+                        <a class="cp-tab is-active" href="#cp-about">Overview</a>
+                        <a class="cp-tab" href="#cp-routes">Routes</a>
+                        <a class="cp-tab" href="#cp-fleet">Fleet</a>
+                        <a class="cp-tab" href="#company-trips">Trips</a>
+                        <a class="cp-tab" href="#cp-reviews">Reviews</a>
+                        <a class="cp-tab" href="#cp-contact">Contact</a>
+                    </nav>
+                </div>
+
+                <!-- Quick stats (populated by js/company.js) -->
+                <section class="cp-stats" aria-label="Company quick statistics">
+                    <div class="container stats-grid" id="company-stats"></div>
+                </section>
+            </header>
+
+            <!-- 2. Overview: intro panel (left) + services (right) -->
+            <section class="company-section" id="cp-about">
+                <div class="container cp-overview">
+                    <div class="cp-panel cp-panel-intro">
+                        <div class="cp-panel-head">
+                            <p class="search-eyebrow">Overview</p>
+                            <h2 class="cp-panel-title" id="about-title">About</h2>
+                        </div>
+
+                        <p id="about-text" class="about-text"></p>
+                        <div id="founded-block" class="founded-block"></div>
+                        <ul id="info-grid" class="info-grid"></ul>
+                    </div>
+
+                    <div class="cp-panel cp-panel-side">
+                        <div class="cp-panel-head">
+                            <p class="search-eyebrow">On board</p>
+                            <h2 class="cp-panel-title">Services &amp; Amenities</h2>
+                        </div>
+                        <ul id="amenity-grid" class="amenity-grid"></ul>
+                        <p class="demo-note">
+                            Company profile content is illustrative sample data built for the ET Transport prototype.
+                            Ratings, reviews, schedules and contact details are NOT verified real-world facts.
+                        </p>
                     </div>
                 </div>
             </section>
 
-            <!-- 2. Company Quick Stats -->
-            <section class="company-stats" aria-label="Company quick statistics">
-                <div class="container stats-grid" id="company-stats"></div>
-            </section>
-
-            <!-- 3. About -->
-            <section class="company-section">
+            <!-- 3. Popular Routes -->
+            <section class="company-section cp-alt" id="cp-routes">
                 <div class="container">
-                    <h2 class="section-title" id="about-title">About</h2>
-                    <p id="about-text" class="about-text"></p>
-                    <p class="demo-note">
-                        Company profile content is illustrative sample data built for the ET Transport prototype.
-                        Ratings, reviews, schedules and contact details are NOT verified real-world facts.
-                    </p>
-                </div>
-            </section>
-
-            <!-- 4. Founded -->
-            <section class="company-section" id="company-founded">
-                <div class="container">
-                    <h2 class="section-title">Founded</h2>
-                    <p class="section-subtitle">How long this company has been moving Ethiopian travellers.</p>
-                    <div id="founded-block" class="founded-block"></div>
-                </div>
-            </section>
-
-            <!-- 5. Services / Amenities -->
-            <section class="company-section company-section-alt">
-                <div class="container">
-                    <h2 class="section-title">Services &amp; Amenities</h2>
-                    <p class="section-subtitle">What passengers can expect on board.</p>
-                    <ul id="amenity-grid" class="amenity-grid"></ul>
-                </div>
-            </section>
-
-            <!-- 6. Popular Routes -->
-            <section class="company-section">
-                <div class="container">
-                    <h2 class="section-title">Popular Routes</h2>
-                    <p class="section-subtitle">Frequent departures from Addis Ababa.</p>
+                    <div class="cp-head">
+                        <p class="search-eyebrow">Network</p>
+                        <h2 class="section-title">Popular Routes</h2>
+                        <p class="section-subtitle">Frequent departures from Addis Ababa.</p>
+                    </div>
                     <div id="route-grid" class="route-grid"></div>
                 </div>
             </section>
 
-            <!-- 7. Fleet -->
-            <section class="company-section company-section-alt">
+            <!-- 4. Fleet -->
+            <section class="company-section" id="cp-fleet">
                 <div class="container">
-                    <h2 class="section-title">Our Fleet</h2>
-                    <p class="section-subtitle">A look at the coaches used on these routes.</p>
+                    <div class="cp-head">
+                        <p class="search-eyebrow">Fleet</p>
+                        <h2 class="section-title">Our Fleet</h2>
+                        <p class="section-subtitle">A look at the coaches used on these routes.</p>
+                    </div>
                     <div id="fleet-grid" class="fleet-grid"></div>
                 </div>
             </section>
 
-            <!-- 8. Upcoming Trips -->
-            <section class="company-section" id="company-trips">
+            <!-- 5. Upcoming Trips -->
+            <section class="company-section cp-alt" id="company-trips">
                 <div class="container">
-                    <h2 class="section-title">Upcoming Trips</h2>
-                    <p class="section-subtitle">Select a trip to continue into the ET Transport booking flow.</p>
+                    <div class="cp-head">
+                        <p class="search-eyebrow">Book</p>
+                        <h2 class="section-title">Upcoming Trips</h2>
+                        <p class="section-subtitle">Select a trip to continue into the ET Transport booking flow.</p>
+                    </div>
                     <div id="trip-grid" class="trip-grid"></div>
                 </div>
             </section>
 
-            <!-- 9. Sample Passenger Reviews -->
-            <section class="company-section company-section-alt">
+            <!-- 6. Reviews -->
+            <section class="company-section" id="cp-reviews">
                 <div class="container">
-                    <h2 class="section-title">Sample Passenger Reviews</h2>
-                    <p class="section-subtitle">Illustrative reviews shown for the prototype demo — not real customer testimonials.</p>
+                    <div class="cp-head">
+                        <p class="search-eyebrow">Reviews</p>
+                        <h2 class="section-title">Passenger Reviews</h2>
+                        <p class="section-subtitle">Illustrative reviews shown for the prototype demo — not real customer testimonials.</p>
+                    </div>
                     <div class="review-layout">
                         <div id="review-summary" class="review-summary"></div>
                         <div id="review-grid" class="review-grid"></div>
@@ -138,23 +164,18 @@
                 </div>
             </section>
 
-            <!-- 10. Company Information -->
-            <section class="company-section">
+            <!-- 7. Branches & Contact -->
+            <section class="company-section cp-alt" id="cp-contact">
                 <div class="container">
-                    <h2 class="section-title">Company Information</h2>
-                    <ul id="info-grid" class="info-grid"></ul>
-                </div>
-            </section>
-
-            <!-- 11. Contact / Offices -->
-            <section class="company-section company-section-alt">
-                <div class="container">
-                    <h2 class="section-title" id="contact-title">Branches &amp; Contact</h2>
+                    <div class="cp-head">
+                        <p class="search-eyebrow">Reach us</p>
+                        <h2 class="section-title" id="contact-title">Branches &amp; Contact</h2>
+                    </div>
                     <div id="contact-grid" class="contact-grid"></div>
                 </div>
             </section>
 
-            <!-- 12. Final CTA -->
+            <!-- 8. Final CTA -->
             <section class="company-final-cta">
                 <div class="container final-cta-inner">
                     <h2>Ready for your next journey?</h2>
@@ -224,10 +245,10 @@
     </footer>
 
     <!-- Scripts -->
-    <script src="js/main.js"></script>
-        <script src="js/auth.js"></script>
-    <script src="js/notifications.js"></script>
-    <script src="js/data.js"></script>
-    <script src="js/company.js?v=20260904-branches"></script>
+    <script src="js/main.js?v=20260912-company-profile"></script>
+        <script src="js/auth.js?v=20260912-company-profile"></script>
+    <script src="js/notifications.js?v=20260912-company-profile"></script>
+    <script src="js/data.js?v=20260912-company-profile"></script>
+    <script src="js/company.js?v=20260912-company-profile"></script>
 </body>
 </html>
