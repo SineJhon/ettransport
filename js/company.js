@@ -532,10 +532,14 @@
     }
 
     function companyTrips(c) {
- /* real companies ship their own upcoming trips straight
-           from the database (api/company.php?action=get). Demo profiles
-           keep using the shared mock trips so nothing else changes. */
+        /* Real companies ship their own upcoming trips straight from the
+           database (api/company.php?action=get); those are the ONLY trips
+           shown on a real profile. A real company (numeric database id)
+           with no upcoming trips shows an empty section — it must never
+           fall back to the shared demo trips. */
         if (c.trips && c.trips.length) { return c.trips; }
+        if (typeof c.id === 'number' && c.id > 0) { return []; }
+        /* Demo profiles (mock=1) keep using the shared mock trips. */
         var out = [];
         for (var i = 0; i < ET_TRIPS.length; i++) {
             if (ET_TRIPS[i].company === c.name) { out.push(ET_TRIPS[i]); }
@@ -758,46 +762,128 @@
    fleet cards are shown inline, so no toggle handler is needed. */
 
     /* ---------- Upcoming trips (deep-links into the existing booking flow) ---------- */
-    function renderTrips(c) {
-        var el = document.getElementById('trip-grid');
-        if (!el) { return; }
-        var trips = companyTrips(c);
+
+    /* Trip day-selector helpers (matching the front-page date picker). */
+    var DAY_ABBR = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+
+    /* Build the week-strip chips: today through the same weekday next week —
+       exactly like the front-page quick-pick date picker (js/home.js). Days
+       that actually have trips get a small indicator dot. */
+    function tripDayChips(trips) {
+        var counts = {};
+        var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+        var d, iso, i;
+        for (i = 0; i < trips.length; i++) {
+            iso = tripDate(trips[i]);
+            counts[iso] = (counts[iso] || 0) + 1;
+        }
+        var chips = '';
+        var today = new Date();
+        today.setHours(0, 0, 0, 0);
+        for (i = 0; i <= 7; i++) {
+            d = new Date(today);
+            d.setDate(today.getDate() + i);
+            iso = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+            var label = (i === 0) ? 'Today' : DAY_ABBR[d.getDay()];
+            var has = counts[iso] ? ' has-trips' : '';
+            chips += '<button type="button" class="trip-day' + has + '" data-date="' + iso + '" aria-pressed="false"' +
+                ' aria-label="' + label + ', ' + d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + '">' +
+                    '<b>' + label + '</b>' +
+                    '<span>' + d.getDate() + '</span>' +
+                '</button>';
+        }
+        return chips;
+    }
+
+    /* The YYYY-MM-DD a trip departs (live trips carry a DB date; demo trips
+       use an offset from today). */
+    function tripDate(t) {
+        var raw = t.date ? String(t.date).slice(0, 10) : '';
+        return raw || isoDateIn(t.offsetDays || 1);
+    }
+
+    /* One trip card (shared by the grid renderer and the day filter). */
+    function tripCardHtml(t) {
+        var date = tripDate(t);
+        return '<article class="trip-card">' +
+            '<div class="trip-date">' + formatDate(date) + '</div>' +
+            '<div class="trip-row">' +
+                '<div class="trip-end trip-depart">' +
+                    '<span class="trip-time">' + t.depart + '</span>' +
+                    '<span class="trip-place">' + t.from + '</span>' +
+                '</div>' +
+                '<div class="trip-journey" aria-hidden="true">' +
+                    '<span class="trip-duration">' + formatDuration(t.minutes) + '</span>' +
+                    '<span class="trip-line"></span>' +
+                '</div>' +
+                '<div class="trip-end trip-arrive">' +
+                    '<span class="trip-time">' + t.arrive + '</span>' +
+                    '<span class="trip-place">' + t.to + '</span>' +
+                '</div>' +
+            '</div>' +
+            '<div class="trip-meta">' +
+                '<span class="trip-bustype">' + t.busType + ' · ' + t.type + '</span>' +
+                '<span class="trip-seats">' + t.seats + ' seats left</span>' +
+            '</div>' +
+            '<div class="trip-buy">' +
+                '<span class="trip-price">' + formatPrice(t.price) + '</span>' +
+                '<a class="btn btn-select-trip" href="' + tripLink(t) + '" data-trip-id="' + t.id + '">Select Trip</a>' +
+            '</div>' +
+        '</article>';
+    }
+
+    function renderTripGrid(trips, el) {
         if (!trips.length) {
-            el.innerHTML = '<p class="trip-empty">No upcoming trips are listed right now. ' +
-                '<a href="' + searchLink('Addis Ababa', 'Hawassa') + '">Search all departures</a> instead.</p>';
+            el.innerHTML = '<p class="trip-empty">No trips are available on this day. ' +
+                'Pick another day from the selector above.</p>';
             return;
         }
         var html = '';
         for (var i = 0; i < trips.length; i++) {
-            var t = trips[i];
-            var date = t.date || isoDateIn(t.offsetDays || 1);
-            html += '<article class="trip-card">' +
-                '<div class="trip-date">' + formatDate(date) + '</div>' +
-                '<div class="trip-row">' +
-                    '<div class="trip-end trip-depart">' +
-                        '<span class="trip-time">' + t.depart + '</span>' +
-                        '<span class="trip-place">' + t.from + '</span>' +
-                    '</div>' +
-                    '<div class="trip-journey" aria-hidden="true">' +
-                        '<span class="trip-duration">' + formatDuration(t.minutes) + '</span>' +
-                        '<span class="trip-line"></span>' +
-                    '</div>' +
-                    '<div class="trip-end trip-arrive">' +
-                        '<span class="trip-time">' + t.arrive + '</span>' +
-                        '<span class="trip-place">' + t.to + '</span>' +
-                    '</div>' +
-                '</div>' +
-                '<div class="trip-meta">' +
-                    '<span class="trip-bustype">' + t.busType + ' \u00b7 ' + t.type + '</span>' +
-                    '<span class="trip-seats">' + t.seats + ' seats left</span>' +
-                '</div>' +
-                '<div class="trip-buy">' +
-                    '<span class="trip-price">' + formatPrice(t.price) + '</span>' +
-                    '<a class="btn btn-select-trip" href="' + tripLink(t) + '" data-trip-id="' + t.id + '">Select Trip</a>' +
-                '</div>' +
-            '</article>';
+            html += tripCardHtml(trips[i]);
         }
         el.innerHTML = html;
+    }
+
+    function renderTrips(c) {
+        var el = document.getElementById('trip-grid');
+        if (!el) { return; }
+        var daysEl = document.getElementById('trip-days');
+        var trips = companyTrips(c);
+        if (!trips.length) {
+            el.innerHTML = '<p class="trip-empty">No upcoming trips are listed right now. ' +
+                '<a href="' + searchLink('Addis Ababa', 'Hawassa') + '">Search all departures</a> instead.</p>';
+            if (daysEl) { daysEl.hidden = true; }
+            return;
+        }
+
+        /* Week-strip day selector: today .. same weekday next week. */
+        if (daysEl) {
+            daysEl.innerHTML = tripDayChips(trips);
+            daysEl.hidden = false;
+
+            daysEl.addEventListener('click', function (event) {
+                var btn = event.target.closest ? event.target.closest('.trip-day') : null;
+                if (!btn) { return; }
+                var date = btn.getAttribute('data-date') || '';
+                /* Re-clicking the selected day clears the picker and shows every
+                   trip again (the old "All days" behaviour, without the chip). */
+                var turningOn = !btn.classList.contains('is-active');
+                var nodes = daysEl.querySelectorAll('.trip-day');
+                for (var k = 0; k < nodes.length; k++) {
+                    var isOn = turningOn && (nodes[k] === btn);
+                    nodes[k].classList.toggle('is-active', isOn);
+                    nodes[k].setAttribute('aria-pressed', isOn ? 'true' : 'false');
+                }
+                var filtered = [];
+                for (var q = 0; q < trips.length; q++) {
+                    if (!turningOn || tripDate(trips[q]) === date) { filtered.push(trips[q]); }
+                }
+                renderTripGrid(filtered, el);
+            });
+        }
+
+        renderTripGrid(trips, el);
 
         /* Share the real trip snapshot with the booking flow so booking.html
            (and the downstream pages) render the correct departure even when
