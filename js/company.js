@@ -157,9 +157,9 @@
             amenities: ['Reclining Seats', 'Headrests', 'Arm Support', 'AC', 'Entertainment', 'Snacks', 'Wi-Fi', 'Luggage Space', 'Multiple Pickup'],
             busCount: 28,
             fleet: [
-                { model: 'Scania Touring', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Charging', 'Reclining Seats'], description: 'Flagship coach with wide recliners and onboard media screens.' },
+                { model: 'Scania Touring', type: 'Standard', seats: 51, image: 'assets/images/buses/SelamBusScania.webp', amenities: ['A/C', 'Charging', 'Reclining Seats'], description: 'Flagship coach with wide recliners and onboard media screens.' },
                 { model: 'MAN Lion\u2019s Coach', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Wi-Fi', 'Charging', 'Meals'], description: 'Priority service with fewer seats, extra legroom and a host on board.' },
-                { model: 'Yutong ZK6122H9', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Luggage', 'Charging'], description: 'Reliable workhorse used for secondary departures during peak days.' }
+                { model: 'Yutong ZK6122H9', type: 'Standard', seats: 51, image: 'assets/images/buses/SelamBusYutong.webp', amenities: ['A/C', 'Luggage', 'Charging'], description: 'Reliable workhorse used for secondary departures during peak days.' }
             ],
             popularRoutes: [
                 { from: 'Addis Ababa', to: 'Mekelle', price: 1200, minutes: 750 },
@@ -624,7 +624,7 @@
             { value: c.destinations.length, label: 'Destinations' },
             { value: c.busCount, label: 'Buses in Fleet' },
             { value: c.rating.toFixed(1), label: 'Average Rating' },
-            { value: c.founded ? years + '+' : '\\u2014', label: 'Years Experience' }
+            { value: c.founded ? years + '+' : '—', label: 'Years Experience' }
         ];
         var html = '';
         for (var i = 0; i < stats.length; i++) {
@@ -737,6 +737,7 @@
             for (var j = 0; j < b.amenities.length; j++) {
                 chips += '<span class="fleet-chip">' + b.amenities[j] + '</span>';
             }
+            var reg = b.registration || b.registration_number || '';
             html += '<article class="fleet-card">' +
                 '<img class="fleet-img" src="' + b.image + '" alt="' + b.model + ' bus image placeholder" loading="lazy">' +
                 '<div class="fleet-body">' +
@@ -746,29 +747,15 @@
                     '</div>' +
                     '<p class="fleet-seats">' + b.seats + ' Seats</p>' +
                     '<div class="fleet-chips">' + chips + '</div>' +
-                    '<button type="button" class="btn btn-fleet-details" aria-expanded="false" aria-controls="fleet-desc-' + i + '">View Details</button>' +
-                    '<p id="fleet-desc-' + i + '" class="fleet-more" hidden>' + b.description + '</p>' +
+                    (reg ? '<span class="fleet-reg" title="Bus registration number">' + esc(reg) + '</span>' : '') +
                 '</div>' +
             '</article>';
         }
         el.innerHTML = html;
     }
 
-    /* Expand/collapse the "View Details" area on each fleet card. */
-    function bindFleetDetails() {
-        var grid = document.getElementById('fleet-grid');
-        if (!grid) { return; }
-        grid.addEventListener('click', function (event) {
-            var btn = event.target.closest ? event.target.closest('.btn-fleet-details') : null;
-            if (!btn) { return; }
-            var more = document.getElementById(btn.getAttribute('aria-controls'));
-            if (!more) { return; }
-            var open = more.hasAttribute('hidden');
-            more.hidden = !open;
-            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-            btn.textContent = open ? 'Hide Details' : 'View Details';
-        });
-    }
+    /* Expand/collapse for the fleet details was removed — descriptions on the
+   fleet cards are shown inline, so no toggle handler is needed. */
 
     /* ---------- Upcoming trips (deep-links into the existing booking flow) ---------- */
     function renderTrips(c) {
@@ -1073,7 +1060,6 @@
         renderAmenities(c);
         renderRoutes(c);
         renderFleet(c);
-        bindFleetDetails();
         renderTrips(c);
         renderReviews(c);
         renderInfo(c);
@@ -1133,6 +1119,18 @@
         return String(str || '').charAt(0).toUpperCase() + String(str || '').slice(1);
     }
 
+    /* Pick a fleet photo for a bus based on its model. Selam Bus provides real
+       coach photos (assets/images/buses/) so their Yutong and Scania coaches
+       show the matching picture instead of the generic placeholder. */
+    function busImageFor(slug, model) {
+        var m = String(model || '').toLowerCase();
+        if (slug === 'selam-bus') {
+            if (m.indexOf('yutong') !== -1) { return 'assets/images/buses/SelamBusYutong.webp'; }
+            if (m.indexOf('scania') !== -1) { return 'assets/images/buses/SelamBusScania.webp'; }
+        }
+        return 'assets/images/buses/bus-standard.svg';
+    }
+
     function normalizeCompanyFromApi(raw) {
         var bag = raw || {};
         var about = bag.description || '';
@@ -1148,9 +1146,10 @@
                 model: b.model || 'Coach',
                 type: 'Standard',
                 seats: 51,
-                image: 'assets/images/buses/bus-standard.svg',
+                image: busImageFor(bag.slug, b.model),
                 amenities: ['A/C', 'Charging', 'Luggage'],
-                description: (b.model || 'Coach') + ' \\u2014 ' + (b.registration_number || 'Active bus')
+                registration: b.registration_number || '',
+                description: (b.model || 'Coach') + ' — ' + (b.registration_number || 'Active bus')
             });
         }
 

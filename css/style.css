@@ -6390,3 +6390,33 @@ body.company-page .contact-card-company h3 {
     color: var(--cp-green-dark);
     font-size: 1.05rem;
 }
+
+/* ============================================================
+   16.8  Fleet card — styled bus ID badge
+   ============================================================ */
+
+.fleet-reg {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    margin-top: .85rem;
+    padding: .34rem .72rem .34rem .6rem;
+    background: rgba(11, 122, 75, .09);
+    border: 1px solid #cfe0d4;
+    border-radius: 999px;
+    color: #0b5c37;
+    font-family: ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, monospace;
+    font-size: .8rem;
+    font-weight: 700;
+    letter-spacing: .03em;
+}
+
+.fleet-reg::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #0b7a4b;
+    box-shadow: 0 0 0 3px rgba(11, 122, 75, .12);
+    flex: 0 0 auto;
+}
