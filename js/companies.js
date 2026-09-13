@@ -124,8 +124,7 @@
     function matches(c) {
         var q = (state.query || '').toLowerCase();
         if (q) {
-            var hay = (c.name + ' ' + (c.tagline || '') + ' ' + c.destinations.join(', ')).toLowerCase();
-            if (hay.indexOf(q) === -1) { return false; }
+            if (String(c.name || '').toLowerCase().indexOf(q) === -1) { return false; }
         }
         return true;
     }
@@ -219,6 +218,7 @@
         render();
     }
 
+    if (searchBox) { searchBox.addEventListener('input', onSearchInput); }
     if (searchBox) {
         searchBox.addEventListener('keydown', function (event) {
             if (event.key === 'Enter') {
