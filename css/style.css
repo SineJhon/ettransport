@@ -3942,20 +3942,49 @@ body.companies .companies-subtitle {
     line-height: 1.6;
 }
 
-/* ---------- Search + filter toolbar (homepage search-card language) ---------- */
-body.companies .company-directory-toolbar {
+/* ---------- Search bar (input + button, separate row) ---------- */
+body.companies .company-search-row {
     display: flex;
     flex-wrap: wrap;
-    align-items: flex-end;
-    gap: 0.75rem 0.9rem;
+    align-items: center;
+    gap: 0.75rem;
     background: #ffffff;
     border: 1px solid #e7ede9;
     border-radius: 16px;
-    padding: 1rem 1.15rem;
+    padding: 0.9rem 1.15rem;
     box-shadow: 0 2px 8px rgba(11, 34, 24, 0.05);
-    margin-bottom: var(--space-md);
+    margin-bottom: var(--space-sm);
 }
 
+body.companies .company-search-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--cp-green);
+    color: #ffffff;
+    border: none;
+    border-radius: 12px;
+    padding: 0.72rem 1.4rem;
+    font-size: 0.98rem;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    flex: 0 0 auto;
+    transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+body.companies .company-search-btn:hover {
+    background: var(--cp-green-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px rgba(11, 122, 75, 0.3);
+}
+
+body.companies .company-search-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* ---------- Search field (input + magnifier, inside the search bar) ---------- */
 body.companies .company-toolbar-search {
     position: relative;
     flex: 1 1 300px;
@@ -3993,109 +4022,15 @@ body.companies .company-toolbar-search .company-search:focus {
     box-shadow: 0 0 0 4px rgba(11, 122, 75, 0.14);
 }
 
-body.companies .company-sort-control {
-    display: grid;
-    gap: 0.28rem;
-    line-height: 1.15;
-}
-
-body.companies .company-control-label {
-    font-size: 0.72rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+/* "From ETB X" fare line on company cards */
+body.companies .company-card-fare {
+    font-size: 0.85rem;
     color: var(--color-muted);
 }
 
-body.companies .company-sort-control .company-sort,
-body.companies .company-sort-control .company-filter-rating {
-    padding: 0.5rem 2rem 0.5rem 0.8rem;
-    border: 1px solid #d1d8df;
-    border-radius: 12px;
-    background: #ffffff;
-    color: var(--color-text);
-    font-size: 0.9rem;
-    font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-body.companies .company-sort-control .company-sort:focus,
-body.companies .company-sort-control .company-filter-rating:focus {
-    outline: none;
-    border-color: var(--cp-green);
-    box-shadow: 0 0 0 4px rgba(11, 122, 75, 0.14);
-}
-
-/* Verified-only pill toggle */
-body.companies .company-verified-toggle {
-    position: relative;
-    cursor: pointer;
-}
-
-body.companies .company-verified-toggle input {
-    position: absolute;
-    opacity: 0;
-    width: 1px;
-    height: 1px;
-}
-
-body.companies .company-verified-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    padding: 0.54rem 0.95rem;
-    border: 1px solid #d1d8df;
-    border-radius: 999px;
-    background: #ffffff;
-    color: var(--color-text);
-    font-size: 0.88rem;
-    font-weight: 600;
-    white-space: nowrap;
-    transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
-}
-
-body.companies .company-verified-label span {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: rgba(11, 122, 75, 0.1);
-    color: var(--cp-green);
-    font-size: 0.7rem;
-    font-weight: 900;
-    flex: 0 0 auto;
-}
-
-body.companies .company-verified-toggle input:checked + .company-verified-label {
-    border-color: var(--cp-green);
-    background: rgba(11, 122, 75, 0.08);
+body.companies .company-card-fare b {
     color: var(--cp-green-dark);
-}
-
-body.companies .company-verified-toggle input:focus-visible + .company-verified-label {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 2px;
-}
-
-body.companies .company-clear-btn {
-    background: transparent;
-    border: 1.5px solid #d1d8df;
-    color: var(--color-muted);
-    border-radius: 999px;
-    padding: 0.5rem 1.1rem;
-    font-size: 0.88rem;
-    font-weight: 700;
-    transition: border-color 0.18s ease, color 0.18s ease, background-color 0.18s ease;
-}
-
-body.companies .company-clear-btn:hover {
-    border-color: var(--cp-green);
-    color: var(--cp-green);
-    background: rgba(11, 122, 75, 0.06);
+    font-weight: 800;
 }
 
 /* ---------- Result count chip ---------- */
@@ -4167,14 +4102,14 @@ body.companies .company-empty-hint {
     body.companies .company-toolbar-search {
         flex: 1 1 100%;
     }
+    body.companies .company-search-btn {
+        flex: 1 1 100%;
+    }
 }
 
 @media (max-width: 600px) {
     body.companies .companies-directory {
         padding: var(--space-md) 0;
-    }
-    body.companies .company-sort-control {
-        flex: 1 1 100%;
     }
 }
 

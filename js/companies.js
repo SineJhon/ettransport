@@ -15,7 +15,7 @@
 
     var companies = (window.ETTransportCompanies || []).slice();
     var fav = window.ETTransportFavorites || null;
-    var state = { query: '', rating: '', sort: 'rating', verified: false };
+    var state = { query: '', sort: 'rating' };
 
  /* ---------- real directory from api/company.php ---------- */
     function normalizeApiCompany(raw) {
@@ -34,7 +34,9 @@
             rating: Number(raw.rating) || 0,
             reviewCount: Number(raw.review_count) || 0,
             busCount: Number(raw.bus_count) || 0,
-            destinations: Array.isArray(raw.destinations) ? raw.destinations.slice() : []
+            destinations: Array.isArray(raw.destinations) ? raw.destinations.slice() : [],
+            popularRoutes: Array.isArray(raw.popularRoutes) ? raw.popularRoutes.slice() : [],
+            minFare: Number(raw.min_fare) || null
         };
     }
 
@@ -76,13 +78,44 @@
         return (v === null || v === '') ? fallback : v;
     }
 
+    /* ---------- per-company minimum fare ----------
+       Powers the "Max fare" filter, the "Lowest fare" sort and the
+       "From ETB X" line on each card. Sources, in order: an explicit
+       min_fare from the API, the popularRoutes prices in the demo
+       data, then any matching trip in window.ETTransportTrips. */
+    var fareCache = {};
+    function minFareFor(c) {
+        if (!c) { return null; }
+        var key = c.slug ? c.slug : String(c.id);
+        if (fareCache[key] !== undefined) { return fareCache[key]; }
+        var prices = [];
+        if (typeof c.minFare === 'number' && c.minFare > 0) { prices.push(c.minFare); }
+        var routes = c.popularRoutes || [];
+        for (var i = 0; i < routes.length; i++) {
+            if (routes[i] && typeof routes[i].price === 'number' && routes[i].price > 0) {
+                prices.push(routes[i].price);
+            }
+        }
+        var trips = window.ETTransportTrips || [];
+        var name = String(c.name || '').toLowerCase();
+        for (var j = 0; j < trips.length; j++) {
+            if (trips[j] && String(trips[j].company || '').toLowerCase() === name
+                && typeof trips[j].price === 'number' && trips[j].price > 0) {
+                prices.push(trips[j].price);
+            }
+        }
+        var min = null;
+        for (var k = 0; k < prices.length; k++) {
+            if (min === null || prices[k] < min) { min = prices[k]; }
+        }
+        fareCache[key] = min;
+        return min;
+    }
+
     /* ---------- DOM refs ---------- */
     var searchBox = document.getElementById('company-search');
-    var sortEl = document.getElementById('company-sort');
-    var ratingEl = document.getElementById('company-filter-rating');
-    var verifiedEl = document.getElementById('company-filter-verified');
-    var clearBtn = document.getElementById('company-clear-filters');
     var statsEl = document.getElementById('company-stats-bar');
+    var searchBtn = document.getElementById('company-search-btn');
     var gridEl = document.getElementById('company-list');
     var emptyEl = document.getElementById('company-directory-empty');
     if (!gridEl) { return; }
@@ -94,9 +127,6 @@
             var hay = (c.name + ' ' + (c.tagline || '') + ' ' + c.destinations.join(', ')).toLowerCase();
             if (hay.indexOf(q) === -1) { return false; }
         }
-        if (state.verified && !c.verified) { return false; }
-        var min = parseFloat(state.rating);
-        if (!isNaN(min) && c.rating < min) { return false; }
         return true;
     }
     function applyFilter() {
@@ -117,6 +147,10 @@
             copy.sort(function (a, b) { return b.destinations.length - a.destinations.length; });
         } else if (key === 'buses') {
             copy.sort(function (a, b) { return (b.busCount || 0) - (a.busCount || 0); });
+        } else if (key === 'fare') {
+            copy.sort(function (a, b) {
+                return (minFareFor(a) || Infinity) - (minFareFor(b) || Infinity);
+            });
         } else {
             copy.sort(function (a, b) {
                 if (b.rating !== a.rating) { return b.rating - a.rating; }
@@ -128,7 +162,13 @@
     
     }
     /* ---------- rendering ---------- */
-        function cardHtml(c) {
+    function fareHtml(c) {
+        var fare = minFareFor(c);
+        if (!fare) { return ''; }
+        return '<p class="company-card-fare">From <b>ETB ' + fare.toLocaleString() + '</b></p>';
+    }
+
+    function cardHtml(c) {
         var isFav = fav ? fav.isFavorite(c.slug) : false;
         var stars = buildStars(c.rating);
         return ''
@@ -141,12 +181,12 @@
             + '<a class="company-card-link" href="company.html?company=' + encodeURIComponent(c.slug) + '">'
             + '<div class="company-card-head">'
             + '<img class="company-card-logo" src="' + c.logo + '" alt="' + escapeHtml(c.name) + ' logo" loading="lazy">'
-            + (c.verified ? '<span class="verified-chip"><span aria-hidden="true">&#10003;</span> Verified</span>' : '')
             + '</div>'
             + '<h3 class="company-card-name">' + escapeHtml(c.name) + '</h3>'
             + '<p class="company-card-rating"><span class="stars" aria-hidden="true">' + stars + '</span> '
             + c.rating.toFixed(1) + ' <span class="company-card-reviews">(' + c.reviewCount.toLocaleString() + ' reviews)</span></p>'
             + '<p class="company-card-dest">' + c.destinations.length + ' Destinations</p>'
+            + fareHtml(c)
             + '<span class="company-card-cta">View Company &#8594;</span>'
             + '</a>'
             + '</article>';
@@ -178,32 +218,22 @@
         state.query = searchBox ? (searchBox.value || '') : '';
         render();
     }
-    function onSortChange() {
-        state.sort = sortEl ? sortEl.value : 'rating';
-        render();
-    }
-    function onRatingChange() {
-        state.rating = ratingEl ? ratingEl.value : '';
-        render();
-    }
-    function onVerifiedChange() {
-        state.verified = verifiedEl ? verifiedEl.checked : false;
-        render();
-    }
-    function onClear() {
-        state = { query: '', rating: '', sort: 'rating', verified: false };
-        if (searchBox) { searchBox.value = ''; }
-        if (ratingEl) { ratingEl.value = ''; }
-        if (verifiedEl) { verifiedEl.checked = false; }
-        if (sortEl) { sortEl.value = 'rating'; }
-        render();
-    }
 
-    if (searchBox) { searchBox.addEventListener('input', onSearchInput); }
-    if (sortEl) { sortEl.addEventListener('change', onSortChange); }
-    if (ratingEl) { ratingEl.addEventListener('change', onRatingChange); }
-    if (verifiedEl) { verifiedEl.addEventListener('change', onVerifiedChange); }
-    if (clearBtn) { clearBtn.addEventListener('click', onClear); }
+    if (searchBox) {
+        searchBox.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                onSearchInput();
+                if (searchBtn) { searchBtn.focus(); }
+            }
+        });
+    }
+    if (searchBtn) {
+        searchBtn.addEventListener('click', function () {
+            onSearchInput();
+            if (searchBox) { searchBox.blur(); }
+        });
+    }
     if (gridEl) {
         gridEl.addEventListener('click', function (event) {
             var btn = event.target.closest ? event.target.closest('.fav-btn') : null;
@@ -215,17 +245,12 @@
         });
     }
 
-    /* ---------- init (honour ?sort= & ?q= from URL) ---------- */
-    var initSort = getParam('sort', '');
-    if (initSort) {
-        state.sort = initSort;
-    }
+    /* ---------- init (honour ?q= from URL) ---------- */
     var initQuery = getParam('q', '');
     if (initQuery && searchBox) {
         searchBox.value = initQuery;
         state.query = initQuery;
     }
-    if (sortEl) { sortEl.value = state.sort; }
 
     loadCompaniesFromApi();
 })();

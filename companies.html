@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Browse all Ethiopian bus companies on ET Transport. Search, filter by rating or verified operators, sort results, and favorite your preferred companies.">
+    <meta name="description" content="Browse all Ethiopian bus companies on ET Transport. Search by name or destination, compare fares and reviews, and favorite your preferred companies.">
     <title>Bus Companies | ET Transport</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="icon" type="image/x-icon" href="assets/icons/favicon.svg">
@@ -52,40 +52,16 @@
                     <p class="companies-subtitle">Search by name or destination, compare ratings and reviews, then pick a company you can trust.</p>
                 </div>
 
-                <!-- Search / filter / sort toolbar -->
-                <div class="company-directory-toolbar" role="search">
+                <!-- Search bar (separate row) -->
+                <div class="company-search-row" role="search">
                     <div class="company-toolbar-search">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
                         <input type="search" id="company-search" class="company-search" placeholder="Search by company, route or destination..." autocomplete="off">
                     </div>
-
-                    <label class="company-sort-control" for="company-sort">
-                        <span class="company-control-label">Sort by</span>
-                        <select id="company-sort" class="company-sort">
-                            <option value="rating">Rating</option>
-                            <option value="reviews">Most Reviewed</option>
-                            <option value="name">Name</option>
-                            <option value="destinations">Most Destinations</option>
-                            <option value="buses">Largest Fleet</option>
-                        </select>
-                    </label>
-
-                    <label class="company-sort-control" for="company-filter-rating">
-                        <span class="company-control-label">Min rating</span>
-                        <select id="company-filter-rating" class="company-filter-rating">
-                            <option value="">Any rating</option>
-                            <option value="4.5">4.5+ stars</option>
-                            <option value="4">4+ stars</option>
-                            <option value="3.5">3.5+ stars</option>
-                        </select>
-                    </label>
-
-                    <label class="company-verified-toggle" for="company-filter-verified">
-                        <input type="checkbox" id="company-filter-verified">
-                        <span class="company-verified-label"><span aria-hidden="true">&#10003;</span> Verified only</span>
-                    </label>
-
-                    <button type="button" id="company-clear-filters" class="btn company-clear-btn">Clear</button>
+                    <button type="button" id="company-search-btn" class="btn company-search-btn">
+                        Search
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+                    </button>
                 </div>
 
                 <!-- Results count (updated by js/companies.js) -->
