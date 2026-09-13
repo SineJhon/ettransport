@@ -6373,3 +6373,20 @@ body.company-page .cp-overview-meta .cp-id-actions .fav-btn-hero {
     body.company-page .cp-overview-logo { width: 76px; height: 76px; }
     body.company-page .cp-overview-name { font-size: 1.2rem; }
 }
+
+/* ============================================================
+   16.5  Company public profile — migrated contact card
+   The company-level phone / email / website now live in the
+   Contact section (moved from the Overview info grid).
+   ============================================================ */
+
+body.company-page .contact-card-company {
+    grid-column: 1 / -1;
+    background: linear-gradient(150deg, #f1f8f3 0%, #ffffff 72%);
+    border-color: #d2e4d8;
+}
+
+body.company-page .contact-card-company h3 {
+    color: var(--cp-green-dark);
+    font-size: 1.05rem;
+}

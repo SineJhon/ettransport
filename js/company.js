@@ -913,27 +913,11 @@
             tags += '<span class="dest-tag">' + c.destinations[i] + '</span>';
         }
         /* Every public phone number — mobile and landline (+251 1xx…). */
-        var phones = companyPhones(c);
-        var phoneHtml = '';
-        for (var p = 0; p < phones.length; p++) {
-            phoneHtml += '<span class="info-phone">' +
-                '<a href="tel:' + phones[p].replace(/\s+/g, '') + '">' + esc(phones[p]) + '</a>' +
-            '</span>';
-        }
-        if (!phoneHtml) { phoneHtml = '&mdash;'; }
         el.innerHTML =
             '<li class="info-item"><span class="info-icon" aria-hidden="true">&#128197;</span>' +
                 '<div class="info-body"><span class="info-label">Founded</span><span class="info-value">' + (c.founded || '&mdash;') + '</span></div></li>' +
             '<li class="info-item"><span class="info-icon" aria-hidden="true">&#127960;</span>' +
                 '<div class="info-body"><span class="info-label">Head Office</span><span class="info-value">' + esc(c.headOffice || '') + '</span></div></li>' +
-            '<li class="info-item"><span class="info-icon" aria-hidden="true">&#128222;</span>' +
-                '<div class="info-body"><span class="info-label">Phone</span><span class="info-value info-phones">' + phoneHtml + '</span></div></li>' +
-            '<li class="info-item"><span class="info-icon" aria-hidden="true">&#9993;</span>' +
-                '<div class="info-body"><span class="info-label">Email</span><span class="info-value">' + esc(c.email || '') + '</span></div></li>' +
-            (c.website ? '<li class="info-item"><span class="info-icon" aria-hidden="true">&#127760;</span>' +
-                '<div class="info-body"><span class="info-label">Website</span>' +
-                '<span class="info-value"><a href="' + c.website + '" target="_blank" rel="noopener noreferrer">' +
-                c.website.replace('https://', '') + '</a></span></div></li>' : '') +
             '<li class="info-item info-item-wide"><span class="info-icon" aria-hidden="true">&#128652;</span>' +
                 '<div class="info-body"><span class="info-label">Main Destinations</span><span class="info-value info-tags">' + tags + '</span></div></li>';
     }
@@ -946,6 +930,29 @@
         if (!grid) { return; }
         var offices = (c.offices && c.offices.length) ? c.offices : [];
         var html = '';
+
+        /* Company-level phone / email / website (migrated from the Overview). */
+        var phones = companyPhones(c);
+        var phoneLines = '';
+        for (var p = 0; p < phones.length; p++) {
+            phoneLines += '<p class="contact-line"><span aria-hidden="true">&#128222;</span> <a href="tel:' +
+                phones[p].replace(/\s+/g, '') + '">' + esc(phones[p]) + '</a></p>';
+        }
+        if (phones.length || c.email || c.website) {
+            html += '<div class="contact-card contact-card-company">' +
+                '<span class="contact-icon" aria-hidden="true">&#127968;</span>' +
+                '<h3>' + esc(c.name || 'Company') + ' &mdash; Main Contact</h3>' +
+                (c.headOffice ? '<p class="contact-address">' + esc(c.headOffice) + '</p>' : '') +
+                phoneLines +
+                (c.email ? '<p class="contact-line"><span aria-hidden="true">&#9993;</span> <a href="mailto:' + esc(c.email) + '">' + esc(c.email) + '</a></p>' : '') +
+                (c.website ? '<p class="contact-line"><span aria-hidden="true">&#127760;</span> <a href="' + esc(c.website) + '" target="_blank" rel="noopener noreferrer">' + esc(c.website.replace('https://', '')) + '</a></p>' : '') +
+                '<div class="contact-actions">' +
+                    (phones.length ? '<a class="btn btn-call" href="tel:' + phones[0].replace(/\s+/g, '') + '">Call</a>' : '') +
+                    (c.email ? '<a class="btn btn-email" href="mailto:' + esc(c.email) + '">Email</a>' : '') +
+                '</div>' +
+            '</div>';
+        }
+
         for (var i = 0; i < offices.length; i++) {
             var o = offices[i];
             var name = o.name || o.city || 'Branch';
