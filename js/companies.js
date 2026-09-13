@@ -36,6 +36,7 @@
             busCount: Number(raw.bus_count) || 0,
             destinations: Array.isArray(raw.destinations) ? raw.destinations.slice() : [],
             popularRoutes: Array.isArray(raw.popularRoutes) ? raw.popularRoutes.slice() : [],
+            amenities: Array.isArray(raw.amenities) ? raw.amenities.slice() : [],
             minFare: Number(raw.min_fare) || null
         };
     }
@@ -161,10 +162,39 @@
     
     }
     /* ---------- rendering ---------- */
-    function fareHtml(c) {
+    /* ---------- card icon set (stroke icons, same family as the homepage) ---------- */
+    var CARD_ICONS = {
+        pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>',
+        bus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>',
+        fare: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M7 9h10v5h-10"/></svg>',
+        arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>'
+    };
+
+    function taglineHtml(c) {
+        var t = String(c.tagline || '').trim();
+        return t ? '<p class="company-card-tagline">' + escapeHtml(t) + '</p>' : '';
+    }
+    function statCellHtml(icon, count, label) {
+        return '<span class="company-card-stat">' + icon + '<b>' + count + '</b><em>' + label + '</em></span>';
+    }
+    function fareCellHtml(c) {
         var fare = minFareFor(c);
-        if (!fare) { return ''; }
-        return '<p class="company-card-fare">From <b>ETB ' + fare.toLocaleString() + '</b></p>';
+        return fare
+            ? '<span class="company-card-stat">' + CARD_ICONS.fare + '<b>ETB ' + fare.toLocaleString() + '</b><em>from</em></span>'
+            : '';
+    }
+    function amenitiesHtml(c) {
+        var list = c.amenities || [];
+        if (!list.length) { return ''; }
+        var html = '';
+        var shown = 0;
+        for (var i = 0; i < list.length && i < 3; i++, shown++) {
+            html += '<span class="company-amenity"><span aria-hidden="true">&#10003;</span> ' + escapeHtml(list[i]) + '</span>';
+        }
+        if (list.length > shown) {
+            html += '<span class="company-amenity company-amenity-more">+' + (list.length - shown) + ' more</span>';
+        }
+        return '<div class="company-card-amenities">' + html + '</div>';
     }
 
     function cardHtml(c) {
@@ -180,13 +210,20 @@
             + '<a class="company-card-link" href="company.html?company=' + encodeURIComponent(c.slug) + '">'
             + '<div class="company-card-head">'
             + '<img class="company-card-logo" src="' + c.logo + '" alt="' + escapeHtml(c.name) + ' logo" loading="lazy">'
-            + '</div>'
+            + '<span class="company-card-titlecopy">'
             + '<h3 class="company-card-name">' + escapeHtml(c.name) + '</h3>'
+            + taglineHtml(c)
+            + '</span>'
+            + '</div>'
             + '<p class="company-card-rating"><span class="stars" aria-hidden="true">' + stars + '</span> '
             + c.rating.toFixed(1) + ' <span class="company-card-reviews">(' + c.reviewCount.toLocaleString() + ' reviews)</span></p>'
-            + '<p class="company-card-dest">' + c.destinations.length + ' Destinations</p>'
-            + fareHtml(c)
-            + '<span class="company-card-cta">View Company &#8594;</span>'
+            + '<div class="company-card-stats">'
+            + statCellHtml(CARD_ICONS.pin, c.destinations.length, 'Destinations')
+            + statCellHtml(CARD_ICONS.bus, c.busCount, 'Buses')
+            + fareCellHtml(c)
+            + '</div>'
+            + amenitiesHtml(c)
+            + '<span class="company-card-cta">View Company<span class="company-card-cta-arrow" aria-hidden="true">' + CARD_ICONS.arrow + '</span></span>'
             + '</a>'
             + '</article>';
     }
