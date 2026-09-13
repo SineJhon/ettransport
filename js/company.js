@@ -560,13 +560,18 @@
 
         if (cover) { cover.src = c.coverImage; cover.alt = ''; }
         if (logo) { logo.src = c.logo; logo.alt = c.name + ' logo'; }
+        var overviewLogo = document.getElementById('overview-logo');
+        if (overviewLogo) { overviewLogo.src = c.logo; overviewLogo.alt = c.name + ' logo'; }
         if (name) { name.textContent = c.name; }
+        var overviewName = document.getElementById('overview-name');
+        if (overviewName) { overviewName.textContent = c.name; }
         if (tagline) { tagline.textContent = c.tagline; }
-        if (verified) {
-            verified.innerHTML = c.verified
-                ? '<span class="verified-chip"><span class="verified-check" aria-hidden="true">&#10003;</span> Verified</span>'
-                : '<span class="verified-chip pending">Verification pending</span>';
-        }
+        var chip = c.verified
+            ? '<span class="verified-chip"><span class="verified-check" aria-hidden="true">&#10003;</span> Verified</span>'
+            : '<span class="verified-chip pending">Verification pending</span>';
+        if (verified) { verified.innerHTML = chip; }
+        var overviewVerified = document.getElementById('overview-verified');
+        if (overviewVerified) { overviewVerified.innerHTML = chip; }
         if (rating) {
             rating.innerHTML = '<span class="hero-stars" aria-hidden="true">' + buildStars(c.rating) + '</span>' +
                 ' <strong>' + c.rating.toFixed(1) + '</strong>' +

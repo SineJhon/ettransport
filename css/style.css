@@ -3878,17 +3878,22 @@ body.company-page {
 /* ---------- Masthead: cover band ---------- */
 body.company-page .cp-cover-wrap {
     position: relative;
-    min-height: clamp(240px, 34vw, 340px);
+    /* Facebook-style cover strip. The photo itself keeps its native 851 x 315
+       form (whole cover always visible) but is width-capped + centered so the
+       band stays compact instead of growing huge on wide monitors. */
     background: linear-gradient(135deg, var(--color-dark-2), var(--color-primary-dark));
     overflow: hidden;
-    padding-bottom: 3.25rem;   /* reserved so the avatar can overlap the cover */
 }
 
 body.company-page .cp-cover-wrap .company-cover {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
+    /* Width-capped + centered: keeps the exact 851:315 Facebook cover form so the
+       entire uploaded photo stays visible, while capping the band at ~370px tall. */
+    position: relative;
+    display: block;
+    width: min(100%, 1000px);
+    aspect-ratio: 851 / 315;
+    height: auto;
+    margin: 0 auto;
     object-fit: cover;
 }
 
@@ -3903,7 +3908,9 @@ body.company-page .cp-cover-wrap .company-hero-overlay {
 body.company-page .company-crumb {
     position: relative;
     z-index: 3;
-    margin: 1.1rem 0 0;
+    /* Align the breadcrumb with the centered (width-capped) cover banner. */
+    max-width: 1000px;
+    margin: 1.1rem auto 0;
     font-size: 0.86rem;
     color: #e2e8f0;
     font-weight: 600;
@@ -4298,10 +4305,6 @@ body.company-page .review-summary {
 }
 
 @media (max-width: 768px) {
-    body.company-page .cp-cover-wrap {
-        min-height: 190px;
-        padding-bottom: 2rem;
-    }
     body.company-page .cp-id {
         padding-top: 1.4rem;
         text-align: center;
@@ -5702,3 +5705,671 @@ body.companies .company-empty-hint {
 .dash-complaint-reply-input { width: 100%; min-height: 3.4rem; resize: vertical; padding: 0.55rem 0.7rem; border: 1px solid #c8ded1; border-radius: 8px; background: #fbfefb; font: inherit; font-size: 0.88rem; line-height: 1.5; }
 .dash-complaint-reply-input:focus { outline: 3px solid rgba(49,164,118,0.16); border-color: #3f976a; }
 .dash-complaint-empty { padding: 1.25rem; color: var(--color-muted); }
+
+/* ============================================================
+   16.1  Company public profile — social sidebar layout
+   Two-column "social profile" rail: cover + logo + name + menu
+   on the left (sticky), content sections scroll on the right.
+   ============================================================ */
+
+body.company-page {
+    --cp-green: #0b7a4b;
+    --cp-green-dark: #095e3a;
+    --cp-charcoal: #14221c;
+    background: #eef3f0;
+}
+
+/* ---------- Shell: two-column grid ---------- */
+body.company-page .cp-shell {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+    padding-top: 1.4rem;
+    padding-bottom: 3rem;
+}
+
+body.company-page .company-crumb {
+    grid-column: 1 / -1;
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    margin: 0 0 .2rem;
+    padding: .55rem 1rem;
+    font-size: .85rem;
+    font-weight: 700;
+    color: #45604f;
+    background: rgba(255, 255, 255, .85);
+    border: 1px solid #e0e9e2;
+    border-radius: 999px;
+    box-shadow: 0 4px 14px rgba(20, 44, 32, .06);
+}
+
+body.company-page .company-crumb a { color: var(--cp-green); text-decoration: none; }
+body.company-page .company-crumb a:hover { color: var(--cp-green-dark); text-decoration: underline; }
+body.company-page .crumb-sep { color: #9db3a5; }
+
+/* ---------- Sidebar rail ---------- */
+body.company-page .cp-sidebar {
+    position: sticky;
+    top: 88px;
+    z-index: 30;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+body.company-page .cp-side-card {
+    background: #ffffff;
+    border: 1px solid #e2ebe5;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 18px 45px rgba(16, 46, 34, .1);
+}
+
+/* Cover inside the rail */
+body.company-page .cp-side-card .cp-cover-wrap {
+    position: relative;
+    background: linear-gradient(135deg, var(--color-dark-2), var(--color-primary-dark));
+}
+
+body.company-page .cp-side-card .company-cover {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 851 / 315;
+    object-fit: cover;
+}
+
+body.company-page .cp-side-card .company-hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(17, 24, 39, .24), rgba(17, 24, 39, .02));
+}
+
+/*END15.7A*/
+
+/* Identity: logo + name below the cover */
+body.company-page .cp-id-copy {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    gap: .45rem;
+    text-align: center;
+    padding: 0 1.1rem 1.1rem;
+}
+
+body.company-page .cp-id-copy .company-logo-hero {
+    width: 84px;
+    height: 84px;
+    margin-top: -44px;
+    border-radius: 50%;
+    border: 4px solid #ffffff;
+    background: #ffffff;
+    box-shadow: 0 8px 22px rgba(14, 34, 26, .22);
+    transform: none;              /* override the old full-bleed masthead offset */
+}
+
+body.company-page .cp-name-line {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    flex-wrap: wrap;
+}
+
+body.company-page .cp-id-copy .company-name {
+    font-size: 1.18rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: var(--cp-charcoal);
+    line-height: 1.15;
+}
+
+body.company-page .cp-id-copy .verified-chip { font-size: .72rem; padding: .22rem .6rem; }
+
+body.company-page .cp-id-copy .company-tagline {
+    margin: 0;
+    font-size: .83rem;
+    color: #64766b;
+    line-height: 1.45;
+}
+
+body.company-page .cp-id-copy .hero-rating {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    font-size: .85rem;
+}
+
+body.company-page .hero-stars { color: #e0a100; letter-spacing: 1.5px; }
+body.company-page .hero-rating strong { color: var(--cp-charcoal); font-weight: 800; }
+body.company-page .hero-review-count { color: #7c8f84; }
+
+body.company-page .cp-id-actions {
+    display: grid;
+    gap: .5rem;
+    width: 100%;
+    margin-top: .35rem;
+}
+
+body.company-page .cp-id-actions .btn-hero-cta,
+body.company-page .cp-id-actions .fav-btn-hero {
+    width: 100%;
+    justify-content: center;
+    border-radius: 12px;
+}
+
+body.company-page .cp-id-actions .btn-hero-cta { padding: .62rem 1rem; font-size: .9rem; }
+body.company-page .cp-id-actions .fav-btn-hero { font-size: .88rem; }
+
+/* ---------- Section menu ---------- */
+body.company-page .cp-tabs {
+    position: static;             /* sidebar rail, not a sticky bar anymore */
+    display: grid;
+    gap: .3rem;
+    margin: 0;
+    padding: .9rem 1rem;
+    border-top: 1px solid #edf2ee;
+    border-bottom: 1px solid #edf2ee;
+    background: #fbfdfc;
+}
+
+body.company-page .cp-tab {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: .7rem;
+    padding: .62rem .85rem;
+    border-radius: 12px;
+    font-size: .9rem;
+    font-weight: 700;
+    color: #54695d;
+    text-decoration: none;
+    transition: background-color .16s ease, color .16s ease, transform .12s ease;
+}
+
+body.company-page .cp-tab::after { content: none; }   /* remove the old underline bar */
+
+body.company-page .cp-tab .cp-tab-ic {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+    background: #edf4ef;
+    color: var(--cp-green);
+    font-size: .95rem;
+    flex: 0 0 auto;
+}
+
+body.company-page .cp-tab:hover {
+    background: #f0f7f2;
+    color: var(--cp-green-dark);
+    transform: translateX(2px);
+}
+
+body.company-page .cp-tab.is-active {
+    background: rgba(11, 122, 75, .12);
+    color: var(--cp-green-dark);
+    box-shadow: inset 3px 0 0 var(--cp-green);
+}
+
+body.company-page .cp-tab.is-active .cp-tab-ic { background: var(--cp-green); color: #fff; }
+
+body.company-page .cp-tab:focus-visible {
+    outline: 2px solid var(--cp-green);
+    outline-offset: 2px;
+}
+
+/* ---------- Quick stats ---------- */
+body.company-page .cp-stats {
+    padding: 1rem 1.1rem 1.15rem;
+    border: none;
+    background: transparent;
+}
+
+body.company-page .cp-stats-title {
+    margin: 0 0 .6rem;
+    font: 800 .68rem/1.3 var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: .09em;
+    color: #8aa094;
+}
+
+body.company-page .cp-stats .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .55rem;
+}
+
+body.company-page .cp-stats .stat-card {
+    display: grid;
+    gap: .1rem;
+    padding: .6rem .75rem;
+    background: #f2f7f4;
+    border: 1px solid #e4ece6;
+    border-radius: 12px;
+}
+
+body.company-page .cp-stats .stat-value { font: 800 1.05rem/1.1 var(--font-display); color: var(--cp-green-dark); }
+body.company-page .cp-stats .stat-label {
+    font-size: .66rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: #7f9488;
+}
+
+/*END15.7B*/
+
+/* ---------- Main content panes ---------- */
+body.company-page .cp-main {
+    display: grid;
+    gap: 1.1rem;
+    min-width: 0;
+}
+
+body.company-page .cp-pane {
+    background: #ffffff;
+    border: 1px solid #e3ece6;
+    border-radius: 18px;
+    padding: clamp(1.15rem, 2.4vw, 1.7rem);
+    box-shadow: 0 10px 28px rgba(16, 46, 34, .05);
+    scroll-margin-top: 92px;
+}
+
+body.company-page .cp-pane.cp-pane-alt {
+    background: linear-gradient(180deg, #f6faf7 0%, #ffffff 72%);
+}
+
+body.company-page .cp-pane .cp-head {
+    display: grid;
+    gap: .35rem;
+    margin-bottom: 1.15rem;
+    padding-bottom: .8rem;
+    border-bottom: 1px dashed #dde7e0;
+}
+body.company-page .cp-pane .cp-head .search-eyebrow { justify-self: start; font-size: .7rem; }
+body.company-page .cp-pane .cp-head .section-title {
+    font-size: 1.45rem;
+    color: var(--cp-charcoal);
+    letter-spacing: -0.012em;
+}
+body.company-page .cp-pane .cp-head .section-subtitle { margin: 0; font-size: .93rem; color: #687d71; }
+
+/* Overview: two panels */
+body.company-page .cp-overview {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 1.1rem;
+    align-items: start;
+}
+
+body.company-page .cp-panel {
+    background: #ffffff;
+    border: 1px solid #e6ede9;
+    border-radius: 14px;
+    padding: 1.15rem;
+}
+body.company-page .cp-panel-side { background: #f7faf8; }
+body.company-page .cp-panel-head { display: grid; gap: .3rem; margin-bottom: .9rem; }
+body.company-page .cp-panel-head .search-eyebrow { justify-self: start; }
+body.company-page .cp-panel-title { font-size: 1.15rem; color: var(--cp-charcoal); }
+
+body.company-page .about-text { margin: 0 0 .9rem; color: #3f5147; font-size: .95rem; line-height: 1.68; }
+
+/* Info grid: compact two columns */
+body.company-page .info-grid {
+    list-style: none;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .6rem;
+    margin: .9rem 0 0;
+    padding: 0;
+}
+body.company-page .info-item {
+    display: flex;
+    align-items: flex-start;
+    gap: .6rem;
+    padding: .65rem .75rem;
+    background: #f8fbf9;
+    border: 1px solid #e7eee9;
+    border-radius: 12px;
+}
+body.company-page .info-item-wide { grid-column: 1 / -1; }
+body.company-page .info-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    background: rgba(11, 122, 75, .1);
+    color: var(--cp-green);
+    font-size: .95rem;
+    flex: 0 0 auto;
+}
+body.company-page .info-body { display: grid; gap: .1rem; min-width: 0; }
+body.company-page .info-label {
+    font-size: .68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: #8aa094;
+}
+body.company-page .info-value { font-size: .9rem; font-weight: 600; color: #24362c; word-break: break-word; }
+body.company-page .info-value a,
+body.company-page .info-phone a { color: var(--cp-green); text-decoration: none; }
+body.company-page .info-value a:hover,
+body.company-page .info-phone a:hover { text-decoration: underline; }
+body.company-page .info-tags { display: flex; flex-wrap: wrap; gap: .3rem; }
+body.company-page .info-phones { display: flex; flex-direction: column; gap: .15rem; }
+
+/* Founded */
+body.company-page .founded-block {
+    display: flex;
+    align-items: center;
+    gap: .9rem;
+    margin-top: .9rem;
+    padding: .85rem 1rem;
+    background: linear-gradient(120deg, rgba(11, 122, 75, .1), rgba(11, 122, 75, .02));
+    border: 1px solid #daebe0;
+    border-radius: 14px;
+}
+body.company-page .founded-year { font: 800 2rem/1 var(--font-display); color: var(--cp-green-dark); }
+body.company-page .founded-text { display: grid; gap: .2rem; }
+body.company-page .founded-years { font-weight: 800; color: var(--cp-charcoal); font-size: .95rem; }
+body.company-page .founded-text p { margin: 0; font-size: .83rem; color: #5f7468; }
+
+/* Amenities chips */
+body.company-page .amenity-grid {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    margin: 0;
+    padding: 0;
+}
+body.company-page .amenity-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    padding: .45rem .85rem;
+    background: #ffffff;
+    border: 1px solid #dce6e0;
+    border-radius: 999px;
+    font-size: .82rem;
+    font-weight: 700;
+    color: #33503f;
+}
+body.company-page .amenity-icon { color: var(--cp-green); font-size: .9rem; }
+body.company-page .demo-note {
+    font-size: .76rem;
+    line-height: 1.55;
+    color: #7c8f84;
+    margin-top: .9rem;
+    padding: .7rem .85rem;
+    background: #eef4f0;
+    border-radius: 10px;
+}
+
+/*END15.7C*/
+
+/* Content grids adjusted for the narrower main column */
+body.company-page .route-grid { grid-template-columns: repeat(2, 1fr); gap: .85rem; }
+body.company-page .fleet-grid { grid-template-columns: repeat(3, 1fr); gap: .85rem; }
+body.company-page .trip-grid { grid-template-columns: repeat(2, 1fr); gap: .9rem; }
+
+/* Reviews */
+body.company-page .review-layout { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 1.1rem; align-items: start; }
+body.company-page .review-summary { position: static; }
+body.company-page .review-grid { display: grid; gap: .85rem; }
+
+/* Contact */
+body.company-page .contact-grid { grid-template-columns: repeat(2, 1fr); gap: .85rem; }
+
+/* Final CTA card */
+body.company-page .company-final-cta {
+    padding: 1.9rem 2rem;
+    background:
+        radial-gradient(520px 220px at 85% -20%, rgba(255, 255, 255, .14), transparent 60%),
+        linear-gradient(120deg, var(--cp-green) 0%, var(--cp-green-dark) 100%);
+    border-radius: 18px;
+    color: #ffffff;
+    text-align: center;
+    box-shadow: 0 18px 40px rgba(11, 122, 75, .25);
+}
+body.company-page .final-cta-inner { display: grid; gap: .45rem; justify-items: center; }
+body.company-page .final-cta-inner h2 { color: #ffffff; font-size: 1.5rem; margin: 0; }
+body.company-page .final-cta-inner p { color: #e4f4ea; margin: 0; }
+body.company-page .final-cta-inner p span { font-weight: 800; }
+body.company-page .final-cta-inner .btn-large { margin-top: .4rem; }
+
+/* ---------- responsive ---------- */
+@media (max-width: 1100px) {
+    body.company-page .cp-shell { grid-template-columns: 260px minmax(0, 1fr); gap: 1.1rem; }
+    body.company-page .cp-overview { grid-template-columns: 1fr; }
+    body.company-page .fleet-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 900px) {
+    body.company-page .cp-shell { grid-template-columns: 1fr; gap: 1rem; }
+    body.company-page .cp-sidebar { position: static; max-height: none; overflow: visible; }
+    body.company-page .cp-side-card .cp-cover-wrap { max-width: 460px; margin: 0 auto; }
+    body.company-page .cp-id-copy .company-logo-hero { margin-top: -30px; width: 72px; height: 72px; }
+    body.company-page .cp-tabs {
+        grid-template-columns: repeat(6, auto);
+        overflow-x: auto;
+        gap: .35rem;
+        padding: .7rem .85rem;
+    }
+    body.company-page .cp-tab { padding: .5rem .8rem; white-space: nowrap; }
+    body.company-page .cp-tab.is-active { box-shadow: inset 0 3px 0 var(--cp-green); }
+    body.company-page .cp-stats { display: grid; grid-template-columns: auto 1fr; gap: .9rem; align-items: center; }
+    body.company-page .cp-stats-title { margin: 0; }
+    body.company-page .cp-stats .stats-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+@media (max-width: 620px) {
+    body.company-page .info-grid { grid-template-columns: 1fr; }
+    body.company-page .route-grid { grid-template-columns: 1fr; }
+    body.company-page .fleet-grid { grid-template-columns: 1fr; }
+    body.company-page .trip-grid { grid-template-columns: 1fr; }
+    body.company-page .contact-grid { grid-template-columns: 1fr; }
+    body.company-page .review-layout { grid-template-columns: 1fr; }
+    body.company-page .cp-stats { grid-template-columns: 1fr; }
+    body.company-page .cp-stats .stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ============================================================
+   16.2  Company public profile — menu beside the profile pic,
+   cover photo inside the Overview section
+   ============================================================ */
+
+/* Sidebar identity: profile picture + name only (no cover) */
+body.company-page .cp-id-copy {
+    padding: 1.5rem 1.1rem 1.1rem;
+}
+
+body.company-page .cp-id-copy .company-logo-hero {
+    width: 96px;
+    height: 96px;
+    margin: 0;
+    border: 4px solid #ffffff;
+    box-shadow: 0 10px 26px rgba(14, 34, 26, .22);
+    transform: none;
+}
+
+body.company-page .cp-side-card .cp-tabs {
+    border-top: 1px solid #edf2ee;
+}
+
+/* Overview: cover photo at the top of the pane */
+body.company-page .cp-pane .cp-cover-wrap {
+    position: relative;
+    margin: 0 0 1.1rem;
+    border-radius: 14px;
+    overflow: hidden;
+    background: linear-gradient(135deg, var(--color-dark-2), var(--color-primary-dark));
+    box-shadow: 0 12px 28px rgba(14, 34, 26, .12);
+}
+
+body.company-page .cp-pane .company-hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(0deg, rgba(17, 24, 39, .32) 0%, rgba(17, 24, 39, 0) 40%);
+}
+
+/* Tagline, rating + actions strip under the cover */
+body.company-page .cp-overview-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.1rem;
+    padding: .9rem 1.1rem;
+    background: #f7faf8;
+    border: 1px solid #e7eee9;
+    border-radius: 14px;
+}
+
+body.company-page .cp-overview-meta-copy {
+    display: grid;
+    gap: .25rem;
+    min-width: 0;
+}
+
+body.company-page .cp-overview-meta .company-tagline {
+    margin: 0;
+    font-size: .97rem;
+    color: #3f5147;
+    line-height: 1.5;
+}
+
+body.company-page .cp-overview-meta .hero-rating {
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    flex-wrap: wrap;
+    font-size: .92rem;
+}
+
+body.company-page .cp-overview-meta .cp-id-actions {
+    display: inline-flex;
+    gap: .6rem;
+    flex-wrap: wrap;
+    width: auto;
+    margin: 0;
+}
+
+body.company-page .cp-overview-meta .cp-id-actions .btn-hero-cta,
+body.company-page .cp-overview-meta .cp-id-actions .fav-btn-hero {
+    width: auto;
+}
+
+/* "At a glance" stats strip inside the overview pane */
+body.company-page .cp-pane .cp-stats {
+    margin-top: 1.1rem;
+    padding: 1rem 0 0;
+    border-top: 1px dashed #dde7e0;
+}
+
+body.company-page .cp-pane .cp-stats .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: .6rem;
+}
+
+/* ---------- responsive fine-tuning ---------- */
+@media (max-width: 900px) {
+    body.company-page .cp-id-copy .company-logo-hero { width: 80px; height: 80px; }
+}
+
+@media (max-width: 620px) {
+    body.company-page .cp-overview-meta .cp-id-actions { width: 100%; }
+    body.company-page .cp-overview-meta .cp-id-actions .btn-hero-cta,
+    body.company-page .cp-overview-meta .cp-id-actions .fav-btn-hero { flex: 1 1 100%; }
+    body.company-page .cp-pane .cp-stats .stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ============================================================
+   16.3  Company public profile — overview identity row
+   Profile picture + name appear below the cover photo.
+   ============================================================ */
+
+body.company-page .cp-overview-meta {
+    gap: 1rem;
+    align-items: center;
+}
+
+body.company-page .cp-overview-logo {
+    width: 92px;
+    height: 92px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    border: 4px solid #ffffff;
+    background: #ffffff;
+    box-shadow: 0 8px 22px rgba(14, 34, 26, .2);
+}
+
+body.company-page .cp-overview-meta-copy {
+    display: grid;
+    gap: .25rem;
+    min-width: 0;
+    flex: 1 1 260px;
+}
+
+body.company-page .cp-overview-name-line {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    flex-wrap: wrap;
+}
+
+body.company-page .cp-overview-name {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: var(--cp-charcoal);
+    line-height: 1.15;
+}
+
+body.company-page .cp-overview-meta .company-tagline {
+    margin: 0;
+    font-size: .95rem;
+    color: #3f5147;
+    line-height: 1.5;
+}
+
+body.company-page .cp-overview-meta .hero-rating {
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    flex-wrap: wrap;
+    font-size: .92rem;
+}
+
+body.company-page .cp-overview-meta .cp-id-actions {
+    width: auto;
+    margin: 0;
+}
+
+body.company-page .cp-overview-meta .cp-id-actions .btn-hero-cta,
+body.company-page .cp-overview-meta .cp-id-actions .fav-btn-hero {
+    width: auto;
+}
+
+@media (max-width: 620px) {
+    body.company-page .cp-overview-meta { align-items: flex-start; }
+    body.company-page .cp-overview-logo { width: 76px; height: 76px; }
+    body.company-page .cp-overview-name { font-size: 1.2rem; }
+}
