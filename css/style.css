@@ -4292,11 +4292,6 @@ body.company-page .company-section.cp-alt {
     background: #f7faf8;
 }
 
-body.company-page .review-summary {
-    position: sticky;
-    top: 118px;
-}
-
 /* ---------- responsive ---------- */
 @media (max-width: 1024px) {
     body.company-page .cp-overview {
@@ -6125,10 +6120,7 @@ body.company-page .route-grid { grid-template-columns: repeat(2, 1fr); gap: .85r
 body.company-page .fleet-grid { grid-template-columns: repeat(3, 1fr); gap: .85rem; }
 body.company-page .trip-grid { grid-template-columns: repeat(2, 1fr); gap: .9rem; }
 
-/* Reviews */
-body.company-page .review-layout { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 1.1rem; align-items: start; }
-body.company-page .review-summary { position: static; }
-body.company-page .review-grid { display: grid; gap: .85rem; }
+/* Reviews — redesigned layout in section 16.10 below */
 
 /* Contact */
 body.company-page .contact-grid { grid-template-columns: repeat(2, 1fr); gap: .85rem; }
@@ -6181,7 +6173,7 @@ body.company-page .final-cta-inner .btn-large { margin-top: .4rem; }
     body.company-page .fleet-grid { grid-template-columns: 1fr; }
     body.company-page .trip-grid { grid-template-columns: 1fr; }
     body.company-page .contact-grid { grid-template-columns: 1fr; }
-    body.company-page .review-layout { grid-template-columns: 1fr; }
+    body.company-page .rv-cards { grid-template-columns: 1fr; }
     body.company-page .cp-stats { grid-template-columns: 1fr; }
     body.company-page .cp-stats .stats-grid { grid-template-columns: repeat(2, 1fr); }
 }
@@ -6496,4 +6488,487 @@ body.company-page .trip-day.is-active span {
 body.company-page .trip-day.is-active.has-trips::after {
     background: #ffffff;
     box-shadow: 0 0 0 2px rgba(255, 255, 255, .3);
+}
+
+/* ============================================================
+   16.10  Company public profile — reviews redesigned
+   Full-width rating band + clickable breakdown bars, a filter/sort
+   toolbar and a two-column card grid. Mirrors the green/gold palette
+   and DM Sans / Outfit type of the rest of the profile page.
+   ============================================================ */
+
+/* ---------- Rating band ---------- */
+body.company-page .rv-summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(240px, auto);
+    gap: clamp(1.75rem, 4vw, 3.5rem);
+    align-items: center;
+    padding: clamp(1.25rem, 3vw, 1.9rem);
+    margin-bottom: 1rem;
+    background:
+        radial-gradient(560px 180px at 88% -30%, rgba(11, 122, 75, .08), transparent 60%),
+        linear-gradient(150deg, #f2f8f3 0%, #ffffff 62%);
+    border: 1px solid #dce8df;
+    border-radius: 18px;
+    box-shadow: 0 10px 26px rgba(16, 46, 34, .06);
+}
+
+/* Left side: rating score + breakdown bars, stacked with breathing room. */
+body.company-page .rv-left {
+    display: grid;
+    gap: clamp(1rem, 2.5vw, 1.5rem);
+    min-width: 0;
+}
+
+body.company-page .rv-score {
+    display: grid;
+    justify-items: start;
+    gap: .3rem;
+    min-width: 150px;
+}
+
+body.company-page .rv-score-num {
+    font: 800 clamp(2.6rem, 5.5vw, 3.4rem)/1 var(--font-display);
+    color: var(--cp-charcoal);
+    letter-spacing: -.02em;
+}
+
+body.company-page .rv-score-stars {
+    color: #e0a100;
+    letter-spacing: 3px;
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+body.company-page .rv-score-count {
+    font-size: .88rem;
+    color: #5f7468;
+}
+
+/* ---------- Rating breakdown bars (clickable filters) ---------- */
+body.company-page .rv-bars {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: .42rem;
+    width: 100%;
+    max-width: 560px;
+}
+
+body.company-page .rv-bar-row {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) 78px;
+    align-items: center;
+    gap: .6rem;
+    padding: .3rem .55rem;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background-color .16s ease, border-color .16s ease, transform .12s ease;
+}
+
+body.company-page .rv-bar-row:hover {
+    background: #eaf2ec;
+    border-color: #d3e5d8;
+}
+
+body.company-page .rv-bar-row.is-filter {
+    background: #e4f0e8;
+    border-color: #a9cfb8;
+    box-shadow: inset 0 0 0 1px rgba(11, 122, 75, .12);
+}
+
+body.company-page .rv-bar-row:focus-visible {
+    outline: 2px solid rgba(11, 122, 75, .45);
+    outline-offset: 1px;
+}
+
+body.company-page .rv-bar-label {
+    font-size: .85rem;
+    font-weight: 700;
+    color: #33503f;
+}
+
+body.company-page .rv-bar-track {
+    display: block;
+    height: 9px;
+    border-radius: 999px;
+    background: #e2ebe5;
+    overflow: hidden;
+}
+
+body.company-page .rv-bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--cp-green) 0%, #12a468 100%);
+    transition: width .3s ease;
+}
+
+body.company-page .rv-bar-count {
+    justify-self: end;
+    font-size: .82rem;
+    font-weight: 700;
+    color: #48624f;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- "Write a review" CTA ---------- */
+/* Right side: "write a review" CTA, clearly separated by a divider. */
+body.company-page .rv-cta {
+    display: grid;
+    gap: .4rem;
+    justify-items: start;
+    align-self: center;
+    min-width: 240px;
+    max-width: 320px;
+    padding-left: clamp(1.5rem, 3vw, 2.5rem);
+    border-left: 1px solid #d9e7dd;
+}
+
+body.company-page .rv-cta strong {
+    font-size: 1rem;
+    color: var(--cp-charcoal);
+}
+
+body.company-page .rv-cta p {
+    margin: 0;
+    font-size: .85rem;
+    line-height: 1.5;
+    color: #5f7468;
+}
+
+body.company-page .rv-cta-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .45rem;
+    margin-top: .3rem;
+    padding: .55rem 1.15rem;
+    border: none;
+    border-radius: 999px;
+    background: var(--cp-green);
+    color: #ffffff;
+    font-size: .9rem;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(11, 122, 75, .25);
+    transition: background-color .16s ease, transform .12s ease, box-shadow .16s ease;
+}
+
+body.company-page .rv-cta-btn:hover {
+    background: var(--cp-green-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(11, 122, 75, .3);
+}
+
+/* Empty band (no ratings yet) */
+/* Empty state sits on the right side, same divider treatment. */
+body.company-page .rv-empty-band {
+    display: grid;
+    gap: .3rem;
+    justify-items: start;
+    align-self: center;
+    min-width: 240px;
+    max-width: 320px;
+    padding-left: clamp(1.5rem, 3vw, 2.5rem);
+    border-left: 1px solid #d9e7dd;
+}
+
+body.company-page .rv-empty-band strong { font-size: 1rem; color: var(--cp-charcoal); }
+body.company-page .rv-empty-band p { margin: 0; font-size: .88rem; color: #5f7468; }
+/* ---------- Toolbar (filter + sort) ---------- */
+body.company-page .rv-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .6rem .8rem;
+    margin: 0 0 1rem;
+}
+
+body.company-page .rv-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .42rem .95rem;
+    border: 1px solid #d6e2d9;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #45604f;
+    font-size: .85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color .16s ease, color .16s ease, border-color .16s ease, transform .12s ease;
+}
+
+body.company-page .rv-chip:hover {
+    border-color: #a9cfb8;
+    transform: translateY(-1px);
+}
+
+body.company-page .rv-chip.is-active {
+    background: var(--cp-green);
+    border-color: var(--cp-green);
+    color: #ffffff;
+    box-shadow: 0 6px 14px rgba(11, 122, 75, .2);
+}
+
+body.company-page .rv-count {
+    font-size: .85rem;
+    color: #6b7f73;
+}
+
+body.company-page .rv-sort {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    margin-left: auto;
+    font-size: .85rem;
+    color: #5f7468;
+}
+
+body.company-page .rv-sort select {
+    padding: .4rem .7rem;
+    border: 1px solid #d6e2d9;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #24362c;
+    font: 600 .86rem var(--font-sans);
+    cursor: pointer;
+}
+
+body.company-page .rv-sort select:focus {
+    outline: 2px solid rgba(11, 122, 75, .35);
+    outline-offset: 1px;
+}
+
+/* ---------- Review cards ---------- */
+body.company-page .rv-cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .9rem;
+}
+
+body.company-page .rv-card {
+    display: flex;
+    flex-direction: column;
+    gap: .8rem;
+    padding: 1.1rem 1.2rem;
+    background: #ffffff;
+    border: 1px solid #e5ece7;
+    border-radius: 16px;
+    box-shadow: 0 6px 16px rgba(16, 46, 34, .045);
+    transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+
+body.company-page .rv-card:hover {
+    transform: translateY(-2px);
+    border-color: #c9dfd1;
+    box-shadow: 0 14px 30px rgba(16, 46, 34, .1);
+}
+
+body.company-page .rv-top {
+    display: flex;
+    align-items: center;
+    gap: .7rem;
+    min-width: 0;
+}
+
+body.company-page .rv-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    color: #ffffff;
+    font-size: .82rem;
+    font-weight: 800;
+    letter-spacing: .02em;
+    box-shadow: 0 4px 10px rgba(16, 46, 34, .16);
+}
+
+body.company-page .rv-id {
+    display: grid;
+    gap: .14rem;
+    min-width: 0;
+}
+
+body.company-page .rv-id strong {
+    font-size: .94rem;
+    color: var(--cp-charcoal);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body.company-page .rv-meta {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    flex-wrap: wrap;
+    font-size: .78rem;
+    color: #75897d;
+}
+
+body.company-page .rv-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+    padding: .14rem .55rem;
+    border-radius: 999px;
+    background: #e2f3e9;
+    color: #14532d;
+    font-size: .68rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+body.company-page .rv-badge::before {
+    content: "\2713";
+    font-weight: 800;
+}
+
+body.company-page .rv-likes {
+    color: #a33c55;
+    font-weight: 700;
+}
+
+body.company-page .rv-rating {
+    margin-left: auto;
+    color: #e0a100;
+    letter-spacing: 2px;
+    font-size: .95rem;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+body.company-page .rv-text {
+    margin: 0;
+    font-size: .95rem;
+    line-height: 1.65;
+    color: #33433b;
+    flex: 1;
+}
+
+/* Company reply */
+body.company-page .rv-reply {
+    display: grid;
+    gap: .3rem;
+    margin-top: .15rem;
+    padding: .8rem .95rem;
+    background: #f5faf6;
+    border: 1px solid #dce8df;
+    border-radius: 12px;
+}
+
+body.company-page .rv-reply-head {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-size: .72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--cp-green-dark);
+}
+
+body.company-page .rv-reply-logo {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #ffffff;
+    border: 1px solid #d3e3d9;
+}
+
+body.company-page .rv-reply p {
+    margin: 0;
+    font-size: .9rem;
+    line-height: 1.55;
+    color: #33433b;
+}
+
+body.company-page .rv-reply-when {
+    font-size: .76rem;
+    color: #7c8f84;
+}
+
+/* Empty + footnote */
+body.company-page .rv-empty {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: 1.4rem;
+    text-align: center;
+    color: #687d71;
+    background: #f8fbf9;
+    border: 1px dashed #d3e3d9;
+    border-radius: 14px;
+}
+
+body.company-page .rv-demo-note {
+    grid-column: 1 / -1;
+    margin: .4rem 0 0;
+    text-align: center;
+    font-size: .76rem;
+    color: #8aa094;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1080px) {
+    body.company-page .rv-summary {
+        grid-template-columns: minmax(0, 1fr) minmax(220px, auto);
+        gap: 1.5rem 2rem;
+    }
+    body.company-page .rv-cta,
+    body.company-page .rv-empty-band {
+        padding-left: 1.5rem;
+    }
+    body.company-page .rv-cta p,
+    body.company-page .rv-empty-band p { max-width: 300px; }
+}
+
+/* Medium widths: the CTA drops below the rating block as a divided strip. */
+@media (max-width: 900px) and (min-width: 761px) {
+    body.company-page .rv-summary { grid-template-columns: 1fr; }
+    body.company-page .rv-cta,
+    body.company-page .rv-empty-band {
+        grid-column: 1 / -1;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        column-gap: 1rem;
+        justify-items: start;
+        border-left: none;
+        padding-left: 0;
+        border-top: 1px solid #d9e7dd;
+        padding-top: 1.25rem;
+        margin-top: .35rem;
+        max-width: none;
+        min-width: 0;
+    }
+    body.company-page .rv-cta strong,
+    body.company-page .rv-empty-band strong { font-size: .95rem; }
+    body.company-page .rv-cta .rv-cta-btn,
+    body.company-page .rv-empty-band .rv-cta-btn { margin-top: 0; }
+}
+
+@media (max-width: 760px) {
+    body.company-page .rv-summary { grid-template-columns: 1fr; }
+    body.company-page .rv-cta,
+    body.company-page .rv-empty-band {
+        grid-column: 1 / -1;
+        grid-template-columns: 1fr;
+        justify-items: start;
+        border-left: none;
+        padding-left: 0;
+        border-top: 1px solid #d9e7dd;
+        padding-top: 1.25rem;
+        margin-top: .35rem;
+        max-width: none;
+        min-width: 0;
+    }
+    body.company-page .rv-cards { grid-template-columns: 1fr; }
 }

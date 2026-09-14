@@ -927,54 +927,245 @@
             .replace(/"/g, '&quot;');
     }
 
-    /* ---------- Sample passenger reviews ---------- */
+    /* ---------- Passenger reviews (full redesign) ----------
+       Full-width rating band + clickable breakdown bars, a filter/sort
+       toolbar and a two-column card grid. Kept under rv-* class names so
+       the legacy section-8 .review-* styles stay untouched for other pages. */
+
+    var REVIEW_AVATAR_COLORS = [
+        '#0b7a4b', '#2a6f97', '#7c5cbf', '#c2622f', '#a33c55',
+        '#3b7d30', '#1f7a8c', '#98661b', '#4b6e9e', '#5e5aa7'
+    ];
+
+    var reviewFilter = null;     /* active star-count filter, null = all */
+    var reviewSort = 'recent';   /* 'recent' | 'rating' */
+    var reviewedCompany = null;
+
+    /* Initials for the reviewer avatar circle. */
+    function reviewerInitials(name) {
+        var parts = String(name || '?').trim().split(/\s+/);
+        var a = (parts[0] || '?').charAt(0);
+        var b = parts.length > 1 ? parts[parts.length - 1].charAt(0) : '';
+        return (a + b).toUpperCase();
+    }
+
+    /* Deterministic avatar colour derived from the reviewer name. */
+    function avatarColor(name) {
+        var s = String(name || '?');
+        var n = 0;
+        for (var i = 0; i < s.length; i++) { n += s.charCodeAt(i); }
+        return REVIEW_AVATAR_COLORS[n % REVIEW_AVATAR_COLORS.length];
+    }
+
+    /* Rough "age in days" for a review's `when` so mock relative strings
+       ("2 weeks ago") and real dates sort through the same key. */
+    function reviewAgeDays(when) {
+        var s = String(when || '').trim().toLowerCase();
+        var m;
+        if ((m = s.match(/([\d.]+)\s*day/))) { return Number(m[1]); }
+        if ((m = s.match(/([\d.]+)\s*week/))) { return Number(m[1]) * 7; }
+        if ((m = s.match(/([\d.]+)\s*month/))) { return Number(m[1]) * 30; }
+        if ((m = s.match(/([\d.]+)\s*year/))) { return Number(m[1]) * 365; }
+        var t = new Date(s.replace(/,/g, ' ')).getTime();
+        return isNaN(t) ? 9999 : Math.max(0, Math.floor((Date.now() - t) / 86400000));
+    }
+
+    /* Written reviews, filtered by the active star rating and sorted. */
+    function filteredReviews(c) {
+        var list = (c.reviews && c.reviews.slice) ? c.reviews.slice() : [];
+        if (reviewFilter) {
+            list = list.filter(function (rv) {
+                return Math.round(Number(rv.rating) || 0) === reviewFilter;
+            });
+        }
+        list.sort(function (a, b) {
+            if (reviewSort === 'rating') {
+                var d = (Number(b.rating) || 0) - (Number(a.rating) || 0);
+                if (d !== 0) { return d; }
+            }
+            return reviewAgeDays(a.when) - reviewAgeDays(b.when);
+        });
+        return list;
+    }
+
+    function renderReviewSummary(c) {
+        var summary = document.getElementById('review-summary');
+        if (!summary) { return; }
+        var total = Number(c.reviewCount) || 0;
+        var rating = Number(c.rating) || 0;
+
+        if (!total) {
+            /* Real database records with no reviews yet — clean empty band. */
+            summary.innerHTML =
+                '<div class="rv-left">' +
+                    '<div class="rv-score">' +
+                        '<span class="rv-score-num">' + rating.toFixed(1) + '</span>' +
+                        '<span class="rv-score-stars" role="img" aria-label="No reviews yet">\u2606\u2606\u2606\u2606\u2606</span>' +
+                        '<span class="rv-score-count">No reviews yet</span>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="rv-empty-band">' +
+                    '<strong>Be the first to review ' + esc(c.name) + '</strong>' +
+                    '<p>Share your experience to help other travellers plan their journey.</p>' +
+                    '<a class="rv-cta-btn" href="login.html">Write a review</a>' +
+                '</div>';
+            return;
+        }
+
+        var dist = buildDistribution(rating);
+        var bars = '';
+        for (var i = 0; i < dist.length; i++) {
+            var d = dist[i];
+            var count = Math.round(total * d.pct / 100);
+            var activeClass = (reviewFilter === d.stars) ? ' is-filter' : '';
+            bars += '<li class="rv-bar-row' + activeClass + '" role="button" tabindex="0" ' +
+                'data-filter="' + d.stars + '" aria-pressed="' + (activeClass ? 'true' : 'false') + '" ' +
+                'title="' + count.toLocaleString() + ' reviews (' + d.pct + '%)">' +
+                '<span class="rv-bar-label">' + d.stars + '\u2605</span>' +
+                '<span class="rv-bar-track"><span class="rv-bar-fill" style="width:' + d.pct + '%"></span></span>' +
+                '<span class="rv-bar-count">' + count.toLocaleString() + '</span>' +
+            '</li>';
+        }
+
+        summary.innerHTML =
+            '<div class="rv-left">' +
+                '<div class="rv-score">' +
+                    '<span class="rv-score-num">' + rating.toFixed(1) + '</span>' +
+                    '<span class="rv-score-stars" role="img" aria-label="Rated ' + rating.toFixed(1) + ' out of 5">' +
+                        buildStars(rating) + '</span>' +
+                    '<span class="rv-score-count">Based on ' + total.toLocaleString() + ' reviews</span>' +
+                '</div>' +
+                '<ul class="rv-bars" aria-label="Rating breakdown">' + bars + '</ul>' +
+            '</div>' +
+            '<div class="rv-cta">' +
+                '<strong>Travelled with ' + esc(c.name) + '?</strong>' +
+                '<p>Your rating helps other passengers pick the right operator.</p>' +
+                '<a class="rv-cta-btn" href="login.html">Write a review</a>' +
+            '</div>';
+    }
+
+    function renderReviewToolbar(c) {
+        var toolbar = document.getElementById('review-toolbar');
+        if (!toolbar) { return; }
+        var total = Number(c.reviewCount) || 0;
+        var shown = filteredReviews(c).length;
+        toolbar.hidden = !total;
+        toolbar.innerHTML =
+            '<button type="button" class="rv-chip' + (reviewFilter ? '' : ' is-active') + '" data-filter="all" ' +
+                'aria-pressed="' + (reviewFilter ? 'false' : 'true') + '">All reviews</button>' +
+            '<span class="rv-count">Showing ' + shown + ' of ' + total.toLocaleString() + '</span>' +
+            '<label class="rv-sort"><span>Sort by</span>' +
+                '<select id="review-sort">' +
+                    '<option value="recent"' + (reviewSort === 'recent' ? ' selected' : '') + '>Most recent</option>' +
+                    '<option value="rating"' + (reviewSort === 'rating' ? ' selected' : '') + '>Highest rating</option>' +
+                '</select></label>';
+    }
+
+    function renderReviewCard(c, rev) {
+        var meta = '';
+        if (rev.verified) { meta += '<span class="rv-badge">Verified Passenger</span>'; }
+        if (rev.likes) { meta += '<span class="rv-likes">\u2665 ' + Number(rev.likes).toLocaleString() + '</span>'; }
+        if (rev.when) { meta += '<span class="rv-when">' + escapeReviewText(rev.when) + '</span>'; }
+
+        var reply = '';
+        if (rev.reply) {
+            reply =
+                '<div class="rv-reply">' +
+                    '<div class="rv-reply-head">' +
+                        (c.logo ? '<img class="rv-reply-logo" src="' + esc(c.logo) + '" alt="" aria-hidden="true">' : '') +
+                        '<span>Response from ' + esc(c.name) + '</span>' +
+                    '</div>' +
+                    '<p>' + escapeReviewText(rev.reply) + '</p>' +
+                    (rev.reply_at ? '<span class="rv-reply-when">Replied ' + formatDate(String(rev.reply_at).slice(0, 10)) + '</span>' : '') +
+                '</div>';
+        }
+
+        return '<article class="rv-card">' +
+            '<div class="rv-top">' +
+                '<span class="rv-avatar" style="background:' + avatarColor(rev.name) + '" aria-hidden="true">' +
+                    esc(reviewerInitials(rev.name)) + '</span>' +
+                '<span class="rv-id">' +
+                    '<strong>' + escapeReviewText(rev.name) + '</strong>' +
+                    '<span class="rv-meta">' + meta + '</span>' +
+                '</span>' +
+                '<span class="rv-rating" role="img" aria-label="Rated ' + Number(rev.rating) + ' out of 5 stars">' +
+                    buildStars(Number(rev.rating) || 0) + '</span>' +
+            '</div>' +
+            '<p class="rv-text">' + escapeReviewText(rev.text) + '</p>' +
+            reply +
+        '</article>';
+    }
+
+    function renderReviewGrid(c) {
+        var grid = document.getElementById('review-grid');
+        if (!grid) { return; }
+        var list = filteredReviews(c);
+        if (!list.length) {
+            grid.innerHTML = '<p class="rv-empty">' +
+                (reviewFilter ? 'No written reviews at this rating yet.' : 'No written reviews yet.') +
+                '</p>';
+            return;
+        }
+        var html = '';
+        for (var r = 0; r < list.length; r++) { html += renderReviewCard(c, list[r]); }
+        grid.innerHTML = html;
+        if (typeof c.id !== 'number') {
+            grid.insertAdjacentHTML('beforeend',
+                '<p class="rv-demo-note">Demo sample \u2014 illustrative reviews shown for the prototype, not real customer testimonials.</p>');
+        }
+    }
+
+    /* One set of delegated listeners on the static reviews pane. */
+    function wireReviewInteractions() {
+        var pane = document.getElementById('cp-reviews');
+        if (!pane || pane.getAttribute('data-rv-wired')) { return; }
+        pane.setAttribute('data-rv-wired', '1');
+
+        pane.addEventListener('click', function (event) {
+            if (!reviewedCompany) { return; }
+            var bar = event.target && event.target.closest ? event.target.closest('.rv-bar-row') : null;
+            if (bar) {
+                var f = Number(bar.getAttribute('data-filter')) || null;
+                reviewFilter = (f === reviewFilter) ? null : f;
+            } else {
+                var chip = event.target && event.target.closest ? event.target.closest('.rv-chip') : null;
+                if (chip) { reviewFilter = null; } else { return; }
+            }
+            renderReviewSummary(reviewedCompany);
+            renderReviewToolbar(reviewedCompany);
+            renderReviewGrid(reviewedCompany);
+        });
+
+        pane.addEventListener('keydown', function (event) {
+            if (!reviewedCompany) { return; }
+            var bar = event.target && event.target.closest ? event.target.closest('.rv-bar-row') : null;
+            if (!bar) { return; }
+            if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); bar.click(); }
+        });
+
+        pane.addEventListener('change', function (event) {
+            if (!reviewedCompany) { return; }
+            if (event.target && event.target.id === 'review-sort') {
+                reviewSort = (event.target.value === 'rating') ? 'rating' : 'recent';
+                renderReviewToolbar(reviewedCompany);
+                renderReviewGrid(reviewedCompany);
+            }
+        });
+    }
+
+    /* Entry point, called from renderCompany() while the pane renders. */
     function renderReviews(c) {
         var summary = document.getElementById('review-summary');
+        var toolbar = document.getElementById('review-toolbar');
         var grid = document.getElementById('review-grid');
-        if (summary) {
-            if (!(c.reviewCount || 0)) {
-                /* Real database records have no reviews yet — avoid the
-                   deterministic distribution (unreadable negative bars). */
-                summary.innerHTML =
-                    '<div class="review-score">' +
-                        '<span class="review-big">' + c.rating.toFixed(1) + '</span>' +
-                        '<span class="review-stars" role="img" aria-label="Rated ' + c.rating.toFixed(1) + ' out of 5">' +
-                            buildStars(c.rating) + '</span>' +
-                        '<span class="review-count">No reviews yet</span>' +
-                    '</div>';
-            } else {
-            var dist = buildDistribution(c.rating);
-            var bars = '';
-            for (var i = 0; i < dist.length; i++) {
-                bars += '<li class="bar-row">' +
-                    '<span class="bar-label">' + dist[i].stars + ' \u2605</span>' +
-                    '<span class="bar-track"><span class="bar-fill" style="width:' + dist[i].pct + '%"></span></span>' +
-                    '<span class="bar-pct">' + dist[i].pct + '%</span>' +
-                '</li>';
-            }
-            summary.innerHTML =
-                '<div class="review-score">' +
-                    '<span class="review-big">' + c.rating.toFixed(1) + '</span>' +
-                    '<span class="review-stars" role="img" aria-label="Rated ' + c.rating.toFixed(1) + ' out of 5">' +
-                        buildStars(c.rating) + '</span>' +
-                    '<span class="review-count">' + c.reviewCount.toLocaleString() + ' reviews</span>' +
-                '</div>' +
-                '<ul class="rating-bars">' + bars + '</ul>';
-            }
-        }
-        if (grid) {
-            var html = '';
-            if (!(c.reviews && c.reviews.length)) {
-                html = '<p class="review-none" style="padding:1rem 0;">No written reviews yet.</p>';
-            } else {
-                for (var r = 0; r < c.reviews.length; r++) {
-                    if (r >= c.reviews.length) { break; }
-                    var rev = c.reviews[r];
-                    html += '<article class="review-card">' +                        '<p class="review-stars-row" role="img" aria-label="Rated ' + rev.rating + ' out of 5 stars">' +                            buildStars(rev.rating) + '</p>' +                        '<p class="review-text">' + escapeReviewText(rev.text) + '</p>' +                        (rev.reply ? '<div class="review-reply">' +                            '<span class="review-reply-label">Response from ' + esc(c.name) + '</span>' +                            '<p>' + escapeReviewText(rev.reply) + '</p>' +                            '<span class="review-reply-when">' + (rev.reply_at ? 'Replied ' + formatDate(String(rev.reply_at).slice(0, 10)) : '') + '</span>' +                        '</div>' : '') +                        '<footer class="reviewer">' +                            '<strong>' + escapeReviewText(rev.name) + '</strong>' +                            (rev.verified ? '<span class="review-badge">Verified Passenger</span>' : '') +                            (rev.likes ? '<span class="review-likes">\u2665 ' + rev.likes + '</span>' : '') +                            '<span class="review-when">' + escapeReviewText(rev.when) + '</span>' +                        '</footer>' +                    '</article>';
-                }
-            }
-            grid.innerHTML = html;
-        }
+        if (!summary && !toolbar && !grid) { return; }
+        reviewedCompany = c;
+        reviewFilter = null;
+        reviewSort = 'recent';
+        renderReviewSummary(c);
+        renderReviewToolbar(c);
+        renderReviewGrid(c);
+        wireReviewInteractions();
     }
 
     /* ---------- Company information ---------- */
@@ -1359,7 +1550,14 @@
         var when = rv && rv.created_at ? String(rv.created_at).slice(0, 10) : '';
         if (when) { when = formatDate(when); }
         return {
-            name: (rv && rv.name) || 'Verified passenger',            rating: Number(rv && rv.rating) ||  5,            when: when,            verified: !!(rv && rv.verified),            text: (rv && rv.comment) || '',            reply: (rv && rv.reply) || null,            reply_at: (rv && rv.reply_at) || null,            likes: Number(rv && rv.likes) ||  0        };
+            name: (rv && rv.name) || 'Verified passenger',
+            rating: Number(rv && rv.rating) ||  5,
+            when: when,
+            verified: !!(rv && rv.verified),
+            text: (rv && rv.comment) || '',
+            reply: (rv && rv.reply) || null,
+            reply_at: (rv && rv.reply_at) || null,
+            likes: Number(rv && rv.likes) ||  0        };
     }
 
     /* Loads { reviews, rating, count } from the real review API for a company.

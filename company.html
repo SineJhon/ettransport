@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Bus company profile on ET Transport — routes, fleet, services and available trips.">
     <title>Bus Company | ET Transport</title>
-    <link rel="stylesheet" href="css/style.css?v=20260913-company-profile-trip-strip">
+    <link rel="stylesheet" href="css/style.css?v=20260913-reviews-split">
     <link rel="icon" type="image/x-icon" href="assets/icons/favicon.svg">
 <!-- Fonts (DM Sans + Outfit) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -147,17 +147,16 @@
                     <div id="trip-grid" class="trip-grid"></div>
                     </section>
 
-            <!-- 5. Reviews -->
+            <!-- 5. Reviews (rating band + toolbar + card grid, rendered by js/company.js) -->
                     <section class="cp-pane" id="cp-reviews" aria-label="Passenger reviews" hidden>
                         <div class="cp-head">
                         <p class="search-eyebrow">Reviews</p>
                         <h2 class="section-title">Passenger Reviews</h2>
-                        <p class="section-subtitle">Illustrative reviews shown for the prototype demo — not real customer testimonials.</p>
+                        <p class="section-subtitle">Ratings and feedback from travellers on this operator's trips, service and comfort.</p>
                     </div>
-                    <div class="review-layout">
-                            <div id="review-summary" class="review-summary"></div>
-                            <div id="review-grid" class="review-grid"></div>
-                        </div>
+                        <div id="review-summary" class="rv-summary"></div>
+                        <div id="review-toolbar" class="rv-toolbar" hidden></div>
+                        <div id="review-grid" class="rv-cards"></div>
                     </section>
 
             <!-- 6. Branches & Contact -->
@@ -233,11 +232,11 @@
     </footer>
 
     <!-- Scripts -->
-    <script src="js/main.js?v=20260913-company-profile-trip-strip"></script>
-        <script src="js/auth.js?v=20260913-company-profile-trip-strip"></script>
-    <script src="js/notifications.js?v=20260913-company-profile-trip-strip"></script>
-    <script src="js/data.js?v=20260913-company-profile-trip-strip"></script>
-    <script src="js/company.js?v=20260913-company-profile-trip-strip"></script>
-    <script src="js/company-nav.js?v=20260913-company-profile-trip-strip"></script>
+    <script src="js/main.js?v=20260913-reviews-split"></script>
+        <script src="js/auth.js?v=20260913-reviews-split"></script>
+    <script src="js/notifications.js?v=20260913-reviews-split"></script>
+    <script src="js/data.js?v=20260913-reviews-split"></script>
+    <script src="js/company.js?v=20260913-reviews-split"></script>
+    <script src="js/company-nav.js?v=20260913-reviews-split"></script>
 </body>
 </html>
