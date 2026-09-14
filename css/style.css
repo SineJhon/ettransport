@@ -6551,6 +6551,160 @@ body.company-page .cmc-tile-value {
 }
 
 /* ============================================================
+/* ============================================================
+   16.6  Branch office cards — polished to match the main contact
+   Cards get a header row (tinted icon + name + city badge),
+   an icon-detail list with clickable phone / email, and pill
+   Call / Email actions, all in the company-page palette.
+   ============================================================ */
+
+body.company-page .cmc-branch {
+    background: #ffffff;
+    border: 1px solid #e2ebe5;
+    border-radius: 16px;
+    padding: 1.15rem 1.2rem;
+    gap: .95rem;
+    box-shadow: 0 6px 16px rgba(16, 46, 34, .045);
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+
+body.company-page .cmc-branch:hover {
+    transform: translateY(-2px);
+    border-color: #c9dfd1;
+    box-shadow: 0 14px 30px rgba(16, 46, 34, .1);
+}
+
+body.company-page .cmc-branch-head {
+    display: flex;
+    align-items: flex-start;
+    gap: .7rem;
+}
+
+body.company-page .cmc-branch-ic {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    background: rgba(11, 122, 75, .1);
+    color: var(--cp-green);
+    font-size: 1.05rem;
+}
+
+body.company-page .cmc-branch-copy {
+    display: grid;
+    gap: .1rem;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+body.company-page .cmc-branch-copy h3 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: -.01em;
+    color: var(--cp-charcoal);
+    line-height: 1.2;
+}
+
+body.company-page .cmc-branch-loc {
+    font-size: .76rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: #8aa094;
+}
+
+body.company-page .cmc-branch-head .branch-head-badge {
+    margin-left: auto;
+    align-self: flex-start;
+    white-space: nowrap;
+}
+
+/* Icon detail rows */
+body.company-page .cmc-branch-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: .45rem;
+}
+
+body.company-page .cmc-branch-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: .5rem;
+    font-size: .9rem;
+    line-height: 1.5;
+    color: #3f5147;
+    min-width: 0;
+}
+
+body.company-page .cmc-branch-list li > span {
+    flex: 0 0 auto;
+    color: var(--cp-green);
+}
+
+body.company-page .cmc-branch-list li a {
+    color: #24362c;
+    text-decoration: none;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+body.company-page .cmc-branch-list li a:hover {
+    color: var(--cp-green);
+    text-decoration: underline;
+}
+
+/* Pill actions */
+body.company-page .cmc-branch .contact-actions {
+    display: flex;
+    gap: .55rem;
+    margin-top: .3rem;
+    flex-wrap: wrap;
+}
+
+body.company-page .cmc-branch .btn-call,
+body.company-page .cmc-branch .btn-email {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: .5rem 1.1rem;
+    border-radius: 999px;
+    font-size: .88rem;
+    font-weight: 700;
+    transition: transform .12s ease, box-shadow .16s ease, background-color .16s ease, color .16s ease, border-color .16s ease;
+}
+
+body.company-page .cmc-branch .btn-call {
+    background: var(--cp-green);
+    color: #ffffff;
+    border: 1.5px solid var(--cp-green);
+}
+
+body.company-page .cmc-branch .btn-call:hover {
+    background: var(--cp-green-dark);
+    border-color: var(--cp-green-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 16px rgba(11, 122, 75, .22);
+}
+
+body.company-page .cmc-branch .btn-email {
+    background: #ffffff;
+    color: var(--cp-green);
+    border: 1.5px solid #a9cfb8;
+}
+
+body.company-page .cmc-branch .btn-email:hover {
+    background: rgba(11, 122, 75, .08);
+    border-color: var(--cp-green);
+    transform: translateY(-1px);
+}
    16.9  Upcoming trips — week-strip day selector
    ============================================================ */
 

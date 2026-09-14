@@ -1243,18 +1243,25 @@
             var o = offices[i];
             var name = o.name || o.city || 'Branch';
             var city = (o.city && o.city !== name) ? o.city : '';
-            html += '<div class="contact-card">' +
-                '<span class="contact-icon" aria-hidden="true">&#128205;</span>' +
-                '<h3>' + esc(name) + '</h3>' +
-                (o.isHead ? '<p class="branch-head-badge">Head Office</p>' : '') +
-                (o.address ? '<p class="contact-address">' + esc(o.address) + '</p>' : (city ? '<p class="contact-address">' + esc(city) + '</p>' : '')) +
-                (o.hours ? '<p class="contact-line"><span aria-hidden="true">&#128337;</span> ' + esc(o.hours) + '</p>' : '') +
-                (o.phone ? '<p class="contact-line"><span aria-hidden="true">&#128222;</span> ' + esc(o.phone) + '</p>' : '') +
-                (o.email ? '<p class="contact-line"><span aria-hidden="true">&#9993;</span> ' + esc(o.email) + '</p>' : '') +
-                '<div class="contact-actions">' +
-                    (o.phone ? '<a class="btn btn-call" href="tel:' + o.phone.replace(/\s+/g, '') + '">Call</a>' : '') +
-                    (o.email ? '<a class="btn btn-email" href="mailto:' + o.email + '">Email</a>' : '') +
+            html += '<div class="contact-card cmc-branch">' +
+                '<div class="cmc-branch-head">' +
+                    '<span class="cmc-branch-ic" aria-hidden="true">&#128205;</span>' +
+                    '<span class="cmc-branch-copy">' +
+                        '<h3>' + esc(name) + '</h3>' +
+                        (city ? '<span class="cmc-branch-loc">' + esc(city) + '</span>' : '') +
+                    '</span>' +
+                    (o.isHead ? '<span class="branch-head-badge">Head Office</span>' : '') +
                 '</div>' +
+                '<ul class="cmc-branch-list">' +
+                    (o.address ? '<li><span aria-hidden="true">&#128205;</span>' + esc(o.address) + '</li>' : '') +
+                    (o.hours ? '<li><span aria-hidden="true">&#128337;</span>' + esc(o.hours) + '</li>' : '') +
+                    (o.phone ? '<li><span aria-hidden="true">&#128222;</span><a href="tel:' + o.phone.replace(/\s+/g, '') + '">' + esc(o.phone) + '</a></li>' : '') +
+                    (o.email ? '<li><span aria-hidden="true">&#9993;</span><a href="mailto:' + esc(o.email) + '">' + esc(o.email) + '</a></li>' : '') +
+                '</ul>' +
+                ((o.phone || o.email) ? '<div class="contact-actions">' +
+                    (o.phone ? '<a class="btn btn-call" href="tel:' + o.phone.replace(/\s+/g, '') + '">Call</a>' : '') +
+                    (o.email ? '<a class="btn btn-email" href="mailto:' + esc(o.email) + '">Email</a>' : '') +
+                '</div>' : '') +
             '</div>';
         }
         if (!html) { html = '<p class="review-none" style="padding:1rem 0;">No branch contact information yet.</p>'; }
