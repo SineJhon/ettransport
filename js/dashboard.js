@@ -189,6 +189,29 @@
         var p = getJSON(KEY_PROFILE, null);
         return (p && typeof p === 'object') ? p : demoProfile();
     }
+
+    /* ---------- Passenger identity ----------
+       A signed-in passenger sees their REAL account name, email and
+       phone on the dashboard. A profile the passenger explicitly saved
+       in this browser still takes priority; demoProfile() is only the
+       last resort when no session user is available at all. */
+    function effectiveProfile(user) {
+        var saved = getJSON(KEY_PROFILE, null);
+        if (saved && typeof saved === 'object' && (saved.fullName || saved.phone || saved.email)) {
+            return saved;
+        }
+        if (user && user.name) {
+            return {
+                fullName: user.name,
+                phone: user.phone || '',
+                email: user.email || '',
+                gender: '',
+                dob: ''
+            };
+        }
+        return demoProfile();
+    }
+
     function loadFavRoutes() {
         var list = getJSON(KEY_FAV_ROUTES, null);
         return (list && Object.prototype.toString.call(list) === '[object Array]') ? list : [];
@@ -1350,8 +1373,8 @@ function closeTicket() {
         if (err) { err.textContent = ''; }
     }
 
-    function renderProfile() {
-        var p = loadProfile();
+    function renderProfile(user) {
+        var p = effectiveProfile(user || sessionUser);
         var greeting = document.getElementById('dash-greeting');
         var firstName = String(p.fullName || 'Passenger').trim().split(/\s+/)[0];
         if (greeting) { greeting.textContent = firstName || 'Passenger'; }
@@ -1370,9 +1393,13 @@ function closeTicket() {
     var profileModal = document.getElementById('profile-modal');
     var profileFormMsg = document.getElementById('profile-form-msg');
 
+    /* Last successfully verified session user (set in start()) so the
+       profile and greeting can fall back to the real account identity. */
+    var sessionUser = null;
+
     function openProfileModal() {
         if (!profileModal) { return; }
-        var p = loadProfile();
+        var p = effectiveProfile(sessionUser);
         document.getElementById('p-full-name').value = p.fullName || '';
         document.getElementById('p-phone-input').value = normalizeLocalPhone(p.phone);
         document.getElementById('p-email-input').value = p.email || '';
@@ -2545,7 +2572,7 @@ var supportForm = document.getElementById('support-form');
     /* ============================================================
        Init
        ============================================================ */
-    function init() {
+    function init(user) {
         renderUpcoming();
         renderStats();
         renderRecentBookings();
@@ -2556,7 +2583,7 @@ var supportForm = document.getElementById('support-form');
         renderFavorites();
         populateCitySelect();
         renderNotifications();
-        renderProfile();
+        renderProfile(user);
         renderSupport();
         renderComplaints();
         applyComplaintAccess();
@@ -2638,8 +2665,9 @@ var supportForm = document.getElementById('support-form');
         }
         window.ETAuth.getCurrentUser().then(function (user) {
             if (user && user.role === 'passenger') {
+                sessionUser = user;
                 revealDashboard();
-                init();
+                init(user);
             } else {
                 showDashboardGate(user);
             }

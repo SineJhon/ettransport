@@ -182,7 +182,7 @@ function roleHome(string $role): string
         return 'company-dashboard.html';
     }
 
-    return 'passenger.html';
+    return 'dashboard.html';
 }
 
 /**

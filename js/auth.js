@@ -32,7 +32,7 @@
     function roleHome(role) {
         if (role === 'admin') { return 'admin.html'; }
         if (role === 'company') { return 'company-dashboard.html'; }
-        return 'passenger.html';
+        return 'dashboard.html';
     }
 
     function toFormData(payload) {
