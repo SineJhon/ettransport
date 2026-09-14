@@ -1184,6 +1184,89 @@ ul {
     align-items: start;
 }
 
+/* ---------- Booking auth gate (guests asked to log in / register) ---------- */
+.booking-auth-gate {
+    max-width: 620px;
+    margin: 0 auto;
+    padding: var(--space-lg);
+    text-align: center;
+}
+
+.booking-gate-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    margin-bottom: var(--space-sm);
+    font-size: 1.5rem;
+    line-height: 1;
+    background-color: var(--color-bg, #eef2f7);
+    border-radius: 50%;
+}
+
+.booking-gate-title {
+    font-size: 1.35rem;
+    margin: 0 0 0.5rem;
+    color: var(--color-primary);
+}
+
+.booking-gate-text {
+    margin: 0 0 1.25rem;
+    line-height: 1.6;
+    color: var(--color-muted);
+    max-width: 52ch;
+}
+
+.booking-gate-note {
+    margin: 0 0 1.25rem;
+    line-height: 1.55;
+    color: var(--color-muted);
+    font-weight: 600;
+}
+
+.booking-gate-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 0 0 0.75rem;
+}
+
+.booking-gate-actions .btn {
+    min-width: 12rem;
+}
+
+.booking-gate-switch {
+    display: inline-block;
+    margin: 0 0 0.5rem;
+    font-size: 0.85rem;
+    color: var(--color-primary);
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.booking-gate-back {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.booking-gate-back .back-link {
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.booking-gate-back .back-link:hover {
+    text-decoration: underline;
+}
+
+/* `.booking-layout` sets display:grid above, which would otherwise override
+   the hidden attribute — keep gated layouts truly hidden until shown. */
+.booking-layout[hidden],
+.booking-auth-gate[hidden] {
+    display: none;
+}
+
 .card {
     background-color: var(--color-white);
     border: 1px solid #e5e7eb;

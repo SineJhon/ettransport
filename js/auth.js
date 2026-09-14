@@ -109,6 +109,54 @@
         });
     }
 
+    /* ------------------------------------------------------------
+       "Continue where you left off" — the `next` query parameter.
+       Guests never have to log in to browse (search, prices, compare,
+       company pages), but the first interactive step (seat selection,
+       review, etc.) asks for login/registration. That prompt links to
+       login.html?next=<the page they were on>, and once the account
+       exists / signs in we send them straight back.
+
+       Only same-site relative URLs are honoured. Root-relative paths
+       (e.g. /ettransport/booking.html?trip=1) and plain relative paths
+       pass; anything that could be an open redirect (schemes like
+       javascript:/http:/https:, protocol-relative //host or bare
+       host names) is rejected.
+       ------------------------------------------------------------ */
+    function urlParam(name) {
+        try {
+            return new URLSearchParams(window.location.search).get(name) || '';
+        } catch (e) { return ''; }
+    }
+
+    function safeNext() {
+        var raw = urlParam('next');
+        if (!raw) { return ''; }
+
+        /* Must be a page on this site: starts with a letter/digit (relative
+           path) or '/' (root-relative). Never protocol-relative or a scheme. */
+        if (/^[a-z0-9]/i.test(raw) === false && raw.charAt(0) !== '/') {
+            return '';
+        }
+        if (raw.indexOf('//') === 0) { return ''; }
+        if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) { return ''; }
+
+        return raw;
+    }
+
+    /* The current page — used as the `next` target when a protected page
+       redirects to login. Always same-site (pathname + query only). */
+    function currentHere() {
+        try {
+            return window.location.pathname + window.location.search;
+        } catch (e) { return ''; }
+    }
+
+    function loginUrl() {
+        var here = encodeURIComponent(currentHere());
+        return here ? 'login.html?next=' + here : 'login.html';
+    }
+
     /* Frontend convenience guard — APIs still enforce authorization server-side. */
     function requireAuth() {
         return getSession().then(function (result) {
@@ -116,7 +164,7 @@
             if (data.authenticated && data.user) {
                 return data.user;
             }
-            window.location.href = 'login.html';
+            window.location.href = loginUrl();
             return null;
         });
     }
@@ -131,7 +179,7 @@
                 window.location.href = roleHome(data.user.role);
                 return null;
             }
-            window.location.href = 'login.html';
+            window.location.href = loginUrl();
             return null;
         });
     }
@@ -448,7 +496,7 @@
                     return;
                 }
 
-                var target = result.data.redirectTo || roleHome((result.data.user && result.data.user.role) || 'passenger');
+                var target = safeNext() || result.data.redirectTo || roleHome((result.data.user && result.data.user.role) || 'passenger');
                 window.location.href = target;
             }).catch(function () {
                 setMessage('Could not reach the server. Make sure you are running through http://localhost/etio-transport/.', 'error');
@@ -476,7 +524,7 @@
                 }
 
                 setMessage(result.data.message || 'Login successful.', 'success');
-                var target = result.data.redirectTo || roleHome((result.data.user && result.data.user.role) || 'passenger');
+                var target = safeNext() || result.data.redirectTo || roleHome((result.data.user && result.data.user.role) || 'passenger');
                 window.location.href = target;
             }).catch(function () {
                 setMessage('Could not reach the server. Make sure you are running through http://localhost/etio-transport/.', 'error');
@@ -608,18 +656,12 @@
         });
     }
 
-    /* ---------- Hybrid guard: booking context ---------- */
-    function hasBookingContext() {
-        try {
-            var params = new URLSearchParams(window.location.search);
-            if (params.get('trip')) { return true; }
-        } catch (e) { /* URLSearchParams unavailable */ }
-        try {
-            if (window.sessionStorage.getItem('etTransportBooking')) { return true; }
-        } catch (e) { /* storage unavailable */ }
-        return false;
-    }
-
+    /* ---------- Page guard: redirect to login (keeping `next`) ----------
+       Browsing stays public; interactive pages (seat selection, passenger
+       details, payment, confirmation, dashboards) carry the data-auth-*
+       attributes and are redirected here when the session is missing.
+       The `?next=` parameter returns the user to the exact page they
+       wanted after they sign in or create a passenger account. */
     function enforcePageGuard() {
         var body = document.body;
         if (!body) { return; }
@@ -628,17 +670,8 @@
         var requiredRole = body.getAttribute('data-auth-role') || '';
         var requiresApprovedCompany = body.getAttribute('data-auth-company-approved') === '1';
         var guestOnly = body.getAttribute('data-auth-guest-only') === '1';
-        var bookingContextOnly = body.getAttribute('data-auth-booking-context') === '1';
 
-        if (!requiresAuth && !requiredRole && !requiresApprovedCompany && !guestOnly && !bookingContextOnly) {
-            return;
-        }
-
-        /* Hybrid passenger page: an active mock booking flow (guest) is allowed
-           without authentication so the unauthenticated flow keeps working. The
-           page is still protected when opened bare (no trip context). */
-        if (bookingContextOnly && hasBookingContext()) {
-            fillIdentity();
+        if (!requiresAuth && !requiredRole && !requiresApprovedCompany && !guestOnly) {
             return;
         }
 
@@ -653,7 +686,7 @@
             }
 
             if (requiresAuth && !isAuthenticated) {
-                window.location.href = 'login.html';
+                window.location.href = loginUrl();
                 return;
             }
 
@@ -668,14 +701,31 @@
 
             if (requiresApprovedCompany) {
                 if (user.role !== 'company' || user.companyStatus !== 'approved' || user.status !== 'active') {
-                    window.location.href = 'login.html';
+                    window.location.href = loginUrl();
                 }
             }
         }).catch(function () {
             if (requiresAuth) {
-                window.location.href = 'login.html';
+                window.location.href = loginUrl();
             }
         });
+    }
+
+    /* Keep the `next` booking target when moving between the Login and
+       Register pages, so a guest who lands on either page is never sent
+       back to the homepage after signing up. */
+    function bindAuthCrossLinks() {
+        var next = safeNext();
+        if (!next) { return; }
+
+        var toRegister = document.getElementById('auth-goto-register');
+        if (toRegister) {
+            toRegister.href = 'register.html?next=' + encodeURIComponent(next);
+        }
+        var toLogin = document.getElementById('auth-goto-login');
+        if (toLogin) {
+            toLogin.href = 'login.html?next=' + encodeURIComponent(next);
+        }
     }
 
     window.ETAuth = {
@@ -697,6 +747,7 @@
         bindRegisterForm();
         bindLogoutButtons();
         bindNavbar();
+        bindAuthCrossLinks();
         fillIdentity();
         enforcePageGuard();
     });

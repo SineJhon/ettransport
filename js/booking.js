@@ -347,5 +347,85 @@
 
     // Seed initial summary
     updateSummary();
+
+    /* ============================================================
+       Booking guard — seat selection is the first interactive booking
+       step. Guests (and non-passenger accounts) may browse trips,
+       prices and company details freely, but they are asked to log in
+       or register right before choosing seats. The prompt links keep
+       this exact page in ?next= so the flow continues seamlessly.
+       ============================================================ */
+    var bookingLayout = document.getElementById('booking-layout');
+    var authGate = document.getElementById('booking-auth-gate');
+    var gateLogin = document.getElementById('booking-gate-login');
+    var gateRegister = document.getElementById('booking-gate-register');
+    var gateSwitch = document.getElementById('booking-gate-switch');
+    var gateNote = document.getElementById('booking-gate-note');
+
+    /* Same-site target that brings the user back here after signing in. */
+    function gateNextUrl() {
+        try {
+            return window.location.pathname + window.location.search;
+        } catch (e) { return 'booking.html' + window.location.search; }
+    }
+
+    function showBookingGate() {
+        if (bookingLayout) { bookingLayout.hidden = true; }
+        if (authGate) {
+            authGate.hidden = false;
+            var next = encodeURIComponent(gateNextUrl());
+            if (gateLogin) { gateLogin.href = 'login.html?next=' + next; }
+            if (gateRegister) { gateRegister.href = 'register.html?next=' + next; }
+        }
+    }
+
+    function showBookingLayout() {
+        if (authGate) { authGate.hidden = true; }
+        if (bookingLayout) { bookingLayout.hidden = false; }
+    }
+
+    (function () {
+        if (!window.ETAuth || !window.ETAuth.getCurrentUser) {
+            /* Auth layer unavailable — keep the page fail-closed on the gate. */
+            showBookingGate();
+            return;
+        }
+        window.ETAuth.getCurrentUser().then(function (user) {
+            if (user && user.role === 'passenger') {
+                showBookingLayout();
+                return;
+            }
+
+            /* Guest — ask for login / registration right before seat selection. */
+            if (user && user.role !== 'passenger') {
+                if (gateNote) {
+                    gateNote.textContent = 'You are signed in as ' + (user.role || 'this account') +
+                        ' (' + (user.name || user.email || '') + '). Only passenger accounts can book trips.';
+                    gateNote.hidden = false;
+                }
+                if (gateSwitch) { gateSwitch.hidden = false; }
+            } else if (gateNote) {
+                gateNote.hidden = true;
+            }
+            showBookingGate();
+        }).catch(function () {
+            /* Could not verify the session — stay on the gate. */
+            showBookingGate();
+        });
+    })();
+
+    if (gateSwitch) {
+        gateSwitch.addEventListener('click', function (e) {
+            e.preventDefault();
+            var next = encodeURIComponent(gateNextUrl());
+            if (window.ETAuth && window.ETAuth.logout) {
+                window.ETAuth.logout().finally(function () {
+                    window.location.href = 'login.html?next=' + next;
+                });
+            } else {
+                window.location.href = 'login.html?next=' + next;
+            }
+        });
+    }
 })();
 

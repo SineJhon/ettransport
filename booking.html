@@ -42,7 +42,35 @@
 
         <h1 class="page-title">Choose Your Seats</h1>
 
-        <div class="booking-layout">
+        <!-- ============================================
+             Auth gate — seat selection is the first interactive
+             booking step. Guests may freely browse trips, prices
+             and company details, but choosing seats requires a
+             passenger account. The Login / Register buttons carry
+             this exact page in ?next= so the user returns here
+             right after signing in or creating an account.
+             ============================================ -->
+        <div id="booking-auth-gate" class="card booking-auth-gate" hidden>
+            <div class="booking-gate-icon" aria-hidden="true">&#128274;</div>
+            <h2 class="booking-gate-title">Log in to choose your seats</h2>
+            <p class="booking-gate-text">
+                Searching trips, comparing prices and reading company details is
+                free for everyone. Picking seats starts a real booking, so it
+                needs a passenger account &mdash; your tickets, reviews and
+                favourites will all stay with you.
+            </p>
+            <p id="booking-gate-note" class="booking-gate-note" hidden></p>
+            <div class="booking-gate-actions">
+                <a id="booking-gate-login" class="btn btn-primary" href="login.html">Login</a>
+                <a id="booking-gate-register" class="btn btn-secondary" href="register.html">Create Account</a>
+            </div>
+            <a id="booking-gate-switch" class="booking-gate-switch" href="#" hidden>Signed in with a different account &rarr; use a passenger account</a>
+            <p class="booking-gate-back">
+                <a href="search.html" class="back-link">&larr; Back to search results</a>
+            </p>
+        </div>
+
+        <div id="booking-layout" class="booking-layout" hidden>
 
             <!-- ============ Seat panel ============ -->
             <section class="seat-panel">
