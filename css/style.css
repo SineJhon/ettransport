@@ -2832,30 +2832,6 @@ body.about .about-developer-card .about-credit {
     padding-top: 0.5rem;
 }
 
-/* ---------- Developed by (small credits) ---------- */
-body.about .about-team-section {
-    padding: var(--space-md) 0;
-}
-body.about .about-team-section .section-title {
-    font-size: 1.35rem;
-    margin-bottom: 0.75rem;
-}
-body.about .about-team-list {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.65rem;
-    margin-bottom: 0.75rem;
-}
-body.about .about-team-list .amenity-chip {
-    padding: 0.5rem 1rem;
-    font-size: 0.9rem;
-}
-body.about .about-team-list .amenity-icon {
-    width: 24px;
-    height: 24px;
-    font-size: 0.72rem;
-}
 body.about .about-credit {
     display: block;
     text-align: center;
@@ -2924,73 +2900,6 @@ body.about .about-contact-value {
 body.about .about-contact-copy a:hover {
     color: var(--color-primary);
     text-decoration: underline;
-}
-
-/* ---------- Closing call-to-action panel ---------- */
-body.about .about-cta {
-    text-align: center;
-    padding: var(--space-lg) var(--space-md);
-    background: linear-gradient(135deg, #f7faf8, #edf4ea);
-    border: 1px solid #dde9dd;
-    border-radius: 20px;
-    margin: var(--space-lg) 0;
-}
-body.about .about-cta h2 {
-    margin-bottom: 0.6rem;
-    font-size: clamp(1.5rem, 3vw, 1.9rem);
-}
-body.about .about-cta .section-subtitle {
-    margin-bottom: 1.25rem;
-}
-body.about .about-cta-actions {
-    display: flex;
-    gap: 0.75rem;
-    justify-content: center;
-    flex-wrap: wrap;
-}
-
-/* ---------- Consistent card polish (How It Works, Routes, Contact) ---------- */
-/* How It Works — feature cards share the green accent line + matched hover */
-body.about .feature-card {
-    position: relative;
-    overflow: hidden;
-    border-radius: 18px;
-    box-shadow: 0 4px 14px rgba(8, 34, 22, 0.05);
-}
-body.about .feature-card::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 56px;
-    height: 4px;
-    border-radius: 0 0 4px 4px;
-    background: linear-gradient(90deg, var(--color-primary), #2fa878);
-    opacity: 0;
-    transition: opacity 0.2s ease, width 0.2s ease;
-}
-body.about .feature-card:hover::before {
-    opacity: 1;
-    width: 72px;
-}
-body.about .feature-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 18px 38px rgba(8, 34, 22, 0.12);
-    border-color: #cfded5;
-}
-
-/* Popular Routes — route cards match the polished card language */
-body.about .route-card {
-    border-radius: 18px;
-    border-color: #e7ede9;
-    padding: 1.4rem 1.25rem;
-    box-shadow: 0 4px 14px rgba(8, 34, 22, 0.05);
-}
-body.about .route-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 18px 38px rgba(8, 34, 22, 0.12);
-    border-color: #cfded5;
 }
 
 /* Contact — cards match the polished card language */
