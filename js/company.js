@@ -605,7 +605,7 @@
         var backTo = getParam('to', '');
         var backDate = getParam('date', isoToday());
         var backPassengers = getParam('passengers', '1');
-        var home = '<a href="index.html#companies">&larr; All Bus Companies</a>';
+        var home = '<a href="companies.html">&larr; All Bus Companies</a>';
         if (backFrom || backTo) {
             var routeFrom = backFrom || 'Addis Ababa';
             var routeTo = backTo || 'Hawassa';
