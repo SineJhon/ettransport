@@ -205,8 +205,7 @@ CREATE TABLE IF NOT EXISTS buses (
   -- There is no luxury/vip class; every coach has A/C, seat chargers and
   -- the standard onboard amenities.
   bus_type ENUM('standard') NOT NULL DEFAULT 'standard',
-  seat_count INT UNSIGNED NOT NULL DEFAULT 51
-    CONSTRAINT chk_buses_seat_count CHECK (seat_count = 51),
+  seat_count INT UNSIGNED NOT NULL DEFAULT 51,
   registration_number VARCHAR(50) DEFAULT NULL,
   status ENUM('active', 'maintenance', 'inactive') NOT NULL DEFAULT 'active',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -215,6 +214,7 @@ CREATE TABLE IF NOT EXISTS buses (
   UNIQUE KEY uq_buses_company_registration (company_id, registration_number),
   KEY idx_buses_company (company_id),
   KEY idx_buses_status (status),
+  CONSTRAINT chk_buses_seat_count CHECK (seat_count = 51),
   CONSTRAINT fk_buses_company
     FOREIGN KEY (company_id) REFERENCES companies(id)
     ON DELETE CASCADE
