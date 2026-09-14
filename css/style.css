@@ -1254,7 +1254,10 @@ ul {
 /* `.booking-layout` sets display:grid above, which would otherwise override
    the hidden attribute — keep gated layouts truly hidden until shown. */
 .booking-layout[hidden],
-.booking-auth-gate[hidden] {
+.booking-auth-gate[hidden],
+#dashboard-ui[hidden],
+#dashboard-head[hidden],
+#dashboard-auth-gate[hidden] {
     display: none;
 }
 
