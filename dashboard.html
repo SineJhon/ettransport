@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Your ET Transport passenger dashboard — upcoming trips, digital tickets, favorites, notifications, booking history and profile. Demo data, no account required.">
+    <meta name="description" content="Your ET Transport passenger dashboard — upcoming trips, digital tickets, favorites, notifications, booking history and profile. Sign in to view your data.">
     <title>Dashboard | ET Transport</title>
-    <link rel="stylesheet" href="css/style.css?v=20260910-statusflow-v1">
+    <link rel="stylesheet" href="css/style.css?v=20260914-guest-gate">
     <link rel="stylesheet" href="css/city-picker.css?v=20260907-swap-fix">
     <link rel="icon" type="image/x-icon" href="assets/icons/favicon.svg">
 <!-- Fonts (DM Sans + Outfit) -->
@@ -42,14 +42,36 @@
     <main class="dashboard-page container">
 
         <!-- ============ Dashboard header ============ -->
-        <section class="dashboard-head" aria-labelledby="dash-title">
+        <section class="dashboard-head" id="dashboard-head" aria-labelledby="dash-title" hidden>
             <p class="search-eyebrow">Passenger Dashboard</p>
             <h1 id="dash-title">Dashboard</h1>
             <p class="dashboard-subtitle">Welcome back, <strong id="dash-greeting">Passenger</strong> &mdash; manage your trips, tickets and account.</p>
-            <p class="demo-note" role="status">Demo experience &mdash; all dashboard data is illustrative and stored only in this browser.</p>
+            <p class="demo-note" role="status">Data is synced from your account &mdash; some illustrative demo records may also appear.</p>
         </section>
 
-        <div class="dashboard-layout">
+        <!-- ============================================
+             Auth gate — the passenger dashboard is account
+             only. Guests get a short login message instead of
+             the dashboard UI; the buttons carry this page in
+             ?next= so they return here right after signing in.
+             ============================================ -->
+        <div id="dashboard-auth-gate" class="card booking-auth-gate" hidden>
+            <div class="booking-gate-icon" aria-hidden="true">&#128274;</div>
+            <h2 class="booking-gate-title">Log in to see your dashboard</h2>
+            <p class="booking-gate-text">
+                Your trips, tickets, reviews and favourites live here &mdash; log in or create a passenger account to view them.
+            </p>
+            <p id="dashboard-gate-note" class="booking-gate-note" hidden></p>
+            <div class="booking-gate-actions">
+                <a id="dashboard-gate-login" class="btn btn-primary" href="login.html">Login</a>
+                <a id="dashboard-gate-register" class="btn btn-secondary" href="register.html">Create Account</a>
+            </div>
+            <p class="booking-gate-back">
+                <a href="index.html" class="back-link">&larr; Back to home</a>
+            </p>
+        </div>
+
+        <div class="dashboard-layout" id="dashboard-ui" hidden>
 
             <!-- ============ Sidebar / section navigation ============ -->
             <nav class="dashboard-sidebar" id="dashboard-sidebar" aria-label="Dashboard sections">
@@ -506,12 +528,12 @@
 
     <!-- Scripts: shared nav/data first, then the dashboard app -->
     <script src="js/main.js"></script>
-        <script src="js/auth.js"></script>
+        <script src="js/auth.js?v=20260914-guest-gate"></script>
     <script src="js/notifications.js"></script>
     <script src="js/data.js"></script>
     <script src="js/cities.js"></script>
     <script src="js/city-picker.js?v=20260907-swap-fix-3-dispatch"></script>
     <script src="js/company.js"></script>
-    <script src="js/dashboard.js?v=20260910-statusflow-v1"></script>
+    <script src="js/dashboard.js?v=20260914-guest-gate"></script>
 </body>
 </html>

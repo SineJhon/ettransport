@@ -2588,9 +2588,70 @@ var supportForm = document.getElementById('support-form');
         showSection(hash);
     }
 
+    /* ============================================================
+       Dashboard gate — the passenger dashboard is account-only.
+       A guest (or a non-passenger account) gets a short login
+       message with Login / Create Account links instead of the
+       dashboard UI, which only runs for a signed-in passenger.
+       ============================================================ */
+    var dashHead = document.getElementById('dashboard-head');
+    var dashUI = document.getElementById('dashboard-ui');
+    var dashGate = document.getElementById('dashboard-auth-gate');
+    var dashGateLogin = document.getElementById('dashboard-gate-login');
+    var dashGateRegister = document.getElementById('dashboard-gate-register');
+    var dashGateNote = document.getElementById('dashboard-gate-note');
+
+    /* Same-site target: brings the user back to this exact page after login. */
+    function dashGateNext() {
+        try {
+            return encodeURIComponent(window.location.pathname + window.location.search);
+        } catch (e) { return 'dashboard.html'; }
+    }
+
+    function showDashboardGate(user) {
+        if (dashHead) { dashHead.hidden = true; }
+        if (dashUI) { dashUI.hidden = true; }
+        if (dashGate) {
+            dashGate.hidden = false;
+            if (dashGateLogin) { dashGateLogin.href = 'login.html?next=' + dashGateNext(); }
+            if (dashGateRegister) { dashGateRegister.href = 'register.html?next=' + dashGateNext(); }
+        }
+        if (dashGateNote && user && user.role !== 'passenger') {
+            dashGateNote.textContent = 'Only passenger accounts have a dashboard.';
+            dashGateNote.hidden = false;
+        } else if (dashGateNote) {
+            dashGateNote.hidden = true;
+        }
+    }
+
+    function revealDashboard() {
+        if (dashGate) { dashGate.hidden = true; }
+        if (dashHead) { dashHead.hidden = false; }
+        if (dashUI) { dashUI.hidden = false; }
+    }
+
+    function start() {
+        if (!window.ETAuth || !window.ETAuth.getCurrentUser) {
+            /* Auth layer unavailable — keep the page fail-closed on the gate. */
+            showDashboardGate(null);
+            return;
+        }
+        window.ETAuth.getCurrentUser().then(function (user) {
+            if (user && user.role === 'passenger') {
+                revealDashboard();
+                init();
+            } else {
+                showDashboardGate(user);
+            }
+        }).catch(function () {
+            /* Could not verify the session — show the login message. */
+            showDashboardGate(null);
+        });
+    }
+
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
+        document.addEventListener('DOMContentLoaded', start);
     } else {
-        init();
+        start();
     }
 })();
