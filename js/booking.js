@@ -359,7 +359,6 @@
     var authGate = document.getElementById('booking-auth-gate');
     var gateLogin = document.getElementById('booking-gate-login');
     var gateRegister = document.getElementById('booking-gate-register');
-    var gateSwitch = document.getElementById('booking-gate-switch');
     var gateNote = document.getElementById('booking-gate-note');
 
     /* Same-site target that brings the user back here after signing in. */
@@ -399,11 +398,9 @@
             /* Guest — ask for login / registration right before seat selection. */
             if (user && user.role !== 'passenger') {
                 if (gateNote) {
-                    gateNote.textContent = 'You are signed in as ' + (user.role || 'this account') +
-                        ' (' + (user.name || user.email || '') + '). Only passenger accounts can book trips.';
+                    gateNote.textContent = 'Only passenger accounts can book trips.';
                     gateNote.hidden = false;
                 }
-                if (gateSwitch) { gateSwitch.hidden = false; }
             } else if (gateNote) {
                 gateNote.hidden = true;
             }
@@ -413,19 +410,5 @@
             showBookingGate();
         });
     })();
-
-    if (gateSwitch) {
-        gateSwitch.addEventListener('click', function (e) {
-            e.preventDefault();
-            var next = encodeURIComponent(gateNextUrl());
-            if (window.ETAuth && window.ETAuth.logout) {
-                window.ETAuth.logout().finally(function () {
-                    window.location.href = 'login.html?next=' + next;
-                });
-            } else {
-                window.location.href = 'login.html?next=' + next;
-            }
-        });
-    }
 })();
 

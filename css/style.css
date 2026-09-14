@@ -1237,15 +1237,6 @@ ul {
     min-width: 12rem;
 }
 
-.booking-gate-switch {
-    display: inline-block;
-    margin: 0 0 0.5rem;
-    font-size: 0.85rem;
-    color: var(--color-primary);
-    text-decoration: underline;
-    cursor: pointer;
-}
-
 .booking-gate-back {
     margin: 0;
     font-size: 0.9rem;
