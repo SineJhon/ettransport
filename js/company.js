@@ -1195,24 +1195,46 @@
         var offices = (c.offices && c.offices.length) ? c.offices : [];
         var html = '';
 
-        /* Company-level phone / email / website (migrated from the Overview). */
+        /* Company-level phone / email / website (migrated from the Overview).
+           Redesigned as a modern grid of clickable icon tiles. */
         var phones = companyPhones(c);
-        var phoneLines = '';
-        for (var p = 0; p < phones.length; p++) {
-            phoneLines += '<p class="contact-line"><span aria-hidden="true">&#128222;</span> <a href="tel:' +
-                phones[p].replace(/\s+/g, '') + '">' + esc(phones[p]) + '</a></p>';
+        var mainTiles = '';
+        for (var tp = 0; tp < phones.length; tp++) {
+            mainTiles += '<a class="cmc-tile cmc-tile-phone" href="tel:' +
+                phones[tp].replace(/\s+/g, '') + '">' +
+                '<span class="cmc-tile-ic" aria-hidden="true">&#128222;</span>' +
+                '<span class="cmc-tile-body">' +
+                    '<span class="cmc-tile-label">' + (tp === 0 ? 'Phone' : 'Line ' + (tp + 1)) + '</span>' +
+                    '<span class="cmc-tile-value">' + esc(phones[tp]) + '</span>' +
+                '</span>' +
+            '</a>';
         }
         if (phones.length || c.email || c.website) {
-            html += '<div class="contact-card contact-card-company">' +
-                '<span class="contact-icon" aria-hidden="true">&#127968;</span>' +
-                '<h3>' + esc(c.name || 'Company') + ' &mdash; Main Contact</h3>' +
-                (c.headOffice ? '<p class="contact-address">' + esc(c.headOffice) + '</p>' : '') +
-                phoneLines +
-                (c.email ? '<p class="contact-line"><span aria-hidden="true">&#9993;</span> <a href="mailto:' + esc(c.email) + '">' + esc(c.email) + '</a></p>' : '') +
-                (c.website ? '<p class="contact-line"><span aria-hidden="true">&#127760;</span> <a href="' + esc(c.website) + '" target="_blank" rel="noopener noreferrer">' + esc(c.website.replace('https://', '')) + '</a></p>' : '') +
-                '<div class="contact-actions">' +
-                    (phones.length ? '<a class="btn btn-call" href="tel:' + phones[0].replace(/\s+/g, '') + '">Call</a>' : '') +
-                    (c.email ? '<a class="btn btn-email" href="mailto:' + esc(c.email) + '">Email</a>' : '') +
+            html += '<div class="contact-card contact-card-company cmc-card">' +
+                '<div class="cmc-head">' +
+                    '<span class="cmc-head-ic" aria-hidden="true">&#127968;</span>' +
+                    '<span class="cmc-head-copy">' +
+                        '<span class="cmc-eyebrow">Main Contact</span>' +
+                        '<h3>' + esc(c.name || 'Company') + '</h3>' +
+                    '</span>' +
+                    (c.headOffice ? '<span class="cmc-address">&#128205; ' + esc(c.headOffice) + '</span>' : '') +
+                '</div>' +
+                '<div class="cmc-grid">' +
+                    mainTiles +
+                    (c.email ? '<a class="cmc-tile cmc-tile-email" href="mailto:' + esc(c.email) + '">' +
+                        '<span class="cmc-tile-ic" aria-hidden="true">&#9993;</span>' +
+                        '<span class="cmc-tile-body">' +
+                            '<span class="cmc-tile-label">Email</span>' +
+                            '<span class="cmc-tile-value">' + esc(c.email) + '</span>' +
+                        '</span>' +
+                    '</a>' : '') +
+                    (c.website ? '<a class="cmc-tile cmc-tile-web" href="' + esc(c.website) + '" target="_blank" rel="noopener noreferrer">' +
+                        '<span class="cmc-tile-ic" aria-hidden="true">&#127760;</span>' +
+                        '<span class="cmc-tile-body">' +
+                            '<span class="cmc-tile-label">Website</span>' +
+                            '<span class="cmc-tile-value">' + esc(c.website.replace('https://', '')) + '</span>' +
+                        '</span>' +
+                    '</a>' : '') +
                 '</div>' +
             '</div>';
         }
