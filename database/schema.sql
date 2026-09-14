@@ -10,7 +10,7 @@
 --   companies ──< buses, trips, parcels
 --   routes ──< trips
 --   trips ──< bookings
---   bookings ──< booking_passengers, payments
+--   bookings ──< booking_passengers, paymentsss
 --   users ──< bookings, reviews, notifications
 --
 -- Passwords are NEVER stored in plain text. They are stored with
