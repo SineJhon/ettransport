@@ -1452,7 +1452,7 @@
                 model: b.model || 'Coach',
                 type: 'Standard',
                 seats: 51,
-                image: busImageFor(bag.slug, b.model),
+                image: b.image || busImageFor(bag.slug, b.model),
                 amenities: ['A/C', 'Charging', 'Luggage'],
                 registration: b.registration_number || '',
                 description: (b.model || 'Coach') + ' — ' + (b.registration_number || 'Active bus')

@@ -177,6 +177,7 @@ function bus_payload(array $row): array
         'bus_type' => $row['bus_type'],
         'seat_count' => (int) $row['seat_count'],
         'status' => $row['status'],
+        'image' => $row['image'] ?? null,
         'created_at' => $row['created_at'],
         'updated_at' => $row['updated_at'],
     ];
@@ -243,7 +244,7 @@ function route_stations_encode(array $stations): ?string
 function fetch_company_buses(PDO $pdo, int $companyId): array
 {
     $stmt = $pdo->prepare('
-        SELECT id, registration_number, name, model, bus_type, seat_count, status, created_at, updated_at
+        SELECT id, registration_number, name, model, bus_type, seat_count, image, status, created_at, updated_at
         FROM buses
         WHERE company_id = :company_id
         ORDER BY id ASC
@@ -322,6 +323,7 @@ function handle_bus_create(PDO $pdo): void
 
     $input = company_input();
 
+    $expectedImage = (string) ($input['bus_image_expected'] ?? '') === '1';
     $name = trim((string) ($input['name'] ?? ''));
     $model = trim((string) ($input['model'] ?? ''));
     $registrationNumber = trim((string) ($input['registration_number'] ?? ''));
@@ -382,6 +384,25 @@ function handle_bus_create(PDO $pdo): void
             ':status' => $status,
         ]);
         $newId = (int) $pdo->lastInsertId();
+
+        /* Optional operator-uploaded photo — stored under the new bus id. */
+        if ($expectedImage && (!isset($_FILES['bus_image']) || ($_FILES['bus_image']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE)) {
+            auth_response(422, [
+                'success' => false,
+                'message' => 'The photo did not upload. Please select the image again and re-save the bus.',
+            ]);
+        }
+        if (isset($_FILES['bus_image']) && ($_FILES['bus_image']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+            $busImage = bus_uploaded_image_or_error($_FILES['bus_image'], $newId);
+            if ($busImage !== null) {
+                $upd = $pdo->prepare('UPDATE buses SET image = :image WHERE id = :id AND company_id = :company_id');
+                $upd->execute([
+                    ':image' => $busImage,
+                    ':id' => $newId,
+                    ':company_id' => (int) $company['id'],
+                ]);
+            }
+        }
     } catch (PDOException $e) {
         if ((int) $e->getCode() === 23000) {
             auth_response(409, [
@@ -393,7 +414,7 @@ function handle_bus_create(PDO $pdo): void
     }
 
     $load = $pdo->prepare('
-        SELECT id, registration_number, name, model, bus_type, seat_count, status, created_at, updated_at
+        SELECT id, registration_number, name, model, bus_type, seat_count, image, status, created_at, updated_at
         FROM buses
         WHERE id = :id
         LIMIT 1');
@@ -431,6 +452,16 @@ function handle_bus_update(PDO $pdo): void
     $hasBusType = has_key($input, 'bus_type') && trim((string) $input['bus_type']) !== '';
     $hasSeatCount = has_key($input, 'seat_count');
     $hasStatus = has_key($input, 'status') && trim((string) $input['status']) !== '';
+    $uploadedImage = bus_uploaded_image_or_error($_FILES['bus_image'] ?? null, $busId);
+    $hasImage = $uploadedImage !== null;
+    $removeImage = (string) ($input['remove_image'] ?? '') === '1';
+    $expectedImage = (string) ($input['bus_image_expected'] ?? '') === '1';
+    if ($expectedImage && $uploadedImage === null) {
+        auth_response(422, [
+            'success' => false,
+            'message' => 'The photo did not upload. Please select the image again and re-save the bus.',
+        ]);
+    }
 
     if ($hasName) {
         $name = trim((string) $input['name']);
@@ -482,7 +513,7 @@ function handle_bus_update(PDO $pdo): void
         }
     }
 
-    if (!$hasName && !$hasModel && !$hasReg && !$hasBusType && !$hasSeatCount && !$hasStatus) {
+    if (!$hasName && !$hasModel && !$hasReg && !$hasBusType && !$hasSeatCount && !$hasStatus && !$hasImage && !$removeImage) {
         auth_response(422, [
             'success' => false,
             'message' => 'At least one field to update is required.',
@@ -499,24 +530,41 @@ function handle_bus_update(PDO $pdo): void
     if ($hasBusType) { $sets[] = 'bus_type = :bus_type'; $params[':bus_type'] = $busType; }
     if ($hasSeatCount) { $sets[] = 'seat_count = :seat_count'; $params[':seat_count'] = $seatCount; }
     if ($hasStatus) { $sets[] = 'status = :status'; $params[':status'] = $status; }
+    if ($hasImage) { $sets[] = 'image = :image'; $params[':image'] = $uploadedImage; }
+    elseif ($removeImage) { $sets[] = 'image = NULL'; }
+
+    /* Check ownership explicitly first. PDO::rowCount() reports the number of
+       rows actually CHANGED by an UPDATE, not the number of rows matched; an
+       update that keeps identical values — or whose optional image upload PHP
+       reports as no-file — would report 0 rows and wrongly look like a 404. */
+    $exists = $pdo->prepare('SELECT id FROM buses WHERE id = :id AND company_id = :company_id LIMIT 1');
+    $exists->execute([':id' => $busId, ':company_id' => (int) $company['id']]);
+    if ($exists->fetch() === false) {
+        /* Either there is no such bus or it belongs to another company.
+           A generic 404 keeps other companies' bus ids private. */
+        auth_response(404, [
+            'success' => false,
+            'message' => 'Bus not found.',
+        ]);
+    }
 
     try {
         $sql = 'UPDATE buses SET ' . implode(', ', $sets)
             . ' WHERE id = :bus_id AND company_id = :company_id';
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
-
-        if ($stmt->rowCount() === 0) {
-            /* Either there is no such bus or it belongs to another company.
-               A generic 404 keeps other companies' bus ids private. */
-            auth_response(404, [
+    } catch (PDOException $e) {
+        if ((int) $e->getCode() === 23000) {
+            auth_response(409, [
                 'success' => false,
-                'message' => 'Bus not found.',
+                'message' => 'A bus with this registration number already exists for your company.',
             ]);
         }
+        throw $e;
+    }
 
-        $load = $pdo->prepare('
-            SELECT id, registration_number, name, model, bus_type, seat_count, status, created_at, updated_at
+    $load = $pdo->prepare('
+            SELECT id, registration_number, name, model, bus_type, seat_count, image, status, created_at, updated_at
             FROM buses
             WHERE id = :id AND company_id = :company_id
             LIMIT 1');
@@ -528,15 +576,6 @@ function handle_bus_update(PDO $pdo): void
             'message' => 'Bus updated.',
             'bus' => $row !== false ? bus_payload($row) : null,
         ]);
-    } catch (PDOException $e) {
-        if ((int) $e->getCode() === 23000) {
-            auth_response(409, [
-                'success' => false,
-                'message' => 'A bus with this registration number already exists for your company.',
-            ]);
-        }
-        throw $e;
-    }
 }
 
 /**
@@ -796,7 +835,7 @@ function company_payload(array $row, array $destinations, array $phones = [], ar
 function fetch_fleet(PDO $pdo, int $companyId): array
 {
     $stmt = $pdo->prepare('
-        SELECT id, name, model, bus_type, seat_count, registration_number, status
+        SELECT id, name, model, bus_type, seat_count, registration_number, image, status
         FROM buses
         WHERE company_id = :company_id AND status = \'active\'
         ORDER BY id ASC
@@ -811,6 +850,7 @@ function fetch_fleet(PDO $pdo, int $companyId): array
             'bus_type' => $row['bus_type'],
             'seat_count' => (int) $row['seat_count'],
             'registration_number' => $row['registration_number'],
+            'image' => $row['image'] ?? null,
         ];
     }
 
@@ -3999,6 +4039,39 @@ function company_uploaded_image_or_error(?array $file, int $companyId, string $k
     }
 
     return 'assets/uploads/companies/' . $filename;
+}
+
+/** Store an owner-uploaded bus image and return its safe public path. */
+function bus_uploaded_image_or_error(?array $file, int $busId): ?string
+{
+    if ($file === null || ($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+        return null;
+    }
+
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file((string) ($file['tmp_name'] ?? ''))) {
+        auth_response(422, ['success' => false, 'message' => 'The image upload could not be completed.']);
+    }
+    if ((int) ($file['size'] ?? 0) < 1 || (int) ($file['size'] ?? 0) > 5 * 1024 * 1024) {
+        auth_response(422, ['success' => false, 'message' => 'Images must be smaller than 5 MB.']);
+    }
+
+    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $mime = $finfo->file((string) $file['tmp_name']);
+    $extensions = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+    if (!isset($extensions[$mime])) {
+        auth_response(422, ['success' => false, 'message' => 'Please upload a PNG, JPEG or WebP image.']);
+    }
+
+    $directory = __DIR__ . '/../assets/uploads/buses';
+    if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
+        auth_response(500, ['success' => false, 'message' => 'Image storage is temporarily unavailable.']);
+    }
+    $filename = 'bus-' . $busId . '-' . bin2hex(random_bytes(12)) . '.' . $extensions[$mime];
+    if (!move_uploaded_file((string) $file['tmp_name'], $directory . '/' . $filename)) {
+        auth_response(500, ['success' => false, 'message' => 'Image storage is temporarily unavailable.']);
+    }
+
+    return 'assets/uploads/buses/' . $filename;
 }
 
 /** GET /api/company.php?action=profile — the authenticated company's own profile. */

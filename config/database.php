@@ -501,6 +501,21 @@ function ensure_schema_columns(PDO $pdo): void
         if ((int) $stmt->fetchColumn() === 0) {
             $pdo->exec("ALTER TABLE buses ADD CONSTRAINT chk_buses_seat_count CHECK (seat_count = 51)");
         }
+
+        /* buses.image — operator-uploaded bus photo shown in the fleet register.
+           Fresh installs already get the column from schema.sql; this adds it to
+           databases created before it existed, so the fleet never breaks. */
+        $stmt = $pdo->prepare(
+            "SELECT COUNT(*)
+               FROM information_schema.columns
+              WHERE table_schema = DATABASE()
+                AND table_name = 'buses'
+                AND column_name = 'image'"
+        );
+        $stmt->execute();
+        if ((int) $stmt->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE buses ADD COLUMN image VARCHAR(255) DEFAULT NULL AFTER registration_number");
+        }
     } catch (Throwable $e) {
         /* Non-fatal on upgrade path — surfaces only if the app cannot query the schema. */
     }

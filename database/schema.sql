@@ -207,6 +207,7 @@ CREATE TABLE IF NOT EXISTS buses (
   bus_type ENUM('standard') NOT NULL DEFAULT 'standard',
   seat_count INT UNSIGNED NOT NULL DEFAULT 51,
   registration_number VARCHAR(50) DEFAULT NULL,
+  image VARCHAR(255) DEFAULT NULL,
   status ENUM('active', 'maintenance', 'inactive') NOT NULL DEFAULT 'active',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

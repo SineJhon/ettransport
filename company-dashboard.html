@@ -687,6 +687,7 @@
         .cd-pane .cd-stat-value { font-size: 1.55rem; }
         .cd-record-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: .45rem; margin: .9rem 0; }.cd-record-meta span { display: block; min-width: 0; padding: .55rem .6rem; color: #547067; background: #f4f8f6; border-radius: 8px; font-size: .73rem; font-weight: 700; }.cd-record-meta b { display: block; overflow: hidden; color: #1d483d; font-size: .84rem; text-overflow: ellipsis; white-space: nowrap; }
         .cd-pane .cd-bus-list, .cd-pane .cd-trip-list { grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 1rem; }.cd-pane .cd-bus-card, .cd-pane .cd-trip-card { padding: 1.1rem; border-top: 4px solid #3aa377; }.cd-pane .cd-trip-card { border-top-color: #4f82b6; }.cd-pane .cd-bus-name, .cd-pane .cd-trip-route { color: #153a31; font-size: 1rem; font-weight: 800; letter-spacing: -.01em; }.cd-pane .cd-bus-actions, .cd-pane .cd-trip-actions { padding-top: .75rem; border-top: 1px solid #e8efeb; }.cd-pane .cd-bus-actions select { flex: 1; min-width: 8.5rem; }
+        .cd-pane .cd-bus-card .cd-bus-image { overflow: hidden; margin-bottom: .85rem; border-radius: 10px; background: #eef5f1; }.cd-pane .cd-bus-card .cd-bus-image img { display: block; width: 100%; height: 150px; object-fit: cover; }
         .cd-trips { border: 0 !important; margin: 0 !important; padding: 0 !important; }.cd-bookings { padding-top: 1.5rem !important; margin-top: 1.5rem !important; }
         .cd-revenue-filters, .cd-bookings-filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .65rem; padding: .85rem; margin: 1rem 0 1.15rem; background: #f2f7f4; border: 1px solid #dce9e1; border-radius: 12px; }.cd-revenue-filters label, .cd-bookings-filters label { align-self: end; margin: 0; font-size: .7rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }.cd-revenue-filters select, .cd-revenue-filters input, .cd-bookings-filters select { width: 100%; min-width: 0; min-height: 2.5rem; margin: 0; background: white; font-weight: 700; }.cd-revenue-filters label { margin-bottom: -.35rem; }.cd-revenue-filters label:nth-of-type(1) { grid-column: 1; grid-row: 1; }.cd-revenue-filters select:nth-of-type(1) { grid-column: 1; grid-row: 2; }.cd-revenue-filters label:nth-of-type(2) { grid-column: 2; grid-row: 1; }.cd-revenue-filters select:nth-of-type(2) { grid-column: 2; grid-row: 2; }.cd-revenue-filters label:nth-of-type(3) { grid-column: 3; grid-row: 1; }.cd-revenue-filters input:nth-of-type(1) { grid-column: 3; grid-row: 2; }.cd-revenue-filters label:nth-of-type(4) { grid-column: 4; grid-row: 1; }.cd-revenue-filters input:nth-of-type(2) { grid-column: 4; grid-row: 2; }
         .cd-bus-modal { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 1rem; background: rgba(8, 31, 25, .58); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }.cd-bus-modal[hidden] { display: none; }.cd-bus-modal-box { width: min(100%, 650px); max-height: min(90vh, 760px); overflow: auto; padding: 1.4rem; background: #fff; border: 1px solid #dfe9e3; border-radius: 18px; box-shadow: 0 25px 70px rgba(5, 26, 20, .28); }.cd-bus-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid #e5ede8; }.cd-bus-modal-head p { margin: .3rem 0 0; color: #647a71; font-size: .85rem; }.cd-bus-modal-close { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; padding: 0; color: #275147; background: #edf5f0; border: 0; border-radius: 50%; cursor: pointer; font-size: 1.25rem; line-height: 1; }.cd-bus-modal .cd-bus-form { display: block; padding: 0; margin: 0; border: 0; }.cd-bus-modal .cd-bus-form h3 { display: none; }.cd-bus-modal .cd-bus-form label { margin-top: .8rem; color: #254a40; font-size: .78rem; font-weight: 800; letter-spacing: .025em; }.cd-bus-modal .cd-bus-form input, .cd-bus-modal .cd-bus-form select { min-height: 2.7rem; background: #fbfdfc; }.cd-bus-modal .cd-bus-form-actions { padding-top: 1rem; margin-top: 1.25rem; border-top: 1px solid #e5ede8; }
@@ -993,27 +994,32 @@
                 <div id="bus-list" class="cd-bus-list" hidden></div>
 
                 <form id="bus-form" class="cd-bus-form" hidden novalidate>
-                    <input type="hidden" id="bus-id">
+                    <input type="hidden" id="bus-id" name="bus_id">
                     <h3 id="bus-form-title">Add Bus</h3>
                     <label for="bus-name">Bus / Fleet Name *</label>
-                    <input type="text" id="bus-name" maxlength="120" placeholder="e.g. Selam Bus Coach 4">
+                    <input type="text" id="bus-name" name="name" maxlength="120" placeholder="e.g. Selam Bus Coach 4">
                     <div class="cd-bus-form-row">
                         <div>
                             <label for="bus-model">Model</label>
-                            <input type="text" id="bus-model" maxlength="120" placeholder="e.g. Scania Touring">
+                            <input type="text" id="bus-model" name="model" maxlength="120" placeholder="e.g. Scania Touring">
                         </div>
                         <div>
                             <label for="bus-reg">Registration Number</label>
-                            <input type="text" id="bus-reg" maxlength="50" placeholder="e.g. ET-SELA04">
+                            <input type="text" id="bus-reg" name="registration_number" maxlength="50" placeholder="e.g. ET-SELA04">
                         </div>
                     </div>
                     <div>
                         <label for="bus-status">Operational Status</label>
-                        <select id="bus-status">
+                        <select id="bus-status" name="status">
                             <option value="active">Active</option>
                             <option value="maintenance">Maintenance</option>
                             <option value="inactive">Inactive</option>
                         </select>
+                    </div>
+                    <div>
+                        <label for="bus-image">Bus Image</label>
+                        <input type="file" id="bus-image" name="bus_image" accept="image/png,image/jpeg,image/webp">
+                        <span class="cd-image-upload-hint">PNG, JPEG or WebP &middot; up to 5 MB</span>
                     </div>
                     <p id="bus-form-error" class="cd-bus-form-error" role="alert"></p>
                     <div class="cd-bus-form-actions">
@@ -2318,6 +2324,6 @@
     <script src="js/auth.js"></script>
     <script src="js/cities.js"></script>
     <script src="js/city-picker.js?v=20260907-swap-fix-3-dispatch"></script>
-    <script src="js/company-dashboard.js?v=20260910-statusflow-v2"></script>
+    <script src="js/company-dashboard.js?v=20260915-bus-photo"></script>
 </body>
 </html>

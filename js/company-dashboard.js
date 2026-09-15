@@ -402,7 +402,8 @@
             var reg = b.registration_number ? escHtml(b.registration_number) : '\u2014';
             /* Platform policy: every bus is a standard 51-seat coach. */
             var busClass = (b.bus_type === 'standard' || !b.bus_type) ? 'Standard' : escHtml(b.bus_type);
-            return '<div class="cd-bus-card" data-bus-id="' + b.id + '">' +
+            var busImg = b.image ? '<div class="cd-bus-image"><img loading="lazy" src="' + escHtml(b.image) + '" alt="' + escHtml(b.name) + '" onerror="var el=this.closest(\'.cd-bus-image\');if(el){el.remove()}"></div>' : '';
+            return '<div class="cd-bus-card" data-bus-id="' + b.id + '">' + busImg +
                 '<span class="cd-bus-name">' + escHtml(b.name) + '</span>' +
                 '<span class="cd-bus-badge ' + badge + '">' + escHtml(b.status) + '</span>' +
                 '<div class="cd-record-meta"><span>Registration<b>' + reg + '</b></span><span>Class<b>' + busClass + '</b></span><span>Capacity<b>' + b.seat_count + ' seats</b></span></div>' +
@@ -514,24 +515,23 @@
 
     function submitBusForm() {
         var errEl = byId('bus-form-error');
+        var form = byId('bus-form');
         var id = byId('bus-id').value;
-        var payload = {
-            name: byId('bus-name').value.trim(),
-            model: byId('bus-model').value.trim(),
-            registration_number: byId('bus-reg').value.trim(),
-            /* Platform policy: every bus is a standard 51-seat coach. */
-            bus_type: 'standard',
-            seat_count: 51,
-            status: byId('bus-status').value
-        };
-        if (id) { payload.bus_id = id; }
+        /* multipart so the optional bus image upload rides the same request. */
+        var payload = new FormData(form);
+        payload.set('bus_type', 'standard');
+        payload.set('seat_count', '51');
+        if (id) { payload.set('bus_id', id); }
+        var fileInput = byId('bus-image');
+        var hasFile = !!(fileInput && fileInput.files && fileInput.files.length);
+        payload.set('bus_image_expected', hasFile ? '1' : '0');
         var action = id ? 'bus_update' : 'bus_create';
 
         fetch('api/company.php?action=' + action, {
             method: 'POST',
             credentials: 'same-origin',
-            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            headers: { 'Accept': 'application/json' },
+            body: payload
         })
             .then(function (res) {
                 return res.json().catch(function () {
