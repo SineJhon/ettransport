@@ -5812,20 +5812,26 @@ function submitBranchForm() {
         if (!cell || !list) { return; }
 
         if (!parcelRouteTripsCache.length) {
-            cell.hidden = true;
             if (tripCell) { tripCell.hidden = true; }
             list.innerHTML = '';
             var sel = byId('parcel-trip');
             if (sel) { sel.innerHTML = '<option value="">Select trip</option>'; }
-            if (!errMsg && empty) { empty.hidden = true; }
-            else if (empty) {
-                empty.textContent = errMsg;
+            if (empty) {
+                /* Show a friendly notice instead of silently hiding the row —
+                   an empty route otherwise looks like a broken form. */
+                empty.textContent = errMsg || 'No scheduled trips are available for this route yet. You can still register the parcel at the base weight price, or choose different cities.';
+                empty.classList.toggle('cd-parcel-no-trips', !errMsg);
+                empty.classList.toggle('cd-parcel-error-note', !!errMsg);
                 empty.hidden = false;
-                cell.hidden = false;
             }
+            cell.hidden = false;
             return;
         }
 
+        if (empty) {
+            empty.hidden = true;
+            empty.classList.remove('cd-parcel-no-trips', 'cd-parcel-error-note');
+        }
         cell.hidden = false;
         var dates = {};
         for (var i = 0; i < parcelRouteTripsCache.length; i++) { dates[parcelRouteTripsCache[i].departure_date] = true; }
@@ -6165,9 +6171,13 @@ function submitBranchForm() {
         var dateList = byId('parcel-travel-day-list');
         var tripCell = byId('parcel-trip-cell');
         var hasDate = dateList ? dateList.querySelector('.cd-day-btn.active') != null : false;
-        if (dateCell && !dateCell.hidden && !hasDate) {
+        /* A date/trip is only required when the route actually has scheduled
+           trips to choose from — otherwise the parcel can be registered at the
+           base weight price (no trip selected / no date to pick). */
+        var hasRouteTrips = parcelRouteTripsCache.length > 0;
+        if (dateCell && !dateCell.hidden && hasRouteTrips && !hasDate) {
             bad('parcel-travel-date', 'Pick a travel date for your shipment.');
-        } else if (tripCell && !tripCell.hidden && !tripId) {
+        } else if (tripCell && !tripCell.hidden && hasRouteTrips && !tripId) {
             bad('parcel-trip', 'Choose a scheduled trip on that date.');
         }
 
