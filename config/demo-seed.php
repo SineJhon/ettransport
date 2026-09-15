@@ -114,7 +114,6 @@ function et_seed_demo_transport(PDO $pdo): void
        rating, review-count, founded-year, fleet [model, type, seats] */
     $companySpecs = [
 ['selam-bus', 'Selam Bus', 'A trusted name on the Addis Ababa – Mekelle corridor.', 'Selam Bus operates modern long-haul coaches on Ethiopia’s northern corridor, linking Addis Ababa with Mekelle, Bahir Dar and Gondar.', 'Addis Ababa, Autobus Tera', '+251 11 667 8022', 'info@selambus.example.com', 'https://selambus.example.com', 4.7, 1240, 2005, [['Scania Touring', 'standard', 51], ['MAN Lion’s Coach', 'standard', 51], ['Yutong ZK6122H9', 'standard', 51]]],
-        ['sky-bus', 'Sky Bus', 'Everyday departures to the lake cities of the south.', 'Sky Bus runs frequent services from Addis Ababa towards the Rift Valley lakes, serving Hawassa and Arba Minch.', 'Addis Ababa, Addis Ketema', '+251 11 228 4455', 'info@skybus.example.com', 'https://skybus.example.com', 4.5, 862, 2008, [['Higer A90', 'standard', 51], ['Yutong ZK6107H', 'standard', 51]]],
         ['yegna-bus', 'Yegna Bus', 'Comfortable daily services on the Bahir Dar – Gondar corridor.', 'Yegna Bus focuses on dependable daytime departures along the Bahir Dar and Gondar corridor.', 'Addis Ababa, Kazanchis', '+251 11 550 1290', 'info@yegnabus.example.com', 'https://yegnabus.example.com', 4.4, 655, 2012, [['MAN Lion’s Coach', 'standard', 51], ['Golden Dragon XML6125', 'standard', 51]]],
         ['golden-bus', 'Golden Bus', 'Daily commuter and long-haul links to eastern and central towns.', 'Golden Bus connects Addis Ababa with Adama and Dessie with frequent departures.', 'Addis Ababa, Bole', '+251 11 663 7020', 'info@goldenbus.example.com', 'https://goldenbus.example.com', 4.3, 540, 2010, [['Yutong ZK6107H', 'standard', 51], ['King Long XMQ6898', 'standard', 51]]],
         ['zemen-bus', 'Zemen Bus', 'Premier service on the eastern corridor to Dire Dawa, Harar and Jijiga.', 'Zemen Bus runs premium coaches on the eastern corridor from Addis Ababa to Dire Dawa.', 'Addis Ababa, Bole', '+251 11 778 1140', 'info@zemenbus.example.com', 'https://zemenbus.example.com', 4.6, 910, 2009, [['Neoplan Skyliner', 'standard', 51], ['Mercedes-Benz Tourismo', 'standard', 51]]],
@@ -143,10 +142,6 @@ $routes = [
         'selam-bus' => [
             ['Addis Ababa', 'Bahir Dar', '06:30', 'standard', [900, 950, 880]],
             ['Addis Ababa', 'Mekelle', '05:30', 'standard', [1200, 1250, 1180]],
-        ],
-        'sky-bus' => [
-            ['Addis Ababa', 'Hawassa', '07:00', 'standard', [500, 520, 480]],
-            ['Addis Ababa', 'Arba Minch', '08:00', 'standard', [700, 720, 680]],
         ],
         'yegna-bus' => [
             ['Addis Ababa', 'Bahir Dar', '10:30', 'standard', [850, 820, 880]],

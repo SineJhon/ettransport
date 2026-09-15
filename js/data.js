@@ -15,8 +15,6 @@
     var companyTrips = [
         { id: 1001, company: 'Selam Bus', from: 'Addis Ababa', to: 'Bahir Dar', depart: '06:30', arrive: '15:30', minutes: 540, price: 900, rating: 4.8, type: 'Standard', seats: 18, busType: 'Scania Touring', offsetDays: 2 },
         { id: 1002, company: 'Selam Bus', from: 'Addis Ababa', to: 'Mekelle', depart: '05:30', arrive: '18:00', minutes: 750, price: 1200, rating: 4.9, type: 'Standard', seats: 9, busType: 'MAN Lion\u2019s Coach', offsetDays: 4 },
-        { id: 1011, company: 'Sky Bus', from: 'Addis Ababa', to: 'Hawassa', depart: '07:00', arrive: '12:15', minutes: 315, price: 500, rating: 4.5, type: 'Standard', seats: 22, busType: 'Yutong ZK6107H', offsetDays: 1 },
-        { id: 1012, company: 'Sky Bus', from: 'Addis Ababa', to: 'Arba Minch', depart: '08:00', arrive: '16:30', minutes: 510, price: 700, rating: 4.6, type: 'Standard', seats: 12, busType: 'Higer A90', offsetDays: 5 },
         { id: 1021, company: 'Yegna Bus', from: 'Addis Ababa', to: 'Bahir Dar', depart: '10:30', arrive: '19:30', minutes: 540, price: 850, rating: 4.4, type: 'Standard', seats: 25, busType: 'MAN Lion\u2019s Coach', offsetDays: 3 },
         { id: 1022, company: 'Yegna Bus', from: 'Addis Ababa', to: 'Gondar', depart: '06:00', arrive: '18:30', minutes: 750, price: 1050, rating: 4.5, type: 'Standard', seats: 8, busType: 'Golden Dragon XML6125', offsetDays: 6 },
         { id: 1031, company: 'Golden Bus', from: 'Addis Ababa', to: 'Dessie', depart: '08:30', arrive: '15:00', minutes: 390, price: 600, rating: 4.3, type: 'Standard', seats: 20, busType: 'Yutong ZK6107H', offsetDays: 2 },
@@ -47,24 +45,6 @@
                 { name: 'Amanuel T.', rating: 5, when: '2 weeks ago', verified: true, text: 'Very comfortable journey and the bus left on time. The reclining seats made the long drive to Mekelle easy.' },
                 { name: 'Hanna G.', rating: 5, when: '1 month ago', verified: true, text: 'Clean coach, helpful crew and our luggage arrived exactly where it should. My go-to for the north.' },
                 { name: 'Bereket S.', rating: 4, when: '2 months ago', verified: true, text: 'Smooth ride overall. Wi-Fi was a little slow but the seat space made up for it.' }
-            ]
-        },
-        {
-            id: 'sky-bus', name: 'Sky Bus', slug: 'sky-bus', logo: 'assets/images/companies/sky-bus-logo.svg', coverImage: 'assets/images/companies/cover-sky-bus.svg', verified: true, tagline: 'Everyday departures to the lake cities of the south.', description: 'Sky Bus runs frequent services from Addis Ababa towards the Rift Valley lakes, serving Hawassa, Arba Minch and Shashamane. A large everyday schedule makes it an easy choice for quick southern getaways.', rating: 4.5, reviewCount: 862, founded: 2008, headOffice: 'Addis Ababa, Addis Ketema', phone: '+251 11 228 4455', phones: ['+251 11 228 4455', '+251 46 221 7788'], email: 'info@skybus.example.com', website: 'https://skybus.example.com', destinations: ['Hawassa', 'Arba Minch', 'Shashamane', 'Dilla', 'Jinka', 'Adama'], amenities: ['Reclining Seats', 'Headrests', 'AC', 'Entertainment', 'Snacks', 'Wi-Fi'], busCount: 21, fleet: [
-                { model: 'Higer A90', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Reclining Seats', 'Luggage'], description: 'Soft recliners and generous legroom for the longer southern hops.' },
-                { model: 'Yutong ZK6107H', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Luggage', 'Charging'], description: 'The everyday workhorse of the Hawassa corridor.' }
-            ], popularRoutes: [
-                { from: 'Addis Ababa', to: 'Hawassa', price: 500, minutes: 315 },
-                { from: 'Addis Ababa', to: 'Arba Minch', price: 700, minutes: 510 },
-                { from: 'Addis Ababa', to: 'Shashamane', price: 320, minutes: 200 },
-                { from: 'Addis Ababa', to: 'Jinka', price: 900, minutes: 690 }
-            ], offices: [
-                { city: 'Addis Ababa', address: 'Addis Ketema Main Terminal', phone: '+251 11 228 4455', email: 'info@skybus.example.com' },
-                { city: 'Hawassa', address: 'Hawassa Intercity Terminal, Piassa', phone: '+251 46 221 7788', email: 'hawassa@skybus.example.com' }
-            ], reviews: [
-                { name: 'Mahlet D.', rating: 5, when: '1 week ago', verified: true, text: 'Quick and easy booking, and the bus to Hawassa arrived right on schedule.' },
-                { name: 'Yonas K.', rating: 4, when: '3 weeks ago', verified: true, text: 'Good value trip to Arba Minch. Seats are comfortable, boarding was smooth.' },
-                { name: 'Sara M.', rating: 4, when: '1 month ago', verified: true, text: 'Clean bus and friendly driver. We stopped for a quick break which was appreciated.' }
             ]
         },
         {

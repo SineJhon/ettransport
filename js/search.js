@@ -104,7 +104,7 @@
  /* ---------- Shared mock data ----------
        js/company.js is loaded BEFORE this file and exposes the
        canonical company profiles (window.ETTransportCompanies)
-       and the 14 company trips with IDs 1001â€“1071
+       and the 12 company trips
        (window.ETTransportTrips). The 8 legacy trips (IDs 1â€“8)
        are kept here unchanged. Booking/passenger/payment/
        confirmation already resolve every one of these IDs. */
@@ -150,7 +150,7 @@
         return out.length ? out : fallback;
     }
 
-    /* Build the complete searchable dataset: legacy (1â€“8) + company (1001â€“1071). */
+    /* Build the complete searchable dataset: legacy (1â€“8) + company. */
     var allTrips = [];
     var routeTrips = [];
 

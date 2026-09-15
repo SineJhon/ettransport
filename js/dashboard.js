@@ -120,17 +120,6 @@
                 status: 'confirmed', demo: true
             },
             {
-                reference: 'ET-7K2B51',
-                company: 'Sky Bus', companyId: 'sky-bus',
-                from: 'Addis Ababa', to: 'Hawassa',
-                date: isoIn(-12), depart: '07:00', arrive: '12:15', minutes: 315,
-                seats: [4], seatLabel: '4', passengerCount: 1,
-                passengerNames: ['Amanuel Passenger'],
-                total: 500, paymentMethod: 'CBE Birr',
-                busType: 'Yutong ZK6107H', tripType: 'Standard',
-                status: 'confirmed', demo: true
-            },
-            {
                 reference: 'ET-3M9DX7',
                 company: 'Zemen Bus', companyId: 'zemen-bus',
                 from: 'Addis Ababa', to: 'Dire Dawa',
@@ -159,7 +148,7 @@
               message: 'Your departure time has changed for one of your trips.',
               time: '5 days ago', read: true },
             { id: 'demo-5', icon: '&#11088;', title: 'Review Reminder',
-              message: 'How was your trip with Sky Bus? Leave a review.',
+              message: 'How was your trip? Leave a review.',
               time: '12 days ago', read: true }
         ];
     }
