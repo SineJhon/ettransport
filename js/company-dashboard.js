@@ -525,6 +525,11 @@
         var fileInput = byId('bus-image');
         var hasFile = !!(fileInput && fileInput.files && fileInput.files.length);
         payload.set('bus_image_expected', hasFile ? '1' : '0');
+        /* A bus photo is mandatory for a new bus. */
+        if (!id && !hasFile) {
+            if (errEl) { errEl.textContent = 'A bus photo is required. Please choose a PNG, JPEG or WebP image.'; }
+            return;
+        }
         var action = id ? 'bus_update' : 'bus_create';
 
         fetch('api/company.php?action=' + action, {

@@ -369,6 +369,14 @@ function handle_bus_create(PDO $pdo): void
     $seatCount = bus_seat_count_or_error($input);
     $busType = 'standard';
 
+    /* A bus photo is mandatory — every bus must have an image. */
+    if (!isset($_FILES['bus_image']) || ($_FILES['bus_image']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        auth_response(422, [
+            'success' => false,
+            'message' => 'A bus photo is required. Please choose a PNG, JPEG or WebP image.',
+        ]);
+    }
+
     try {
         $ins = $pdo->prepare('
             INSERT INTO buses (company_id, name, model, bus_type, seat_count, registration_number, status)
