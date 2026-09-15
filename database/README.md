@@ -72,7 +72,7 @@ is now only a **fallback**: if you create a database with just the schema part
 development demo data via `config/demo-seed.php`:
 
 - the platform `admin` account
-- demo company accounts (each `owner.<slug>@ettransport.local` with a company profile, buses, routes and a **rolling 14-day trip schedule**)
+- demo company accounts (each `owner.<slug>@ettransport.com` with a company profile, buses, routes and a **rolling 14-day trip schedule**)
 - one real verified review (passenger **Hanna Alem**) with a company reply
 
 The fallback runs automatically only when `companies` is empty, and never
@@ -80,13 +80,18 @@ deletes or overlays anything. `ET_DEMO_SEED` env var modes: `0` disables it;
 `force` re-runs it even against an existing database (idempotent, per-row
 checks — useful for pushing updated demo/real account credentials).
 
-> The demo credentials are **DEVELOPMENT ONLY** and shared publicly:
+> The test credentials below are used for local testing. They are shared in
+> this README on purpose so every device that imports `database/schema.sql`
+> gets the same working logins:
 >
 > | Role | Email | Password |
 > | --- | --- | --- |
-> | Admin | `admin@ettransport.local` | `Admin@EtTransport123` |
-> | Company | `owner.selambus@ettransport.local` (and every other owner.*) | `SeedPass123!` |
+> | Admin | `admin@ettransport.com` | `Admin@121634` |
+> | Company | `owner.selambus@ettransport.com` (and every other `owner.<slug>@ettransport.com`) | `Company@121634` |
+> | Passenger | `hanna.alem@ettransport.com` | `Passenger@121634` |
 >
+> Walk-in/office booking accounts (`walkin-*@ettransport.local`) are
+> auto-generated with random passwords and are not usable for manual login.
 > Change these for anything other than local testing.
 
 > **Production note**: the dev defaults above must always be replaced in a real

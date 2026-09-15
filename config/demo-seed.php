@@ -85,7 +85,7 @@ function et_maybe_seed_demo(): void
 function et_seed_demo_admin(PDO $pdo): void
 {
     $check = $pdo->prepare('SELECT id FROM users WHERE email = :email LIMIT 1');
-    $check->execute([':email' => 'admin@ettransport.local']);
+    $check->execute([':email' => 'admin@ettransport.com']);
     if ($check->fetch()) {
         return;
     }
@@ -96,9 +96,9 @@ function et_seed_demo_admin(PDO $pdo): void
     );
     $stmt->execute([
         ':name' => 'Platform Admin',
-        ':email' => 'admin@ettransport.local',
+        ':email' => 'admin@ettransport.com',
         ':phone' => '+251900000001',
-        ':password_hash' => password_hash('Admin@EtTransport123', PASSWORD_DEFAULT),
+        ':password_hash' => password_hash('Admin@121634', PASSWORD_DEFAULT),
         ':role' => 'admin',
         ':status' => 'active',
     ]);
@@ -188,7 +188,7 @@ $routes = [
             continue;
         }
 
-        $userEmail = 'owner.' . str_replace('-', '', $slug) . '@ettransport.local';
+        $userEmail = 'owner.' . str_replace('-', '', $slug) . '@ettransport.com';
         $selUser->execute([':email' => $userEmail]);
         $matched = $selUser->fetch();
         $userId = $matched['id'] ?? null;
@@ -196,7 +196,7 @@ $routes = [
             $insUser->execute([
                 ':name' => $spec[1] . ' Owner',
                 ':email' => $userEmail,
-                ':password_hash' => password_hash('SeedPass123!', PASSWORD_DEFAULT),
+                ':password_hash' => password_hash('Company@121634', PASSWORD_DEFAULT),
                 ':role' => 'company',
                 ':status' => 'active',
             ]);
@@ -373,7 +373,7 @@ $routes = [
 function et_seed_demo_review(PDO $pdo): void
 {
     /* ---------- 1. passenger ---------- */
-    $email = 'hanna.alem@ettransport.local';
+    $email = 'hanna.alem@ettransport.com';
     $selUser = $pdo->prepare('SELECT id FROM users WHERE email = :email LIMIT 1');
     $selUser->execute([':email' => $email]);
     $user = $selUser->fetch();
@@ -385,7 +385,7 @@ function et_seed_demo_review(PDO $pdo): void
             ':name' => 'Hanna Alem',
             ':email' => $email,
             ':phone' => '+251 91 234 5566',
-            ':password_hash' => password_hash('SeedPass123!', PASSWORD_DEFAULT),
+            ':password_hash' => password_hash('Passenger@121634', PASSWORD_DEFAULT),
             ':role' => 'passenger',
             ':status' => 'active',
         ]);
