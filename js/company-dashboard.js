@@ -3452,13 +3452,12 @@
         var office = bd.office || {};
         var parcels = bd.parcels || {};
 
-        setRevStat('cd-rev-ov-bookings', String(total.bookings == null ? 0 : total.bookings));
-        setRevStat('cd-rev-ov-online', String(online.bookings == null ? 0 : online.bookings));
-        setRevStat('cd-rev-ov-office', String(office.bookings == null ? 0 : office.bookings));
-        setRevStat('cd-rev-ov-parcels', String(parcels.bookings == null ? 0 : parcels.bookings));
-        setRevStat('cd-rev-ov-paid', formatMoney(total.paid));
-        setRevStat('cd-rev-ov-refunds', formatMoney(total.refunds));
-        setRevStat('cd-rev-ov-net', formatMoney(total.net));
+        setRevStat('cd-rev-ov-online-paid', 'ETB ' + formatMoney(online.paid));
+        setRevStat('cd-rev-ov-office-paid', 'ETB ' + formatMoney(office.paid));
+        setRevStat('cd-rev-ov-parcels-paid', 'ETB ' + formatMoney(parcels.paid));
+        setRevStat('cd-rev-ov-paid', 'ETB ' + formatMoney(total.paid));
+        setRevStat('cd-rev-ov-refunds', 'ETB ' + formatMoney(total.refunds));
+        setRevStat('cd-rev-ov-net', 'ETB ' + formatMoney(total.net));
 
         var label = byId('cd-revenue-overview-period-label');
         if (label) { label.textContent = (data.period && data.period.label) || 'All time'; }
@@ -3543,33 +3542,6 @@
 
     var paymentsRequestId = 0;   // discards responses from superseded payment requests
 
-    function renderInlineRevenueSummary(data) {
-        var bd = (data && data.breakdown) || {};
-        var online = bd.online || {}, office = bd.office || {}, parcels = bd.parcels || {}, total = bd.total || {};
-        setRevStat('cd-rev-inline-online', 'ETB ' + formatMoney(online.paid));
-        setRevStat('cd-rev-inline-office', 'ETB ' + formatMoney(office.paid));
-        setRevStat('cd-rev-inline-parcels', 'ETB ' + formatMoney(parcels.paid));
-        setRevStat('cd-rev-inline-paid', 'ETB ' + formatMoney(total.paid));
-        setRevStat('cd-rev-inline-refunds', 'ETB ' + formatMoney(total.refunds));
-        setRevStat('cd-rev-inline-net', 'ETB ' + formatMoney(total.net));
-        var rows = [['Website bookings', online], ['Office bookings', office], ['Parcels', parcels], ['Total', total]];
-        var body = byId('cd-revenue-inline-rows');
-        if (body) {
-            body.innerHTML = rows.map(function (row, index) {
-                var value = row[1] || {};
-                return '<tr' + (index === rows.length - 1 ? ' class="cd-revenue-overview-total"' : '') + '><td>' + row[0] + '</td><td>' + (value.bookings == null ? 0 : value.bookings) + '</td><td>' + formatMoney(value.paid) + '</td><td>' + formatMoney(value.refunds) + '</td><td>' + formatMoney(value.net) + '</td></tr>';
-            }).join('');
-        }
-        var box = byId('revenue-inline-summary'); if (box) { box.hidden = false; }
-    }
-
-    function loadInlineRevenueSummary() {
-        fetch('api/company.php?action=revenue_breakdown', { method: 'GET', credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
-            .then(function (res) { return res.json().catch(function () { return { success: false }; }).then(function (data) { return { ok: res.ok, data: data }; }); })
-            .then(function (result) { if (result.ok && result.data && result.data.success) { renderInlineRevenueSummary(result.data); } })
-            .catch(function () { /* Payment records stay usable if the summary is temporarily unavailable. */ });
-    }
-
     function loadPayments() {
         var rid = ++paymentsRequestId;
         var sec = byId('company-revenue'); if (sec) { sec.hidden = false; }
@@ -3577,7 +3549,6 @@
         var list = byId('payment-list'); if (list) { list.innerHTML = ''; list.hidden = true; }
         var empty = byId('payment-empty'); if (empty) { empty.hidden = true; }
         var loading = byId('payment-loading'); if (loading) { loading.hidden = false; }
-        loadInlineRevenueSummary();
 
         fetch(paymentsFilterUrl(), {
             method: 'GET',
