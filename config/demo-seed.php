@@ -121,7 +121,6 @@ function et_seed_demo_transport(PDO $pdo): void
         ['odaa-bus', 'ODAA Bus', 'Reliable routes to Jimma, Hawassa and the western belt.', 'ODAA Bus covers fast-growing southern and western routes, delivering value and predictable departures.', 'Addis Ababa, Kolfe', '+251 11 442 9090', 'info@odaa.example.com', 'https://odaa.example.com', 4.4, 610, 2015, [['Yutong ZK6122H9', 'standard', 51], ['Foton AUV BJ6129', 'standard', 51]]],
         ['abay-bus', 'Abay Bus', 'Budget-friendly connections to the north-west.', 'Abay Bus is known for dependable buses on the Addis Ababa – Bahir Dar corridor.', 'Addis Ababa, Megenagna', '+251 11 554 7733', 'info@abaybus.example.com', 'https://abaybus.example.com', 4.2, 420, 2011, [['Yutong ZK6107H', 'standard', 51]]],
         ['ethio-bus', 'Ethio Bus', 'Fast route coverage to the south and lake regions.', 'Ethio Bus serves key southern destinations with focused departures on fast-moving routes to Hawassa.', 'Addis Ababa, Meskel Square', '+251 11 445 8922', 'info@ethiobus.example.com', 'https://ethiobus.example.com', 4.1, 318, 2016, [['King Long XMQ6898', 'standard', 51]]],
-        ['liyu-bus', 'Liyu Bus', 'Executive comfort on the north corridor to Mekelle.', 'Liyu Bus offers premium comfort and regular departures for the Addis Ababa – Mekelle corridor.', 'Addis Ababa, Piassa', '+251 11 990 2133', 'info@liyubus.example.com', 'https://liyubus.example.com', 4.6, 730, 2014, [['Neoplan Skyliner', 'standard', 51]]],
     ];
 $routes = [
         ['Addis Ababa', 'Arba Minch', 510],
@@ -169,9 +168,6 @@ $routes = [
         ],
         'ethio-bus' => [
             ['Addis Ababa', 'Hawassa', '06:15', 'standard', [480, 500, 470]],
-        ],
-        'liyu-bus' => [
-            ['Addis Ababa', 'Mekelle', '20:00', 'standard', [1350, 1400, 1300]],
         ],
     ];
 

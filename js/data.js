@@ -27,7 +27,6 @@
         { id: 1052, company: 'ODAA Bus', from: 'Addis Ababa', to: 'Hawassa', depart: '13:00', arrive: '18:10', minutes: 310, price: 480, rating: 4.3, type: 'Standard', seats: 27, busType: 'Foton AUV BJ6129', offsetDays: 4 },
         { id: 1061, company: 'Abay Bus', from: 'Addis Ababa', to: 'Bahir Dar', depart: '07:00', arrive: '16:00', minutes: 540, price: 880, rating: 4.2, type: 'Standard', seats: 19, busType: 'Yutong ZK6107H', offsetDays: 3 },
         { id: 1071, company: 'Ethio Bus', from: 'Addis Ababa', to: 'Hawassa', depart: '06:15', arrive: '11:20', minutes: 305, price: 480, rating: 4.1, type: 'Standard', seats: 31, busType: 'King Long XMQ6898', offsetDays: 2 },
-        { id: 1081, company: 'Liyu Bus', from: 'Addis Ababa', to: 'Mekelle', depart: '20:00', arrive: '06:30', minutes: 630, price: 1350, rating: 4.6, type: 'Standard', seats: 7, busType: 'Neoplan Skyliner', offsetDays: 3 }
     ];
 
     var companies = [
@@ -165,21 +164,6 @@
             ], reviews: [
                 { name: 'Blen A.', rating: 4, when: '2 weeks ago', verified: true, text: 'Smooth enough for a quick trip to Hawassa. The route was on time and the bus was clean.' },
                 { name: 'Tinsae G.', rating: 4, when: '1 month ago', verified: true, text: 'Travel time was reasonable and the fare was good value.' }
-            ]
-        },
-        {
-            id: 'liyu-bus', name: 'Liyu Bus', slug: 'liyu-bus', logo: 'assets/images/companies/liyu-bus-logo.svg', coverImage: 'assets/images/companies/cover-liyu-bus.svg', verified: true, tagline: 'Executive comfort on the north corridor to Mekelle.', description: 'Liyu Bus offers premium comfort and regular departures for the Addis Ababa – Mekelle corridor, focusing on travelers wanting more space and a polished service.', rating: 4.6, reviewCount: 730, founded: 2014, headOffice: 'Addis Ababa, Piassa', phone: '+251 11 990 2133', phones: ['+251 11 990 2133', '+251 34 556 1099'], email: 'info@liyubus.example.com', website: 'https://liyubus.example.com', destinations: ['Mekelle', 'Axum', 'Shire'], amenities: ['Reclining Seats', 'Headrests', 'Arm Support', 'AC', 'Entertainment', 'Snacks', 'Water', 'Wi-Fi', 'Luggage Space', 'Multiple Pickup'], busCount: 13, fleet: [
-                { model: 'Neoplan Skyliner', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Wi-Fi', 'Charging'], description: 'Executive coach with extra legroom and premium services for northbound travelers.' }
-            ], popularRoutes: [
-                { from: 'Addis Ababa', to: 'Mekelle', price: 1350, minutes: 630 },
-                { from: 'Addis Ababa', to: 'Axum', price: 1500, minutes: 760 },
-                { from: 'Addis Ababa', to: 'Shire', price: 1420, minutes: 710 }
-            ], offices: [
-                { city: 'Addis Ababa', address: 'Piassa Terminal', phone: '+251 11 990 2133', email: 'info@liyubus.example.com' },
-                { city: 'Mekelle', address: 'Mekelle Intercity Station', phone: '+251 34 556 1099', email: 'mekelle@liyubus.example.com' }
-            ], reviews: [
-                { name: 'Mekdes T.', rating: 5, when: '1 week ago', verified: true, text: 'The seat layout was excellent and the bus to Mekelle felt very premium.' },
-                { name: 'Abel K.', rating: 4, when: '1 month ago', verified: true, text: 'Good service, good comfort and very smooth ride north.' }
             ]
         }
     ];

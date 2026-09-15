@@ -130,7 +130,6 @@
         { id: 1052, company: 'ODAA Bus', from: 'Addis Ababa', to: 'Hawassa', depart: '13:00', arrive: '18:10', minutes: 310, price: 480, rating: 4.3, type: 'Standard', seats: 27, busType: 'Foton AUV BJ6129', offsetDays: 4 },
         { id: 1061, company: 'Abay Bus', from: 'Addis Ababa', to: 'Bahir Dar', depart: '07:00', arrive: '16:00', minutes: 540, price: 880, rating: 4.2, type: 'Standard', seats: 19, busType: 'Yutong ZK6107H', offsetDays: 3 },
         { id: 1071, company: 'Ethio Bus', from: 'Addis Ababa', to: 'Hawassa', depart: '06:15', arrive: '11:20', minutes: 305, price: 480, rating: 4.1, type: 'Standard', seats: 31, busType: 'King Long XMQ6898', offsetDays: 2 },
-        { id: 1081, company: 'Liyu Bus', from: 'Addis Ababa', to: 'Mekelle', depart: '20:00', arrive: '06:30', minutes: 630, price: 1350, rating: 4.6, type: 'Standard', seats: 7, busType: 'Neoplan Skyliner', offsetDays: 3 }
     ];
 
     /* ---------- Mock company profiles (illustrative sample data) ---------- */
@@ -443,45 +442,6 @@
                 { name: 'Biniyam M.', rating: 4, when: '3 weeks ago', verified: true, text: 'Good value for the short trip to Adama. Simple and on schedule.' }
             ]
         },
-        {
-            id: 'liyu-bus',
-            name: 'Liyu Bus',
-            slug: 'liyu-bus',
-            logo: 'assets/images/companies/liyu-bus-logo.svg',
-            coverImage: 'assets/images/companies/cover-liyu-bus.svg',
-            verified: true,
-            tagline: 'Comfortable overnight and express travel.',
-            description: 'Liyu Bus focuses on premium and overnight express services, with modern coaches and generous comfort so every passenger travels relaxed.',
-            rating: 4.5,
-            reviewCount: 522,
-            founded: 2017,
-            headOffice: 'Addis Ababa, Bole Medhanealem',
-            phone: '+251 11 662 1170',
-            email: 'info@liyubus.example.com',
-            website: 'https://liyubus.example.com',
-            destinations: ['Mekelle', 'Gondar', 'Bahir Dar', 'Hawassa'],
-            amenities: ['Reclining Seats', 'Headrests', 'Arm Support', 'AC', 'Entertainment', 'Snacks', 'Water', 'Wi-Fi', 'Luggage Space', 'Multiple Pickup'],
-            busCount: 11,
-            fleet: [
-                { model: 'Neoplan Skyliner', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Wi-Fi', 'Charging', 'Meals'], description: 'Signature coach for overnight routes.' },
-                { model: 'Mercedes-Benz Tourismo', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Reclining Seats', 'Entertainment'], description: 'Quiet, premium coach with full relaxation seating.' },
-                { model: 'Higer A90', type: 'Standard', seats: 51, image: 'assets/images/buses/bus-standard.svg', amenities: ['A/C', 'Charging', 'Luggage'], description: 'Comfortable coach on daytime express runs.' }
-            ],
-            popularRoutes: [
-                { from: 'Addis Ababa', to: 'Mekelle', price: 1350, minutes: 630 },
-                { from: 'Addis Ababa', to: 'Gondar', price: 1150, minutes: 720 },
-                { from: 'Addis Ababa', to: 'Bahir Dar', price: 950, minutes: 510 },
-                { from: 'Addis Ababa', to: 'Hawassa', price: 550, minutes: 300 }
-            ],
-            offices: [
-                { city: 'Addis Ababa', address: 'Bole Medhanealem, behind the church', phone: '+251 11 662 1170', email: 'info@liyubus.example.com' },
-                { city: 'Mekelle', address: 'Mekelle Main Bus Station, Hawelti', phone: '+251 34 440 2233', email: 'mekelle@liyubus.example.com' }
-            ],
-            reviews: [
-                { name: 'Rediet A.', rating: 5, when: '1 week ago', verified: true, text: 'Easily the most comfortable overnight bus I have travelled on in Ethiopia.' },
-                { name: 'Natnael D.', rating: 5, when: '2 weeks ago', verified: true, text: 'Smooth booking and a genuinely premium coach. Worth every birr.' }
-            ]
-        }
     ];
 
     /* ---------- Link builders into the existing ET Transport flow ---------- */
@@ -1696,8 +1656,8 @@ function showCompanyError(mode, slug, apiMessage) {
        The company directory page (companies.html) and the enhanced
        search page (search.html) reuse this same in-memory data by
        loading js/company.js BEFORE their own script. This avoids a
-       full refactor while keeping one canonical source for the 15
-       company trips (IDs 1001–1081) and the 9 company profiles.
+       full refactor while keeping one canonical source for the 14
+       company trips (IDs 1001–1071) and the 8 company profiles.
        ------------------------------------------------------------ */
     window.ETTransportCompanies = companies;
     window.ETTransportTrips = ET_TRIPS;
