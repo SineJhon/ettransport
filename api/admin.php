@@ -1713,6 +1713,7 @@ function admin_complaint_payload(array $row, array $responses = []): array
         'id' => (int) $row['id'],
         'company_id' => isset($row['company_id']) && $row['company_id'] !== null ? (int) $row['company_id'] : null,
         'company_name' => $row['company_name'] ?? '',
+        'company_logo' => $row['company_logo'] ?? null,
         'target' => ($row['target'] ?? 'company') === 'platform' ? 'platform' : 'company',
         'passenger_id' => isset($row['passenger_id']) && $row['passenger_id'] !== null ? (int) $row['passenger_id'] : null,
         'passenger_name' => $row['passenger_name'] ?? '',
@@ -1737,6 +1738,7 @@ function admin_fetch_complaint_rows(PDO $pdo, ?string $status = null, ?string $t
                c.created_at, c.updated_at,
                u.name AS passenger_name,
                co.name AS company_name,
+               co.logo AS company_logo,
                b.booking_reference,
                CONCAT(r.from_city, ' → ', r.to_city) AS route,
                t.departure_date, t.departure_time

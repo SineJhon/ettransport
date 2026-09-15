@@ -167,6 +167,19 @@ $routes = [
     ];
 
     /* ---------- 1. companies + owner company user accounts ---------- */
+    /* Demo companies use the same uploaded profile photos that live in the
+       database snapshot (assets/uploads/companies/) so their public profile
+       picture and admin avatar match Selam Bus. The SVG monograms remain the
+       fallback for slugs without a real photo. */
+    $companyPhoto = [
+        'selam-bus'  => ['assets/uploads/companies/company-136-logo-fac0dbe69c1fc0d0c2580a48.webp', 'assets/uploads/companies/company-136-cover-94980b91e3da6feb44860bf4.webp'],
+        'yegna-bus'  => ['assets/uploads/companies/company-138-logo-5842bf95c9e3e312f673bdb2.webp', 'assets/uploads/companies/company-138-cover-070bb62c126a5d0a805649c0.webp'],
+        'golden-bus' => ['assets/uploads/companies/company-139-logo-827e0a67c668814ed9f09bf2.webp', 'assets/uploads/companies/company-139-cover-8998512af93091632ee0412a.webp'],
+        'zemen-bus'  => ['assets/uploads/companies/company-140-logo-0ce3a3963555e43d3d9f8c92.webp', 'assets/uploads/companies/company-140-cover-743da061d85d692317e7c8ef.webp'],
+        'odaa-bus'   => ['assets/uploads/companies/company-141-logo-f1006b0b174e3549a042f583.webp', 'assets/uploads/companies/company-141-cover-2e8362e5bc6b38c6f90e63a3.webp'],
+        'abay-bus'   => ['assets/uploads/companies/company-142-logo-404aac68160d28e1406dcdb2.webp', 'assets/uploads/companies/company-142-cover-5051e70c622f71c1b3178218.webp'],
+        'ethio-bus'  => ['assets/uploads/companies/company-143-logo-81c9a40874675bddce5dbc4c.webp', 'assets/uploads/companies/company-143-cover-2c4779044ba3af3ac3e8ca7f.webp'],
+    ];
     $selUser = $pdo->prepare('SELECT id FROM users WHERE email = :email LIMIT 1');
     $insUser = $pdo->prepare('INSERT INTO users (name, email, password_hash, role, status) VALUES (:name, :email, :password_hash, :role, :status)');
     $selComp = $pdo->prepare('SELECT id FROM companies WHERE slug = :slug LIMIT 1');
@@ -195,13 +208,14 @@ $routes = [
         }
 
         $tagDesc = $spec[2] . "\n\n" . $spec[3];
+        $photo = $companyPhoto[$slug] ?? [];
         $insComp->execute([
             ':user_id' => $userId,
             ':name' => $spec[1],
             ':slug' => $slug,
             ':description' => $tagDesc,
-            ':logo' => 'assets/images/companies/' . $slug . '-logo.svg',
-            ':cover_image' => 'assets/images/companies/cover-' . $slug . '.svg',
+            ':logo' => $photo[0] ?? ('assets/images/companies/' . $slug . '-logo.svg'),
+            ':cover_image' => $photo[1] ?? ('assets/images/companies/cover-' . $slug . '.svg'),
             ':phone' => $spec[5],
             ':email' => $spec[6],
             ':address' => $spec[4],

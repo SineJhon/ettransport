@@ -44,6 +44,18 @@
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;');
     }
+/* Company profile picture for the admin workspace. The public company
+       profile (company.html) shows companies.logo as its profile picture;
+       the admin dashboard uses that EXACT image everywhere a company is
+       listed, and falls back to a deterministic initials tile when the
+       company has not uploaded a logo yet so no row ever looks empty. */
+    function companyAvatarMarkup(c) {
+        var logo = c && c.logo;
+        if (logo) {
+            return '<img class="ad-co-logo" src="' + escHtml(logo) + '" alt="">';
+        }
+        return '<span class="ad-co-avatar" aria-hidden="true">' + escHtml(avatarInitials(c && c.name)) + '</span>';
+    }
 
     function formatMoney(value) {
         var num = Number(value);
@@ -251,7 +263,7 @@
             return '<tr data-company-id="' + c.id + '" data-status="' + escHtml(bucket) + '">' +
                 '<td>' +
                     '<div class="ad-co-name">' +
-                        (c.logo ? '<img class="ad-co-logo" src="' + escHtml(c.logo) + '" alt="">' : '') +
+                        companyAvatarMarkup(c) +
                         '<span>' + escHtml(c.name) + '</span>' +
                     '</div>' +
                     '<span class="ad-co-slug">@' + escHtml(c.slug) + '</span>' +
@@ -378,6 +390,15 @@ function renderDetail(c) {
                 hide(logo);
             }
         }
+        var detailAvatar = byId('ad-detail-avatar');
+        if (detailAvatar) {
+            if (c.logo) {
+                hide(detailAvatar);
+            } else {
+                detailAvatar.textContent = avatarInitials(c.name);
+                show(detailAvatar);
+            }
+        }
 
         setText('ad-detail-owner', c.owner_name || '\u2014');
         setText('ad-detail-email', c.owner_email || '\u2014');
@@ -490,6 +511,15 @@ function renderDetail(c) {
             } else {
                 logo.removeAttribute('src');
                 hide(logo);
+            }
+        }
+        var manageAvatar = byId('ad-manage-avatar');
+        if (manageAvatar) {
+            if (c.logo) {
+                hide(manageAvatar);
+            } else {
+                manageAvatar.textContent = avatarInitials(c.name);
+                show(manageAvatar);
             }
         }
 
@@ -1400,7 +1430,7 @@ function renderDetail(c) {
         hide(empty);
         var html = '';
         list.forEach(function (c) {
-            var logo = c.logo ? '<img class="ad-co-logo" src="' + escHtml(c.logo) + '" alt="">' : '';
+            var logo = companyAvatarMarkup(c);
             html += '<tr>' +
                 '<td><span class="ad-co-name">' + logo + escHtml(c.name) + '</span><span class="ad-co-slug">@' + escHtml(c.slug || '') + '</span></td>' +
                 '<td><span class="ad-badge ' + badgeClass(c.status) + '">' + escHtml(c.status || '') + '</span></td>' +
@@ -2236,6 +2266,7 @@ function renderDetail(c) {
                 groups[key] = {
                     id: key,
                     name: isPlatform ? 'ET Transport' : (c.company_name || 'Company'),
+                    logo: c.company_logo || '',
                     list: []
                 };
                 order.push(key);
@@ -2262,6 +2293,9 @@ function renderDetail(c) {
         if (adminComplaintFilter !== null && !matched.length) { return ''; }
 
         var initial = String(group.name || '?').trim().charAt(0).toUpperCase() || '?';
+        var avatarHtml = group.logo
+            ? '<img class="ad-complaint-co-logo" src="' + escHtml(group.logo) + '" alt="" loading="lazy">'
+            : '<span class="ad-complaint-co-avatar" aria-hidden="true">' + escHtml(initial) + '</span>';
         var openN = 0; var escN = 0;
         for (var j = 0; j < matched.length; j++) {
             if (matched[j].status === 'open') { openN++; }
@@ -2275,7 +2309,7 @@ function renderDetail(c) {
         }
         return '<article class="ad-complaint-co-card" tabindex="0" role="button" aria-label="Open complaints for ' + escHtml(group.name) + '" data-admin-complaint-company="' + escHtml(group.id) + '">' +
             '<div class="ad-complaint-co-top">' +
-                '<span class="ad-complaint-co-avatar" aria-hidden="true">' + escHtml(initial) + '</span>' +
+                avatarHtml +
                 '<span class="ad-complaint-co-info">' +
                     '<strong>' + escHtml(group.name) + '</strong>' +
                     '<small>' + (isPlatform ? 'Platform complaints' : 'Bus company') + '</small>' +
@@ -2296,13 +2330,16 @@ function renderDetail(c) {
        middle, and the live complaint count on the right. */
     function adminComplaintDetailHeadHtml(group, count, isPlatform) {
         var initial = String(group.name || '?').trim().charAt(0).toUpperCase() || '?';
+        var avatarHtml = group.logo
+            ? '<img class="ad-complaint-co-logo" src="' + escHtml(group.logo) + '" alt="" loading="lazy">'
+            : '<span class="ad-complaint-co-avatar" aria-hidden="true">' + escHtml(initial) + '</span>';
         return '<div class="ad-complaint-detail-head">' +
             '<button type="button" class="ad-complaint-back" data-admin-complaint-back="1">' +
                 '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m11 18-6-6 6-6"/></svg>' +
                 (isPlatform ? 'Overview' : 'All companies') +
             '</button>' +
             '<div class="ad-complaint-detail-id">' +
-                '<span class="ad-complaint-co-avatar" aria-hidden="true">' + escHtml(initial) + '</span>' +
+                avatarHtml +
                 '<span class="ad-complaint-co-info">' +
                     '<strong>' + escHtml(group.name) + '</strong>' +
                     '<small>' + (isPlatform ? 'Platform complaints' : 'Complaint details') + '</small>' +
