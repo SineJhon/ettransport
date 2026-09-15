@@ -1994,7 +1994,12 @@
         if (!label) { return; }
         label.textContent = selectedBookingDate
             ? new Date(selectedBookingDate + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
-            : 'All upcoming departure dates';
+            : 'All departure dates';
+    }
+
+    function syncBookingDateInput() {
+        var input = byId('booking-date-filter');
+        if (input) { input.value = selectedBookingDate; }
     }
 
     function renderBookingDayPicker() {
@@ -2016,6 +2021,8 @@
                 var date = this.getAttribute('data-booking-date');
                 selectedBookingDate = selectedBookingDate === date ? '' : date;
                 renderBookingDayPicker();
+                syncBookingDateInput();
+                updateBookingDateLabel();
                 applyBookingFilters();
             });
         }
@@ -3259,6 +3266,7 @@
                     window.ETCityPicker.sync('booking-to-filter');
                 }
                 renderBookingDayPicker();
+                syncBookingDateInput();
                 updateBookingDateLabel();
             })
             .catch(function () { /* non-fatal: filter stays on "All trips" */ });
@@ -7085,6 +7093,16 @@ function submitBranchForm() {
         if (bookingFromFilter) { bookingFromFilter.addEventListener('change', applyBookingFilters); }
         var bookingToFilter = byId('booking-to-filter');
         if (bookingToFilter) { bookingToFilter.addEventListener('change', applyBookingFilters); }
+        var bookingDateFilter = byId('booking-date-filter');
+        if (bookingDateFilter) {
+            syncBookingDateInput();
+            bookingDateFilter.addEventListener('change', function () {
+                selectedBookingDate = this.value || '';
+                updateBookingDateLabel();
+                renderBookingDayPicker();
+                applyBookingFilters();
+            });
+        }
 
         /* Wire the booking status filter buttons (All bookings / Active / Cancelled). */
         var bookingStatusFilterButtons = document.querySelectorAll('.cd-booking-status-filter[data-booking-status]');
@@ -7110,6 +7128,7 @@ function submitBranchForm() {
                 selectedBookingStatus = 'all';
                 if (bookingFromFilter) { bookingFromFilter.value = ''; }
                 if (bookingToFilter) { bookingToFilter.value = ''; }
+                if (bookingDateFilter) { bookingDateFilter.value = ''; }
                 if (window.ETCityPicker) {
                     window.ETCityPicker.sync('booking-from-filter');
                     window.ETCityPicker.sync('booking-to-filter');
@@ -7121,6 +7140,7 @@ function submitBranchForm() {
                     statusButtons[b].setAttribute('aria-pressed', active ? 'true' : 'false');
                 }
                 renderBookingDayPicker();
+                syncBookingDateInput();
                 applyBookingFilters();
             });
         }
