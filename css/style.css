@@ -2786,11 +2786,11 @@ body.about .about-developer-list {
 body.about .about-developer {
     display: flex;
     align-items: center;
-    gap: 0.85rem;
-    padding: 0.7rem 0.85rem;
+    gap: 1rem;
+    padding: 0.85rem 1rem;
     background: var(--color-white);
     border: 1px solid #dde6e1;
-    border-radius: 12px;
+    border-radius: 14px;
     transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 body.about .about-developer:hover {
@@ -2803,14 +2803,29 @@ body.about .about-developer-avatar {
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
-    width: 44px;
-    height: 44px;
+    width: 64px;
+    height: 64px;
     border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid #ffffff;
+    box-shadow:
+        0 0 0 2px rgba(11, 122, 75, 0.55),
+        0 8px 16px rgba(8, 34, 22, 0.14);
     background: linear-gradient(135deg, var(--color-primary), #2fa878);
     color: #ffffff;
     font-size: 0.8rem;
     font-weight: 800;
     letter-spacing: 0.02em;
+}
+body.about .about-developer-avatar img {
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+    flex: 0 0 auto;
 }
 body.about .about-developer-meta {
     display: flex;
