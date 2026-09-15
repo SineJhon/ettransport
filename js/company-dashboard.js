@@ -5427,7 +5427,17 @@ function submitBranchForm() {
 
     function updateParcelPricePreview() {
         var preview = byId('parcel-price-preview');
-        var breakdown = byId('parcel-price-breakdown');
+        var breakdownBox = byId('parcel-price-breakdown');
+        var weightDetail = byId('parcel-price-weight-detail');
+        var weightCostEl = byId('parcel-price-weight-cost');
+        var tripDetail = byId('parcel-price-trip-detail');
+        var tripCostEl = byId('parcel-price-trip-cost');
+        var capLine = byId('parcel-price-cap-line');
+        var capNote = byId('parcel-price-cap-note');
+        var capValueEl = byId('parcel-price-cap-value');
+        var minLine = byId('parcel-price-min-line');
+        var minValueEl = byId('parcel-price-min-value');
+        var totalEl = byId('parcel-price-total');
         var weightEl = byId('parcel-weight');
         var typeEl = byId('parcel-type');
         if (!preview || !weightEl || !typeEl) { return; }
@@ -5437,7 +5447,7 @@ function submitBranchForm() {
         var tripFare = trip ? Number(trip.price) : 0;
         if (!(weight > 0)) {
             preview.textContent = 'ETB 0.00';
-            if (breakdown) { breakdown.textContent = ''; }
+            if (breakdownBox) { breakdownBox.hidden = true; }
             return;
         }
         var billed = Math.max(weight, PARCEL_MIN_CHARGE_KG);
@@ -5447,18 +5457,45 @@ function submitBranchForm() {
         var computed = weightCost + tripCost;
         var cap = (tripFare > 0) ? tripFare * PARCEL_MAX_TRIP_FARE_RATIO : 0;
         var price = parcelPrice(weight, type, tripFare);
+        var capped = tripFare > 0 && price < computed;
+        var floorApplied = price === PARCEL_MIN_PRICE && price > computed;
+
         preview.textContent = 'ETB ' + formatMoney(price);
-        if (breakdown) {
-            var parts = [billed + ' kg × ETB ' + rate + ' = ETB ' + formatMoney(weightCost)];
+        if (breakdownBox) { breakdownBox.hidden = false; }
+
+        if (weightDetail) { weightDetail.textContent = billed + ' kg × ETB ' + rate + '/kg · ' + parcelTypeLabel(type); }
+        if (weightCostEl) { weightCostEl.textContent = 'ETB ' + formatMoney(weightCost); }
+
+        if (tripFare > 0) {
+            if (tripDetail) { tripDetail.textContent = '25% of the ETB ' + formatMoney(tripFare) + ' trip fare'; }
+            if (tripCostEl) { tripCostEl.textContent = '+ ETB ' + formatMoney(tripCost); }
+        } else {
+            if (tripDetail) { tripDetail.textContent = 'No trip selected — no trip surcharge added'; }
+            if (tripCostEl) { tripCostEl.textContent = 'ETB 0.00'; }
+        }
+
+        if (capLine) {
             if (tripFare > 0) {
-                parts.push('trip 25% = ETB ' + formatMoney(tripCost) + ' · max 75% fare = ETB ' + formatMoney(cap));
+                capLine.hidden = false;
+                if (capValueEl) { capValueEl.textContent = 'ETB ' + formatMoney(cap) + (capped ? ' · applied' : ' · not reached'); }
+            } else {
+                capLine.hidden = true;
             }
-            if (tripFare > 0 && price < computed) {
-                parts.push('capped at 75% of trip fare');
-            } else if (price === PARCEL_MIN_PRICE && price > computed) {
-                parts.push('min ETB ' + PARCEL_MIN_PRICE);
-            }
-            breakdown.textContent = parts.join(' · ') + ' → ETB ' + formatMoney(price);
+        }
+        if (capNote) {
+            capNote.textContent = tripFare > 0
+                ? 'Price never exceeds 75% of the ETB ' + formatMoney(tripFare) + ' fare'
+                : 'Requires a selected trip';
+        }
+
+        if (minLine) {
+            minLine.hidden = !floorApplied;
+            if (minValueEl) { minValueEl.textContent = 'ETB ' + PARCEL_MIN_PRICE; }
+        }
+
+        if (totalEl) {
+            totalEl.textContent = 'ETB ' + formatMoney(price) +
+                (capped ? ' (capped)' : floorApplied ? ' (minimum)' : '');
         }
     }
 

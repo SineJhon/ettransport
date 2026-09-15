@@ -841,9 +841,21 @@
         #parcel-trip-cell select { min-height: 2.7rem; }
         .cd-parcel-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; margin-top: .55rem; }
         .cd-parcel-form-error { color: #b91c1c; font-size: .82rem; font-weight: 600; margin: .6rem 0 0; }
-        .cd-parcel-price-box { display: flex; flex-direction: column; gap: .3rem; padding: .6rem .75rem; background: #f0f7f2; border: 1px solid #d4e6da; border-radius: 10px; align-self: stretch; justify-content: center; }
+        .cd-parcel-price-box { display: grid; gap: .5rem; padding: .85rem .95rem; background: #edf6f0; border: 1px solid #cfe2d6; border-radius: 12px; align-self: stretch; justify-content: center; }
+        .cd-parcel-price-head { display: flex; align-items: baseline; justify-content: space-between; gap: .6rem; }
         .cd-parcel-price-label { font: 800 .68rem/1 'DM Sans', sans-serif; text-transform: uppercase; letter-spacing: .05em; color: #5d776b; }
         .cd-parcel-price-value { font: 800 1.5rem/1 'Outfit', sans-serif; color: #14603f; }
+        .cd-parcel-price-breakdown { display: grid; gap: .35rem; margin-top: .15rem; padding-top: .55rem; border-top: 1px dashed #c2dacb; }
+        .cd-parcel-price-line { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; color: #527467; font-size: .78rem; }
+        .cd-parcel-price-line-label { font-weight: 700; }
+        .cd-parcel-price-line-label em { display: block; margin-top: .12rem; color: #6f8a7e; font-size: .68rem; font-style: normal; font-weight: 600; }
+        .cd-parcel-price-line-value { color: #1e4a3c; font-weight: 800; white-space: nowrap; }
+        .cd-parcel-price-cap .cd-parcel-price-line-value { color: #a05c16; }
+        .cd-parcel-price-cap .cd-parcel-price-line-label em { color: #a57844; }
+        .cd-parcel-price-min .cd-parcel-price-line-value { color: #8a7130; }
+        .cd-parcel-price-total { margin-top: .25rem; padding-top: .4rem; border-top: 1px solid #c2dacb; font-size: .86rem; }
+        .cd-parcel-price-total .cd-parcel-price-line-label { color: #1e463a; }
+        .cd-parcel-price-total .cd-parcel-price-line-value { color: #14603f; font-size: 1.02rem; }
         .cd-parcel-form-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5ede8; }
         .cd-parcel-form-actions .btn[hidden] { display: none; }
         .cd-parcel-steps { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: 0 0 .85rem; }
@@ -1681,9 +1693,32 @@
                     </div>
                 </div>
                 <div class="cd-parcel-price-box">
-                    <span class="cd-parcel-price-label">Estimated price</span>
-                    <span id="parcel-price-preview" class="cd-parcel-price-value">ETB 0.00</span>
-                    <p id="parcel-price-breakdown" class="cd-parcel-form-hint"></p>
+                    <div class="cd-parcel-price-head">
+                        <span class="cd-parcel-price-label">Estimated price</span>
+                        <span id="parcel-price-preview" class="cd-parcel-price-value">ETB 0.00</span>
+                    </div>
+                    <div id="parcel-price-breakdown" class="cd-parcel-price-breakdown" hidden>
+                        <div class="cd-parcel-price-line">
+                            <span class="cd-parcel-price-line-label">Weight charge <em id="parcel-price-weight-detail"></em></span>
+                            <span class="cd-parcel-price-line-value" id="parcel-price-weight-cost"></span>
+                        </div>
+                        <div class="cd-parcel-price-line">
+                            <span class="cd-parcel-price-line-label">Trip surcharge <em id="parcel-price-trip-detail"></em></span>
+                            <span class="cd-parcel-price-line-value" id="parcel-price-trip-cost"></span>
+                        </div>
+                        <div id="parcel-price-cap-line" class="cd-parcel-price-line cd-parcel-price-cap" hidden>
+                            <span class="cd-parcel-price-line-label">75% of trip fare cap <em id="parcel-price-cap-note"></em></span>
+                            <span class="cd-parcel-price-line-value" id="parcel-price-cap-value"></span>
+                        </div>
+                        <div id="parcel-price-min-line" class="cd-parcel-price-line cd-parcel-price-min" hidden>
+                            <span class="cd-parcel-price-line-label">Minimum charge</span>
+                            <span class="cd-parcel-price-line-value" id="parcel-price-min-value"></span>
+                        </div>
+                        <div class="cd-parcel-price-line cd-parcel-price-total">
+                            <span class="cd-parcel-price-line-label">Amount to pay</span>
+                            <span class="cd-parcel-price-line-value" id="parcel-price-total"></span>
+                        </div>
+                    </div>
                 </div>
                 <div>
                     <label for="parcel-notes">Contents / description</label>
