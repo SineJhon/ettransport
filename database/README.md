@@ -58,7 +58,9 @@ following tables:
 ```
 users, companies, company_reason_history, company_branches, buses, routes,
 trips, bookings, booking_passengers, payments, reviews, review_likes,
-notifications
+notifications, company_amenities, company_phones, complaints,
+complaint_responses, parcels, parcel_delete_log, parcel_payments,
+parcel_status_log
 ```
 
 ---

@@ -10,7 +10,7 @@
 --   companies ──< buses, trips, parcels
 --   routes ──< trips
 --   trips ──< bookings
---   bookings ──< booking_passengers, paymentsss
+--   bookings ──< booking_passengers, payments
 --   users ──< bookings, reviews, notifications
 --
 -- Passwords are NEVER stored in plain text. They are stored with
@@ -306,7 +306,6 @@ CREATE TABLE `company_phones` (
 
 LOCK TABLES `company_phones` WRITE;
 /*!40000 ALTER TABLE `company_phones` DISABLE KEYS */;
-INSERT INTO `company_phones` ,(3,138,'+251 11 550 1290',NULL,1,0,'2026-09-14 21:28:50','2026-09-14 21:28:50'),(4,139,'+251 11 663 7020',NULL,1,0,'2026-09-14 21:28:50','2026-09-14 21:28:50'),(5,140,'+251 11 778 1140',NULL,1,0,'2026-09-14 21:28:50','2026-09-14 21:28:50'),(6,141,'+251 11 442 9090',NULL,1,0,'2026-09-14 21:28:50','2026-09-14 21:28:50'),(7,142,'+251 11 554 7733',NULL,1,0,'2026-09-14 21:28:50','2026-09-14 21:28:50'),(8,143,'+251 11 445 8922',NULL,1,0,'2026-09-14 21:28:50','2026-09-14 21:28:50'),(21,136,'+251 91 140 3977',NULL,1,0,'2026-09-15 04:02:04','2026-09-15 04:02:04'),(22,136,'+251 91 140 3978',NULL,0,1,'2026-09-15 04:02:04','2026-09-15 04:02:04'),(23,136,'+251 11 554 8800',NULL,0,2,'2026-09-15 04:02:04','2026-09-15 04:02:04'),(24,136,'+251 11 554 8801',NULL,0,3,'2026-09-15 04:02:04','2026-09-15 04:02:04');
 /*!40000 ALTER TABLE `company_phones` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -506,7 +505,7 @@ CREATE TABLE `parcel_payments` (
   KEY `idx_parcel_payments_company` (`company_id`,`created_at`),
   CONSTRAINT `fk_parcel_payments_company` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_parcel_payments_parcel` FOREIGN KEY (`parcel_id`) REFERENCES `parcels` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=85 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=116 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -817,6 +816,10 @@ LOCK TABLES `users` WRITE;
 INSERT INTO `users` VALUES (152,'Platform Admin','admin@ettransport.com','+251900000001','$2y$10$MXCB3lTl8m8mz.J1fFCnienbgBXkImsiZKdvgEMeoT7LzwX4Lgswy','admin','active','2026-09-14 21:28:47','2026-09-15 07:51:38'),(153,'Selam Bus Owner','owner.selambus@ettransport.com',NULL,'$2y$10$bRogVgfE6OOzbB3xVkxMQuCQwzIvphAvAu/5oLrecCWOdnPH34Eay','company','active','2026-09-14 21:28:47','2026-09-15 07:51:38'),(155,'Yegna Bus Owner','owner.yegnabus@ettransport.com',NULL,'$2y$10$YVEXly0qjH9UOBA5z/6Raeh2QuWpGgWnCkBdVqAGR860Pd3aLZhsq','company','active','2026-09-14 21:28:47','2026-09-15 07:51:38'),(156,'Golden Bus Owner','owner.goldenbus@ettransport.com',NULL,'$2y$10$nXZ0QeE3so3e/pEhNPc0geKV9gN1J3PJJSBIUaQ781gwseiDppBgm','company','active','2026-09-14 21:28:47','2026-09-15 07:51:38'),(157,'Zemen Bus Owner','owner.zemenbus@ettransport.com',NULL,'$2y$10$phfpSddpwDv2l79NjkgJZOiMPTBY4Ld9uz7l0CauU9EwxIIayIQcW','company','active','2026-09-14 21:28:47','2026-09-15 07:51:39'),(158,'ODAA Bus Owner','owner.odaabus@ettransport.com',NULL,'$2y$10$DEmsOGbWvJh01L.DNKTgPeBvP/Okm7PSocSD.YwU2hxk2EEhbevmi','company','active','2026-09-14 21:28:47','2026-09-15 07:51:39'),(159,'Abay Bus Owner','owner.abaybus@ettransport.com',NULL,'$2y$10$uj5bBL9nKWYVGeJDxft/3utJlT.aCzNCFSCzprlX/zh9k2WLC9ViO','company','active','2026-09-14 21:28:47','2026-09-15 07:51:39'),(160,'Ethio Bus Owner','owner.ethiobus@ettransport.com',NULL,'$2y$10$O.rS4xE2afRU2Pz2ZirHku4pbnL4cIMw0kB9iC5j3N6556f/tPPd2','company','active','2026-09-14 21:28:47','2026-09-15 07:51:39'),(162,'Hanna Alem','hanna.alem@ettransport.com','+251 91 234 5566','$2y$10$4gaETzapEQJgExfgEz9FWeP.DJMf66J.q8LVW2Qjr5p03tYHcOvD.','passenger','active','2026-09-14 21:28:48','2026-09-15 07:51:39'),(163,'Debebe Jakson','walkin-debebe-jakson-904d7997@ettransport.local','+251936913118','$2y$10$eo8ipj20XMFotoB2gBADyuNjScIYnuAIdkJCmHNXHuj.NwlfyZ/BS','passenger','active','2026-09-15 03:50:29','2026-09-15 03:50:29'),(164,'Hana Alemu','hana.alemu@ettransport.com','+251 91 776 8899','$2y$10$4gaETzapEQJgExfgEz9FWeP.DJMf66J.q8LVW2Qjr5p03tYHcOvD.','passenger','active','2026-09-15 05:30:00','2026-09-15 05:30:00');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
+
+--
+-- Dumping routines for database 'ethio_transport'
+--
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -827,4 +830,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-15 13:05:49
+-- Dump completed on 2026-09-15 17:27:30
