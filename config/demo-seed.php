@@ -3,20 +3,30 @@
 declare(strict_types=1);
 
 /**
- * ET Transport — automatic demo-data bootstrap.
+ * ET Transport — portable data bootstrap.
  *
- * On a FRESH database (as created by database/schema.sql with zero rows in
- * `companies`) the first database connection auto-creates the development
- * demo data so the app works out-of-the-box on any new device:
+ * In the normal flow the database is restored from database/schema.sql,
+ * which now ships BOTH the table definitions and a full row snapshot of
+ * the live database (the "DATA SNAPSHOT" section). In that case there is
+ * nothing for this file to do — it detects the pre-existing rows and skips.
+ *
+ * This file is the fallback for a brand-new EMPTY database (schema-only
+ * import): on the first database connection it auto-creates:
  *
  *   - the platform admin account
  *   - the demo company accounts + their profiles
  *   - buses, routes and a 14-day trip schedule
  *   - one real verified review (with a company reply)
  *
- * It NEVER runs when the `companies` table already has rows (i.e. real or
- * previously seeded data exists) and it never deletes or overlays anything.
- * Set ET_DEMO_SEED=0 to disable the automatic bootstrap entirely.
+ * Modes (ET_DEMO_SEED environment variable):
+ *   unset / 1        auto-seed ONLY when `companies` is empty (default)
+ *   0 / off / false  never seed
+ *   force            run even when companies already exist — every routine
+ *                    here is idempotent (per-row existence checks), so this
+ *                    only fills in any missing records and never deletes or
+ *                    overwrites user data. Use it to push updated (e.g.
+ *                    real) account credentials into an existing database
+ *                    after editing the specs in this file.
  *
  * Everything is idempotent (per-row existence checks).
  *
@@ -34,17 +44,26 @@ function et_maybe_seed_demo(): void
     }
     $done = true;
 
-    if ((string) getenv('ET_DEMO_SEED') === '0') {
+    $mode = strtolower(trim((string) getenv('ET_DEMO_SEED')));
+
+    /* '0' / 'off' / 'false' disables the bootstrap entirely. */
+    if ($mode === '0' || $mode === 'off' || $mode === 'false') {
         return;
     }
+
+    /* 'force' / '1' runs even against a non-empty database (idempotent). */
+    $force = ($mode === 'force' || $mode === '1');
 
     try {
         $pdo = db();
 
-        /* A non-empty companies table means real or existing demo data —
-           never touch it. Fresh installs start with zero companies. */
+        /* A non-empty companies table means the database was restored from
+           the schema.sql data snapshot, or already seeded. The default mode
+           never touches it. Force mode proceeds anyway: every seeding
+           routine below is idempotent (per-row existence checks), so it only
+           adds missing demo records and never deletes or overwrites data. */
         $existing = (int) $pdo->query('SELECT COUNT(*) FROM companies')->fetchColumn();
-        if ($existing > 0) {
+        if ($existing > 0 && !$force) {
             return;
         }
 

@@ -34,7 +34,12 @@ Open the XAMPP Control Panel and make sure these are running:
 4. Click **Go**.
 
 `schema.sql` contains `CREATE DATABASE IF NOT EXISTS ethio_transport` and
-`USE ethio_transport`, so it creates the database and every table in one step.
+`USE ethio_transport`, so importing it restores the whole database in one
+step — every table **and every row of the current live state** (the
+`DATA SNAPSHOT` section at the bottom: users, companies, branches, phones,
+amenities, buses, routes, trips, bookings, payments, reviews, parcels,
+notifications …). Uploaded photo files referenced by the snapshot travel
+with the repository under `assets/uploads/`.
 No separate migration scripts are needed — keep `schema.sql` up to date and it
 is the single source of truth for the whole database.
 
@@ -58,20 +63,22 @@ notifications
 
 ---
 
-## 3. Demo data (automatic)
+## 3. Demo data (fallback only)
 
-No seed commands are needed. The first time the app talks to a **fresh,
-empty database** (schema-only import on any new device) it automatically
-creates the development demo data via `config/demo-seed.php`:
+`schema.sql` already carries the current rows, so after a normal import you
+are done — the demo portfolio is included in the snapshot. `config/demo-seed.php`
+is now only a **fallback**: if you create a database with just the schema part
+(a truly empty `companies` table), the first app connection auto-creates the
+development demo data via `config/demo-seed.php`:
 
 - the platform `admin` account
 - demo company accounts (each `owner.<slug>@ettransport.local` with a company profile, buses, routes and a **rolling 14-day trip schedule**)
 - one real verified review (passenger **Hanna Alem**) with a company reply
 
-This bootstrap runs **only on a fresh database** (an empty `companies` table).
-If the database already has companies — real or demo — it never runs, deletes
-nothing, and never overlays anything. Set `ET_DEMO_SEED=0` to disable the
-automatic bootstrap entirely.
+The fallback runs automatically only when `companies` is empty, and never
+deletes or overlays anything. `ET_DEMO_SEED` env var modes: `0` disables it;
+`force` re-runs it even against an existing database (idempotent, per-row
+checks — useful for pushing updated demo/real account credentials).
 
 > The demo credentials are **DEVELOPMENT ONLY** and shared publicly:
 >
