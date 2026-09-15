@@ -1043,7 +1043,8 @@
                 <div class="cd-passenger-filter" aria-label="Filter trips by departure date">
                     <div class="cd-day-picker">
                         <div class="cd-date-head"><strong>Departure date</strong><p id="trip-date-label" class="cd-selected-date">All departure dates</p></div>
-                        <div id="trip-day-list" class="cd-day-list" role="group" aria-label="Departure date"></div>
+                        <input type="date" id="trip-date-filter" class="cd-date-input" aria-label="Filter by departure date">
+                        <div id="trip-day-list" class="cd-day-list" role="group" aria-label="Quick departure dates"></div>
                     </div>
                     <div class="cd-filter-actions"><button type="button" id="btn-clear-trip-filters" class="btn btn-secondary">Clear filters</button><button type="button" id="btn-refresh-trips" class="btn btn-primary">Refresh trips</button></div>
                 </div>
@@ -1572,7 +1573,8 @@
             <div class="cd-parcel-filters">
                 <div class="cd-day-picker">
                     <div class="cd-date-head"><strong>Registered date</strong><p id="parcel-date-label" class="cd-selected-date">All registered dates</p></div>
-                    <div id="parcel-day-list" class="cd-day-list" role="group" aria-label="Parcel registered date"></div>
+                    <input type="date" id="parcel-date-filter" class="cd-date-input" aria-label="Filter by registered date">
+                    <div id="parcel-day-list" class="cd-day-list" role="group" aria-label="Quick registered dates"></div>
                 </div>
                 <div class="cd-parcel-search-row">
                     <label for="parcel-search">Search parcels</label>
@@ -1855,8 +1857,9 @@
 
             <div class="cd-passenger-filter cd-revenue-filter" aria-label="Filter revenue payments">
                 <div class="cd-day-picker">
-                    <div class="cd-date-head"><strong>Departure date</strong><p id="revenue-date-label" class="cd-selected-date">All upcoming departure dates</p></div>
-                    <div id="revenue-day-list" class="cd-day-list" role="group" aria-label="Payment departure date"></div>
+                    <div class="cd-date-head"><strong>Departure date</strong><p id="revenue-date-label" class="cd-selected-date">All departure dates</p></div>
+                    <input type="date" id="revenue-date-filter" class="cd-date-input" aria-label="Filter by departure date">
+                    <div id="revenue-day-list" class="cd-day-list" role="group" aria-label="Quick departure dates"></div>
                 </div>
                 <div class="cd-route-picker">
                     <div class="cd-filter-label-row"><strong>Search payment records</strong></div>

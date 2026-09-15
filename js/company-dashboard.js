@@ -1133,6 +1133,11 @@
             : 'All departure dates';
     }
 
+    function syncTripDateInput() {
+        var input = byId('trip-date-filter');
+        if (input) { input.value = selectedTripDate; }
+    }
+
     function renderTripDayPicker() {
         var list = byId('trip-day-list');
         if (!list) { return; }
@@ -1152,6 +1157,8 @@
                 var date = this.getAttribute('data-trip-date');
                 selectedTripDate = selectedTripDate === date ? '' : date;
                 renderTripDayPicker();
+                syncTripDateInput();
+                updateTripDateLabel();
                 applyTripFilter();
             });
         }
@@ -3364,14 +3371,27 @@
         }
         list.innerHTML = html;
         var buttons = list.querySelectorAll('[data-revenue-date]');
-        for (var j = 0; j < buttons.length; j++) { buttons[j].addEventListener('click', function () { var date = this.getAttribute('data-revenue-date'); selectedRevenueDate = selectedRevenueDate === date ? '' : date; renderRevenueDayPicker(); applyRevenueFilters(); }); }
+        for (var j = 0; j < buttons.length; j++) {
+            buttons[j].addEventListener('click', function () {
+                var date = this.getAttribute('data-revenue-date');
+                selectedRevenueDate = selectedRevenueDate === date ? '' : date;
+                renderRevenueDayPicker();
+                syncRevenueDateInput();
+                applyRevenueFilters();
+            });
+        }
+    }
+
+    function syncRevenueDateInput() {
+        var input = byId('revenue-date-filter');
+        if (input) { input.value = selectedRevenueDate; }
     }
 
     function applyRevenueFilters() {
         var from = byId('revenue-from-filter'); var to = byId('revenue-to-filter');
         var fromValue = from ? from.value : ''; var toValue = to ? to.value : '';
         var label = byId('revenue-date-label');
-        if (label) { label.textContent = selectedRevenueDate ? new Date(selectedRevenueDate + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : 'All upcoming departure dates'; }
+        if (label) { label.textContent = selectedRevenueDate ? new Date(selectedRevenueDate + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : 'All departure dates'; }
         renderPayments(currentPayments.filter(function (payment) {
             var statusOk = selectedPaymentStatus === 'all' || String(payment.status) === selectedPaymentStatus;
             return (!selectedRevenueDate || String(payment.departure_date) === selectedRevenueDate) && (!fromValue || String(payment.route_from) === fromValue) && (!toValue || String(payment.route_to) === toValue) && statusOk;
@@ -5577,6 +5597,11 @@ function submitBranchForm() {
             : 'All registered dates';
     }
 
+    function syncParcelDateInput() {
+        var input = byId('parcel-date-filter');
+        if (input) { input.value = selectedParcelDate; }
+    }
+
     /* Day strip mirrored from the trips section: today + the previous 13 days,
        because parcels are historical records (created_at), not future departures. */
     function renderParcelDayPicker() {
@@ -5598,6 +5623,7 @@ function submitBranchForm() {
                 var date = this.getAttribute('data-parcel-date');
                 selectedParcelDate = selectedParcelDate === date ? '' : date;
                 renderParcelDayPicker();
+                syncParcelDateInput();
                 applyParcelFilters();
             });
         }
@@ -6449,6 +6475,17 @@ function submitBranchForm() {
     function initParcel() {
         loadParcels();
         renderParcelDayPicker();
+        var parcelDateFilter = byId('parcel-date-filter');
+        if (parcelDateFilter) {
+            syncParcelDateInput();
+            updateParcelDateLabel();
+            parcelDateFilter.addEventListener('change', function () {
+                selectedParcelDate = this.value || '';
+                updateParcelDateLabel();
+                renderParcelDayPicker();
+                applyParcelFilters();
+            });
+        }
 
         var addBtn = byId('btn-add-parcel');
         if (addBtn) { addBtn.addEventListener('click', function () { openParcelForm(null); }); }
@@ -6482,6 +6519,7 @@ function submitBranchForm() {
                 selectedParcelDate = '';
                 parcelSearchTerm = '';
                 if (search) { search.value = ''; }
+                if (parcelDateFilter) { parcelDateFilter.value = ''; }
                 var buttons = document.querySelectorAll('.cd-parcel-filter[data-parcel-status]');
                 for (var b = 0; b < buttons.length; b++) {
                     var active = buttons[b].getAttribute('data-parcel-status') === 'all';
@@ -6489,6 +6527,7 @@ function submitBranchForm() {
                     buttons[b].setAttribute('aria-pressed', active ? 'true' : 'false');
                 }
                 renderParcelDayPicker();
+                syncParcelDateInput();
                 applyParcelFilters();
             });
         }
@@ -6864,8 +6903,19 @@ function submitBranchForm() {
             })(tripFilterButtons[fi]);
         }
 
-        /* Render the trips departure-date day strip. */
+        /* Render the trips departure-date day strip + wire the date input. */
         renderTripDayPicker();
+        var tripDateFilter = byId('trip-date-filter');
+        if (tripDateFilter) {
+            syncTripDateInput();
+            updateTripDateLabel();
+            tripDateFilter.addEventListener('change', function () {
+                selectedTripDate = this.value || '';
+                updateTripDateLabel();
+                renderTripDayPicker();
+                applyTripFilter();
+            });
+        }
 
         var tripRefresh = byId('btn-refresh-trips');
         if (tripRefresh) { tripRefresh.addEventListener('click', loadTrips); }
@@ -6875,6 +6925,7 @@ function submitBranchForm() {
             clearTripFilters.addEventListener('click', function () {
                 selectedTripDate = '';
                 selectedTripStatus = 'all';
+                if (tripDateFilter) { tripDateFilter.value = ''; }
                 var statusButtons = document.querySelectorAll('.cd-trip-filter[data-trip-filter]');
                 for (var tb = 0; tb < statusButtons.length; tb++) {
                     var active = statusButtons[tb].getAttribute('data-trip-filter') === 'all';
@@ -6882,6 +6933,7 @@ function submitBranchForm() {
                     statusButtons[tb].setAttribute('aria-pressed', active ? 'true' : 'false');
                 }
                 renderTripDayPicker();
+                syncTripDateInput();
                 applyTripFilter();
             });
         }
@@ -7301,6 +7353,15 @@ function submitBranchForm() {
         if (revFromFilter) { revFromFilter.addEventListener('change', applyRevenueFilters); }
         var revToFilter = byId('revenue-to-filter');
         if (revToFilter) { revToFilter.addEventListener('change', applyRevenueFilters); }
+        var revDateFilter = byId('revenue-date-filter');
+        if (revDateFilter) {
+            syncRevenueDateInput();
+            revDateFilter.addEventListener('change', function () {
+                selectedRevenueDate = this.value || '';
+                renderRevenueDayPicker();
+                applyRevenueFilters();
+            });
+        }
 
         /* Wire the payment status filter buttons (All payments / Paid / Refunded). */
         var revStatusButtons = document.querySelectorAll('.cd-payment-filter[data-payment-status]');
@@ -7326,6 +7387,7 @@ function submitBranchForm() {
                 selectedPaymentStatus = 'all';
                 if (revFromFilter) { revFromFilter.value = ''; }
                 if (revToFilter) { revToFilter.value = ''; }
+                if (revDateFilter) { revDateFilter.value = ''; }
                 if (window.ETCityPicker) {
                     window.ETCityPicker.sync('revenue-from-filter');
                     window.ETCityPicker.sync('revenue-to-filter');
@@ -7337,6 +7399,7 @@ function submitBranchForm() {
                     statusButtons[b].setAttribute('aria-pressed', active ? 'true' : 'false');
                 }
                 renderRevenueDayPicker();
+                syncRevenueDateInput();
                 applyRevenueFilters();
             });
         }
