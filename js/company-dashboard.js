@@ -3658,6 +3658,18 @@
         return digits ? ('+251' + digits) : '';
     }
 
+    /* Normalize a phone entry to its 9 Ethiopian national digits. Accepts
+       +251 / 251 / 0 prefixes (09X or 2519X…) and strips all punctuation.
+       Returns '' for blanks. The leading trunk-0 is dropped at any length
+       because the field only ever holds the national number (+251 is the
+       locked UI prefix). */
+    function ethiopianPhoneDigits(raw) {
+        var digits = String(raw == null ? '' : raw).replace(/\D/g, '');
+        if (digits.indexOf('251') === 0 && digits.length > 10) { digits = digits.slice(3); }
+        if (digits.charAt(0) === '0' && digits.length > 1) { digits = digits.slice(1); }
+        return digits;
+    }
+
     /* ---------- Multiple phone numbers ---------- */
     /* One editable +251 phone row used inside the profile edit form. The
        country code is appended automatically on save; the input holds only
@@ -5086,9 +5098,17 @@ var reviewEditingReplyId = null;
         }
     }
 
+    function setBranchPhoneError(message) {
+        var err = byId('branch-phone-error');
+        if (!err) { return; }
+        err.textContent = message || '';
+        err.hidden = !message;
+    }
+
     function clearBranchMessages() {
         var err = byId('branch-error'); if (err) { err.hidden = true; }
         var ferr = byId('branch-form-error'); if (ferr) { ferr.hidden = true; }
+        setBranchPhoneError('');
     }
 
     function renderBranches(list) {
@@ -5183,11 +5203,24 @@ function submitBranchForm() {
         }
         clearBranchMessages();
         var saveBtn = byId('btn-branch-save');
+        var phoneInput = byId('branch-input-phone');
+        /* Validate the Ethiopian phone format before saving. Phone is
+           optional, but when present it must be +251 + 9 national digits. */
+        if (phoneInput) {
+            var phoneRaw = phoneInput.value.trim();
+            var phoneDigits = ethiopianPhoneDigits(phoneRaw);
+            if (phoneRaw && !/^[1-9][0-9]{8}$/.test(phoneDigits)) {
+                var phoneMessage = 'Enter a valid Ethiopian phone number: +251 followed by 9 digits (mobile 9X / 7X or landline 1X…).';
+                setBranchPhoneError(phoneMessage);
+                phoneInput.focus();
+                return;
+            }
+            phoneInput.value = phoneDigits ? ('+251' + phoneDigits) : '';
+            setBranchPhoneError('');
+        }
         if (saveBtn) { saveBtn.disabled = true; }
         var branchIdInput = byId('branch-id');
         var branchId = branchIdInput ? String(branchIdInput.value || '') : '';
-        var phoneInput = byId('branch-input-phone');
-        if (phoneInput) { phoneInput.value = fullPhoneValue(phoneInput.value); }
         var payload = new FormData(form);
         var statusChk = byId('branch-input-status');
         if (statusChk && !statusChk.checked) { payload.set('status', 'inactive'); }
@@ -7438,6 +7471,22 @@ function submitBranchForm() {
             branchForm.addEventListener('submit', function (ev) {
                 ev.preventDefault();
                 submitBranchForm();
+            });
+        }
+
+        /* Branch phone: accept digits only and stop at the 9 national digits
+           as the operator types; run the inline error on blur/change. */
+        var branchPhoneInput = byId('branch-input-phone');
+        if (branchPhoneInput) {
+            branchPhoneInput.addEventListener('input', function () {
+                var normalized = ethiopianPhoneDigits(this.value);
+                this.value = normalized.slice(0, 9);
+            });
+            branchPhoneInput.addEventListener('change', function () {
+                var raw = this.value.trim();
+                setBranchPhoneError(raw && !/^[1-9][0-9]{8}$/.test(ethiopianPhoneDigits(raw))
+                    ? 'Enter a valid Ethiopian phone number: +251 followed by 9 digits (mobile 9X / 7X or landline 1X…).'
+                    : '');
             });
         }
 

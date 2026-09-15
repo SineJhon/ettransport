@@ -603,6 +603,8 @@
         .cd-branch-form-meta { display: flex; flex-wrap: wrap; gap: 1.2rem; margin-top: .5rem; }
         .cd-branch-check { display: inline-flex; align-items: center; gap: .4rem; font-size: .85rem; font-weight: 600; color: #3c4a45; cursor: pointer; }
         .cd-branch-check input { width: auto; }
+        .cd-branch-field-error { margin: .35rem 0 0; color: #b91c1c; font-size: .78rem; font-weight: 600; line-height: 1.4; }
+        .cd-branch-field-error[hidden] { display: none; }
         .cd-branch-form { margin-top: .9rem; }
         .cd-profile-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); margin-bottom: var(--space-sm); }
         .cd-profile-form-hint { font-size: 0.78rem; color: var(--color-muted); }
@@ -2229,8 +2231,9 @@
                         <label for="branch-input-phone">Phone</label>
                         <div class="phone-field">
                             <span class="phone-prefix" aria-hidden="true">+251</span>
-                            <input id="branch-input-phone" name="phone" type="tel" class="field-input" maxlength="12" placeholder="9XX XXX XXXX" inputmode="numeric" autocomplete="tel-national">
+                            <input id="branch-input-phone" name="phone" type="tel" class="field-input" maxlength="16" placeholder="9XX XXX XXXX" inputmode="numeric" autocomplete="tel-national">
                         </div>
+                        <p id="branch-phone-error" class="cd-branch-field-error" hidden role="alert"></p>
                     </div>
                     <div>
                         <label for="branch-input-email">Email</label>

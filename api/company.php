@@ -4489,8 +4489,20 @@ function company_branch_input_or_error(): array
     if (mb_strlen($address) > 255) {
         auth_response(422, ['success' => false, 'message' => 'Address must be at most 255 characters.']);
     }
-    if ($phone !== '' && preg_match('/^[+0-9][0-9\\-\\s]{6,20}$/', $phone) !== 1) {
-        auth_response(422, ['success' => false, 'message' => 'Please enter a valid phone number.']);
+    if ($phone !== '') {
+        /* Ethiopian number: +251 (or 251 / leading 0) + 9 national digits,
+           mobile 9X / 7X or landline 1X. Normalize then enforce the format
+           so a malformed branch phone is rejected instead of silently kept. */
+        $phoneDigits = preg_replace('/\D/', '', (string) $phone);
+        if (strpos($phoneDigits, '251') === 0 && strlen($phoneDigits) > 10) {
+            $phoneDigits = substr($phoneDigits, 3);
+        }
+        if (strlen($phoneDigits) === 10 && $phoneDigits[0] === '0') {
+            $phoneDigits = substr($phoneDigits, 1);
+        }
+        if (preg_match('/^[1-9][0-9]{8}$/', $phoneDigits) !== 1) {
+            auth_response(422, ['success' => false, 'message' => 'Enter a valid Ethiopian phone number: +251 followed by 9 digits (mobile 9X / 7X or landline 1X…).']);
+        }
     }
     if (mb_strlen($phone) > 30) {
         auth_response(422, ['success' => false, 'message' => 'Phone must be at most 30 characters.']);
