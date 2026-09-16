@@ -8050,6 +8050,35 @@ body.company-page .rv-demo-note {
 .support-card:hover { transform: translateY(-2px); border-color: #c6e0d1; box-shadow: 0 12px 24px rgba(20, 56, 47, 0.08); }
 .support-contact { border-color: #e3ece7; border-radius: 16px; }
 
+/* ---------- 17.15.1 Support Center (FAQ accordion + My Requests) ---------- */
+.support-card { display: block; text-decoration: none; color: inherit; }
+.support-card-link { display: block; margin-top: 0.55rem; color: #0b7a4b; font-size: 0.82rem; font-weight: 800; }
+.support-card:hover .support-card-link { text-decoration: underline; }
+.support-optional { font-size: 0.78rem; color: #7c8f87; font-weight: 400; }
+.support-faq-search { display: flex; align-items: center; gap: 0.55rem; margin: 0.2rem 0 0.85rem; padding: 0.55rem 0.8rem; background: #f2f7f4; border: 1px solid #d7e8de; border-radius: 10px; }
+.support-faq-ico { flex: 0 0 auto; font-size: 1.05rem; line-height: 1; }
+.support-faq-input { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 0.92rem; color: #2b3a33; }
+.support-faq-input::placeholder { color: #7c8f87; }
+.support-faq-input:focus-visible { outline: 3px solid rgba(49, 164, 118, 0.16); outline-offset: -1px; }
+.support-faq-list { display: grid; gap: 0.55rem; margin-bottom: 1.1rem; }
+.dash-faq-item { background: #fbfdfc; border: 1px solid #e3ece7; border-radius: 12px; overflow: hidden; }
+.dash-faq-q { display: flex; align-items: center; justify-content: space-between; gap: 0.65rem; width: 100%; text-align: left; padding: 0.72rem 0.9rem; background: transparent; border: 0; cursor: pointer; font: inherit; font-size: 0.9rem; font-weight: 700; color: #163a33; }
+.dash-faq-q:hover { color: #0b7a4b; }
+.dash-faq-q:focus-visible { outline: 3px solid rgba(49, 164, 118, 0.2); outline-offset: -1px; }
+.dash-faq-q-mark { font-size: 1.05rem; line-height: 1; color: #0b7a4b; flex: 0 0 auto; }
+.dash-faq-a { padding: 0.6rem 0.9rem 0.8rem; border-top: 1px solid #e7eeea; font-size: 0.88rem; line-height: 1.65; color: #5c6d67; }
+.dash-faq-a p { margin: 0 0 0.35rem; }
+.dash-faq-a a { color: #0b7a4b; }
+.support-faq-empty { padding: 0.9rem 0 0; color: #7c8f87; font-size: 0.88rem; }
+.dash-support-requests { display: grid; gap: 0.7rem; }
+.dash-support-request { border-color: #e3ece7; border-radius: 14px; }
+.dash-support-request-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-top: 0.55rem; flex-wrap: wrap; }
+.dash-support-toggle { padding: 0.3rem 0.75rem; border: 1.5px solid #a8cdbb; border-radius: 999px; background: transparent; color: #0b7a4b; font-size: 0.78rem; font-weight: 800; cursor: pointer; }
+.dash-support-toggle:hover { background-color: #edf6f1; border-color: #0b7a4b; }
+.dash-support-toggle:focus-visible { outline: 3px solid rgba(49, 164, 118, 0.2); outline-offset: 2px; }
+.dash-support-awaiting { font-size: 0.72rem; color: #8a5a06; font-weight: 700; }
+.dash-support-thread { margin-top: 0.5rem; }
+
 /* ---------- 17.16 Empty states ---------- */
 .dash-empty { border: 1px dashed #cfe0d6; border-radius: 16px; background-color: #fbfdfc; }
 .dash-empty-icon { font-size: 2.2rem; }

@@ -1733,31 +1733,175 @@ function closeTicket() {
        Support — help topics + frontend-only contact form
        ============================================================ */
     var SUPPORT_TOPICS = [
-        { icon: '&#127915;', title: 'Booking Help',
+        { key: 'booking_help', icon: '&#127915;', title: 'Booking Help',
           text: 'Questions about an existing booking, changing seats or travel dates.' },
-        { icon: '&#128179;', title: 'Payment Help',
+        { key: 'payment_help', icon: '&#128179;', title: 'Payment Help',
           text: 'Trouble with Telebirr, CBE Birr or M-Pesa demo payments.' },
-        { icon: '&#8617;', title: 'Cancellation & Refund',
+        { key: 'cancellation_refund', icon: '&#8617;', title: 'Cancellation & Refund',
           text: 'Cancel an upcoming paid booking from your ticket — the refund goes to your saved refund account.' },
-        { icon: '&#127890;', title: 'Lost Items',
+        { key: 'lost_items', icon: '&#127890;', title: 'Lost Items',
           text: 'Report items left on the bus after your journey.' },
-        { icon: '&#9881;', title: 'Technical Support',
+        { key: 'technical_support', icon: '&#9881;', title: 'Technical Support',
           text: 'Problems with the website or the booking flow.' }
     ];
 
+    /* Help-topic cards double as shortcuts: clicking one pre-fills the contact
+       form's Topic dropdown and moves the passenger to the form. The dropdown
+       is rebuilt from SUPPORT_TOPICS, so cards and form can never drift apart. */
     function renderSupport() {
         var el = document.getElementById('support-cards');
         if (!el) { return; }
         var html = '';
         for (var i = 0; i < SUPPORT_TOPICS.length; i++) {
             var t = SUPPORT_TOPICS[i];
-            html += '<div class="card support-card">' +
+            html += '<a class="support-card" href="#support-form" data-support-topic="' + escapeAttr(t.key) + '" aria-label="Ask about ' + escapeAttr(t.title) + '">' +
                 '<span class="support-icon" aria-hidden="true">' + t.icon + '</span>' +
                 '<h3>' + escapeHtml(t.title) + '</h3>' +
                 '<p>' + escapeHtml(t.text) + '</p>' +
-            '</div>';
+                '<span class="support-card-link">Ask about this &rarr;</span>' +
+            '</a>';
         }
         el.innerHTML = html;
+
+        /* Single source of truth for the Topic dropdown. */
+        var select = document.getElementById('support-topic');
+        if (!select) { return; }
+        while (select.firstChild) { select.removeChild(select.firstChild); }
+        for (var j = 0; j < SUPPORT_TOPICS.length; j++) {
+            var opt = document.createElement('option');
+            opt.value = SUPPORT_TOPICS[j].key;
+            opt.textContent = SUPPORT_TOPICS[j].title;
+            select.appendChild(opt);
+        }
+    }
+
+    /* Topic card clicked -> pre-fill the form's Topic dropdown and take the
+       passenger to the form (progressive enhancement: the card is also an
+       anchor that links there without JS). */
+    function selectSupportTopic(key) {
+        var select = document.getElementById('support-topic');
+        if (select) {
+            for (var i = 0; i < select.options.length; i++) {
+                if (select.options[i].value === key) { select.selectedIndex = i; break; }
+            }
+        }
+        /* The request form lives on the "Contact Support" tab inside this
+           section — switch to it, then scroll to the form and focus. */
+        setSupportView('contact');
+        var form = document.getElementById('support-form');
+        if (!form) { return; }
+        try { form.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { form.scrollIntoView(); }
+        setTimeout(function () {
+            var msg = document.getElementById('support-message');
+            if (msg) { try { msg.focus(); } catch (e) { /* noop */ } }
+        }, 320);
+    }
+
+    /* FAQ / Contact split inside the Support section — one small tab set
+       keeps the FAQ separate from the request form until it is needed.
+       Opening the contact tab also refreshes My Requests so the list is
+       current the moment the passenger switches over. */
+    var supportView = 'faq'; // 'faq' | 'contact'
+
+    function setSupportView(view) {
+        var valid = (view === 'contact') ? 'contact' : 'faq';
+        supportView = valid;
+        var faqPane = document.getElementById('support-view-faq');
+        var contactPane = document.getElementById('support-view-contact');
+        if (faqPane) { faqPane.hidden = (valid !== 'faq'); }
+        if (contactPane) { contactPane.hidden = (valid !== 'contact'); }
+        var btns = document.querySelectorAll('[data-support-view]');
+        for (var i = 0; i < btns.length; i++) {
+            var on = (btns[i].getAttribute('data-support-view') === valid);
+            btns[i].classList.toggle('active', on);
+            btns[i].setAttribute('aria-selected', on ? 'true' : 'false');
+        }
+        if (valid === 'contact' && typeof syncRealComplaints === 'function') {
+            syncRealComplaints();
+        }
+    }
+
+/* ============================================================
+       Support FAQ — in-panel accordion with live search so the
+       "Passenger Support & FAQ" label matches what's on this page.
+       Every entry is tagged with a SUPPORT_TOPICS key so topic cards,
+       the dropdown and the FAQ stay one navigable help center.
+       ============================================================ */
+    var SUPPORT_FAQ = [
+        { topic: 'booking_help', q: 'How do I view a trip I already booked?',
+          a: 'Open My Trips in the sidebar to see your upcoming and past journeys. Your paid, upcoming trips also appear under Tickets as digital tickets with a QR code and your reference.' },
+        { topic: 'booking_help', q: 'Can I change my seat or travel date after booking?',
+          a: 'Self-service changes are not available yet. Send a message above with the Topic set to Booking Help and include your booking reference (e.g. ET-20260901-ABC123) so support can help you switch.' },
+        { topic: 'booking_help', q: 'Where can I find my booking reference?',
+          a: 'Your reference is printed on every digital ticket (My Trips > View ticket, or the Tickets section) and in the booking confirmation email after you pay. Support and complaints both accept this reference.' },
+        { topic: 'payment_help', q: 'Which payment methods are accepted?',
+          a: 'Checkout supports Telebirr, CBE Birr, M-Pesa and cash-on-bus in the demo flow. Each payment is simulated — no real money moves in this demo.' },
+        { topic: 'payment_help', q: 'My payment failed but I was not issued a ticket. What should I do?',
+          a: 'Send a Payment Help request and include the trip date and route, plus your booking reference if the system generated one. If the exchange was on this demo, no real charge was made.' },
+        { topic: 'payment_help', q: 'Where does a refund go?',
+          a: 'Refunds from cancellations are returned to the refund account saved in your Profile — either the Telebirr number attached to your account or a bank account you entered there.' },
+        { topic: 'cancellation_refund', q: 'How do I cancel a booking I already paid for?',
+          a: 'Open the trip under My Trips and use Cancel booking on its ticket. Only upcoming paid bookings can be cancelled, and the refund uses your saved refund account. The trip card switches to Cancelled after you confirm.' },
+        { topic: 'cancellation_refund', q: 'When will my refund arrive?',
+          a: 'Once the cancellation goes through, the refund is recorded against your saved refund account immediately. If it has not appeared there, open the cancelled ticket and message support or file a Refund Problem complaint.' },
+        { topic: 'cancellation_refund', q: 'Can I get a refund for a trip I missed?',
+          a: 'No-shows are not refundable, but the company may still help if the bus was delayed or cancelled. File a Complaint with the Late Departure or Canceled Trip category and both the company and support can review it.' },
+        { topic: 'lost_items', q: 'I left something on the bus. How do I report it?',
+          a: 'File a complaint under Complaints > Lost Parcel and include the route, travel date and seat number so the company can check quickly. If the company does not reply, you can escalate the complaint to ET Transport support.' },
+        { topic: 'lost_items', q: 'What details should I give for a lost item?',
+          a: 'The company, route, departure date and time, seat number and a clear description of the item. Adding your booking reference makes the search much faster.' },
+        { topic: 'technical_support', q: 'The site is slow, stuck or showing errors. What can I try?',
+          a: 'Refresh the page, then open it in a normal browser window (not incognito) and check your connection. If the problem continues, send a Technical Support request and describe exactly what you were doing.' },
+        { topic: 'technical_support', q: 'I cannot sign in to my account. What should I do?',
+          a: 'Double-check the email and password you registered with, and confirm you activated the account from the sign-up email. Still stuck? Send a Technical Support request with the email address you registered.' },
+        { topic: 'technical_support', q: 'How do I turn on or read notifications?',
+          a: 'Notifications arrive in the Notifications section and the bell in the top bar. Tap a notification to mark it read, or use Mark All as Read. If a feed looks stale, leave and reopen the section to refresh it.' }
+    ];
+    var supportOpenFaq = {};
+
+    function supportTopicTitle(key) {
+        for (var i = 0; i < SUPPORT_TOPICS.length; i++) {
+            if (SUPPORT_TOPICS[i].key === key) { return SUPPORT_TOPICS[i].title; }
+        }
+        return '';
+    }
+
+    function renderFaq(query) {
+        var list = document.getElementById('faq-list');
+        var empty = document.getElementById('faq-empty');
+        if (!list) { return; }
+        var want = String(query || '').trim().toLowerCase();
+        var html = '';
+        var shown = 0;
+        for (var i = 0; i < SUPPORT_FAQ.length; i++) {
+            var f = SUPPORT_FAQ[i];
+            if (want !== '') {
+                var hay = f.q + ' ' + f.a + ' ' + supportTopicTitle(f.topic);
+                if (hay.toLowerCase().indexOf(want) === -1) { continue; }
+            }
+            var id = 'faq-' + i;
+            var open = supportOpenFaq[id] === true;
+            shown++;
+            html += '<div class="dash-faq-item" data-faq-topic="' + escapeAttr(f.topic) + '">' +
+                '<button type="button" class="dash-faq-q" aria-expanded="' + (open ? 'true' : 'false') + '" aria-controls="' + id + '" data-faq-toggle="' + id + '">' +
+                    '<span class="dash-faq-q-text">' + escapeHtml(f.q) + '</span>' +
+                    '<span class="dash-faq-q-mark" aria-hidden="true">' + (open ? '&minus;' : '&plus;') + '</span>' +
+                '</button>' +
+                '<div class="dash-faq-a" id="' + id + '"' + (open ? '' : ' hidden') + '><p>' + escapeHtml(f.a) + '</p></div>' +
+            '</div>';
+        }
+        list.innerHTML = html;
+        if (empty) { empty.hidden = shown > 0; }
+    }
+
+    function toggleFaq(id) {
+        if (supportOpenFaq[id]) { delete supportOpenFaq[id]; } else { supportOpenFaq[id] = true; }
+        var search = document.getElementById('faq-search');
+        renderFaq(search ? search.value : '');
+    }
+
+    function escapeAttr(value) {
+        return String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
     /* ============================================================
@@ -1970,6 +2114,83 @@ function closeTicket() {
         }
     }
 
+    /* ---------- Support "My requests" tracker ----------
+       The same complaint feed drives both panels: the full Complaints
+       section shows everything (company + platform), while Support shows
+       only the passenger's platform requests — i.e. the contact-support
+       messages sent to ET Transport support. Any admin reply lands in
+       the shared chat thread below, so nothing new needs persisting. */
+    function renderSupportRequests() {
+        var list = document.getElementById('support-requests');
+        var empty = document.getElementById('support-requests-empty');
+        if (!list) { return; }
+
+        if (complaintState === 'loading') {
+            list.innerHTML = '';
+            if (empty) { empty.textContent = 'Loading your requests\u2026'; empty.hidden = false; }
+            return;
+        }
+
+        var mine = [];
+        for (var i = 0; i < currentComplaints.length; i++) {
+            var c = currentComplaints[i];
+            if (c && c.target === 'platform') { mine.push(c); }
+        }
+
+        if (mine.length) {
+            var html = '';
+            for (var j = 0; j < mine.length; j++) {
+                var r = mine[j];
+                var meta = '';
+                if (r.booking_reference || r.route) {
+                    var parts = [];
+                    if (r.booking_reference) { parts.push('Booking ' + r.booking_reference); }
+                    if (r.route) { parts.push(r.route); }
+                    meta = '<p class="dash-complaint-meta">' + escapeHtml(parts.join(' \u00b7 ')) + '</p>';
+                }
+                var awaiting = (r.status === 'open' || r.status === 'in_progress');
+                html += '<article class="dash-complaint-card dash-support-request">' +
+                    '<div class="dash-complaint-card-head">' +
+                        '<span class="dash-complaint-company">ET Transport Support</span>' +
+                        '<span class="dash-complaint-category">' + escapeHtml(complaintCategoryLabel(r.category)) + '</span>' +
+                        complaintBadgeHtml(r.status) +
+                        '<span class="dash-complaint-date">' + formatComplaintDate(r.created_at) + '</span>' +
+                    '</div>' +
+                    '<h4 class="dash-complaint-subject">' + escapeHtml(r.subject) + '</h4>' +
+                    '<p class="dash-complaint-message">' + escapeHtml(r.message) + '</p>' +
+                    meta +
+                    '<div class="dash-support-request-foot">' +
+                        '<button type="button" class="dash-support-toggle" data-support-toggle="' + r.id + '" aria-expanded="false">View reply thread</button>' +
+                        (awaiting ? '<span class="dash-support-awaiting">Awaiting ET Transport support</span>' : '') +
+                    '</div>' +
+                    '<div class="dash-support-thread" id="support-thread-' + r.id + '" hidden>' + complaintThreadHtml(r) + complaintActionsHtml(r) + '</div>' +
+                '</article>';
+            }
+            list.innerHTML = html;
+            if (empty) { empty.hidden = true; }
+            return;
+        }
+
+        list.innerHTML = '';
+        if (empty) {
+            empty.hidden = false;
+            empty.textContent = complaintState === 'error'
+                ? 'Could not load your requests. Please try again later.'
+                : 'No support requests yet. Found a question the FAQ did not answer? Send a message above and track it here.';
+        }
+    }
+
+    function toggleSupportThread(id, btn) {
+        var thread = document.getElementById('support-thread-' + id);
+        if (!thread) { return; }
+        var open = thread.hidden;
+        thread.hidden = !open;
+        if (btn) {
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            btn.textContent = open ? 'Hide reply thread' : 'View reply thread';
+        }
+    }
+
     function applyComplaintAccess() {
         var form = document.getElementById('complaint-form');
         var btn = document.getElementById('complaint-submit-btn');
@@ -1990,11 +2211,13 @@ function closeTicket() {
                 currentComplaints = [];
                 complaintState = 'idle';
                 renderComplaints();
+                renderSupportRequests();
                 return;
             }
-            if (!window.fetch) { complaintState = 'error'; renderComplaints(); return; }
+            if (!window.fetch) { complaintState = 'error'; renderComplaints(); renderSupportRequests(); return; }
             complaintState = 'loading';
             renderComplaints();
+            renderSupportRequests();
             window.fetch('api/complaint.php?action=list', {
                 credentials: 'same-origin',
                 headers: { 'Accept': 'application/json' }
@@ -2008,10 +2231,12 @@ function closeTicket() {
                         complaintState = 'loaded';
                     }
                     renderComplaints();
+                    renderSupportRequests();
                 })
                 .catch(function () {
                     complaintState = 'error';
                     renderComplaints();
+                    renderSupportRequests();
                 });
         }).catch(function () { /* stay in demo empty state */ });
     }
@@ -2152,7 +2377,8 @@ function closeTicket() {
            opened, so newly created booking/payment/review notifications show up
            without requiring a full page reload. Guests/demo are unaffected. */
         if (name === 'notifications') { syncRealNotifications(); }
-        if (name === 'complaints') { applyComplaintAccess(); syncRealComplaints(); loadComplaintCompanies(); }
+        /* FAQ needs no live data; Support (My Requests) re-syncs like Complaints. */
+        if (name === 'complaints' || name === 'support') { applyComplaintAccess(); syncRealComplaints(); loadComplaintCompanies(); }
     }
 
     /* Notification deep-link resolver. The `target` stored on a notification
@@ -2891,6 +3117,7 @@ function closeTicket() {
         var name = document.getElementById('support-name');
         var email = document.getElementById('support-email');
         var topic = document.getElementById('support-topic');
+        var booking = document.getElementById('support-booking');
         var message = document.getElementById('support-message');
         var msg = document.getElementById('support-form-msg');
         var btn = document.getElementById('support-submit-btn');
@@ -2903,6 +3130,29 @@ function closeTicket() {
         else { clearFieldError('support-email'); }
         if (!message.value.trim()) { setFieldError('support-message', 'Please describe your issue.'); ok = false; }
         else { clearFieldError('support-message'); }
+        /* Optional booking reference — must belong to this passenger so the
+           server-side ownership lookup never fails after a round trip. */
+        var bookingRef = (booking && booking.value) ? booking.value.trim() : '';
+        if (bookingRef && bookingRef.length > 30) {
+            setFieldError('support-booking', 'Booking reference must be 30 characters or fewer.');
+            ok = false;
+        } else if (bookingRef) {
+            var bOwned = false;
+            var allBk = loadBookings();
+            for (var bi = 0; bi < allBk.length; bi++) {
+                var b0 = allBk[bi];
+                var ref = b0 ? (String(b0.reference || '') || String(b0.booking_reference || '')) : '';
+                if (ref === bookingRef) { bOwned = true; break; }
+            }
+            if (!bOwned) {
+                setFieldError('support-booking', 'That booking reference was not found on your account.');
+                ok = false;
+            } else {
+                clearFieldError('support-booking');
+            }
+        } else {
+            clearFieldError('support-booking');
+        }
         if (!ok) { return; }
 
         if (msg) { msg.hidden = true; msg.textContent = ''; }
@@ -2917,6 +3167,7 @@ function closeTicket() {
         body.append('category', category);
         body.append('subject', subject);
         body.append('message', message.value.trim());
+        if (bookingRef) { body.append('booking_reference', bookingRef); }
 
         window.fetch('api/complaint.php?action=create', {
             method: 'POST',
@@ -2938,11 +3189,11 @@ function closeTicket() {
                 if (form) { form.reset(); }
                 prefillSupportIdentity(sessionUser);
                 if (msg) {
-                    msg.textContent = 'Request sent to ET Transport support. You can track the reply in the Complaints section.';
+                    msg.textContent = 'Request sent to ET Transport support. Track the reply under My Requests below.';
                     msg.setAttribute('role', 'status');
                     msg.hidden = false;
                 }
-                /* Show the new thread in Complaints without a reload. */
+                /* Refresh the shared complaint feed (Complaints + My Requests). */
                 syncRealComplaints();
                 if (window.ETNotifications && window.ETNotifications.refresh) { window.ETNotifications.refresh(); }
             })
@@ -3188,7 +3439,9 @@ function closeTicket() {
         renderProfile(user);
         renderSupport();
         prefillSupportIdentity(user);
+        renderFaq();
         renderComplaints();
+        renderSupportRequests();
         applyComplaintAccess();
         loadComplaintCompanies();
         loadRealCompanyLogos();
@@ -3214,6 +3467,62 @@ function closeTicket() {
                 if (btn && btn.getAttribute('data-complaint-action')) { handleComplaintAction(btn); }
             });
         }
+
+        /* Support center: FAQ search + accordion toggles, topic-card shortcuts
+           and the My Requests tracker (same feed as the Complaints section). */
+        var faqSearch = document.getElementById('faq-search');
+        if (faqSearch) {
+            faqSearch.addEventListener('input', function () { renderFaq(faqSearch.value); });
+        }
+        var faqList = document.getElementById('faq-list');
+        if (faqList) {
+            faqList.addEventListener('click', function (ev) {
+                var faqToggleBtn = ev.target.closest ? ev.target.closest('[data-faq-toggle]') : null;
+                if (faqToggleBtn) {
+                    var faqId = faqToggleBtn.getAttribute('data-faq-toggle');
+                    if (faqId) { toggleFaq(faqId); }
+                }
+            });
+        }
+        var supportCards = document.getElementById('support-cards');
+        if (supportCards) {
+            supportCards.addEventListener('click', function (ev) {
+                var topicBtn = ev.target.closest ? ev.target.closest('[data-support-topic]') : null;
+                if (topicBtn) {
+                    ev.preventDefault();
+                    var topicKey = topicBtn.getAttribute('data-support-topic');
+                    if (topicKey) { selectSupportTopic(topicKey); }
+                }
+            });
+        }
+        var supportRequests = document.getElementById('support-requests');
+        if (supportRequests) {
+            supportRequests.addEventListener('click', function (ev) {
+                var actionButton = ev.target.closest ? ev.target.closest('[data-complaint-action]') : null;
+                if (actionButton && actionButton.getAttribute('data-complaint-action')) {
+                    handleComplaintAction(actionButton);
+                    return;
+                }
+                var threadBtn = ev.target.closest ? ev.target.closest('[data-support-toggle]') : null;
+                if (threadBtn) {
+                    var rid = threadBtn.getAttribute('data-support-toggle');
+                    if (rid) { toggleSupportThread(rid, threadBtn); }
+                }
+            });
+        }
+
+        /* Support view toggle (FAQ <-> Contact Support). */
+        var supportViewTabs = document.querySelector('.support-view-tabs');
+        if (supportViewTabs) {
+            supportViewTabs.addEventListener('click', function (ev) {
+                var viewBtn = ev.target.closest ? ev.target.closest('[data-support-view]') : null;
+                if (viewBtn && viewBtn.getAttribute('data-support-view')) {
+                    setSupportView(viewBtn.getAttribute('data-support-view'));
+                }
+            });
+        }
+        /* Keep the FAQ tab as the default entry view for the Support section. */
+        setSupportView('faq');
 
         var hash = window.location.hash ? window.location.hash.slice(1) : 'overview';
         if (hash === 'profile-edit') { hash = 'profile'; }

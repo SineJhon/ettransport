@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Your ET Transport passenger dashboard — upcoming trips, digital tickets, favorites, notifications, booking history and profile. Sign in to view your data.">
     <title>Dashboard | ET Transport</title>
-    <link rel="stylesheet" href="css/style.css?v=20260916-notif-links">
+    <link rel="stylesheet" href="css/style.css?v=20260916-support-toggle">
     <link rel="stylesheet" href="css/city-picker.css?v=20260907-swap-fix">
     <link rel="icon" type="image/x-icon" href="assets/icons/favicon.svg">
 <!-- Fonts (DM Sans + Outfit) -->
@@ -290,44 +290,66 @@
                     </dl>
                 </section>
 
-                <!-- ============ Support ============ -->
+                <!-- ============ Support (FAQ + contact, toggled) ============ -->
                 <section class="dash-section" id="section-support" aria-labelledby="support-title" hidden>
                     <h2 id="support-title" class="dash-section-title">Support</h2>
-                    <p class="dash-section-note">Help topics and quick answers about your bookings, payments and travel. Send a request and ET Transport support replies right here in this dashboard &mdash; the thread is tracked in the Complaints section.</p>
-                    <div id="support-cards" class="support-grid"></div>
+                    <p class="dash-section-note">Browse the FAQ for quick answers, or send a request and ET Transport support replies right here in this dashboard, tracked under My Requests.</p>
 
-                    <div class="card support-contact">
-                        <h3 class="dash-card-title">Contact Support</h3>
-                        <p class="support-callout">Call <a href="tel:+251936913118">+251 93 691 3118</a> or email <a href="mailto:support@ettransport.com">support@ettransport.com</a> &mdash; or send a message below.</p>
-                        <form id="support-form" novalidate>
-                            <div class="form-group">
-                                <label for="support-name">Your Name</label>
-                                <input type="text" id="support-name" name="name" required autocomplete="name">
-                                <span class="field-error" id="support-name-err" role="alert"></span>
-                            </div>
-                            <div class="form-group">
-                                <label for="support-email">Email Address</label>
-                                <input type="email" id="support-email" name="email" required autocomplete="email">
-                                <span class="field-error" id="support-email-err" role="alert"></span>
-                            </div>
-                            <div class="form-group">
-                                <label for="support-topic">Topic</label>
-                                <select id="support-topic" name="topic">
-                                    <option value="booking_help">Booking Help</option>
-                                    <option value="payment_help">Payment Help</option>
-                                    <option value="cancellation_refund">Cancellation &amp; Refund</option>
-                                    <option value="lost_items">Lost Items</option>
-                                    <option value="technical_support">Technical Support</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="support-message">Message</label>
-                                <textarea id="support-message" name="message" rows="4" maxlength="1000" required></textarea>
-                                <span class="field-error" id="support-message-err" role="alert"></span>
-                            </div>
-                            <button type="submit" id="support-submit-btn" class="btn btn-primary">Send Support Request</button>
-                            <p id="support-form-msg" class="continue-msg" role="status" hidden></p>
-                        </form>
+                    <div class="dash-tabs support-view-tabs" role="tablist" aria-label="Support views">
+                        <button type="button" class="dash-tab support-view-tab active" role="tab" aria-selected="true" data-support-view="faq">FAQ</button>
+                        <button type="button" class="dash-tab support-view-tab" role="tab" aria-selected="false" data-support-view="contact">Contact Support</button>
+                    </div>
+
+                    <div id="support-view-faq" data-support-pane="faq">
+                        <h3 class="dash-block-title">Help Topics</h3>
+                        <div id="support-cards" class="support-grid" aria-label="Support topics"></div>
+
+                        <h3 class="dash-block-title">Frequently Asked Questions</h3>
+                        <div class="support-faq-search">
+                            <span class="support-faq-ico" aria-hidden="true">&#128269;</span>
+                            <input type="search" id="faq-search" class="support-faq-input" placeholder="Search questions and answers&hellip;" autocomplete="off" aria-label="Search frequently asked questions">
+                        </div>
+                        <div id="faq-list" class="support-faq-list"></div>
+                        <p id="faq-empty" class="support-faq-empty" role="status" hidden>No FAQ matches your search. Switch to Contact Support above and we&rsquo;ll help.</p>
+                    </div>
+
+                    <div id="support-view-contact" data-support-pane="contact" hidden>
+                        <div class="card support-contact">
+                            <h3 class="dash-card-title">Contact Support</h3>
+                            <p class="support-callout">Call <a href="tel:+251936913118">+251 93 691 3118</a> or email <a href="mailto:support@ettransport.com">support@ettransport.com</a> &mdash; or send a message below.</p>
+                            <form id="support-form" novalidate>
+                                <div class="form-group">
+                                    <label for="support-name">Your Name</label>
+                                    <input type="text" id="support-name" name="name" required autocomplete="name">
+                                    <span class="field-error" id="support-name-err" role="alert"></span>
+                                </div>
+                                <div class="form-group">
+                                    <label for="support-email">Email Address</label>
+                                    <input type="email" id="support-email" name="email" required autocomplete="email">
+                                    <span class="field-error" id="support-email-err" role="alert"></span>
+                                </div>
+                                <div class="form-group">
+                                    <label for="support-topic">Topic</label>
+                                    <select id="support-topic" name="topic"></select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="support-booking">Booking Reference <span class="support-optional">(optional &mdash; speeds up help)</span></label>
+                                    <input type="text" id="support-booking" name="booking_reference" maxlength="30" autocomplete="off" placeholder="e.g. ET-20260901-ABC123">
+                                    <span class="field-error" id="support-booking-err" role="alert"></span>
+                                </div>
+                                <div class="form-group">
+                                    <label for="support-message">Message</label>
+                                    <textarea id="support-message" name="message" rows="4" maxlength="1000" required placeholder="Describe what you need help with. Include the route and travel date where possible."></textarea>
+                                    <span class="field-error" id="support-message-err" role="alert"></span>
+                                </div>
+                                <button type="submit" id="support-submit-btn" class="btn btn-primary">Send Support Request</button>
+                                <p id="support-form-msg" class="continue-msg" role="status" hidden></p>
+                            </form>
+                        </div>
+
+                        <h3 class="dash-block-title">My Requests</h3>
+                        <div id="support-requests" class="dash-support-requests"></div>
+                        <p id="support-requests-empty" class="dash-complaint-empty" role="status"></p>
                     </div>
                 </section>
 
@@ -694,6 +716,6 @@
     <script src="js/cities.js"></script>
     <script src="js/city-picker.js?v=20260907-swap-fix-3-dispatch"></script>
     <script src="js/company.js"></script>
-    <script src="js/dashboard.js?v=20260916-notif-links"></script>
+    <script src="js/dashboard.js?v=20260916-support-toggle"></script>
 </body>
 </html>
