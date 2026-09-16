@@ -259,18 +259,19 @@
        in this browser still takes priority; demoProfile() is only the
        last resort when no session user is available at all. */
     function effectiveProfile(user) {
-        var saved = getJSON(KEY_PROFILE, null);
-        if (saved && typeof saved === 'object' && (saved.fullName || saved.phone || saved.email)) {
-            return saved;
-        }
+        /* A real authenticated account is the source of truth. */
         if (user && user.name) {
             return {
                 fullName: user.name,
                 phone: user.phone || '',
                 email: user.email || '',
-                gender: '',
-                dob: ''
+                gender: user.gender || '',
+                dob: user.date_of_birth || ''
             };
+        }
+        var saved = getJSON(KEY_PROFILE, null);
+        if (saved && typeof saved === 'object' && (saved.fullName || saved.phone || saved.email)) {
+            return saved;
         }
         return demoProfile();
     }
@@ -741,7 +742,7 @@
         }
         var html = '';
         for (var j = 0; j < withTickets.length; j++) {
-            html += tripCardHtml(withTickets[j], { showDetails: true });
+            html += tripCardHtml(withTickets[j], { showDetails: false });
         }
         el.innerHTML = html;
     }
@@ -1174,13 +1175,24 @@ function closeTicket() {
     var CITIES = ['Addis Ababa', 'Adama', 'Arba Minch', 'Bahir Dar', 'Dessie', 'Dire Dawa',
         'Gondar', 'Hawassa', 'Jimma', 'Mekelle', 'Shashamane', 'Wolkite'];
 
+    function starRowHtml(rate) {
+        var n = Math.round(Number(rate) || 0);
+        var html = '';
+        for (var s = 1; s <= 5; s++) {
+            html += '<span class="dash-fav-star' + (s <= n ? ' is-on' : '') + '" aria-hidden="true">\u2605</span>';
+        }
+        return html;
+    }
+
     function renderFavoriteCompanies() {
         var el = document.getElementById('fav-companies');
         if (!el) { return; }
         var slugs = favCompanies();
         if (!slugs.length) {
-            el.innerHTML = '<div class="card dash-fav-empty">' +
-                '<p>No favorite companies yet. Star a company on its profile page and it will appear here.</p>' +
+            el.innerHTML = '<div class="dash-empty">' +
+                '<p class="dash-empty-icon" aria-hidden="true">&#11088;</p>' +
+                '<h3>No favorite companies yet</h3>' +
+                '<p>Star a company on its profile page and it will appear here.</p>' +
                 '<a href="companies.html" class="btn btn-secondary btn-sm">Browse Companies</a>' +
             '</div>';
             return;
@@ -1190,17 +1202,59 @@ function closeTicket() {
             var c = companyBySlug(slugs[i]);
             var name = c ? c.name : slugs[i];
             var logo = c && c.logo ? c.logo : '';
+            var rating = c ? Number(c.rating) : 0;
+            var meta = '';
+            if (c) {
+                if (c.destinations && c.destinations.length) { meta = c.destinations.slice(0, 3).join(' \u00b7 '); }
+                else if (c.tagline) { meta = c.tagline; }
+            }
             html += '<div class="card dash-fav-company">' +
-                (logo ? '<img class="dash-fav-logo" src="' + escapeHtml(logo) + '" alt="' + escapeHtml(name) + ' logo">' : '') +
+                '<a class="dash-fav-badge" href="company.html?company=' + escapeHtml(slugs[i]) + '">' +
+                    (logo
+                        ? '<img class="dash-fav-logo" src="' + escapeHtml(logo) + '" alt="' + escapeHtml(name) + '" width="48" height="48" loading="lazy">'
+                        : '<span aria-hidden="true">&#128652;</span>') +
+                '</a>' +
                 '<div class="dash-fav-info">' +
-                    '<h4>' + escapeHtml(name) + '</h4>' +
-                    '<p class="dash-fav-rating">' + (c ? (c.rating.toFixed(1) + ' \u2605') : 'Bus company') + '</p>' +
+                    '<h4>' + escapeHtml(name) +
+                        (c && c.verified ? '<span class="dash-fav-verified" title="Verified company" aria-label="Verified company">&#10003;</span>' : '') +
+                    '</h4>' +
+                    (rating > 0
+                        ? '<span class="dash-fav-stars">' + starRowHtml(rating) + '<span class="dash-fav-rating-num">' + rating.toFixed(1) + '</span></span>'
+                        : '<span class="dash-fav-meta">Bus company</span>') +
+                    (meta ? '<p class="dash-fav-meta">' + escapeHtml(meta) + '</p>' : '') +
                 '</div>' +
-                '<a class="btn btn-secondary btn-sm" href="company.html?company=' + escapeHtml(slugs[i]) + '">View</a>' +
-                '<button type="button" class="btn btn-remove-fav btn-sm" data-fav-slug="' + escapeHtml(slugs[i]) + '" aria-label="Remove ' + escapeHtml(name) + ' from favorites">&#10005; Remove</button>' +
+                '<div class="dash-fav-actions">' +
+                    '<a class="btn btn-secondary btn-sm" href="company.html?company=' + escapeHtml(slugs[i]) + '">View Profile</a>' +
+                    '<button type="button" class="btn btn-remove-fav btn-sm" data-fav-slug="' + escapeHtml(slugs[i]) + '" aria-label="Remove ' + escapeHtml(name) + ' from favorites">&#10005; Remove</button>' +
+                '</div>' +
             '</div>';
         }
         el.innerHTML = html;
+    }
+
+    /* Price-tag / clock / arrow glyphs — same stroke style used on the
+       homepage popular-route cards (js/home.js). */
+    var ICON_TAG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41 12 22l-8-8V4h10l6.59 6.59a2 2 0 0 1 0 2.82Z"/><path d="M8 8h.01"/></svg>';
+    var ICON_CLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
+    var ICON_ARROW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>';
+
+    /* Cheapest fare + shortest duration across every company's popularRoutes
+       for the given from → to pair (same aggregation the homepage uses). */
+    function routeStatsFor(from, to) {
+        var price = null, minutes = null;
+        var all = window.ETTransportCompanies || [];
+        for (var c = 0; c < all.length; c++) {
+            var list = (all[c] && all[c].popularRoutes) ? all[c].popularRoutes : [];
+            for (var r = 0; r < list.length; r++) {
+                var route = list[r];
+                if (!route || !route.from || !route.to) { continue; }
+                if (String(route.from).toLowerCase() !== String(from).toLowerCase() ||
+                    String(route.to).toLowerCase() !== String(to).toLowerCase()) { continue; }
+                if (typeof route.price === 'number' && (price === null || route.price < price)) { price = route.price; }
+                if (typeof route.minutes === 'number' && (minutes === null || route.minutes < minutes)) { minutes = route.minutes; }
+            }
+        }
+        return { price: price, minutes: minutes };
     }
 
     function renderFavRoutes() {
@@ -1208,17 +1262,35 @@ function closeTicket() {
         if (!el) { return; }
         var routes = loadFavRoutes();
         if (!routes.length) {
-            el.innerHTML = '<div class="card dash-fav-empty"><p>No favorite routes yet. Save a route below for one-click searches.</p></div>';
+            el.innerHTML = '<div class="dash-empty">' +
+                '<p class="dash-empty-icon" aria-hidden="true">&#128204;</p>' +
+                '<h3>No favorite routes yet</h3>' +
+                '<p>Save a route below for one-click searches.</p>' +
+            '</div>';
             return;
         }
         var html = '<ul class="dash-route-list">';
         for (var i = 0; i < routes.length; i++) {
             var r = routes[i];
-            html += '<li class="card dash-route-chip">' +
-                '<a href="search.html?from=' + encodeURIComponent(r.from) + '&amp;to=' + encodeURIComponent(r.to) + '">' +
-                escapeHtml(r.from) + ' &rarr; ' + escapeHtml(r.to) + '</a>' +
-                '<button type="button" class="btn btn-remove-fav btn-xs" data-route-fav="' + i +
-                '" aria-label="Remove route from favorites">&#10005;</button>' +
+            var stats = routeStatsFor(r.from, r.to);
+            var priceHtml = (stats.price !== null)
+                ? '<span class="dash-route-price">' + ICON_TAG + '<b>ETB ' + Number(stats.price).toLocaleString() + '</b></span>'
+                : '';
+            var durHtml = (stats.minutes !== null)
+                ? '<span class="dash-route-dur">' + ICON_CLOCK + '<span>' + formatDuration(stats.minutes) + '</span></span>'
+                : '';
+            html += '<li class="dash-route-item">' +
+                '<a class="dash-route-btn" href="search.html?from=' + encodeURIComponent(r.from) +
+                '&amp;to=' + encodeURIComponent(r.to) + '">' +
+                    '<span class="dash-route-route">' +
+                        '<span class="dash-route-city">' + escapeHtml(r.from) + '</span>' +
+                        '<span class="dash-route-arrow" aria-hidden="true">' + ICON_ARROW + '</span>' +
+                        '<span class="dash-route-city">' + escapeHtml(r.to) + '</span>' +
+                    '</span>' +
+                    '<span class="dash-route-meta">' + priceHtml + durHtml + '</span>' +
+                '</a>' +
+                '<button type="button" class="btn btn-remove-fav dash-route-del" data-route-fav="' + i +
+                    '" aria-label="Remove route from favorites">&#10005;</button>' +
             '</li>';
         }
         el.innerHTML = html + '</ul>';
@@ -1227,6 +1299,8 @@ function closeTicket() {
     function renderFavorites() {
         renderFavoriteCompanies();
         renderFavRoutes();
+        setCount('fav-count', favCompanies().length);
+        setCount('route-count', loadFavRoutes().length);
     }
 
     function toggleFavCompany(slug) {
@@ -2445,15 +2519,59 @@ function closeTicket() {
 
             if (!ok) { return; }
 
-            setJSON(KEY_PROFILE, {
-                fullName: name,
-                phone: '+251' + digits,
-                email: email,
-                gender: gender || '',
-                dob: dob || ''
-            });
-            renderProfile();
-            closeProfileModal();
+            var submitBtn = document.getElementById('profile-save-btn');
+            var fullPhone = '+251' + digits;
+            var savedProfile = { fullName: name, phone: fullPhone, email: email, gender: gender || '', dob: dob || '' };
+
+            function applyProfile(updatedUser) {
+                if (updatedUser) { sessionUser = updatedUser; }
+                setJSON(KEY_PROFILE, savedProfile);
+                renderProfile();
+                closeProfileModal();
+                toast('Your profile has been updated.');
+            }
+
+            if (sessionUser) {
+                /* Real authenticated passenger — persist to the database. */
+                if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Saving\u2026'; }
+                if (profileFormMsg) { profileFormMsg.hidden = true; }
+
+                var body = new FormData();
+                body.append('name', name);
+                body.append('email', email);
+                body.append('phone', fullPhone);
+                body.append('gender', gender || '');
+                body.append('date_of_birth', dob || '');
+
+                window.fetch('api/auth.php?action=update_profile', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Accept': 'application/json' },
+                    body: body
+                })
+                    .then(function (res) { return res.json().catch(function () { return {}; }); })
+                    .then(function (json) {
+                        if (json && json.success === true) {
+                            applyProfile(json.user || null);
+                        } else {
+                            if (profileFormMsg) {
+                                profileFormMsg.textContent = (json && json.message) || 'Unable to save your profile. Please try again.';
+                                profileFormMsg.hidden = false;
+                            }
+                            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Save Profile'; }
+                        }
+                    })
+                    .catch(function () {
+                        if (profileFormMsg) {
+                            profileFormMsg.textContent = 'Network error \u2014 your profile was not saved.';
+                            profileFormMsg.hidden = false;
+                        }
+                        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Save Profile'; }
+                    });
+            } else {
+                /* No real account (guest) — keep the browser-only copy. */
+                applyProfile(null);
+            }
         });
     }
 var supportForm = document.getElementById('support-form');

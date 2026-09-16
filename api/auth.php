@@ -84,6 +84,8 @@ function user_payload(array $user): array
         'name' => $user['name'],
         'email' => $user['email'],
         'phone' => $user['phone'],
+        'gender' => $user['gender'] ?? null,
+        'date_of_birth' => $user['date_of_birth'] ?? null,
         'role' => $user['role'],
         'status' => $user['status'],
         'companyStatus' => $user['company_status'] ?? null,
@@ -391,6 +393,96 @@ function handle_session(): void
     ]);
 }
 
+function handle_update_profile(): void
+{
+    require_post();
+    $user = requireRole('passenger');
+
+    $input = read_request_body();
+
+    $name = clean_text($input['name'] ?? '');
+    $email = strtolower(clean_text($input['email'] ?? ''));
+    $phone = clean_text($input['phone'] ?? '');
+    $gender = clean_text($input['gender'] ?? '');
+    $dob = clean_text($input['date_of_birth'] ?? '');
+
+    if ($name === '' || strlen($name) < 2) {
+        auth_response(422, ['success' => false, 'message' => 'Please enter a valid full name.']);
+    }
+
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        auth_response(422, ['success' => false, 'message' => 'Please enter a valid email address.']);
+    }
+
+    $normalizedPhone = null;
+    if ($phone !== '') {
+        $normalizedPhone = normalize_ethiopian_phone($phone);
+        if ($normalizedPhone === null) {
+            auth_response(422, [
+                'success' => false,
+                'message' => 'Please enter a valid Ethiopian phone number: +251 followed by 9 digits (mobile 9X / 7X or landline 11X…).',
+            ]);
+        }
+    }
+
+    if ($gender !== '' && mb_strlen($gender) > 30) {
+        auth_response(422, ['success' => false, 'message' => 'Please choose a valid gender.']);
+    }
+
+    $dobValue = null;
+    if ($dob !== '') {
+        $dobTime = DateTime::createFromFormat('Y-m-d', $dob);
+        if (!$dobTime || $dobTime->format('Y-m-d') !== $dob) {
+            auth_response(422, ['success' => false, 'message' => 'Please enter a valid date of birth.']);
+        }
+        $dobValue = $dobTime->format('Y-m-d');
+    }
+
+    $userId = (int) $user['id'];
+    $pdo = db();
+
+    try {
+        $check = $pdo->prepare('SELECT id FROM users WHERE email = :email AND id <> :id LIMIT 1');
+        $check->execute([':email' => $email, ':id' => $userId]);
+        if ($check->fetch()) {
+            auth_response(409, ['success' => false, 'message' => 'An account with this email already exists.']);
+        }
+
+        if ($normalizedPhone !== null) {
+            $phoneCheck = $pdo->prepare('SELECT id FROM users WHERE phone = :phone AND id <> :id LIMIT 1');
+            $phoneCheck->execute([':phone' => $normalizedPhone, ':id' => $userId]);
+            if ($phoneCheck->fetch()) {
+                auth_response(409, ['success' => false, 'message' => 'An account with this phone number already exists.']);
+            }
+        }
+
+        $update = $pdo->prepare(
+            'UPDATE users
+             SET name = :name, email = :email, phone = :phone,
+                 gender = :gender, date_of_birth = :date_of_birth
+             WHERE id = :id'
+        );
+        $update->execute([
+            ':name' => $name,
+            ':email' => $email,
+            ':phone' => $normalizedPhone,
+            ':gender' => $gender !== '' ? $gender : null,
+            ':date_of_birth' => $dobValue,
+            ':id' => $userId,
+        ]);
+    } catch (Throwable $e) {
+        auth_response(500, ['success' => false, 'message' => 'Unable to update your profile. Please try again.']);
+    }
+
+    $updated = fetch_user_by_id($userId);
+
+    auth_response(200, [
+        'success' => true,
+        'message' => 'Profile updated.',
+        'user' => user_payload($updated ?? $user),
+    ]);
+}
+
 $action = request_action();
 
 if ($action === 'register') {
@@ -404,6 +496,9 @@ if ($action === 'logout') {
 }
 if ($action === 'session') {
     handle_session();
+}
+if ($action === 'update_profile') {
+    handle_update_profile();
 }
 
 auth_response(400, [

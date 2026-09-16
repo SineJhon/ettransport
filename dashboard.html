@@ -202,28 +202,43 @@
 
                 <!-- ============ Favorites ============ -->
                 <section class="dash-section" id="section-favorites" aria-labelledby="favorites-title" hidden>
-                    <h2 id="favorites-title" class="dash-section-title">Favorites</h2>
-                    <p class="dash-section-note">Companies you starred on their profile page, and routes you saved for quick searches. Stored in this browser only.</p>
+                    <div class="dash-section-head">
+                        <div>
+                            <h2 id="favorites-title" class="dash-section-title">Favorites</h2>
+                            <p class="dash-section-note">Companies you starred and routes you saved for quick searches. Stored in this browser only.</p>
+                        </div>
+                    </div>
 
-                    <h3 class="dash-block-title">Favorite Companies</h3>
+                    <div class="dash-block-head">
+                        <h3 class="dash-block-title">Favorite Companies</h3>
+                        <span class="dash-count-pill" id="fav-count" hidden></span>
+                    </div>
                     <div id="fav-companies" class="dash-fav-grid"></div>
 
-                    <h3 class="dash-block-title">Favorite Routes</h3>
+                    <div class="dash-block-head">
+                        <h3 class="dash-block-title">Favorite Routes</h3>
+                        <span class="dash-count-pill" id="route-count" hidden></span>
+                    </div>
                     <div id="fav-routes"></div>
 
                     <div class="card dash-add-route">
-                        <h3 class="dash-card-title">Add a Favorite Route</h3>
+                        <div class="dash-add-route-head">
+                            <h3 class="dash-card-title">Add a Favorite Route</h3>
+                            <p class="dash-add-route-hint">Save a frequent journey and jump straight to its search results.</p>
+                        </div>
                         <form id="fav-route-form" class="fav-route-form">
-                            <div class="form-group">
-                                <label for="fav-from">From</label>
-                                <select id="fav-from" name="from" data-city-picker data-city-pair="favorite" data-city-role="from"></select>
-                            </div>
-                            <button type="button" class="city-swap" data-city-pair="favorite" aria-label="Swap from and to">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>
-                            </button>
-                            <div class="form-group">
-                                <label for="fav-to">To</label>
-                                <select id="fav-to" name="to" data-city-picker data-city-pair="favorite" data-city-role="to"></select>
+                            <div class="fav-route-pick">
+                                <div class="form-group">
+                                    <label for="fav-from">From</label>
+                                    <select id="fav-from" name="from" data-city-picker data-city-pair="favorite" data-city-role="from"></select>
+                                </div>
+                                <button type="button" class="city-swap" data-city-pair="favorite" aria-label="Swap from and to">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>
+                                </button>
+                                <div class="form-group">
+                                    <label for="fav-to">To</label>
+                                    <select id="fav-to" name="to" data-city-picker data-city-pair="favorite" data-city-role="to"></select>
+                                </div>
                             </div>
                             <button type="submit" class="btn btn-search">Save Route</button>
                         </form>
@@ -243,8 +258,6 @@
                 <!-- ============ Profile ============ -->
                 <section class="dash-section" id="section-profile" aria-labelledby="profile-title" hidden>
                     <h2 id="profile-title" class="dash-section-title">Profile</h2>
-                    <p class="dash-section-note">A demo passenger profile. There is no real account &mdash; changes are kept in this browser only.</p>
-
                     <div class="card dash-profile-card">
                         <div class="profile-avatar" id="profile-avatar" aria-hidden="true">A</div>
                         <div class="profile-summary">
@@ -517,7 +530,7 @@
                     <input type="date" id="p-dob-input" name="dob">
                 </div>
                 <div class="profile-form-actions">
-                    <button type="submit" class="btn btn-primary">Save Profile</button>
+                    <button type="submit" class="btn btn-primary" id="profile-save-btn">Save Profile</button>
                     <button type="button" class="btn btn-secondary" id="profile-cancel-btn">Cancel</button>
                 </div>
                 <p id="profile-form-msg" class="continue-msg" role="status" hidden></p>
@@ -584,6 +597,6 @@
     <script src="js/cities.js"></script>
     <script src="js/city-picker.js?v=20260907-swap-fix-3-dispatch"></script>
     <script src="js/company.js"></script>
-    <script src="js/dashboard.js?v=20260916-favlogos"></script>
+    <script src="js/dashboard.js?v=20260916-profiledb"></script>
 </body>
 </html>

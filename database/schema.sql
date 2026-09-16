@@ -794,6 +794,8 @@ CREATE TABLE `users` (
   `name` varchar(120) NOT NULL,
   `email` varchar(190) NOT NULL,
   `phone` varchar(30) DEFAULT NULL,
+  `gender` varchar(30) DEFAULT NULL,
+  `date_of_birth` date DEFAULT NULL,
   `password_hash` varchar(255) NOT NULL,
   `role` enum('passenger','company','admin') NOT NULL,
   `status` enum('active','pending','suspended','rejected') NOT NULL DEFAULT 'active',

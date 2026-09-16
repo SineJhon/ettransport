@@ -38,6 +38,8 @@ function normalize_user_row(array $row): array
         'name' => $row['name'],
         'email' => $row['email'],
         'phone' => $row['phone'],
+        'gender' => $row['gender'] ?? null,
+        'date_of_birth' => $row['date_of_birth'] ?? null,
         'role' => $row['role'],
         'status' => $row['status'],
         'company_status' => $row['company_status'] ?? null,
@@ -47,7 +49,7 @@ function normalize_user_row(array $row): array
 
 function fetch_user_by_id(int $userId): ?array
 {
-    $sql = 'SELECT u.id, u.name, u.email, u.phone, u.role, u.status, c.status AS company_status, c.listed AS company_listed
+    $sql = 'SELECT u.id, u.name, u.email, u.phone, u.gender, u.date_of_birth, u.role, u.status, c.status AS company_status, c.listed AS company_listed
             FROM users u
             LEFT JOIN companies c ON c.user_id = u.id
             WHERE u.id = :id
