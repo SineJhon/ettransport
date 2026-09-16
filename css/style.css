@@ -7740,3 +7740,411 @@ body.company-page .rv-demo-note {
     }
     body.company-page .rv-cards { grid-template-columns: 1fr; }
 }
+/* ============================================================
+   17. PASSENGER DASHBOARD — UI/UX POLISH
+   Appended on top of the base dashboard styles (section 16).
+   Follows the site's forest-green + gold design language and is
+   scoped so other pages (company profiles, confirmation, search)
+   are unaffected.
+   ============================================================ */
+
+/* ---------- 17.1 Dashboard header banner ---------- */
+#dashboard-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.25rem;
+    margin-bottom: var(--space-md);
+    padding: 1.75rem 2rem;
+    border-radius: 18px;
+    overflow: hidden;
+    position: relative;
+    color: #eef7f2;
+    background:
+        radial-gradient(120% 170% at 100% 0%, rgba(232, 163, 61, 0.30) 0%, rgba(232, 163, 61, 0) 48%),
+        linear-gradient(120deg, #0b7a4b 0%, #0d6c46 55%, #095e3a 100%);
+    box-shadow: 0 14px 34px rgba(9, 64, 43, 0.20);
+}
+#dashboard-head[hidden] { display: none; }
+.dash-head-copy { display: grid; gap: 0.2rem; min-width: 0; }
+.dashboard-head .search-eyebrow {
+    color: #ffdba1;
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+    margin-bottom: 0.1rem;
+}
+#dashboard-head h1 { color: #ffffff; margin-bottom: 0.1rem; }
+#dashboard-head .dashboard-subtitle { color: #d6ecdf; margin-bottom: 0; }
+#dashboard-head .dashboard-subtitle strong { color: #ffffff; }
+.dash-head-emblem {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.13);
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 10px 22px rgba(0, 0, 0, 0.10);
+    font-size: 2.1rem;
+    color: #ffe2ad;
+}
+
+/* ---------- 17.2 Sidebar navigation ---------- */
+.dashboard-sidebar {
+    border: 1px solid #e2ece6;
+    border-radius: 16px;
+    padding: 0.6rem;
+    background: #ffffff;
+    box-shadow: 0 8px 22px rgba(20, 56, 47, 0.06);
+}
+.dash-nav-cap {
+    padding: 0.35rem 0.85rem 0.45rem;
+    margin-bottom: 0.25rem;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #8aa299;
+}
+.dash-nav-btn {
+    justify-content: flex-start;
+    gap: 0.7rem;
+    padding: 0.74rem 0.85rem;
+    border-radius: 11px;
+    color: #40554c;
+    transition: color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease, transform 0.1s ease;
+}
+.dash-nav-ico {
+    flex: 0 0 auto;
+    width: 1.25rem;
+    height: 1.25rem;
+    color: #86a096;
+}
+.dash-nav-label { flex: 1 1 auto; min-width: 0; text-align: left; white-space: nowrap; }
+.dash-nav-btn:hover { background-color: #edf6f1; color: #0b7a4b; }
+.dash-nav-btn:hover .dash-nav-ico { color: #0b7a4b; }
+.dash-nav-btn.active {
+    background: linear-gradient(135deg, #0b7a4b, #0e9157);
+    color: #ffffff;
+    box-shadow: 0 6px 16px rgba(11, 122, 75, 0.28);
+}
+.dash-nav-btn.active .dash-nav-ico { color: #ffe0a6; }
+.dash-nav-btn:active { transform: translateY(1px); }
+.dash-nav-count {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.45rem;
+    padding: 0.1rem 0.42rem;
+    border-radius: 999px;
+    font-weight: 800;
+    background: #0b7a4b;
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(11, 122, 75, 0.25);
+}
+.dash-nav-count[hidden] { display: none; }
+.dash-nav-btn.active .dash-nav-count { background: #ffe0a6; color: #0b7a4b; box-shadow: none; }
+
+/* ---------- 17.3 Sections, titles & entrance animation ---------- */
+.dash-section-title { font-size: 1.55rem; letter-spacing: -0.02em; color: #163a33; }
+.dash-section-note { color: #6b7f76; }
+.dash-block-title { letter-spacing: -0.01em; color: #163a33; }
+.dash-eyebrow { color: #0b7a4b; font-weight: 800; }
+@keyframes dashSectionIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+}
+.dash-section { animation: dashSectionIn 0.26s ease-out; }
+
+/* ---------- 17.4 My Trips status tabs (previously unstyled) ---------- */
+.dash-tabs {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    padding: 0.35rem;
+    margin-bottom: 1rem;
+    background: #eef4f0;
+    border: 1px solid #dfe9e3;
+    border-radius: 14px;
+}
+.dash-tab {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #5b7268;
+    padding: 0.5rem 1.1rem;
+    border-radius: 10px;
+    transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+.dash-tab:hover { color: #0b7a4b; background-color: rgba(11, 122, 75, 0.08); }
+.dash-tab.active { color: #ffffff; background: #0b7a4b; box-shadow: 0 4px 12px rgba(11, 122, 75, 0.30); }
+.dash-tab:focus-visible { outline: 2px solid #0b7a4b; outline-offset: 2px; }
+
+/* ---------- 17.5 Search / sort / load-more controls ---------- */
+.dash-search-input { border-radius: 10px; border-color: #d6e2dc; box-shadow: inset 0 1px 2px rgba(20, 56, 47, 0.04); }
+.dash-search-hint { color: #7d9189; }
+.dash-sort-select { border-radius: 10px; border-color: #d6e2dc; }
+.btn-dash-loadmore { border-radius: 999px; padding: 0.6rem 1.6rem; font-weight: 700; }
+
+/* ---------- 17.6 Summary stats ---------- */
+.dash-stats { gap: 1rem; }
+.dash-stat {
+    position: relative;
+    overflow: hidden;
+    padding: 1.05rem 1.15rem;
+    border: 1px solid #e3ece7;
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(20, 56, 47, 0.05);
+}
+.dash-stat::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #0b7a4b, #31a476);
+}
+.dash-stat::after {
+    content: "";
+    position: absolute;
+    right: -22px; top: -22px;
+    width: 74px; height: 74px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(232, 163, 61, 0.11), rgba(232, 163, 61, 0) 70%);
+    pointer-events: none;
+}
+.dash-stat-value { font-family: var(--font-display); font-size: 1.7rem; line-height: 1.15; }
+.dash-stat--upcoming::before { background: linear-gradient(90deg, #0b7a4b, #31a476); }
+.dash-stat--completed::before { background: linear-gradient(90deg, #245f9e, #7f9ec4); }
+.dash-stat--favorites::before { background: linear-gradient(90deg, #e8a33d, #f2bd6a); }
+.dash-stat--tickets::before { background: linear-gradient(90deg, #0d6c46, #31a476); }
+
+/* ---------- 17.7 Upcoming trip card ---------- */
+.dash-upcoming-card {
+    padding: 1.6rem;
+    border: 1px solid #e0ebe4;
+    border-radius: 18px;
+    background:
+        radial-gradient(130% 150% at 100% 0%, rgba(232, 163, 61, 0.10), rgba(255, 255, 255, 0) 46%),
+        #ffffff;
+    box-shadow: 0 10px 26px rgba(20, 56, 47, 0.06);
+}
+.dash-upcoming-company { font-size: 1.45rem; letter-spacing: -0.02em; }
+.dash-upcoming-details { border-color: #e6eee9; }
+
+/* ---------- 17.8 Trip cards (scoped to the dashboard) ---------- */
+.dashboard-page .trip-card {
+    position: relative;
+    padding: 1.35rem 1.4rem;
+    border: 1px solid #e3ece7;
+    border-radius: 16px;
+    box-shadow: 0 6px 18px rgba(20, 56, 47, 0.05);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.dashboard-page .trip-card:hover {
+    transform: translateY(-3px);
+    border-color: #c6e0d1;
+    box-shadow: 0 14px 30px rgba(20, 56, 47, 0.10);
+}
+.dashboard-page .trip-card::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 1.1rem; bottom: 1.1rem;
+    width: 4px;
+    border-radius: 0 4px 4px 0;
+    opacity: 0.9;
+}
+.dashboard-page .trip-card-upcoming::before  { background: linear-gradient(180deg, #0b7a4b, #31a476); }
+.dashboard-page .trip-card-completed::before { background: linear-gradient(180deg, #245f9e, #7f9ec4); }
+.dashboard-page .trip-card-cancelled::before { background: linear-gradient(180deg, #d9534f, #e99a8f); }
+.dashboard-page .trip-company-badge { box-shadow: 0 0 0 3px rgba(11, 122, 75, 0.12); }
+.dashboard-page .trip-company-logo { border-radius: 12px; }
+
+/* ---------- 17.9 Status chips (dashboard + ticket modal) ---------- */
+.dashboard-page .status-upcoming { background-color: #e6f5ea; color: #0b7a4b; }
+.dashboard-page .status-completed { background-color: #e7f1fb; color: #245f9e; }
+.dashboard-page .status-cancelled { background-color: #fdeaea; color: #b02f2f; }
+#ticket-modal .ticket-status.status-upcoming  { background-color: #e6f5ea; color: #0b7a4b; }
+#ticket-modal .ticket-status.status-completed { background-color: #e7f1fb; color: #245f9e; }
+#ticket-modal .ticket-status.status-cancelled { background-color: #fdeaea; color: #b02f2f; }
+
+/* ---------- 17.10 Action buttons ---------- */
+.dashboard-page .btn-ticket-view { background-color: #0b7a4b; color: #ffffff; }
+.dashboard-page .btn-ticket-view:hover { background-color: #095e3a; box-shadow: 0 8px 18px rgba(11, 122, 75, 0.28); }
+.dashboard-page .btn-trip-details { background-color: transparent; color: #0b7a4b; border: 1.5px solid #a8cdbb; }
+.dashboard-page .btn-trip-details:hover { background-color: #edf6f1; border-color: #0b7a4b; }
+
+/* ---------- 17.11 Recent bookings table ---------- */
+.dash-table-row { border-color: #edf3ef; }
+.dash-table-head { background-color: #f1f7f3; color: #547067; }
+.dash-table-row:not(.dash-table-head) { transition: background-color 0.15s ease; }
+.dash-table-row:not(.dash-table-head):hover { background-color: #f7fbf8; }
+
+/* ---------- 17.12 Overview mini chips / favourites ---------- */
+.dash-mini { border-color: #e3ece7; }
+.dash-mini-chip { border-color: #dce8e1; transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease; }
+.dash-mini-chip:hover { border-color: #0b7a4b; background-color: #f0f8f3; }
+.dash-fav-company { border-radius: 16px; border-color: #e3ece7; transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; }
+.dash-fav-company:hover { transform: translateY(-2px); border-color: #c6e0d1; box-shadow: 0 12px 26px rgba(20, 56, 47, 0.09); }
+.dash-fav-logo { border-radius: 12px; }
+.btn-remove-fav { border-radius: 10px; }
+.dash-route-chip { border-color: #e3ece7; border-radius: 12px; transition: border-color 0.15s ease, background-color 0.15s ease; }
+.dash-route-chip:hover { border-color: #0b7a4b; background-color: #f6faf7; }
+
+/* ---------- 17.13 Notifications ---------- */
+.dash-notif-item { border: 1px solid #e3ece7; border-radius: 14px; transition: border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease; }
+.dash-notif-item:hover { border-color: #0b7a4b; box-shadow: 0 8px 18px rgba(20, 56, 47, 0.07); }
+.dash-notif-item.is-unread { background-color: #f2f8f4; border-left: 4px solid #0b7a4b; }
+.dash-notif-icon { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 2.3rem; height: 2.3rem; border-radius: 10px; background: #ebf4ef; color: #0b7a4b; font-size: 1.05rem; }
+.dash-notif-dot { box-shadow: 0 0 0 3px rgba(232, 163, 61, 0.18); }
+
+/* ---------- 17.14 Profile ---------- */
+.dash-profile-card { border-color: #e3ece7; border-radius: 16px; }
+.profile-avatar { box-shadow: 0 8px 18px rgba(11, 122, 75, 0.26); outline: 3px solid #d9ecdf; outline-offset: 2px; }
+.profile-summary h3 { letter-spacing: -0.02em; }
+.profile-details { border-color: #e3ece7; border-radius: 16px; }
+
+/* ---------- 17.15 Support ---------- */
+.support-card { border-color: #e3ece7; border-radius: 14px; transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; }
+.support-card:hover { transform: translateY(-2px); border-color: #c6e0d1; box-shadow: 0 12px 24px rgba(20, 56, 47, 0.08); }
+.support-contact { border-color: #e3ece7; border-radius: 16px; }
+
+/* ---------- 17.16 Empty states ---------- */
+.dash-empty { border: 1px dashed #cfe0d6; border-radius: 16px; background-color: #fbfdfc; }
+.dash-empty-icon { font-size: 2.2rem; }
+
+/* ---------- 17.17 Modals (dashboard + ticket) ---------- */
+@keyframes dashModalIn {
+    from { opacity: 0; transform: translateY(14px) scale(0.985); }
+    to   { opacity: 1; transform: none; }
+}
+.dash-modal-backdrop { background-color: rgba(7, 28, 20, 0.52); backdrop-filter: blur(2px); }
+.dash-modal-box { border-radius: 18px; animation: dashModalIn 0.22s ease-out; box-shadow: 0 24px 60px rgba(6, 26, 19, 0.35); }
+.dash-modal-close { border-radius: 9px; transition: color 0.15s ease, background-color 0.15s ease; }
+#ticket-modal .ticket { border: 1px solid #dfe9e3; border-radius: 16px; overflow: hidden; }
+#ticket-modal .ticket-head { background: linear-gradient(120deg, #0b7a4b, #095e3a); padding: 1.05rem 1.4rem; }
+#ticket-modal .ticket-body { padding: 1.5rem; }
+#ticket-modal .ticket-grid { border-top-color: #dfe9e3; }
+#ticket-modal .t-cell { background: #f4faf7; border: 1px solid #e6f0ea; }
+#ticket-modal .total-cell { background: #fdf3d9; }
+#ticket-modal .total-cell dd { color: var(--color-accent-dark, #c9821f); }
+
+/* ---------- 17.18 Complaints ---------- */
+.dash-complaint-card { border-color: #e2ece6; border-radius: 16px; box-shadow: 0 4px 14px rgba(20, 56, 47, 0.04); }
+.dash-complaint-reply-input { border-radius: 10px; background: #ffffff; }
+
+/* ---------- 17.19 Toast refinements ---------- */
+.dash-toast { border-radius: 12px; box-shadow: 0 14px 30px rgba(9, 32, 26, 0.28); }
+
+/* ---------- 17.20 Responsive polish ---------- */
+@media (max-width: 992px) {
+    .dashboard-sidebar {
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        gap: 0.3rem;
+        padding: 0.5rem;
+        scrollbar-width: thin;
+        scrollbar-color: #cfe0d6 transparent;
+    }
+    .dash-nav-cap { display: none; }
+    .dash-nav-btn { flex: 0 0 auto; justify-content: center; padding: 0.6rem 0.85rem; }
+    .dash-nav-label { text-align: center; }
+    .dash-nav-count { margin-left: 0.3rem; }
+}
+@media (max-width: 560px) {
+    #dashboard-head { padding: 1.4rem 1.4rem; }
+    #dashboard-head h1 { font-size: 1.7rem; }
+    .dash-head-emblem { width: 58px; height: 58px; font-size: 1.7rem; }
+    .dash-stats { grid-template-columns: repeat(2, 1fr); gap: 0.7rem; }
+    .dash-stat { padding: 0.95rem 1rem; }
+    .dash-stat-value { font-size: 1.55rem; }
+}
+
+/* ---------- 17.21 Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+    .dash-section, .dash-modal-box, .dash-toast,
+    .dashboard-page .trip-card, .dash-fav-company, .support-card {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* ---------- 17.22 Overview polish: block heads, see-all, stat icons, countdown, fav chips ---------- */
+.dash-block-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin: var(--space-md) 0 var(--space-sm);
+}
+.dash-block-head .dash-block-title { margin: 0; }
+.dash-see-all {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: transparent;
+    border: 1px solid #cfe0d6;
+    border-radius: 999px;
+    color: #0b7a4b;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 0.3rem 0.85rem;
+    text-decoration: none;
+    transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+.dash-see-all:hover { background-color: #edf6f1; border-color: #0b7a4b; }
+.dash-see-all:focus-visible { outline: 2px solid #0b7a4b; outline-offset: 2px; }
+.dash-see-all::after { content: "\2192"; }
+
+.dash-stat-head { display: flex; align-items: center; justify-content: flex-start; gap: 0.5rem; margin: 0 0 0.4rem; }
+.dash-stat-icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 8px;
+    background: #eef7f1;
+    color: #0b7a4b;
+}
+.dash-stat-icon svg { width: 14px; height: 14px; }
+.dash-stat--completed .dash-stat-icon { background: #eef4fb; color: #245f9e; }
+.dash-stat--favorites .dash-stat-icon { background: #fdf6e8; color: #a86a11; }
+.dash-stat--tickets .dash-stat-icon { background: #e9f3ec; color: #095e3a; }
+
+.dash-countdown {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.28rem 0.72rem;
+    border: 1px solid rgba(232, 163, 61, 0.4);
+    border-radius: 999px;
+    background: rgba(232, 163, 61, 0.14);
+    color: #a86a11;
+    font-size: 0.78rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+.dash-countdown::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #e8a33d;
+    flex: 0 0 auto;
+}
+
+.dash-mini-chip-logo { flex: 0 0 auto; width: 22px; height: 22px; border-radius: 6px; object-fit: contain; }
+.dash-mini-chip-name { font-weight: 600; }

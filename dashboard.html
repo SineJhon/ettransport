@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Your ET Transport passenger dashboard — upcoming trips, digital tickets, favorites, notifications, booking history and profile. Sign in to view your data.">
     <title>Dashboard | ET Transport</title>
-    <link rel="stylesheet" href="css/style.css?v=20260914-guest-gate">
+    <link rel="stylesheet" href="css/style.css?v=20260915-dash-polish">
     <link rel="stylesheet" href="css/city-picker.css?v=20260907-swap-fix">
     <link rel="icon" type="image/x-icon" href="assets/icons/favicon.svg">
 <!-- Fonts (DM Sans + Outfit) -->
@@ -43,10 +43,14 @@
 
         <!-- ============ Dashboard header ============ -->
         <section class="dashboard-head" id="dashboard-head" aria-labelledby="dash-title" hidden>
-            <p class="search-eyebrow">Passenger Dashboard</p>
-            <h1 id="dash-title">Dashboard</h1>
-            <p class="dashboard-subtitle">Welcome back, <strong id="dash-greeting">Passenger</strong> &mdash; manage your trips, tickets and account.</p>
-            <p class="demo-note" role="status">Data is synced from your account &mdash; some illustrative demo records may also appear.</p>
+            <div class="dash-head-copy">
+                <p class="search-eyebrow">Passenger Dashboard</p>
+                <h1 id="dash-title">Dashboard</h1>
+                <p class="dashboard-subtitle">Welcome back, <strong id="dash-greeting">Passenger</strong> &mdash; manage your trips, tickets and account.</p>
+            </div>
+            <div class="dash-head-emblem" aria-hidden="true">
+                <span>&#128652;</span>
+            </div>
         </section>
 
         <!-- ============================================
@@ -75,14 +79,43 @@
 
             <!-- ============ Sidebar / section navigation ============ -->
             <nav class="dashboard-sidebar" id="dashboard-sidebar" aria-label="Dashboard sections">
-                <button type="button" class="dash-nav-btn active" data-section="overview" aria-current="true">Overview</button>
-                <button type="button" class="dash-nav-btn" data-section="trips">My Trips <span class="dash-nav-count" id="count-trips" hidden></span></button>
-                <button type="button" class="dash-nav-btn" data-section="tickets">Tickets <span class="dash-nav-count" id="count-tickets" hidden></span></button>
-                <button type="button" class="dash-nav-btn" data-section="favorites">Favorites <span class="dash-nav-count" id="count-favs" hidden></span></button>
-                <button type="button" class="dash-nav-btn" data-section="notifications">Notifications <span class="dash-nav-count" id="count-unread" hidden></span></button>
-                <button type="button" class="dash-nav-btn" data-section="profile">Profile</button>
-                <button type="button" class="dash-nav-btn" data-section="support">Support</button>
-                <button type="button" class="dash-nav-btn" data-section="complaints">Complaints</button>
+                <p class="dash-nav-cap">Menu</p>
+                <button type="button" class="dash-nav-btn active" data-section="overview" aria-current="true">
+                    <svg class="dash-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.6"/><rect x="14" y="3" width="7" height="7" rx="1.6"/><rect x="3" y="14" width="7" height="7" rx="1.6"/><rect x="14" y="14" width="7" height="7" rx="1.6"/></svg>
+                    <span class="dash-nav-label">Overview</span>
+                </button>
+                <button type="button" class="dash-nav-btn" data-section="trips">
+                    <svg class="dash-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="6" width="16" height="11" rx="2.5"/><path d="M4 11.5h16"/><path d="M8 20.5v-1.4M16 20.5v-1.4"/><circle cx="8.4" cy="17.6" r="1.1"/><circle cx="15.6" cy="17.6" r="1.1"/></svg>
+                    <span class="dash-nav-label">My Trips</span>
+                    <span class="dash-nav-count" id="count-trips" hidden></span>
+                </button>
+                <button type="button" class="dash-nav-btn" data-section="tickets">
+                    <svg class="dash-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9a2 2 0 0 0 2 2 2 2 0 0 1 0 4 2 2 0 0 0-2 2v2a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-2a2 2 0 0 1 0-4 2 2 0 0 1 0-4V5a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v4Z"/><path d="M14.5 7.5v2M14.5 11.5v2M14.5 15.5v2"/></svg>
+                    <span class="dash-nav-label">Tickets</span>
+                    <span class="dash-nav-count" id="count-tickets" hidden></span>
+                </button>
+                <button type="button" class="dash-nav-btn" data-section="favorites">
+                    <svg class="dash-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3.5 2.55 5.17 5.7.83-4.12 4.02.97 5.67L12 16.6l-5.1 2.68.97-5.67L3.75 9.5l5.7-.83L12 3.5Z"/></svg>
+                    <span class="dash-nav-label">Favorites</span>
+                    <span class="dash-nav-count" id="count-favs" hidden></span>
+                </button>
+                <button type="button" class="dash-nav-btn" data-section="notifications">
+                    <svg class="dash-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9.5a6 6 0 0 1 12 0c0 3.6 1.7 4.7 1.7 4.7H4.3S6 13.1 6 9.5Z" transform="translate(0 -1)"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>
+                    <span class="dash-nav-label">Notifications</span>
+                    <span class="dash-nav-count" id="count-unread" hidden></span>
+                </button>
+                <button type="button" class="dash-nav-btn" data-section="profile">
+                    <svg class="dash-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="7.5" r="4"/><path d="M4.5 20.5c.7-3.9 3.9-5.8 7.5-5.8s6.8 1.9 7.5 5.8"/></svg>
+                    <span class="dash-nav-label">Profile</span>
+                </button>
+                <button type="button" class="dash-nav-btn" data-section="support">
+                    <svg class="dash-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13.5v-1.5a8 8 0 0 1 16 0v1.5"/><rect x="3" y="13.5" width="4" height="5.5" rx="1.6"/><rect x="17" y="13.5" width="4" height="5.5" rx="1.6"/><path d="M20 19v.5a2.5 2.5 0 0 1-2.5 2.5H14"/></svg>
+                    <span class="dash-nav-label">Support</span>
+                </button>
+                <button type="button" class="dash-nav-btn" data-section="complaints">
+                    <svg class="dash-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V6a1 1 0 0 1 1-1h11l-2.2 4L17 13H6"/></svg>
+                    <span class="dash-nav-label">Complaints</span>
+                </button>
             </nav>
 
             <!-- ============ Dashboard content ============ -->
@@ -90,24 +123,41 @@
 
                 <!-- ============ Overview ============ -->
                 <section class="dash-section" id="section-overview" aria-labelledby="overview-title">
-                    <h2 id="overview-title" class="dash-section-title">Overview</h2>
+                    <div class="dash-section-head">
+                        <div>
+                            <h2 id="overview-title" class="dash-section-title">Overview</h2>
+                            <p class="dash-section-note">Your journeys at a glance &mdash; next trip, stats and recent activity.</p>
+                        </div>
+                    </div>
+
                     <div id="dash-upcoming"></div>
+
+                    <h3 class="dash-block-title">Your Stats</h3>
                     <div id="dash-stats" class="dash-stats"></div>
 
-                    <h3 class="dash-block-title">Recent Bookings</h3>
+                    <div class="dash-block-head">
+                        <h3 class="dash-block-title">Recent Bookings</h3>
+                        <button type="button" class="dash-see-all" data-goto-section="trips">View all</button>
+                    </div>
                     <div id="dash-recent-bookings" class="dash-bookings-wrap"></div>
 
-                    <h3 class="dash-block-title">Favorite Companies</h3>
+                    <div class="dash-block-head">
+                        <h3 class="dash-block-title">Favorite Companies</h3>
+                        <a class="dash-see-all" href="companies.html">Explore</a>
+                    </div>
                     <div id="dash-overview-fav"></div>
 
-                    <h3 class="dash-block-title">Recent Notifications</h3>
+                    <div class="dash-block-head">
+                        <h3 class="dash-block-title">Recent Notifications</h3>
+                        <button type="button" class="dash-see-all" data-goto-section="notifications">View all</button>
+                    </div>
                     <div id="dash-overview-notif"></div>
                 </section>
 <!-- ============ My Trips ============ -->
                 <section class="dash-section" id="section-trips" aria-labelledby="trips-title" hidden>
                     <h2 id="trips-title" class="dash-section-title">My Trips</h2>
                     <p class="dash-section-note">Browse your upcoming, completed and cancelled journeys. Demo records are included so the dashboard never looks empty.</p>
-                                        <div class="dash-tabs" role="tablist" aria-label="Trip status filter">
+                    <div class="dash-tabs" role="tablist" aria-label="Trip status filter">
                         <button type="button" class="dash-tab active" role="tab" aria-selected="true" data-tab="upcoming">Upcoming</button>
                         <button type="button" class="dash-tab" role="tab" aria-selected="false" data-tab="all">All</button>
                         <button type="button" class="dash-tab" role="tab" aria-selected="false" data-tab="completed">Completed</button>
@@ -140,7 +190,7 @@
                 <!-- ============ Tickets ============ -->
                 <section class="dash-section" id="section-tickets" aria-labelledby="tickets-title" hidden>
                     <h2 id="tickets-title" class="dash-section-title">Digital Tickets</h2>
-                                        <p class="dash-section-note">View, print or share a digital ticket for any confirmed booking.</p>
+                    <p class="dash-section-note">View, print or share a digital ticket for any confirmed booking.</p>
                     <div class="dash-booking-search">
                         <p class="dash-block-title">Find a ticket</p>
                         <input type="search" id="tickets-search" class="dash-search-input" placeholder="Search booking reference, route or company…" autocomplete="off" aria-label="Search your tickets" aria-describedby="tickets-search-hint">
@@ -534,6 +584,6 @@
     <script src="js/cities.js"></script>
     <script src="js/city-picker.js?v=20260907-swap-fix-3-dispatch"></script>
     <script src="js/company.js"></script>
-    <script src="js/dashboard.js?v=20260914-guest-gate"></script>
+    <script src="js/dashboard.js?v=20260916-favlogos"></script>
 </body>
 </html>
