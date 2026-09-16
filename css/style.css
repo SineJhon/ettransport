@@ -8286,5 +8286,181 @@ body.company-page .rv-demo-note {
     .fav-route-pick { grid-template-columns: 1fr; }
     .fav-route-form .btn[type="submit"] { width: 100%; }
 }
+/* ---------- 17.19 Profile edit modal (Edit Profile) ---------- */
+#profile-modal .dash-modal-box { max-width: 740px; }
+#profile-modal .dash-modal-head { align-items: flex-start; }
+#profile-modal .profile-modal-head-copy { display: grid; gap: 0.2rem; min-width: 0; }
+#profile-modal .profile-modal-head-copy h2 { margin: 0; }
+#profile-modal .profile-modal-head-copy p { margin: 0; font-size: 0.85rem; line-height: 1.5; color: #6b7f76; }
+
+#profile-form .profile-form-intro { margin: 0 0 0.9rem; font-size: 0.87rem; line-height: 1.5; color: #6b7f76; }
+
+/* Section cards: header (icon + title + description) over a soft body. */
+.profile-edit-section + .profile-edit-section { margin-top: 1.1rem; }
+.profile-edit-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    padding: 0 0 0.45rem;
+    border-bottom: 1px solid #e3ece7;
+}
+.profile-edit-ic {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.7rem;
+    height: 1.7rem;
+    border-radius: 9px;
+    background: #eaf3ee;
+    color: #0b7a4b;
+    font-size: 0.95rem;
+}
+.profile-edit-copy { min-width: 0; }
+.profile-edit-copy h3 { margin: 0; font-size: 1.02rem; font-weight: 800; color: #163a33; letter-spacing: -0.01em; }
+.profile-edit-copy p { margin: 0.15rem 0 0; font-size: 0.8rem; line-height: 1.45; color: #7d9189; }
+.profile-edit-body {
+    margin-top: 0.7rem;
+    padding: 0.9rem 1rem;
+    background: #fbfdfc;
+    border: 1px solid #e2ece6;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(20, 56, 47, 0.05);
+}
+
+#profile-form .form-group { display: grid; gap: 0.35rem; margin-bottom: 0.85rem; }
+#profile-form .form-group:last-child { margin-bottom: 0; }
+#profile-form .form-group[hidden] { display: none; }
+#profile-form .form-group label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    color: #163a33;
+    text-transform: none;
+}
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
+.profile-info-row { align-items: start; }
+.profile-info-row .form-group { margin-bottom: 0; }
+.profile-info-row .profile-check-line { margin-bottom: 0; align-self: stretch; }
+@media (max-width: 560px) {
+    .form-row { grid-template-columns: 1fr; }
+    .profile-gender-options { grid-template-columns: 1fr; }
+}
+
+/* Date of birth — native calendar date picker. */
+#p-dob-input { width: 100%; }
+
+/* Gender — segmented radio pills. */
+.profile-gender-group { margin-bottom: 0.85rem; }
+.profile-field-label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: #163a33;
+    margin: 0 0 0.5rem;
+}
+.profile-gender-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.5rem; }
+.profile-pill { position: relative; }
+.profile-pill input[type="radio"] { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.profile-pill span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.45rem;
+    padding: 0.45rem 0.55rem;
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: #46605a;
+    border: 1.5px solid #d7e2db;
+    border-radius: 10px;
+    background: #ffffff;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+.profile-pill span:hover { border-color: #a8cdbb; color: #163a33; }
+.profile-pill input[type="radio"]:checked + span {
+    border-color: #0b7a4b;
+    background: linear-gradient(180deg, #0f844f, #0b6d44);
+    color: #ffffff;
+    box-shadow: 0 6px 14px rgba(11, 122, 75, 0.20);
+}
+.profile-pill input[type="radio"]:focus-visible + span { box-shadow: 0 0 0 3px rgba(11, 122, 75, 0.25); }
+
+/* "Pre-fill my bookings" custom checkbox. */
+.profile-check-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    padding: 0.7rem 0.85rem;
+    border: 1.5px solid #dbe3ec;
+    border-radius: 12px;
+    background: #fbfdfc;
+    cursor: pointer;
+    margin-bottom: 0.85rem;
+}
+.profile-check-line:hover { border-color: #a8cdbb; background-color: #f4faf7; }
+.profile-check-line input[type="checkbox"] { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.profile-check-box {
+    flex: 0 0 auto;
+    width: 1.2rem;
+    height: 1.2rem;
+    position: relative;
+    border: 2px solid #c3d5c8;
+    border-radius: 5px;
+    background: #ffffff;
+}
+.profile-check-line input[type="checkbox"]:focus-visible + .profile-check-box { box-shadow: 0 0 0 3px rgba(11, 122, 75, 0.25); }
+.profile-check-line input[type="checkbox"]:checked + .profile-check-box {
+    border-color: #0b7a4b;
+    background: #0b7a4b;
+}
+.profile-check-line input[type="checkbox"]:checked + .profile-check-box::after {
+    content: "\2713";
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 900;
+}
+.profile-check-copy { display: grid; gap: 0.1rem; min-width: 0; }
+.profile-check-copy strong { font-size: 0.89rem; color: #2c4940; font-weight: 700; }
+.profile-check-copy small { color: #7d9189; font-size: 0.78rem; }
+
+/* Refund account — direct fields, the same input method as the booking page. */
+.profile-refund-tip {
+    margin: 0 0 0.85rem;
+    padding: 0.6rem 0.8rem;
+    border: 1px dashed #cfe0d6;
+    border-radius: 10px;
+    background: #f2f8f4;
+    color: #2c4940;
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+#profile-modal .profile-form-actions {
+    justify-content: flex-end;
+    margin-top: 1.1rem;
+    padding: 0.85rem 0 0;
+    border-top: 1px solid #e3ece7;
+}
+
+/* Keep the Phone + Email inputs on one straight line: identical height,
+   the +251 chip never wraps, and the phone hint adds no phantom space. */
+#profile-form .form-row .field-input {
+    height: 46px;
+    box-sizing: border-box;
+}
+#profile-form .phone-field .phone-prefix {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+#profile-form .phone-info {
+    min-height: 0;
+}
 =======
 >>>>>>> b58c4aa2d1a919a0aa5d927c8fdb1be8bb88d643

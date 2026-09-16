@@ -274,6 +274,7 @@
                         <div class="profile-detail"><dt>Email</dt><dd id="p-email"></dd></div>
                         <div class="profile-detail"><dt>Gender</dt><dd id="p-gender"></dd></div>
                         <div class="profile-detail"><dt>Date of Birth</dt><dd id="p-dob"></dd></div>
+                        <div class="profile-detail"><dt>Refund Account</dt><dd id="p-refund"></dd></div>
                     </dl>
                 </section>
 
@@ -493,42 +494,126 @@
         <div class="dash-modal-backdrop" data-profile-close></div>
         <div class="dash-modal-box">
             <div class="dash-modal-head">
-                <h2 id="profile-modal-title">Edit Profile</h2>
+                <div class="profile-modal-head-copy">
+                    <h2 id="profile-modal-title">Edit Profile</h2>
+                    <p>Saved once, used on every booking.</p>
+                </div>
                 <button type="button" id="profile-modal-close" class="dash-modal-close" aria-label="Close profile editor">&times;</button>
             </div>
             <form id="profile-form" novalidate>
-                <div class="form-group">
-                    <label for="p-full-name">Full Name</label>
-                    <input type="text" id="p-full-name" name="fullName" required autocomplete="name">
-                    <span class="field-error" id="p-full-name-err" role="alert"></span>
-                </div>
-                <div class="form-group">
-                    <label for="p-phone-input">Phone</label>
-                    <div class="phone-field">
-                        <span class="phone-prefix" aria-hidden="true">+251</span>
-                        <input type="tel" id="p-phone-input" name="phone" class="field-input" placeholder="9XXXXXXXX" inputmode="numeric" autocomplete="tel">
+                <p class="profile-form-intro">Pre-fills the passenger form and refund account.</p>
+
+                <!-- 1. Contact -->
+                <section class="profile-edit-section">
+                    <header class="profile-edit-head">
+                        <span class="profile-edit-ic" aria-hidden="true">&#128100;</span>
+                        <div class="profile-edit-copy">
+                            <h3>Contact</h3>
+                            <p>How the platform reaches you.</p>
+                        </div>
+                    </header>
+                    <div class="profile-edit-body">
+                        <div class="form-group">
+                            <label for="p-full-name">Full Name</label>
+                            <input type="text" id="p-full-name" name="fullName" required autocomplete="name" placeholder="e.g. Amanuel Tesfaye">
+                            <span class="field-error" id="p-full-name-err" role="alert"></span>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="p-phone-input">Phone</label>
+                                <div class="phone-field">
+                                    <span class="phone-prefix" aria-hidden="true">+251</span>
+                                    <input type="tel" id="p-phone-input" name="phone" class="field-input" placeholder="9XXXXXXXX" inputmode="numeric" autocomplete="tel">
+                                </div>
+                                <span class="phone-info" id="p-phone-info"></span>
+                                <span class="field-error" id="p-phone-err" role="alert"></span>
+                            </div>
+                            <div class="form-group">
+                                <label for="p-email-input">Email</label>
+                                <input type="email" id="p-email-input" name="email" autocomplete="email" placeholder="you@example.com">
+                                <span class="field-error" id="p-email-err" role="alert"></span>
+                            </div>
+                        </div>
                     </div>
-                    <span class="phone-info" id="p-phone-info"></span>
-                    <span class="field-error" id="p-phone-err" role="alert"></span>
-                </div>
-                <div class="form-group">
-                    <label for="p-email-input">Email</label>
-                    <input type="email" id="p-email-input" name="email" autocomplete="email">
-                    <span class="field-error" id="p-email-err" role="alert"></span>
-                </div>
-                <div class="form-group">
-                    <label for="p-gender-input">Gender</label>
-                    <select id="p-gender-input" name="gender">
-                        <option value="">Select gender</option>
-                        <option>Male</option>
-                        <option>Female</option>
-                        <option>Prefer not to say</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="p-dob-input">Date of Birth</label>
-                    <input type="date" id="p-dob-input" name="dob">
-                </div>
+                </section>
+
+                <!-- 2. Passenger Info -->
+                <section class="profile-edit-section">
+                    <header class="profile-edit-head">
+                        <span class="profile-edit-ic" aria-hidden="true">&#127891;</span>
+                        <div class="profile-edit-copy">
+                            <h3>Passenger Info</h3>
+                            <p>About you &mdash; used on the booking passenger form.</p>
+                        </div>
+                    </header>
+                    <div class="profile-edit-body">
+                        <div class="profile-gender-group" role="radiogroup" aria-labelledby="p-gender-label">
+                            <span class="profile-field-label" id="p-gender-label">Gender</span>
+                            <div class="profile-gender-options">
+                                <label class="profile-pill"><input type="radio" name="gender" value="Male"><span>Male</span></label>
+                                <label class="profile-pill"><input type="radio" name="gender" value="Female"><span>Female</span></label>
+                                <label class="profile-pill"><input type="radio" name="gender" value="Prefer not to say"><span>Prefer not to say</span></label>
+                            </div>
+                        </div>
+                        <div class="form-row profile-info-row">
+                            <div class="form-group">
+                                <span class="profile-field-label" id="p-dob-label">Date of Birth</span>
+                                <input type="date" id="p-dob-input" name="dob" class="field-input" min="1900-01-01">
+                                <span class="field-error" id="p-dob-err" role="alert"></span>
+                            </div>
+                            <label class="profile-check-line">
+                                <input type="checkbox" id="p-prefill" name="prefillBooking">
+                                <span class="profile-check-box" aria-hidden="true"></span>
+                                <span class="profile-check-copy"><strong>Pre-fill my bookings with this info</strong><small>My details are filled in automatically for passenger 1 when I book.</small></span>
+                            </label>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Refund Account — same input method as the booking page -->
+                <section class="profile-edit-section">
+                    <header class="profile-edit-head">
+                        <span class="profile-edit-ic" aria-hidden="true">&#128179;</span>
+                        <div class="profile-edit-copy">
+                            <h3>Refund Account</h3>
+                            <p>Where a cancelled booking refund is sent.</p>
+                        </div>
+                    </header>
+                    <div class="profile-edit-body">
+                        <p class="profile-refund-tip">If a trip is cancelled and a refund is issued, the money is returned to this account. Entered once &mdash; it is pre-filled on every booking.</p>
+                        <div class="form-group">
+                            <label for="p-refund-name">Account Name</label>
+                            <input type="text" id="p-refund-name" class="field-input" maxlength="120" placeholder="e.g. Amanuel Tesfaye" autocomplete="off">
+                            <span class="field-error" id="p-refund-name-err" role="alert"></span>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="p-refund-bank">Type of Bank</label>
+                                <select id="p-refund-bank" name="refundBank" class="field-input">
+                                    <option value="">Select bank&hellip;</option>
+                                    <option value="CBE">CBE</option>
+                                    <option value="CBE Birr">CBE Birr</option>
+                                    <option value="TeleBirr">TeleBirr</option>
+                                    <option value="Bank Of Abisiniya">Bank Of Abisiniya</option>
+                                    <option value="Dashen Bank">Dashen Bank</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                                <span class="field-error" id="p-refund-bank-err" role="alert"></span>
+                            </div>
+                            <div class="form-group">
+                                <label for="p-refund-number">Account Number</label>
+                                <input type="text" id="p-refund-number" class="field-input" maxlength="50" placeholder="e.g. 1000134567890" autocomplete="off">
+                                <span class="field-error" id="p-refund-number-err" role="alert"></span>
+                            </div>
+                        </div>
+                        <div class="form-group" id="p-refund-other-wrap" hidden>
+                            <label for="p-refund-other">Other Bank Name</label>
+                            <input type="text" id="p-refund-other" name="refundOther" class="field-input" maxlength="50" placeholder="e.g. Awash Bank" autocomplete="off">
+                            <span class="field-error" id="p-refund-other-err" role="alert"></span>
+                        </div>
+                    </div>
+                </section>
+
                 <div class="profile-form-actions">
                     <button type="submit" class="btn btn-primary" id="profile-save-btn">Save Profile</button>
                     <button type="button" class="btn btn-secondary" id="profile-cancel-btn">Cancel</button>

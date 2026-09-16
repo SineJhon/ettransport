@@ -259,6 +259,13 @@
        in this browser still takes priority; demoProfile() is only the
        last resort when no session user is available at all. */
     function effectiveProfile(user) {
+        /* Browser-saved extras (pre-fill toggle + refund account) are kept
+           separate from the account fields because the database has no
+           columns for them — merge them onto whichever identity wins. */
+        var saved = getJSON(KEY_PROFILE, null);
+        var extras = (saved && typeof saved === 'object')
+            ? { prefillBooking: !!saved.prefillBooking, refundAccount: saved.refundAccount || null }
+            : null;
         /* A real authenticated account is the source of truth. */
         if (user && user.name) {
             return {
@@ -266,10 +273,11 @@
                 phone: user.phone || '',
                 email: user.email || '',
                 gender: user.gender || '',
-                dob: user.date_of_birth || ''
+                dob: user.date_of_birth || '',
+                prefillBooking: extras ? extras.prefillBooking : false,
+                refundAccount: extras ? extras.refundAccount : null
             };
         }
-        var saved = getJSON(KEY_PROFILE, null);
         if (saved && typeof saved === 'object' && (saved.fullName || saved.phone || saved.email)) {
             return saved;
         }
@@ -1535,6 +1543,51 @@ function closeTicket() {
         if (err) { err.textContent = ''; }
     }
 
+    /* ============================================================
+       Profile modal helpers — gender radios, DOB picker, refunds.
+       ============================================================ */
+    function setGenderRadio(value) {
+        var radios = document.querySelectorAll('#profile-form input[name="gender"]');
+        for (var i = 0; i < radios.length; i++) {
+            radios[i].checked = (radios[i].value === value);
+        }
+    }
+    function selectedGender() {
+        var radios = document.querySelectorAll('#profile-form input[name="gender"]');
+        for (var i = 0; i < radios.length; i++) {
+            if (radios[i].checked) { return radios[i].value; }
+        }
+        return '';
+    }
+
+    /* "Use my account" refunds derive a TeleBirr number from the +251 phone. */
+    function telebirrNumber(phone) {
+        var digits = normalizeLocalPhone(phone);
+        return validLocalPhone(digits) ? '0' + digits : '';
+    }
+
+    function syncRefundOtherToggle() {
+        var bank = document.getElementById('p-refund-bank');
+        var otherWrap = document.getElementById('p-refund-other-wrap');
+        if (!bank || !otherWrap) { return; }
+        if (bank.value === 'Other') {
+            otherWrap.hidden = false;
+        } else {
+            otherWrap.hidden = true;
+            var other = document.getElementById('p-refund-other');
+            if (other) { other.value = ''; }
+        }
+    }
+
+    function refundSummaryText(p) {
+        var ra = (p && p.refundAccount) ? p.refundAccount : null;
+        if (!ra) { return '\u2014'; }
+        if (ra.mode === 'mine') { return 'My account \u00b7 TeleBirr'; }
+        var bank = (ra.bank === 'Other' && ra.otherBank) ? ra.otherBank : ra.bank;
+        if (!bank && !ra.number) { return '\u2014'; }
+        return ((bank || 'Account') + (ra.number ? ' \u00b7 ' + ra.number : '')).trim();
+    }
+
     function renderProfile(user) {
         var p = effectiveProfile(user || sessionUser);
         var greeting = document.getElementById('dash-greeting');
@@ -1550,6 +1603,7 @@ function closeTicket() {
         document.getElementById('p-email').textContent = p.email || '';
         document.getElementById('p-gender').textContent = p.gender || '\u2014';
         document.getElementById('p-dob').textContent = p.dob ? formatDate(p.dob) : '\u2014';
+        document.getElementById('p-refund').textContent = refundSummaryText(p);
     }
 
     var profileModal = document.getElementById('profile-modal');
@@ -1565,11 +1619,48 @@ function closeTicket() {
         document.getElementById('p-full-name').value = p.fullName || '';
         document.getElementById('p-phone-input').value = normalizeLocalPhone(p.phone);
         document.getElementById('p-email-input').value = p.email || '';
-        document.getElementById('p-gender-input').value = p.gender || '';
-        document.getElementById('p-dob-input').value = p.dob || '';
+        setGenderRadio(p.gender || '');
+        var dobEl = document.getElementById('p-dob-input');
+        if (dobEl) {
+            dobEl.max = isoToday();
+            dobEl.value = p.dob || '';
+        }
+        var prefill = document.getElementById('p-prefill');
+        if (prefill) { prefill.checked = !!(p.prefillBooking); }
+
+        /* Refund account — plain saved values, edited directly. Mirrors the
+           booking section's refund form. Legacy "mode: mine" data (entered in
+           earlier builds) still expands to the profile's own TeleBirr account. */
+        var savedRefund = (p && p.refundAccount && typeof p.refundAccount === 'object') ? p.refundAccount : null;
+        var rName = document.getElementById('p-refund-name');
+        var rBank = document.getElementById('p-refund-bank');
+        var rNum = document.getElementById('p-refund-number');
+        var rOther = document.getElementById('p-refund-other');
+        if (rName) {
+            rName.value = savedRefund
+                ? ((savedRefund.mode === 'mine') ? (p.fullName || '') : (savedRefund.name || ''))
+                : '';
+        }
+        if (rBank) {
+            rBank.value = savedRefund
+                ? ((savedRefund.mode === 'mine') ? 'TeleBirr' : (savedRefund.bank || ''))
+                : '';
+        }
+        if (rNum) {
+            rNum.value = savedRefund
+                ? ((savedRefund.mode === 'mine') ? telebirrNumber(p && p.phone) : (savedRefund.number || ''))
+                : '';
+        }
+        if (rOther) { rOther.value = (savedRefund && savedRefund.otherBank) ? savedRefund.otherBank : ''; }
+        syncRefundOtherToggle();
+
         clearFieldError('p-full-name');
         clearFieldError('p-phone-input');
         clearFieldError('p-email-input');
+        clearFieldError('p-dob');
+        clearFieldError('p-refund-name');
+        clearFieldError('p-refund-bank');
+        clearFieldError('p-refund-number');
         var info = document.getElementById('p-phone-info');
         if (info) { info.textContent = ''; info.classList.remove('show'); }
         if (profileFormMsg) { profileFormMsg.hidden = true; }
@@ -2497,6 +2588,56 @@ function closeTicket() {
         });
     }
 
+    /* Inline validation shown as the user leaves each field (name, email, DOB).
+       Phone already validates live as digits are typed. */
+    function validateNameField() {
+        var el = document.getElementById('p-full-name');
+        if (!el) { return; }
+        if (!el.value.trim()) { setFieldError('p-full-name', 'Full name is required.'); }
+        else { clearFieldError('p-full-name'); }
+    }
+    function validateEmailField() {
+        var el = document.getElementById('p-email-input');
+        if (!el) { return; }
+        var val = el.value.trim();
+        if (val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) { setFieldError('p-email-input', 'Please enter a valid email address.'); }
+        else { clearFieldError('p-email-input'); }
+    }
+    function validateDobField() {
+        var el = document.getElementById('p-dob-input');
+        if (!el) { return; }
+        var val = el.value;
+        if (!val) { clearFieldError('p-dob'); return; }
+        if (val > isoToday()) { setFieldError('p-dob', 'Date of birth cannot be in the future.'); }
+        else { clearFieldError('p-dob'); }
+    }
+    var profileNameFld = document.getElementById('p-full-name');
+    if (profileNameFld) { profileNameFld.addEventListener('blur', validateNameField); }
+    var profileEmailFld = document.getElementById('p-email-input');
+    if (profileEmailFld) { profileEmailFld.addEventListener('blur', validateEmailField); }
+    var profileDobFld = document.getElementById('p-dob-input');
+    if (profileDobFld) {
+        profileDobFld.max = isoToday();
+        profileDobFld.addEventListener('change', validateDobField);
+    }
+
+    function fetchWithTimeout(url, options, ms) {
+        if (typeof window.fetch !== 'function') { return Promise.reject(new Error('fetch unavailable')); }
+        if (typeof window.AbortController === 'undefined') { return window.fetch(url, options); }
+        var controller = new AbortController();
+        var timer = setTimeout(function () { controller.abort(); }, ms || 8000);
+        var opts = {};
+        if (options) {
+            for (var k in options) {
+                if (Object.prototype.hasOwnProperty.call(options, k)) { opts[k] = options[k]; }
+            }
+        }
+        opts.signal = controller.signal;
+        return window.fetch(url, opts)
+            .then(function (resp) { clearTimeout(timer); return resp; })
+            .catch(function (err) { clearTimeout(timer); throw err; });
+    }
+
     var profileForm = document.getElementById('profile-form');
     if (profileForm) {
         profileForm.addEventListener('submit', function (event) {
@@ -2505,8 +2646,16 @@ function closeTicket() {
             var name = document.getElementById('p-full-name').value.trim();
             var email = document.getElementById('p-email-input').value.trim();
             var digits = normalizeLocalPhone(document.getElementById('p-phone-input').value);
-            var gender = document.getElementById('p-gender-input').value;
-            var dob = document.getElementById('p-dob-input').value;
+            var gender = selectedGender();
+            var dobIso = document.getElementById('p-dob-input').value;
+            var prefillBooking = !!(document.getElementById('p-prefill') && document.getElementById('p-prefill').checked);
+
+            if (dobIso && dobIso > isoToday()) {
+                setFieldError('p-dob', 'Date of birth cannot be in the future.');
+                ok = false;
+            } else {
+                clearFieldError('p-dob');
+            }
 
             if (!name) { setFieldError('p-full-name', 'Full name is required.'); ok = false; }
             else { clearFieldError('p-full-name'); }
@@ -2517,11 +2666,59 @@ function closeTicket() {
             if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setFieldError('p-email-input', 'Please enter a valid email address.'); ok = false; }
             else { clearFieldError('p-email-input'); }
 
+            /* Refund account — read directly, the same way as the booking section's
+               form. Fields are optional, but once the user starts an account
+               keep it internally consistent (a bank is needed, and "Other"
+               needs its bank name). */
+            var refundBankValue = document.getElementById('p-refund-bank').value;
+            var refundAccount = {
+                name: document.getElementById('p-refund-name').value.trim(),
+                number: document.getElementById('p-refund-number').value.trim(),
+                bank: refundBankValue,
+                otherBank: ''
+            };
+            if (refundBankValue === 'Other') {
+                refundAccount.otherBank = document.getElementById('p-refund-other').value.trim();
+                refundAccount.bank = refundAccount.otherBank ? 'Other' : '';
+            }
+            var refundStarted = !!(refundAccount.name || refundAccount.number || refundAccount.bank);
+            clearFieldError('p-refund-name');
+            clearFieldError('p-refund-bank');
+            clearFieldError('p-refund-number');
+            clearFieldError('p-refund-other');
+            if (refundStarted) {
+                if (!refundAccount.name) { setFieldError('p-refund-name', 'Please enter the account name.'); ok = false; }
+                if (!refundAccount.bank) { setFieldError('p-refund-bank', 'Please choose a bank.'); ok = false; }
+                if (refundBankValue === 'Other' && !refundAccount.otherBank) {
+                    setFieldError('p-refund-other', 'Please name the bank.');
+                    ok = false;
+                }
+                if (!refundAccount.number) { setFieldError('p-refund-number', 'Please enter the account number.'); ok = false; }
+            }
+
             if (!ok) { return; }
 
-            var submitBtn = document.getElementById('profile-save-btn');
             var fullPhone = '+251' + digits;
-            var savedProfile = { fullName: name, phone: fullPhone, email: email, gender: gender || '', dob: dob || '' };
+            var savedProfile = {
+                fullName: name,
+                phone: fullPhone,
+                email: email,
+                gender: gender || '',
+                dob: dobIso || '',
+                prefillBooking: prefillBooking,
+                refundAccount: refundAccount
+            };
+
+            /* Local-first save: apply the profile to this device immediately so
+               the modal never blocks on the server. Logged-in passengers get
+               the same fields synced to the database in the background (with a
+               timeout, so a slow server can never leave the button hanging). */
+            var body = new FormData();
+            body.append('name', name);
+            body.append('email', email);
+            body.append('phone', fullPhone);
+            body.append('gender', gender || '');
+            body.append('date_of_birth', dobIso || '');
 
             function applyProfile(updatedUser) {
                 if (updatedUser) { sessionUser = updatedUser; }
@@ -2531,47 +2728,40 @@ function closeTicket() {
                 toast('Your profile has been updated.');
             }
 
-            if (sessionUser) {
-                /* Real authenticated passenger — persist to the database. */
-                if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Saving\u2026'; }
-                if (profileFormMsg) { profileFormMsg.hidden = true; }
-
-                var body = new FormData();
-                body.append('name', name);
-                body.append('email', email);
-                body.append('phone', fullPhone);
-                body.append('gender', gender || '');
-                body.append('date_of_birth', dob || '');
-
-                window.fetch('api/auth.php?action=update_profile', {
+            if (sessionUser && typeof window.fetch === 'function') {
+                fetchWithTimeout('api/auth.php?action=update_profile', {
                     method: 'POST',
                     credentials: 'same-origin',
                     headers: { 'Accept': 'application/json' },
                     body: body
-                })
+                }, 8000)
                     .then(function (res) { return res.json().catch(function () { return {}; }); })
                     .then(function (json) {
-                        if (json && json.success === true) {
-                            applyProfile(json.user || null);
-                        } else {
-                            if (profileFormMsg) {
-                                profileFormMsg.textContent = (json && json.message) || 'Unable to save your profile. Please try again.';
-                                profileFormMsg.hidden = false;
-                            }
-                            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Save Profile'; }
+                        if (json && json.success === true && json.user) {
+                            sessionUser = json.user;
+                            setJSON(KEY_PROFILE, savedProfile);
+                            renderProfile();
+                        } else if (json && json.message) {
+                            toast('Saved on this device \u2014 server sync: ' + json.message);
                         }
                     })
                     .catch(function () {
-                        if (profileFormMsg) {
-                            profileFormMsg.textContent = 'Network error \u2014 your profile was not saved.';
-                            profileFormMsg.hidden = false;
-                        }
-                        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Save Profile'; }
+                        toast('Profile saved on this device \u2014 server sync unavailable.');
                     });
-            } else {
-                /* No real account (guest) — keep the browser-only copy. */
-                applyProfile(null);
             }
+            applyProfile(null);
+        });
+    }
+
+    /* Live behaviour for the redesigned profile form: DOB input handling,
+       refund bank "Other" field toggle and inline validation on blur/change. */
+    var profileFormLive = document.getElementById('profile-form');
+    if (profileFormLive) {
+        profileFormLive.addEventListener('change', function (event) {
+            var target = event.target;
+            if (!target || !target.name) { return; }
+            if (target.id === 'p-dob-input') { validateDobField(); }
+            if (target.id === 'p-refund-bank') { syncRefundOtherToggle(); }
         });
     }
 var supportForm = document.getElementById('support-form');

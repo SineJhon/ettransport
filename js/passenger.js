@@ -357,6 +357,105 @@
         }
     });
 
+    /* ============================================================
+       Saved-profile pre-fill — the dashboard's "Edit Profile" modal
+       stores reusable passenger details plus a refund account. When
+       the passenger enabled "pre-fill my bookings", apply the saved
+       details to their own card (passenger 1) and the saved refund
+       account to the refund card, so details are entered once and
+       reused on every booking.
+       ============================================================ */
+    function loadSavedProfile() {
+        if (!window.ETTransportStore) { return null; }
+        var p = window.ETTransportStore.get('etTransportProfile');
+        return (p && typeof p === 'object' && p.fullName) ? p : null;
+    }
+
+    function ageFromDob(iso) {
+        if (!iso) { return ''; }
+        var bd = new Date(iso + 'T00:00:00');
+        if (isNaN(bd.getTime())) { return ''; }
+        var now = new Date();
+        var age = now.getFullYear() - bd.getFullYear();
+        var m = now.getMonth() - bd.getMonth();
+        if (m < 0 || (m === 0 && now.getDate() < bd.getDate())) { age--; }
+        return (age >= 1 && age <= 100) ? String(age) : '';
+    }
+
+    function prefillFromProfile() {
+        var profile = loadSavedProfile();
+        if (!profile) { return; }
+
+        /* Refund account — reused on every booking once entered in the profile. */
+        var ra = profile.refundAccount;
+        var rName = document.getElementById('refund-account-name');
+        var rBank = document.getElementById('refund-account-type');
+        var rOther = document.getElementById('refund-account-other');
+        var rOtherWrap = document.getElementById('refund-account-other-wrap');
+        var rNum = document.getElementById('refund-account-number');
+        if (ra && rName && rBank) {
+            var nameVal, bankVal, otherVal = '', numVal;
+            if (ra.mode === 'mine') {
+                nameVal = profile.fullName || '';
+                bankVal = 'TeleBirr';
+                numVal = ra.number || normalizeLocal(profile.phone || '');
+            } else {
+                nameVal = ra.name || '';
+                bankVal = ra.bank || '';
+                otherVal = (ra.bank === 'Other' && ra.otherBank) ? ra.otherBank : '';
+                numVal = ra.number || '';
+            }
+            rName.value = nameVal;
+            rBank.value = bankVal;
+            if (rNum) { rNum.value = numVal; }
+            if (rOther) { rOther.value = otherVal; }
+            if (rOtherWrap) { rOtherWrap.hidden = (bankVal !== 'Other'); }
+        }
+
+        /* Passenger card 1 (the traveller themselves) — only when pre-fill was
+           enabled in the profile so a new booking can still start blank. */
+        if (!profile.prefillBooking || passengerCards.length < 1) { return; }
+        var card = passengerCards[0];
+        var nameInput = card.querySelector('.p-name');
+        if (nameInput && profile.fullName) { nameInput.value = profile.fullName; }
+        if (profile.phone) {
+            var phoneInput = card.querySelector('.p-phone');
+            if (phoneInput) { phoneInput.value = normalizeLocal(profile.phone); }
+        }
+        if (profile.email) {
+            var emailInput = card.querySelector('.p-email');
+            if (emailInput) { emailInput.value = profile.email; }
+        }
+        if (profile.gender === 'Male' || profile.gender === 'Female') {
+            var genderSel = card.querySelector('.p-gender');
+            if (genderSel) { genderSel.value = profile.gender; }
+        }
+        var ageInput = card.querySelector('.p-age');
+        if (ageInput) {
+            var savedAge = ageFromDob(profile.dob);
+            if (savedAge) { ageInput.value = savedAge; }
+        }
+    }
+
+    prefillFromProfile();
+
+    /* Enable "Continue to Payment" only when the pre-filled details are
+       complete; skip early error markers so "Prefer not to say" profiles
+       (and other partially-saved data) stay clean until the user edits. */
+    function cardsAllValid() {
+        for (var v = 0; v < passengerCards.length; v++) {
+            var c = passengerCards[v];
+            if (!c.querySelector('.p-name').value.trim()) { return false; }
+            var ageRaw = c.querySelector('.p-age').value.trim();
+            var ageNum = parseInt(ageRaw, 10);
+            if (!/^\d+$/.test(ageRaw) || ageNum < 1 || ageNum > 100) { return false; }
+            if (!c.querySelector('.p-gender').value) { return false; }
+            if (!validLocal(normalizeLocal(c.querySelector('.p-phone').value))) { return false; }
+        }
+        return true;
+    }
+    if (cardsAllValid()) { updatePayState(); }
+
     /* -------- Refund account bank toggle (show "Other" text when selected) -------- */
     var refundBankTypeEl = document.getElementById('refund-account-type');
     var refundBankOtherWrap = document.getElementById('refund-account-other-wrap');
