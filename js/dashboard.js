@@ -1745,25 +1745,44 @@ function closeTicket() {
           text: 'Problems with the website or the booking flow.' }
     ];
 
-    /* Help-topic cards double as shortcuts: clicking one pre-fills the contact
-       form's Topic dropdown and moves the passenger to the form. The dropdown
-       is rebuilt from SUPPORT_TOPICS, so cards and form can never drift apart. */
+    var selectedSupportTopic = '';
+    var supportDrafts = {};   // topic key -> { msg, ref } kept while switching cards
+
+    /* The topic cards ARE the contact form's topic picker. Tapping a card
+       selects the topic and expands an inline input field right where the
+       description was — the passenger types the message on the card itself.
+       The hidden topic <select> + name/email stay in sync for the payload. */
     function renderSupport() {
         var el = document.getElementById('support-cards');
         if (!el) { return; }
         var html = '';
         for (var i = 0; i < SUPPORT_TOPICS.length; i++) {
             var t = SUPPORT_TOPICS[i];
-            html += '<a class="support-card" href="#support-form" data-support-topic="' + escapeAttr(t.key) + '" aria-label="Ask about ' + escapeAttr(t.title) + '">' +
+            var selected = (selectedSupportTopic === t.key);
+            var draft = supportDrafts[t.key];
+            var draftMsg = draft ? (draft.msg || '') : '';
+            var draftRef = draft ? (draft.ref || '') : '';
+            html += '<div class="support-card support-topic-card' + (selected ? ' selected' : '') + '" data-support-topic="' + escapeAttr(t.key) + '" role="button" tabindex="0" aria-pressed="' + (selected ? 'true' : 'false') + '">' +
                 '<span class="support-icon" aria-hidden="true">' + t.icon + '</span>' +
-                '<h3>' + escapeHtml(t.title) + '</h3>' +
-                '<p>' + escapeHtml(t.text) + '</p>' +
-                '<span class="support-card-link">Ask about this &rarr;</span>' +
-            '</a>';
+                '<span class="support-topic-title">' + escapeHtml(t.title) + '</span>' +
+                '<p class="support-card-desc">' + escapeHtml(t.text) + '</p>' +
+                (selected
+                    ? '<div class="support-card-fields">' +
+                        '<textarea class="support-card-input" data-support-message maxlength="1000" placeholder="Tell us what happened — include the route and travel date…">' + escapeHtml(draftMsg) + '</textarea>' +
+                        '<span class="field-error" data-support-err role="alert"></span>' +
+                        '<div class="support-card-subrow">' +
+                            '<input type="text" class="support-card-ref" data-support-booking maxlength="30" autocomplete="off" placeholder="Booking ref (optional)" value="' + escapeAttr(draftRef) + '">' +
+                            '<button type="submit" class="btn btn-primary btn-sm">Send Request</button>' +
+                        '</div>' +
+                        '<p class="support-card-status" data-support-status role="status" hidden></p>' +
+                    '</div>'
+                    : '<span class="support-card-link">Choose this &rarr;</span>') +
+            '</div>';
         }
         el.innerHTML = html;
 
-        /* Single source of truth for the Topic dropdown. */
+        /* Hidden dropdown stays the single source of truth for the submit
+           payload. No topic is pre-selected — a card click is required. */
         var select = document.getElementById('support-topic');
         if (!select) { return; }
         while (select.firstChild) { select.removeChild(select.firstChild); }
@@ -1773,26 +1792,42 @@ function closeTicket() {
             opt.textContent = SUPPORT_TOPICS[j].title;
             select.appendChild(opt);
         }
+        select.selectedIndex = -1;
     }
 
-    /* Topic card clicked -> pre-fill the form's Topic dropdown and take the
-       passenger to the form (progressive enhancement: the card is also an
-       anchor that links there without JS). */
+    /* Topic card clicked -> record the choice, reveal the inline input on the
+       selected card and ask for the message. Drafts from a previously opened
+       card are stashed so nothing typed is ever lost when switching. */
     function selectSupportTopic(key) {
+        if (selectedSupportTopic === key) {
+            var existing = document.querySelector('.support-topic-card.selected [data-support-message]');
+            if (existing) { try { existing.focus(); } catch (e) { /* noop */ } }
+            return;
+        }
+        /* Stash the current card's draft before re-rendering. */
+        if (selectedSupportTopic) {
+            var prevMsg = document.querySelector('.support-topic-card.selected [data-support-message]');
+            var prevRef = document.querySelector('.support-topic-card.selected [data-support-booking]');
+            supportDrafts[selectedSupportTopic] = {
+                msg: prevMsg ? prevMsg.value : '',
+                ref: prevRef ? prevRef.value : ''
+            };
+        }
+        selectedSupportTopic = key;
+        renderSupport();
         var select = document.getElementById('support-topic');
         if (select) {
             for (var i = 0; i < select.options.length; i++) {
                 if (select.options[i].value === key) { select.selectedIndex = i; break; }
             }
         }
-        /* The request form lives on the "Contact Support" tab inside this
-           section — switch to it, then scroll to the form and focus. */
-        setSupportView('contact');
-        var form = document.getElementById('support-form');
-        if (!form) { return; }
-        try { form.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { form.scrollIntoView(); }
+        clearFieldError('support-topic');
+        var fields = document.querySelector('.support-topic-card.selected .support-card-fields');
+        if (fields) {
+            try { fields.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { fields.scrollIntoView(); }
+        }
         setTimeout(function () {
-            var msg = document.getElementById('support-message');
+            var msg = document.querySelector('.support-topic-card.selected [data-support-message]');
             if (msg) { try { msg.focus(); } catch (e) { /* noop */ } }
         }, 320);
     }
@@ -3114,27 +3149,38 @@ function closeTicket() {
 
     function submitSupport(event) {
         event.preventDefault();
+        var card = document.querySelector('.support-topic-card.selected');
+        if (!card) {
+            setFieldError('support-topic', 'Choose a topic first.');
+            return;
+        }
         var name = document.getElementById('support-name');
         var email = document.getElementById('support-email');
         var topic = document.getElementById('support-topic');
-        var booking = document.getElementById('support-booking');
-        var message = document.getElementById('support-message');
-        var msg = document.getElementById('support-form-msg');
-        var btn = document.getElementById('support-submit-btn');
+        var booking = card.querySelector('[data-support-booking]');
+        var message = card.querySelector('[data-support-message]');
+        var statusEl = card.querySelector('[data-support-status]');
+        var errEl = card.querySelector('[data-support-err]');
+        var btn = card.querySelector('button[type="submit"]');
         if (!topic || !message) { return; }
 
+        function cardError(text) { if (errEl) { errEl.textContent = text || ''; } }
+
         var ok = true;
-        if (!name || !name.value.trim()) { setFieldError('support-name', 'Your name is required.'); ok = false; }
-        else { clearFieldError('support-name'); }
-        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) { setFieldError('support-email', 'A valid email is required.'); ok = false; }
-        else { clearFieldError('support-email'); }
-        if (!message.value.trim()) { setFieldError('support-message', 'Please describe your issue.'); ok = false; }
-        else { clearFieldError('support-message'); }
+        if (!name || !String(name.value || '').trim() ||
+            !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email.value || '').trim())) {
+            toast('Please check your name and email, then try again.');
+            ok = false;
+        }
+        if (!topic || topic.selectedIndex < 0) { setFieldError('support-topic', 'Choose a topic first.'); ok = false; }
+        else { clearFieldError('support-topic'); }
+        if (!message.value.trim()) { cardError('Please describe your issue.'); ok = false; }
+        else { cardError(''); }
         /* Optional booking reference — must belong to this passenger so the
            server-side ownership lookup never fails after a round trip. */
         var bookingRef = (booking && booking.value) ? booking.value.trim() : '';
         if (bookingRef && bookingRef.length > 30) {
-            setFieldError('support-booking', 'Booking reference must be 30 characters or fewer.');
+            cardError('Booking reference must be 30 characters or fewer.');
             ok = false;
         } else if (bookingRef) {
             var bOwned = false;
@@ -3145,18 +3191,15 @@ function closeTicket() {
                 if (ref === bookingRef) { bOwned = true; break; }
             }
             if (!bOwned) {
-                setFieldError('support-booking', 'That booking reference was not found on your account.');
+                cardError('That booking reference was not found on your account.');
                 ok = false;
-            } else {
-                clearFieldError('support-booking');
             }
-        } else {
-            clearFieldError('support-booking');
         }
         if (!ok) { return; }
 
-        if (msg) { msg.hidden = true; msg.textContent = ''; }
+        if (statusEl) { statusEl.hidden = true; statusEl.textContent = ''; }
         if (btn) { btn.disabled = true; btn.textContent = 'Sending\u2026'; }
+        if (message) { message.disabled = true; }
 
         var sel = (topic.selectedIndex >= 0) ? topic.options[topic.selectedIndex] : null;
         var subject = (sel && sel.textContent ? sel.textContent.trim() : 'Support request').slice(0, 120);
@@ -3177,31 +3220,33 @@ function closeTicket() {
         })
             .then(function (res) { return res.json().catch(function () { return { success: false, message: 'Invalid server response.' }; }); })
             .then(function (json) {
-                if (btn) { btn.disabled = false; btn.textContent = 'Send Support Request'; }
+                if (btn) { btn.disabled = false; btn.textContent = 'Send Request'; }
+                if (message) { message.disabled = false; }
                 if (!json || !json.success) {
-                    if (msg) {
-                        msg.textContent = (json && json.message) || 'Unable to send your request. Please try again.';
-                        msg.hidden = false;
+                    if (statusEl) {
+                        statusEl.style.color = '#b02f2f';
+                        statusEl.textContent = (json && json.message) || 'Unable to send your request. Please try again.';
+                        statusEl.hidden = false;
                     }
                     return;
                 }
-                var form = document.getElementById('support-form');
-                if (form) { form.reset(); }
+                /* Reset the picker back to step one; the new request shows in
+                   My Requests (refreshed below). */
+                delete supportDrafts[selectedSupportTopic];
+                selectedSupportTopic = '';
+                renderSupport();
                 prefillSupportIdentity(sessionUser);
-                if (msg) {
-                    msg.textContent = 'Request sent to ET Transport support. Track the reply under My Requests below.';
-                    msg.setAttribute('role', 'status');
-                    msg.hidden = false;
-                }
-                /* Refresh the shared complaint feed (Complaints + My Requests). */
+                toast('Request sent to ET Transport support. Track the reply under My Requests below.');
                 syncRealComplaints();
                 if (window.ETNotifications && window.ETNotifications.refresh) { window.ETNotifications.refresh(); }
             })
             .catch(function () {
-                if (btn) { btn.disabled = false; btn.textContent = 'Send Support Request'; }
-                if (msg) {
-                    msg.textContent = 'Network error — your request was not sent. Please try again.';
-                    msg.hidden = false;
+                if (btn) { btn.disabled = false; btn.textContent = 'Send Request'; }
+                if (message) { message.disabled = false; }
+                if (statusEl) {
+                    statusEl.style.color = '#b02f2f';
+                    statusEl.textContent = 'Network error — your request was not sent. Please try again.';
+                    statusEl.hidden = false;
                 }
             });
     }
@@ -3487,11 +3532,21 @@ function closeTicket() {
         var supportCards = document.getElementById('support-cards');
         if (supportCards) {
             supportCards.addEventListener('click', function (ev) {
-                var topicBtn = ev.target.closest ? ev.target.closest('[data-support-topic]') : null;
-                if (topicBtn) {
-                    ev.preventDefault();
-                    var topicKey = topicBtn.getAttribute('data-support-topic');
+                /* Clicks inside the inline input / button stay native. */
+                if (ev.target.closest && ev.target.closest('button, input, textarea, select, a')) { return; }
+                var cardEl = ev.target.closest ? ev.target.closest('[data-support-topic]') : null;
+                if (cardEl) {
+                    var topicKey = cardEl.getAttribute('data-support-topic');
                     if (topicKey) { selectSupportTopic(topicKey); }
+                }
+            });
+            supportCards.addEventListener('keydown', function (ev) {
+                if (ev.key !== 'Enter' && ev.key !== ' ') { return; }
+                if (ev.target.closest && ev.target.closest('button, input, textarea, select, a')) { return; }
+                var cardEl = ev.target.closest ? ev.target.closest('[data-support-topic]') : null;
+                if (cardEl) {
+                    ev.preventDefault();
+                    selectSupportTopic(cardEl.getAttribute('data-support-topic'));
                 }
             });
         }
