@@ -8148,6 +8148,7 @@ body.company-page .rv-demo-note {
 
 .dash-mini-chip-logo { flex: 0 0 auto; width: 22px; height: 22px; border-radius: 6px; object-fit: contain; }
 .dash-mini-chip-name { font-weight: 600; }
+<<<<<<< HEAD
 
 /* ---------- 17.23 Favorites section polish ---------- */
 .dash-count-pill {
@@ -8285,3 +8286,5 @@ body.company-page .rv-demo-note {
     .fav-route-pick { grid-template-columns: 1fr; }
     .fav-route-form .btn[type="submit"] { width: 100%; }
 }
+=======
+>>>>>>> b58c4aa2d1a919a0aa5d927c8fdb1be8bb88d643
