@@ -250,7 +250,8 @@ function handle_pay(): void
                 'Payment Successful',
                 'Payment of ETB ' . number_format($amount, 2) . ' for booking '
                     . $booking['booking_reference'] . ' was successful (ref ' . $txRef . ').',
-                'payment-success:' . $txRef
+                'payment-success:' . $txRef,
+                'tickets'
             );
         } catch (Throwable $e) {
             /* Best-effort only — never let a notification failure alter the response. */

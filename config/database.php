@@ -516,6 +516,24 @@ function ensure_schema_columns(PDO $pdo): void
         if ((int) $stmt->fetchColumn() === 0) {
             $pdo->exec("ALTER TABLE buses ADD COLUMN image VARCHAR(255) DEFAULT NULL AFTER registration_number");
         }
+
+        /* notifications.target — optional navigation target that makes a
+           passenger notification a deep link (e.g. 'tickets', 'trips',
+           'profile-edit', 'complaints', 'company-reviews:selam-bus').
+           Rendered by the dashboard list and the navbar bell. Fresh
+           installs already get the column from schema.sql; this adds it to
+           databases created before it existed. */
+        $stmt = $pdo->prepare(
+            "SELECT COUNT(*)
+               FROM information_schema.columns
+              WHERE table_schema = DATABASE()
+                AND table_name = 'notifications'
+                AND column_name = 'target'"
+        );
+        $stmt->execute();
+        if ((int) $stmt->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE notifications ADD COLUMN target VARCHAR(120) DEFAULT NULL AFTER type");
+        }
     } catch (Throwable $e) {
         /* Non-fatal on upgrade path — surfaces only if the app cannot query the schema. */
     }

@@ -286,6 +286,16 @@ function handle_create(): void
 
         $newId = (int) $pdo->lastInsertId();
 
+        /* Company slug for the notification deep link to the public profile's
+           reviews section (company.html?company=SLUG#cp-reviews). */
+        $reviewCompanyTarget = '';
+        $slugStmt = $pdo->prepare('SELECT slug FROM companies WHERE id = :id LIMIT 1');
+        $slugStmt->execute([':id' => (int) $booking['company_id']]);
+        $slugRow = $slugStmt->fetch();
+        if ($slugRow !== false && (string) ($slugRow['slug'] ?? '') !== '') {
+            $reviewCompanyTarget = 'company-reviews:' . (string) $slugRow['slug'];
+        }
+
         /* Real notification: review submitted. Created ONLY after the review row
            is inserted (invalid / duplicate / rejected reviews return before this
            point and never create one). The company name comes from MySQL via the
@@ -297,7 +307,8 @@ function handle_create(): void
                 'review',
                 'Review Submitted',
                 'Your review for ' . $booking['company_name'] . ' has been submitted successfully.',
-                'review-created:' . $newId
+                'review-created:' . $newId,
+                $reviewCompanyTarget
             );
         } catch (Throwable $e) {
             /* Best-effort only — never let a notification failure alter the response. */

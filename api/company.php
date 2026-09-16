@@ -1818,7 +1818,8 @@ function handle_trip_status(PDO $pdo): void
                         . $trip['to_city'] . ') departing ' . $trip['departure_date'] . ' has been cancelled '
                         . 'because the transport company cancelled this trip. Reason: ' . $cancellationReason
                         . '. Please contact the company for assistance or book another trip.',
-                    'trip-cancelled:' . $book['booking_reference']
+                    'trip-cancelled:' . $book['booking_reference'],
+                    'trips'
                 );
                 $notified++;
             } catch (Throwable $e) {
@@ -3055,7 +3056,8 @@ function handle_company_booking_create(PDO $pdo): void
                 'booking',
                 'Ticket booked by office',
                 'Your ticket for ' . $trip['from_city'] . ' → ' . $trip['to_city'] . ' has been booked and confirmed. Seat ' . $seatNumber . ' is reserved under booking ' . $ref . '.',
-                'walkin-booking:' . $ref
+                'walkin-booking:' . $ref,
+                'tickets'
             );
         } catch (Throwable $e) {
             // Best-effort only; never fail the booking.
@@ -3271,7 +3273,8 @@ function handle_booking_cancel(PDO $pdo): void
                 'Your booking ' . $booking['booking_reference'] . ' (' . $booking['from_city'] . ' → '
                     . $booking['to_city'] . ') departing ' . $booking['departure_date'] . ' has been cancelled. '
                     . $refundNote,
-                'booking-cancelled:' . $booking['booking_reference']
+                'booking-cancelled:' . $booking['booking_reference'],
+                'trips'
             );
         } catch (Throwable $e) {
             /* A notification failure never changes the cancellation result. */
@@ -5356,7 +5359,8 @@ function handle_complaint_update(PDO $pdo): void
                 'complaint',
                 'Complaint Update',
                 $note,
-                'complaint-replied:' . $complaintId
+                'complaint-replied:' . $complaintId,
+                'complaints'
             );
         } catch (Throwable $e) {
             /* Best-effort only — never let a notification failure alter the response. */

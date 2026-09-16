@@ -731,7 +731,8 @@ function handle_create(): void
                 'Your booking ' . $reference . ' for ' . $trip['from_city'] . ' → ' . $trip['to_city']
                     . ' on ' . $trip['departure_date'] . ' with ' . $trip['company_name']
                     . ' for ' . count($seats) . ' seat(s) is confirmed.',
-                'booking-confirmed:' . $reference
+                'booking-confirmed:' . $reference,
+                'tickets'
             );
         } catch (Throwable $e) {
             /* Best-effort only — never let a notification failure alter the response. */
@@ -1168,7 +1169,8 @@ function handle_cancel(): void
                     'Booking Cancelled',
                     'Your booking ' . $row['booking_reference'] . ' (' . $row['from_city'] . ' → '
                         . $row['to_city'] . ') on ' . $row['departure_date'] . ' has been cancelled.',
-                    'booking-cancelled:' . $row['booking_reference']
+                    'booking-cancelled:' . $row['booking_reference'],
+                    'trips'
                 );
             }
         } catch (Throwable $e) {

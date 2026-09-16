@@ -99,6 +99,7 @@
                     title: n.title || '',
                     message: n.message || '',
                     type: n.type || 'general',
+                    target: n.target || '',
                     read: !!n.read,
                     time: timeLabel(n.created_at),
                     icon: iconFor(n.type)
@@ -185,11 +186,14 @@
             } else {
                 for (var j = 0; j < state.items.length; j++) {
                     var n = state.items[j];
-                    html += '<button type="button" class="nav-bell-item ' + (n.read ? 'is-read' : 'is-unread') + '" data-id="' + esc(n.id) + '">' +
+                    var hasGo = !!(n.target && String(n.target).trim());
+                    html += '<button type="button" class="nav-bell-item ' + (n.read ? 'is-read' : 'is-unread') + '" data-id="' + esc(n.id) + '"' +
+                        (hasGo ? ' data-target="' + esc(n.target) + '"' : '') + '>' +
                         '<span class="nav-bell-ico-small" aria-hidden="true">' + (n.icon || '&#128276;') + '</span>' +
                         '<span class="nav-bell-body"><strong>' + esc(n.title) + '</strong>' +
                         '<span class="nav-bell-msg">' + esc(n.message) + '</span>' +
-                        '<span class="nav-bell-time">' + esc(n.time || '') + '</span></span></button>';
+                        '<span class="nav-bell-time">' + esc(n.time || '') + '</span></span>' +
+                        (hasGo ? '<span class="nav-bell-go" aria-hidden="true">&rsaquo;</span>' : '') + '</button>';
                 }
             }
             w.list.innerHTML = html;
@@ -228,6 +232,34 @@
             postForm(API + '?action=read_all', {}).then(function (res) {
                 if (!(res.ok && res.data && res.data.success)) { loadList(true); }
             });
+        }
+    }
+
+    /* Resolve a notification deep link. On dashboard.html the section switch
+       happens in place (via ETDashboard.go, which also handles profile-edit);
+       everywhere else we navigate to the right page/hash. */
+    function navigate(target) {
+        if (!target) { return; }
+        var t = String(target).trim();
+        var isEdit = t === 'profile-edit';
+        if (isEdit) { t = 'profile'; }
+        var page = (window.location.pathname.split('/').pop() || '').toLowerCase();
+        if (t.indexOf('company-reviews:') === 0) {
+            window.location.href = 'company.html?company=' + encodeURIComponent(t.slice(15)) + '#cp-reviews';
+            return;
+        }
+        if (t.indexOf('company:') === 0) {
+            window.location.href = 'company.html?company=' + encodeURIComponent(t.slice(8));
+            return;
+        }
+        var SECTIONS = ['overview', 'trips', 'tickets', 'favorites', 'notifications', 'profile', 'support', 'complaints'];
+        if (SECTIONS.indexOf(t) !== -1) {
+            if (page === 'dashboard.html' && window.ETDashboard && window.ETDashboard.go) {
+                /* Pass the ORIGINAL target so profile-edit still opens the editor. */
+                window.ETDashboard.go(isEdit ? 'profile-edit' : t);
+                return;
+            }
+            window.location.href = 'dashboard.html#' + t;
         }
     }
 
@@ -286,7 +318,16 @@
         w.panel.addEventListener('click', function (e) {
             var t = e.target;
             var item = t && t.closest ? t.closest('.nav-bell-item') : null;
-            if (item) { e.stopPropagation(); markOne(item.getAttribute('data-id')); return; }
+            if (item) {
+                e.stopPropagation();
+                markOne(item.getAttribute('data-id'));
+                var ntarget = item.getAttribute('data-target');
+                if (ntarget) {
+                    closePanel();
+                    setTimeout(function () { navigate(ntarget); }, 80);
+                }
+                return;
+            }
             var markAllBtn = t && t.closest ? t.closest('.nav-bell-markall') : null;
             if (markAllBtn) { e.stopPropagation(); markAll(); }
         });
@@ -314,7 +355,8 @@
         openPanel: openPanel,
         closePanel: closePanel,
         markRead: markOne,
-        markAllRead: markAll
+        markAllRead: markAll,
+        go: navigate
     };
 })();
 

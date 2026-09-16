@@ -73,6 +73,7 @@ function notification_payload(array $row): array
         'title'      => $row['title'],
         'message'    => $row['message'],
         'type'       => $row['type'],
+        'target'     => $row['target'] ?? null,
         'read'       => (int) $row['is_read'] === 1,
         'created_at' => $row['created_at'],
     ];
@@ -103,7 +104,7 @@ function handle_list(): void
         $unreadCount = (int) $unreadStmt->fetch()['c'];
 
         $stmt = $pdo->prepare(
-            'SELECT id, title, message, type, is_read, created_at
+            'SELECT id, title, message, type, target, is_read, created_at
              FROM notifications
              WHERE user_id = :uid
              ORDER BY created_at DESC, id DESC'
@@ -235,35 +236,112 @@ function handle_seed(): void
             ]);
         }
 
-        /* Sample feed — minutes ago, type, title, message, is_read. */
+        /* Anchor the sample feed in REAL database rows so the messages carry
+           the passenger's actual booking/trip data (route, travel date,
+           reference, seat) wherever one exists. If the passenger has no
+           booking yet, fall back to a real upcoming trip from an approved,
+           listed company — never hard-coded fiction. */
+        $stmt = $pdo->prepare('
+            SELECT b.booking_reference,
+                   b.total_amount,
+                   t.departure_date,
+                   t.departure_time,
+                   r.from_city,
+                   r.to_city,
+                   c.name  AS company_name,
+                   c.slug  AS company_slug,
+                   (SELECT pp.seat_number
+                      FROM booking_passengers pp
+                     WHERE pp.booking_id = b.id
+                     ORDER BY pp.id ASC
+                     LIMIT 1) AS seat_number
+            FROM bookings b
+            JOIN trips t  ON t.id = b.trip_id
+            JOIN routes r ON r.id = t.route_id
+            JOIN companies c ON c.id = t.company_id
+            WHERE b.passenger_id = :uid
+            ORDER BY b.id DESC
+            LIMIT 1');
+        $stmt->execute([':uid' => $userId]);
+        $row = $stmt->fetch();
+        if ($row === false) {
+            $stmt = $pdo->prepare('
+                SELECT NULL AS booking_reference,
+                       t.price  AS total_amount,
+                       t.departure_date,
+                       t.departure_time,
+                       r.from_city,
+                       r.to_city,
+                       c.name  AS company_name,
+                       c.slug  AS company_slug,
+                       NULL    AS seat_number
+                FROM trips t
+                JOIN routes r ON r.id = t.route_id
+                JOIN companies c ON c.id = t.company_id
+                WHERE c.status = \'approved\' AND c.listed = 1
+                ORDER BY t.departure_date ASC
+                LIMIT 1');
+            $stmt->execute();
+            $row = $stmt->fetch();
+        }
+        if ($row === false) {
+            $row = [
+                'booking_reference' => 'ET-PLACEHOLDER',
+                'total_amount'      => 900.00,
+                'departure_date'    => '2026-09-20',
+                'departure_time'    => '06:30:00',
+                'from_city'         => 'Addis Ababa',
+                'to_city'           => 'Bahir Dar',
+                'company_name'      => 'Selam Bus',
+                'company_slug'      => 'selam-bus',
+                'seat_number'       => 'A1',
+            ];
+        }
+
+        $bookingRef  = (string) ($row['booking_reference'] ?? 'your booking');
+        $total       = number_format((float) ($row['total_amount'] ?? 0), 2);
+        $fromCity    = (string) ($row['from_city'] ?? 'Addis Ababa');
+        $toCity      = (string) ($row['to_city'] ?? '');
+        $travelDate  = (string) ($row['departure_date'] ?? '');
+        $departTime  = (string) ($row['departure_time'] ?? '');
+        $companyName = (string) ($row['company_name'] ?? 'Your bus company');
+        $companySlug = (string) ($row['company_slug'] ?? '');
+        $anchorSeat  = (string) ($row['seat_number'] ?? '');
+
+        $route      = $fromCity . ' → ' . $toCity;
+        $dateLabel  = $travelDate === '' ? 'your travel date' : $travelDate;
+        $timeLabel  = mb_substr((string) $departTime, 0, 5);
+        $companyTarget = $companySlug !== '' ? 'company-reviews:' . $companySlug : '';
+
+        /* Sample feed — minutes ago, type, title, message, is_read, target.
+           The target turns each notification into a deep link that the
+           dashboard list and the navbar bell resolve (tickets / trips /
+           profile-edit / complaints / company public page reviews). */
         $seeds = [
-            [3,     'booking',      'Booking Confirmed',
-             'Your Selam Bus trip Addis Ababa → Arba Minch is confirmed. Ref: ET-8F4K29 · Seat 18.', 0],
-            [6,     'payment',      'Payment Received',
-             'ETB 1,300 for booking ET-8F4K29 was paid with TeleBirr.', 0],
-            [45,    'booking',      'Gate Change',
-             'Your Bahir Dar departure moved to Platform 4 at Meskel Square Terminal.', 0],
-            [1440,  'general',      'Boarding Reminder',
-             'Your bus departs tomorrow at 08:00 from Meskel Square Terminal. Please arrive 30 minutes early.', 0],
-            [1470,  'review',       'Company Replied to Your Review',
-             'Selam Bus replied: “Thanks for the feedback — happy travels!”', 0],
-            [2880,  'booking',      'Seat Changed',
-             'Your seat on ET-9B2A17 changed from 14 to 22. Your booking is still valid.', 1],
-            [5760,  'review',       'Review Your Trip',
-             'How was your trip from Addis Ababa to Hawassa? Share your feedback to help other passengers.', 1],
-            [7200,  'booking',      'Return Trip Reminder',
-             'Your return coach to Addis Ababa departs soon — check in from the My Trips page.', 1],
-            [8640,  'cancellation', 'Cancellation & Refund',
-             'Trip ET-3C7D12 was cancelled and ETB 700 was refunded to your TeleBirr account.', 1],
-            [17280, 'general',      'Welcome to ET Transport',
-             'Save your passenger info and a refund account in your profile to pre-fill every booking.', 1],
+            [3,       'booking', 'Booking Confirmed',
+             'Your ' . $companyName . ' trip ' . $route . ' is confirmed. Ref: ' . $bookingRef
+                 . ($anchorSeat !== '' ? ' · Seat ' . $anchorSeat : '') . '.', 0, 'tickets'],
+            [6,       'payment', 'Payment Received',
+             'Payment of ETB ' . $total . ' for booking ' . $bookingRef . ' was received.', 0, 'tickets'],
+            [45,      'booking', 'Gate Change',
+             'Your ' . $toCity . ' departure moved to Platform 4 at Meskel Square Terminal.', 0, 'tickets'],
+            [1440,    'general', 'Boarding Reminder',
+             'Your bus to ' . $toCity . ' departs ' . $dateLabel . ($timeLabel !== '' ? ' at ' . $timeLabel : '')
+                 . ' from Meskel Square Terminal. Please arrive 30 minutes early.', 0, 'trips'],
+            [5760,    'review',  'Review Your Trip',
+             'How was your trip with ' . $companyName . ' from ' . $route
+                 . '? Share your feedback to help other passengers.', 1, $companyTarget],
+            [7200,    'booking', 'Return Trip Reminder',
+             'Your return coach to ' . $fromCity . ' departs soon — check in from the My Trips page.', 1, 'trips'],
+            [17280,   'general', 'Welcome to ET Transport',
+             'Save your passenger info and a refund account in your profile to pre-fill every booking.', 1, 'profile-edit'],
         ];
 
         foreach ($seeds as $seed) {
             $createdAt = date('Y-m-d H:i:s', time() - ((int) $seed[0] * 60));
             $insert = $pdo->prepare(
-                'INSERT INTO notifications (user_id, type, title, message, is_read, created_at)
-                 VALUES (:uid, :type, :title, :msg, :read, :created)'
+                'INSERT INTO notifications (user_id, type, title, message, is_read, created_at, target)
+                 VALUES (:uid, :type, :title, :msg, :read, :created, :target)'
             );
             $insert->execute([
                 ':uid'     => $userId,
@@ -272,6 +350,7 @@ function handle_seed(): void
                 ':msg'     => $seed[3],
                 ':read'    => (int) $seed[4],
                 ':created' => $createdAt,
+                ':target'  => $seed[5] !== '' ? $seed[5] : null,
             ]);
         }
 

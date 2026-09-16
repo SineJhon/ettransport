@@ -20,7 +20,7 @@
     var KEY_FAV_ROUTES = 'etTransportFavoriteRoutes'; // saved routes (array of {from,to})
     var KEY_REVIEWED = 'etTransportReviewedBookings'; // reviewed booking ids per user (object)
     var KEY_NOTIF_VERSION = 'etTransportNotifVersion'; // demo notification feed stamp
-    var NOTIF_DEMO_VERSION = 2;                        // bump when demoNotifications() changes
+    var NOTIF_DEMO_VERSION = 4;                        // bump when demoNotifications() changes
 
     /* ---------- Safe JSON storage helpers ---------- */
     function getJSON(key, fallback) {
@@ -211,37 +211,28 @@
 
     function demoNotifications() {
         return [
-            { id: 'demo-1', type: 'booking', title: 'Booking Confirmed',
-              message: 'Your Selam Bus trip Addis Ababa \u2192 Arba Minch is confirmed. Ref: ET-8F4K29 \u00b7 Seat 18.',
+            { id: 'demo-1', type: 'booking', title: 'Booking Confirmed', target: 'tickets',
+              message: 'Your Selam Bus trip Addis Ababa \u2192 Bahir Dar is confirmed. Ref: BK-SEED-HANNA01 \u00b7 Seat A1.',
               time: 'Today, 09:15', read: false },
-            { id: 'demo-2', type: 'payment', title: 'Payment Received',
-              message: 'ETB 1,300 for booking ET-8F4K29 was paid with TeleBirr.',
+            { id: 'demo-2', type: 'payment', title: 'Payment Received', target: 'tickets',
+              message: 'Payment of ETB 900 for booking BK-SEED-HANNA01 was received.',
               time: 'Today, 09:16', read: false },
-            { id: 'demo-8', type: 'booking', title: 'Gate Change',
+            { id: 'demo-8', type: 'booking', title: 'Gate Change', target: 'tickets',
               message: 'Your Bahir Dar departure moved to Platform 4 at Meskel Square Terminal.',
               time: 'Today, 09:40', read: false },
-            { id: 'demo-3', type: 'general', title: 'Boarding Reminder',
+            { id: 'demo-3', type: 'general', title: 'Boarding Reminder', target: 'trips',
               message: 'Your bus departs tomorrow at 08:00 from Meskel Square Terminal. Please arrive 30 minutes early.',
               time: 'Yesterday, 18:20', read: false },
-            { id: 'demo-9', type: 'review', title: 'Company Replied to Your Review',
-              message: 'Selam Bus replied: \u201cThanks for the feedback \u2014 happy travels!\u201d',
-              time: 'Yesterday, 11:05', read: false },
-            { id: 'demo-4', type: 'booking', title: 'Seat Changed',
-              message: 'Your seat on ET-9B2A17 changed from 14 to 22. Your booking is still valid.',
-              time: '2 days ago', read: true },
-            { id: 'demo-5', type: 'review', title: 'Review Your Trip',
-              message: 'How was your trip from Addis Ababa to Hawassa? Share your feedback to help other passengers.',
+            { id: 'demo-5', type: 'review', title: 'Review Your Trip', target: 'company-reviews:selam-bus',
+              message: 'How was your trip with Selam Bus from Addis Ababa to Bahir Dar? Share your feedback to help other passengers.',
               time: '4 days ago', read: true },
-            { id: 'demo-12', type: 'booking', title: 'Return Trip Reminder',
+            { id: 'demo-12', type: 'booking', title: 'Return Trip Reminder', target: 'trips',
               message: 'Your return coach to Addis Ababa departs soon \u2014 check in from the My Trips page.',
               time: '5 days ago', read: true },
-            { id: 'demo-6', type: 'cancellation', title: 'Cancellation & Refund',
-              message: 'Trip ET-3C7D12 was cancelled and ETB 700 was refunded to your TeleBirr account.',
-              time: '6 days ago', read: true },
-            { id: 'demo-11', type: 'general', title: 'Favorite Route Update',
+            { id: 'demo-11', type: 'general', title: 'Favorite Route Update', target: 'trips',
               message: 'Your saved route Addis Ababa \u2192 Bahir Dar now has a new morning departure.',
               time: '9 days ago', read: true },
-            { id: 'demo-7', type: 'general', title: 'Welcome to ET Transport',
+            { id: 'demo-7', type: 'general', title: 'Welcome to ET Transport', target: 'profile-edit',
               message: 'Save your passenger info and a refund account in your profile to pre-fill every booking.',
               time: '12 days ago', read: true }
         ];
@@ -637,11 +628,17 @@
         var html = '<ul class="dash-notif-mini">';
         for (var i = 0; i < list.length; i++) {
             var n = list[i];
+            var hasTarget = !!(n.target && String(n.target).trim());
             html += '<li class="' + (n.read ? 'is-read' : 'is-unread') + '">' +
-                '<span class="dash-notif-icon is-' + String(n.type || '').toLowerCase() + '" aria-hidden="true">' +
-                    (n.icon || notifIconFor(n.type)) + '</span>' +
-                '<span class="dash-notif-text"><strong>' + escapeHtml(n.title) + '</strong>' +
-                '<span class="dash-notif-time">' + escapeHtml(n.time || '') + '</span></span>' +
+                '<button type="button" class="dash-notif-mini-item' + (hasTarget ? ' has-target' : '') + '"' +
+                    ' data-notif-id="' + escapeHtml(n.id) + '"' +
+                    (hasTarget ? ' data-notif-target="' + escapeHtml(n.target) + '"' : '') + '>' +
+                    '<span class="dash-notif-icon is-' + String(n.type || '').toLowerCase() + '" aria-hidden="true">' +
+                        (n.icon || notifIconFor(n.type)) + '</span>' +
+                    '<span class="dash-notif-text"><strong>' + escapeHtml(n.title) + '</strong>' +
+                    '<span class="dash-notif-time">' + escapeHtml(n.time || '') + '</span></span>' +
+                    (hasTarget ? '<span class="dash-notif-go" aria-hidden="true">&rsaquo;</span>' : '') +
+                '</button>' +
             '</li>';
         }
         el.innerHTML = html + '</ul>';
@@ -1434,6 +1431,7 @@ function closeTicket() {
             title: n.title || '',
             message: n.message || '',
             type: n.type || 'general',
+            target: n.target || '',
             read: !!n.read,
             time: formatNotifTime(n.created_at),
             icon: notifIconFor(n.type)
@@ -1476,9 +1474,11 @@ function closeTicket() {
         for (var i = 0; i < list.length; i++) {
             var n = list[i];
             var typeCls = String(n.type || '').toLowerCase();
+            var hasTarget = !!(n.target && String(n.target).trim());
             html += '<li>' +
-                '<button type="button" class="dash-notif-item ' + (n.read ? 'is-read' : 'is-unread') +
-                '" data-notif-id="' + escapeHtml(n.id) + '">' +
+                '<button type="button" class="dash-notif-item ' + (n.read ? 'is-read' : 'is-unread') + '"' +
+                    ' data-notif-id="' + escapeHtml(n.id) + '"' +
+                    (hasTarget ? ' data-notif-target="' + escapeHtml(n.target) + '" aria-label="' + escapeHtml(n.title) + ' \u2014 open"' : '') + '>' +
                     '<span class="dash-notif-icon is-' + typeCls + '" aria-hidden="true">' +
                         (n.icon || notifIconFor(n.type)) + '</span>' +
                     '<span class="dash-notif-body">' +
@@ -1487,6 +1487,7 @@ function closeTicket() {
                         '<span class="dash-notif-time">' + escapeHtml(n.time || '') + '</span>' +
                     '</span>' +
                     '<span class="dash-notif-dot" aria-hidden="true"></span>' +
+                    (hasTarget ? '<span class="dash-notif-go" aria-hidden="true">&rsaquo;</span>' : '') +
                 '</button>' +
             '</li>';
         }
@@ -1737,7 +1738,7 @@ function closeTicket() {
         { icon: '&#128179;', title: 'Payment Help',
           text: 'Trouble with Telebirr, CBE Birr or M-Pesa demo payments.' },
         { icon: '&#8617;', title: 'Cancellation & Refund',
-          text: 'Demo only — cancellation is not available yet in this prototype.' },
+          text: 'Cancel an upcoming paid booking from your ticket — the refund goes to your saved refund account.' },
         { icon: '&#127890;', title: 'Lost Items',
           text: 'Report items left on the bus after your journey.' },
         { icon: '&#9881;', title: 'Technical Support',
@@ -2152,6 +2153,29 @@ function closeTicket() {
            without requiring a full page reload. Guests/demo are unaffected. */
         if (name === 'notifications') { syncRealNotifications(); }
         if (name === 'complaints') { applyComplaintAccess(); syncRealComplaints(); loadComplaintCompanies(); }
+    }
+
+    /* Notification deep-link resolver. The `target` stored on a notification
+       is resolved here and shared with the navbar bell. Tokens map to
+       dashboard sections, the public company page (optionally its reviews
+       pane) and a couple of shortcut flows (profile-edit opens the editor). */
+    function navigateToTarget(target) {
+        if (!target) { return; }
+        var t = String(target).trim();
+        if (t === 'profile-edit') {
+            showSection('profile');
+            setTimeout(function () { openProfileModal(); }, 60);
+            return;
+        }
+        if (SECTIONS.indexOf(t) !== -1) { showSection(t); return; }
+        if (t.indexOf('company-reviews:') === 0) {
+            window.location.href = 'company.html?company=' + encodeURIComponent(t.slice(15)) + '#cp-reviews';
+            return;
+        }
+        if (t.indexOf('company:') === 0) {
+            window.location.href = 'company.html?company=' + encodeURIComponent(t.slice(8));
+            return;
+        }
     }
 
     function setTripTab(tab) {
@@ -2573,10 +2597,13 @@ function closeTicket() {
             if (ri !== null) { removeFavRoute(parseInt(ri, 10)); return; }
         }
 
-        var notif = el.closest('.dash-notif-item');
+        var notif = el.closest('.dash-notif-item, .dash-notif-mini-item');
         if (notif) {
             var id = notif.getAttribute('data-notif-id');
-            if (id) { toggleNotifRead(id); return; }
+            if (id) { toggleNotifRead(id); }
+            var notifTarget = notif.getAttribute('data-notif-target');
+            if (notifTarget) { navigateToTarget(notifTarget); }
+            return;
         }
     });
 
@@ -2834,30 +2861,103 @@ function closeTicket() {
             if (target.id === 'p-refund-bank') { syncRefundOtherToggle(); }
         });
     }
-var supportForm = document.getElementById('support-form');
+/* ============================================================
+       Support request — REAL, database-backed for signed-in
+       passengers. A support request is filed as a platform-targeted
+       complaint (target=platform) so ET Transport support can reply
+       in the same tracked thread shown in the Complaints section.
+       The client never claims success — the server is authoritative.
+       ============================================================ */
+    var SUPPORT_CATEGORY_BY_TOPIC = {
+        booking_help: 'other',
+        payment_help: 'refund_issue',
+        cancellation_refund: 'refund_issue',
+        lost_items: 'lost_parcel',
+        technical_support: 'other'
+    };
+
+    /* Prefill the support contact form from the signed-in passenger's
+       account so a request is never sent with stale contact details. */
+    function prefillSupportIdentity(user) {
+        if (!user) { return; }
+        var nameEl = document.getElementById('support-name');
+        var emailEl = document.getElementById('support-email');
+        if (nameEl && !nameEl.value) { nameEl.value = user.name || ''; }
+        if (emailEl && !emailEl.value) { emailEl.value = user.email || ''; }
+    }
+
+    function submitSupport(event) {
+        event.preventDefault();
+        var name = document.getElementById('support-name');
+        var email = document.getElementById('support-email');
+        var topic = document.getElementById('support-topic');
+        var message = document.getElementById('support-message');
+        var msg = document.getElementById('support-form-msg');
+        var btn = document.getElementById('support-submit-btn');
+        if (!topic || !message) { return; }
+
+        var ok = true;
+        if (!name || !name.value.trim()) { setFieldError('support-name', 'Your name is required.'); ok = false; }
+        else { clearFieldError('support-name'); }
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) { setFieldError('support-email', 'A valid email is required.'); ok = false; }
+        else { clearFieldError('support-email'); }
+        if (!message.value.trim()) { setFieldError('support-message', 'Please describe your issue.'); ok = false; }
+        else { clearFieldError('support-message'); }
+        if (!ok) { return; }
+
+        if (msg) { msg.hidden = true; msg.textContent = ''; }
+        if (btn) { btn.disabled = true; btn.textContent = 'Sending\u2026'; }
+
+        var sel = (topic.selectedIndex >= 0) ? topic.options[topic.selectedIndex] : null;
+        var subject = (sel && sel.textContent ? sel.textContent.trim() : 'Support request').slice(0, 120);
+        var category = SUPPORT_CATEGORY_BY_TOPIC[sel ? sel.value : ''] || 'other';
+
+        var body = new URLSearchParams();
+        body.append('target', 'platform');
+        body.append('category', category);
+        body.append('subject', subject);
+        body.append('message', message.value.trim());
+
+        window.fetch('api/complaint.php?action=create', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'Accept': 'application/json' },
+            body: body.toString()
+        })
+            .then(function (res) { return res.json().catch(function () { return { success: false, message: 'Invalid server response.' }; }); })
+            .then(function (json) {
+                if (btn) { btn.disabled = false; btn.textContent = 'Send Support Request'; }
+                if (!json || !json.success) {
+                    if (msg) {
+                        msg.textContent = (json && json.message) || 'Unable to send your request. Please try again.';
+                        msg.hidden = false;
+                    }
+                    return;
+                }
+                var form = document.getElementById('support-form');
+                if (form) { form.reset(); }
+                prefillSupportIdentity(sessionUser);
+                if (msg) {
+                    msg.textContent = 'Request sent to ET Transport support. You can track the reply in the Complaints section.';
+                    msg.setAttribute('role', 'status');
+                    msg.hidden = false;
+                }
+                /* Show the new thread in Complaints without a reload. */
+                syncRealComplaints();
+                if (window.ETNotifications && window.ETNotifications.refresh) { window.ETNotifications.refresh(); }
+            })
+            .catch(function () {
+                if (btn) { btn.disabled = false; btn.textContent = 'Send Support Request'; }
+                if (msg) {
+                    msg.textContent = 'Network error — your request was not sent. Please try again.';
+                    msg.hidden = false;
+                }
+            });
+    }
+
+    var supportForm = document.getElementById('support-form');
     if (supportForm) {
-        supportForm.addEventListener('submit', function (event) {
-            event.preventDefault();
-            var ok = true;
-            var name = document.getElementById('support-name').value.trim();
-            var email = document.getElementById('support-email').value.trim();
-            var message = document.getElementById('support-message').value.trim();
-            if (!name) { setFieldError('support-name', 'Your name is required.'); ok = false; }
-            else { clearFieldError('support-name'); }
-            if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setFieldError('support-email', 'A valid email is required.'); ok = false; }
-            else { clearFieldError('support-email'); }
-            if (!message) { setFieldError('support-message', 'Please describe your issue.'); ok = false; }
-            else { clearFieldError('support-message'); }
-            if (!ok) { return; }
-            var msg = document.getElementById('support-form-msg');
-            if (msg) {
-                msg.textContent = 'Your support request has been recorded for this demo. ' +
-                    'No real ticket was created on a server.';
-                msg.setAttribute('role', 'status');
-                msg.hidden = false;
-            }
-            supportForm.reset();
-        });
+        supportForm.addEventListener('submit', submitSupport);
     }
 
     /* ---------- Sidebar counts ---------- */
@@ -3087,6 +3187,7 @@ var supportForm = document.getElementById('support-form');
         renderNotifications();
         renderProfile(user);
         renderSupport();
+        prefillSupportIdentity(user);
         renderComplaints();
         applyComplaintAccess();
         loadComplaintCompanies();
@@ -3115,7 +3216,11 @@ var supportForm = document.getElementById('support-form');
         }
 
         var hash = window.location.hash ? window.location.hash.slice(1) : 'overview';
+        if (hash === 'profile-edit') { hash = 'profile'; }
         showSection(hash);
+        if ((window.location.hash || '').slice(1) === 'profile-edit') {
+            setTimeout(function () { openProfileModal(); }, 60);
+        }
     }
 
     /* ============================================================
@@ -3185,4 +3290,11 @@ var supportForm = document.getElementById('support-form');
     } else {
         start();
     }
+
+    /* Shared handle for the navbar bell: same-page section switching and
+       notification deep links reuse the dashboard's own resolver. */
+    window.ETDashboard = {
+        goSection: showSection,
+        go: navigateToTarget
+    };
 })();

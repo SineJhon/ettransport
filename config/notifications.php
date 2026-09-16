@@ -52,6 +52,10 @@ function notification_exists(PDO $pdo, int $userId, string $type, string $dedupT
  * @param string      $message    Body of the notification.
  * @param string|null $dedupToken Optional unique token that prevents an
  *                                accidental duplicate for the same real event.
+ * @param string|null $target     Optional navigation target (deep link)
+ *                                resolved by the passenger bell/dashboard:
+ *                                e.g. 'tickets', 'trips', 'profile-edit',
+ *                                'complaints', 'company-reviews:slug'.
  */
 function createNotification(
     PDO $pdo,
@@ -59,7 +63,8 @@ function createNotification(
     string $type,
     string $title,
     string $message,
-    ?string $dedupToken = null
+    ?string $dedupToken = null,
+    ?string $target = null
 ): void {
     $userId = (int) $userId;
     if ($userId <= 0) {
@@ -71,13 +76,14 @@ function createNotification(
     }
 
     $stmt = $pdo->prepare(
-        'INSERT INTO notifications (user_id, title, message, type)
-         VALUES (:uid, :title, :message, :type)'
+        'INSERT INTO notifications (user_id, title, message, type, target)
+         VALUES (:uid, :title, :message, :type, :target)'
     );
     $stmt->execute([
         ':uid'     => $userId,
         ':title'   => $title,
         ':message' => $message,
         ':type'    => $type,
+        ':target'  => $target,
     ]);
 }

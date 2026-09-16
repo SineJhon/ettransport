@@ -1957,7 +1957,8 @@ function handle_admin_complaint_update(PDO $pdo): void
                 'complaint',
                 'Admin Support',
                 'An administrator updated your complaint "' . $row['subject'] . '".',
-                'admin-complaint:' . $complaintId
+                'admin-complaint:' . $complaintId,
+                'complaints'
             );
         } catch (Throwable $e) {
             /* Best-effort only. */

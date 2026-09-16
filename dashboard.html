@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Your ET Transport passenger dashboard — upcoming trips, digital tickets, favorites, notifications, booking history and profile. Sign in to view your data.">
     <title>Dashboard | ET Transport</title>
-    <link rel="stylesheet" href="css/style.css?v=20260915-dash-polish">
+    <link rel="stylesheet" href="css/style.css?v=20260916-notif-links">
     <link rel="stylesheet" href="css/city-picker.css?v=20260907-swap-fix">
     <link rel="icon" type="image/x-icon" href="assets/icons/favicon.svg">
 <!-- Fonts (DM Sans + Outfit) -->
@@ -293,7 +293,7 @@
                 <!-- ============ Support ============ -->
                 <section class="dash-section" id="section-support" aria-labelledby="support-title" hidden>
                     <h2 id="support-title" class="dash-section-title">Support</h2>
-                    <p class="dash-section-note">Help topics for the demo. Submitting a form only records a message in this browser &mdash; no real ticket is created.</p>
+                    <p class="dash-section-note">Help topics and quick answers about your bookings, payments and travel. Send a request and ET Transport support replies right here in this dashboard &mdash; the thread is tracked in the Complaints section.</p>
                     <div id="support-cards" class="support-grid"></div>
 
                     <div class="card support-contact">
@@ -313,19 +313,19 @@
                             <div class="form-group">
                                 <label for="support-topic">Topic</label>
                                 <select id="support-topic" name="topic">
-                                    <option>Booking Help</option>
-                                    <option>Payment Help</option>
-                                    <option>Cancellation &amp; Refund</option>
-                                    <option>Lost Items</option>
-                                    <option>Technical Support</option>
+                                    <option value="booking_help">Booking Help</option>
+                                    <option value="payment_help">Payment Help</option>
+                                    <option value="cancellation_refund">Cancellation &amp; Refund</option>
+                                    <option value="lost_items">Lost Items</option>
+                                    <option value="technical_support">Technical Support</option>
                                 </select>
                             </div>
                             <div class="form-group">
                                 <label for="support-message">Message</label>
-                                <textarea id="support-message" name="message" rows="4" required></textarea>
+                                <textarea id="support-message" name="message" rows="4" maxlength="1000" required></textarea>
                                 <span class="field-error" id="support-message-err" role="alert"></span>
                             </div>
-                            <button type="submit" class="btn btn-primary">Send Support Request</button>
+                            <button type="submit" id="support-submit-btn" class="btn btn-primary">Send Support Request</button>
                             <p id="support-form-msg" class="continue-msg" role="status" hidden></p>
                         </form>
                     </div>
@@ -689,15 +689,11 @@
     <!-- Scripts: shared nav/data first, then the dashboard app -->
     <script src="js/main.js"></script>
         <script src="js/auth.js?v=20260914-guest-gate"></script>
-    <script src="js/notifications.js"></script>
+    <script src="js/notifications.js?v=20260916-notif-links"></script>
     <script src="js/data.js"></script>
     <script src="js/cities.js"></script>
     <script src="js/city-picker.js?v=20260907-swap-fix-3-dispatch"></script>
     <script src="js/company.js"></script>
-<<<<<<< HEAD
-    <script src="js/dashboard.js?v=20260916-profiledb"></script>
-=======
-    <script src="js/dashboard.js?v=20260916-overview"></script>
->>>>>>> b58c4aa2d1a919a0aa5d927c8fdb1be8bb88d643
+    <script src="js/dashboard.js?v=20260916-notif-links"></script>
 </body>
 </html>

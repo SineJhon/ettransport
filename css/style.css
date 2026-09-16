@@ -5447,20 +5447,42 @@ body.companies .company-empty-hint {
 .dash-mini-empty p { margin-bottom: 0.6rem; }
 
 .dash-notif-mini { display: grid; gap: 0.5rem; }
-.dash-notif-mini li {
+.dash-notif-mini li { margin: 0; padding: 0; background: transparent; border: 0; }
+.dash-notif-mini-item {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    width: 100%;
     padding: 0.7rem 0.9rem;
     background-color: var(--color-white);
     border: 1px solid #e5e7eb;
     border-radius: var(--radius);
+    font: 600 0.9rem/1.4 var(--font-sans);
+    color: var(--color-dark);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.dash-notif-mini .is-unread { border-left: 4px solid var(--color-primary); }
+.dash-notif-mini-item:hover { border-color: var(--color-primary); }
+.dash-notif-mini-item.has-target { border-color: #cfe3d4; }
+.dash-notif-mini .is-unread > .dash-notif-mini-item { border-left: 4px solid var(--color-primary); }
 .dash-notif-icon { font-size: 1.15rem; }
 .dash-notif-text { display: flex; flex-direction: column; min-width: 0; }
 .dash-notif-text strong { color: var(--color-dark); font-size: 0.95rem; }
 .dash-notif-time { font-size: 0.8rem; color: var(--color-muted); }
+.dash-notif-go {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.65rem;
+    height: 1.65rem;
+    border-radius: 50%;
+    background: #eef4ee;
+    color: var(--color-primary);
+    font-size: 1.05rem;
+    font-weight: 800;
+}
 
 /* ---------- Favorites ---------- */
 .dash-fav-grid {
@@ -5973,6 +5995,19 @@ body.companies .company-empty-hint {
     border-left: 4px solid var(--color-primary);
 }
 .nav-bell-item.is-read { opacity: 0.85; }
+.nav-bell-go {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    background: #eef4ee;
+    color: var(--color-primary);
+    font-size: 1.05rem;
+    font-weight: 800;
+}
 .nav-bell-ico-small { font-size: 1.05rem; line-height: 1.3; }
 .nav-bell-body {
     min-width: 0;
@@ -8148,7 +8183,6 @@ body.company-page .rv-demo-note {
 
 .dash-mini-chip-logo { flex: 0 0 auto; width: 22px; height: 22px; border-radius: 6px; object-fit: contain; }
 .dash-mini-chip-name { font-weight: 600; }
-<<<<<<< HEAD
 
 /* ---------- 17.23 Favorites section polish ---------- */
 .dash-count-pill {
@@ -8486,5 +8520,3 @@ body.company-page .rv-demo-note {
 .dash-notif-icon.is-review { background: #fdf3d9; color: #c9821f; }
 .dash-notif-icon.is-cancellation { background: #fdeaea; color: #b02f2f; }
 .dash-notif-icon.is-general { background: #edf5f0; color: #38635a; }
-=======
->>>>>>> b58c4aa2d1a919a0aa5d927c8fdb1be8bb88d643

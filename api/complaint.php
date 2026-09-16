@@ -455,7 +455,8 @@ function handle_create(): void
             'complaint',
             'Complaint Submitted',
             'Your complaint "' . $subject . '"' . ($isPlatform ? '' : ' for ' . $company['name']) . ' has been submitted. ' . $responder . ' will respond soon.',
-            'complaint-created:' . $newId
+            'complaint-created:' . $newId,
+            'complaints'
         );
         if ($isPlatform) {
             $admins = $pdo->query("SELECT id FROM users WHERE role = 'admin' AND status = 'active'")->fetchAll();
