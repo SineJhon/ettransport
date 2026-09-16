@@ -73,6 +73,23 @@
         return Math.floor(minutes / 60) + 'h ' + pad(minutes % 60) + 'm';
     }
 
+    /* Whole days between today and a YYYY-MM-DD date (local, timezone-safe). */
+    function daysUntilDate(iso) {
+        if (!iso) { return null; }
+        var d = new Date(iso + 'T00:00:00');
+        if (isNaN(d.getTime())) { return null; }
+        var now = new Date();
+        var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        return Math.round((d - today) / 86400000);
+    }
+
+    function countdownLabel(days) {
+        if (days === 0) { return 'Today'; }
+        if (days === 1) { return 'Tomorrow'; }
+        if (days === 2) { return 'In 2 days'; }
+        return 'In ' + days + ' days';
+    }
+
     function slugify(name) {
         return String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
     }
@@ -371,12 +388,16 @@
             );
             return;
         }
+        var daysUntil = daysUntilDate(next.date);
+        var countdown = (daysUntil === null) ? '' :
+            '<span class="dash-countdown">' + countdownLabel(daysUntil) + '</span>';
         el.innerHTML = '<div class="card dash-upcoming-card">' +
             '<div class="dash-upcoming-head">' +
                 '<div>' +
                     '<p class="dash-eyebrow">Next Trip</p>' +
                     '<h3 class="dash-upcoming-company">' + escapeHtml(next.company) + '</h3>' +
                 '</div>' +
+                countdown +
                 '<span class="trip-status status-upcoming">Upcoming</span>' +
             '</div>' +
             '<p class="trip-card-route">' + escapeHtml(next.from) + ' &rarr; ' + escapeHtml(next.to) + '</p>' +
@@ -398,6 +419,23 @@
     /* ============================================================
        Overview — summary stats
        ============================================================ */
+    /* Inline icon glyphs for the summary stat cards (same stroke style as the
+       sidebar navigation icons). */
+    var STAT_ICON_UPCOMING = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M11.4 8.8L12 12M12 12L17 10.6"/><circle cx="12" cy="12" r="1.6"/></svg>';
+    var STAT_ICON_COMPLETED = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17.24 9 17.24L20 17.24 20 21.5L20 24 21.24L22 24 22.24 24 22.24L23 21.24 23 17.5 23 6L24 6 24 4 24 4"/></svg>';
+    var STAT_ICON_FAVORITES = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3.5 2.55 5.17 5.7.83-4.12 4.02.97 5.67L12 16.6l-5.1 2.68.97-5.67L3.75 9.5l5.7-.83L12 3.5Z"/></svg>';
+    var STAT_ICON_TICKETS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9a2 2 0 0 0 2 2 2 2 0 0 1 0 4 2 2 0 0 0-2 2v2a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-2a2 2 0 0 1 0-4 2 2 0 0 1 0-4V5a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v4Z"/><path d="M14.5 7.5v2M14.5 11.5v2M14.5 15.5v2"/></svg>';
+
+    function statCard(typeClass, label, value, iconHtml) {
+        return '<div class="card dash-stat ' + typeClass + '">' +
+            '<div class="dash-stat-head">' +
+                '<span class="dash-stat-icon" aria-hidden="true">' + iconHtml + '</span>' +
+                '<span class="dash-stat-label">' + label + '</span>' +
+            '</div>' +
+            '<strong class="dash-stat-value">' + value + '</strong>' +
+        '</div>';
+    }
+
     function renderStats() {
         var el = document.getElementById('dash-stats');
         if (!el) { return; }
@@ -410,11 +448,10 @@
             if (s !== 'cancelled') { tickets++; }
         }
         var favs = favCompanies().length + loadFavRoutes().length;
-        el.innerHTML =
-            '<div class="card dash-stat"><span class="dash-stat-label">Upcoming</span><strong class="dash-stat-value">' + upcoming + '</strong></div>' +
-            '<div class="card dash-stat"><span class="dash-stat-label">Completed</span><strong class="dash-stat-value">' + completed + '</strong></div>' +
-            '<div class="card dash-stat"><span class="dash-stat-label">Favorites</span><strong class="dash-stat-value">' + favs + '</strong></div>' +
-            '<div class="card dash-stat"><span class="dash-stat-label">Tickets</span><strong class="dash-stat-value">' + tickets + '</strong></div>';
+        el.innerHTML = statCard('dash-stat--upcoming', 'Upcoming', upcoming, STAT_ICON_UPCOMING) +
+            statCard('dash-stat--completed', 'Completed', completed, STAT_ICON_COMPLETED) +
+            statCard('dash-stat--favorites', 'Favorites', favs, STAT_ICON_FAVORITES) +
+            statCard('dash-stat--tickets', 'Tickets', tickets, STAT_ICON_TICKETS);
     }
 
     /* ============================================================
@@ -459,8 +496,13 @@
         for (var i = 0; i < slugs.length; i++) {
             var c = companyBySlug(slugs[i]);
             var name = c ? c.name : slugs[i];
+            var logo = c && c.logo ? c.logo : '';
             html += '<a class="dash-mini-chip" href="company.html?company=' + escapeHtml(slugs[i]) + '">' +
-                '<span aria-hidden="true">&#128652;</span> ' + escapeHtml(name) + '</a>';
+                (logo
+                    ? '<img class="dash-mini-chip-logo" src="' + escapeHtml(logo) + '" alt="" width="22" height="22" loading="lazy">'
+                    : '<span aria-hidden="true">&#128652;</span>') +
+                '<span class="dash-mini-chip-name">' + escapeHtml(name) + '</span>' +
+            '</a>';
         }
         return html + '</div>';
     }
@@ -1875,6 +1917,14 @@ function closeTicket() {
             if (btn && btn.getAttribute('data-section')) {
                 showSection(btn.getAttribute('data-section'));
             }
+        });
+    }
+
+    /* ---------- Overview "View all" shortcuts (switch sections) ---------- */
+    var gotoEls = document.querySelectorAll('[data-goto-section]');
+    for (var gi = 0; gi < gotoEls.length; gi++) {
+        gotoEls[gi].addEventListener('click', function () {
+            showSection(this.getAttribute('data-goto-section'));
         });
     }
 
