@@ -19,6 +19,8 @@
     var KEY_PROFILE = 'etTransportProfile';           // profile (object)
     var KEY_FAV_ROUTES = 'etTransportFavoriteRoutes'; // saved routes (array of {from,to})
     var KEY_REVIEWED = 'etTransportReviewedBookings'; // reviewed booking ids per user (object)
+    var KEY_NOTIF_VERSION = 'etTransportNotifVersion'; // demo notification feed stamp
+    var NOTIF_DEMO_VERSION = 2;                        // bump when demoNotifications() changes
 
     /* ---------- Safe JSON storage helpers ---------- */
     function getJSON(key, fallback) {
@@ -209,20 +211,38 @@
 
     function demoNotifications() {
         return [
-            { id: 'demo-1', icon: '&#128652;', title: 'Booking Confirmed',
-              message: 'Your Selam Bus trip to Arba Minch is confirmed (ref ET-8F4K29).',
+            { id: 'demo-1', type: 'booking', title: 'Booking Confirmed',
+              message: 'Your Selam Bus trip Addis Ababa \u2192 Arba Minch is confirmed. Ref: ET-8F4K29 \u00b7 Seat 18.',
+              time: 'Today, 09:15', read: false },
+            { id: 'demo-2', type: 'payment', title: 'Payment Received',
+              message: 'ETB 1,300 for booking ET-8F4K29 was paid with TeleBirr.',
+              time: 'Today, 09:16', read: false },
+            { id: 'demo-8', type: 'booking', title: 'Gate Change',
+              message: 'Your Bahir Dar departure moved to Platform 4 at Meskel Square Terminal.',
+              time: 'Today, 09:40', read: false },
+            { id: 'demo-3', type: 'general', title: 'Boarding Reminder',
+              message: 'Your bus departs tomorrow at 08:00 from Meskel Square Terminal. Please arrive 30 minutes early.',
               time: 'Yesterday, 18:20', read: false },
-            { id: 'demo-2', icon: '&#128179;', title: 'Payment Successful',
-              message: 'Payment of ETB 1,300 was successfully processed.',
-              time: 'Yesterday, 18:20', read: true },
-            { id: 'demo-3', icon: '&#9200;', title: 'Upcoming Trip',
-              message: 'Your trip departs soon at 08:00. Please arrive 30 minutes early.',
-              time: '2 days ago', read: false },
-            { id: 'demo-4', icon: '&#128679;', title: 'Schedule Update',
-              message: 'Your departure time has changed for one of your trips.',
+            { id: 'demo-9', type: 'review', title: 'Company Replied to Your Review',
+              message: 'Selam Bus replied: \u201cThanks for the feedback \u2014 happy travels!\u201d',
+              time: 'Yesterday, 11:05', read: false },
+            { id: 'demo-4', type: 'booking', title: 'Seat Changed',
+              message: 'Your seat on ET-9B2A17 changed from 14 to 22. Your booking is still valid.',
+              time: '2 days ago', read: true },
+            { id: 'demo-5', type: 'review', title: 'Review Your Trip',
+              message: 'How was your trip from Addis Ababa to Hawassa? Share your feedback to help other passengers.',
+              time: '4 days ago', read: true },
+            { id: 'demo-12', type: 'booking', title: 'Return Trip Reminder',
+              message: 'Your return coach to Addis Ababa departs soon \u2014 check in from the My Trips page.',
               time: '5 days ago', read: true },
-            { id: 'demo-5', icon: '&#11088;', title: 'Review Reminder',
-              message: 'How was your trip? Leave a review.',
+            { id: 'demo-6', type: 'cancellation', title: 'Cancellation & Refund',
+              message: 'Trip ET-3C7D12 was cancelled and ETB 700 was refunded to your TeleBirr account.',
+              time: '6 days ago', read: true },
+            { id: 'demo-11', type: 'general', title: 'Favorite Route Update',
+              message: 'Your saved route Addis Ababa \u2192 Bahir Dar now has a new morning departure.',
+              time: '9 days ago', read: true },
+            { id: 'demo-7', type: 'general', title: 'Welcome to ET Transport',
+              message: 'Save your passenger info and a refund account in your profile to pre-fill every booking.',
               time: '12 days ago', read: true }
         ];
     }
@@ -246,7 +266,22 @@
     }
     function loadNotifications() {
         var list = getJSON(KEY_NOTIF, null);
-        return (list && Object.prototype.toString.call(list) === '[object Array]') ? list : demoNotifications();
+        if (list && Object.prototype.toString.call(list) === '[object Array]') {
+            /* Sessions that cached an OLDER demo feed keep showing stale sample
+               notifications. When the demo feed version changes, refresh the
+               browser's copy so newly added notifications actually appear. */
+            var storedVersion = getJSON(KEY_NOTIF_VERSION, null);
+            if (storedVersion !== NOTIF_DEMO_VERSION) {
+                var isOldDemo = list.length === 0 || String(list[0].id).indexOf('demo-') === 0;
+                if (isOldDemo) {
+                    setJSON(KEY_NOTIF, demoNotifications());
+                    setJSON(KEY_NOTIF_VERSION, NOTIF_DEMO_VERSION);
+                    return demoNotifications();
+                }
+            }
+            return list;
+        }
+        return demoNotifications();
     }
     function loadProfile() {
         var p = getJSON(KEY_PROFILE, null);
@@ -355,6 +390,8 @@
        async fetch so the panel can show loading/loaded/error states. */
     var realNotifs = null;
     var notifState = 'idle'; // idle | loading | loaded | error
+    var notifFilter = 'all'; // all | unread (applies to the demo + real lists)
+    var notifSeeded = false;  // one-shot: seed a sample feed for empty real accounts
     function reviewedStorage() {
         var obj = getJSON(KEY_REVIEWED, null);
         return (obj && typeof obj === 'object' && !Array.isArray(obj)) ? obj : {};
@@ -601,7 +638,8 @@
         for (var i = 0; i < list.length; i++) {
             var n = list[i];
             html += '<li class="' + (n.read ? 'is-read' : 'is-unread') + '">' +
-                '<span class="dash-notif-icon" aria-hidden="true">' + (n.icon || '&#128276;') + '</span>' +
+                '<span class="dash-notif-icon is-' + String(n.type || '').toLowerCase() + '" aria-hidden="true">' +
+                    (n.icon || notifIconFor(n.type)) + '</span>' +
                 '<span class="dash-notif-text"><strong>' + escapeHtml(n.title) + '</strong>' +
                 '<span class="dash-notif-time">' + escapeHtml(n.time || '') + '</span></span>' +
             '</li>';
@@ -1359,7 +1397,10 @@ function closeTicket() {
         return n;
     }
 
-    function saveNotifications(list) { setJSON(KEY_NOTIF, list); }
+    function saveNotifications(list) {
+        setJSON(KEY_NOTIF, list);
+        setJSON(KEY_NOTIF_VERSION, NOTIF_DEMO_VERSION);
+    }
 
     function notifIconFor(type) {
         type = String(type || '').toLowerCase();
@@ -1415,19 +1456,31 @@ function closeTicket() {
             return;
         }
         var list = effectiveNotifications();
-        if (!list.length) {
+        var total = list.length;
+        if (notifFilter === 'unread') {
+            list = list.filter(function (n) { return !n.read; });
+        }
+        if (!total) {
             el.innerHTML = '<div class="dash-empty">' +
                 '<p class="dash-empty-icon" aria-hidden="true">&#128276;</p>' +
                 '<h3>No notifications</h3><p>Booking updates will appear here.</p></div>';
             return;
         }
+        if (!list.length) {
+            el.innerHTML = '<div class="dash-empty">' +
+                '<p class="dash-empty-icon" aria-hidden="true">&#128203;</p>' +
+                '<h3>You\'re all caught up</h3><p>No unread notifications right now.</p></div>';
+            return;
+        }
         var html = '<ul class="dash-notif-list">';
         for (var i = 0; i < list.length; i++) {
             var n = list[i];
+            var typeCls = String(n.type || '').toLowerCase();
             html += '<li>' +
                 '<button type="button" class="dash-notif-item ' + (n.read ? 'is-read' : 'is-unread') +
                 '" data-notif-id="' + escapeHtml(n.id) + '">' +
-                    '<span class="dash-notif-icon" aria-hidden="true">' + (n.icon || '&#128276;') + '</span>' +
+                    '<span class="dash-notif-icon is-' + typeCls + '" aria-hidden="true">' +
+                        (n.icon || notifIconFor(n.type)) + '</span>' +
                     '<span class="dash-notif-body">' +
                         '<strong>' + escapeHtml(n.title) + '</strong>' +
                         '<span class="dash-notif-message">' + escapeHtml(n.message) + '</span>' +
@@ -2159,6 +2212,23 @@ function closeTicket() {
         });
     }
 
+    /* ---------- Notifications filter tabs (All / Unread) ---------- */
+    var notifTabsWrap = document.querySelector('.dash-notif-tabs');
+    if (notifTabsWrap) {
+        notifTabsWrap.addEventListener('click', function (event) {
+            var btn = event.target.closest ? event.target.closest('button[data-notif-filter]') : null;
+            if (!btn) { return; }
+            notifFilter = btn.getAttribute('data-notif-filter') || 'all';
+            var tabs = notifTabsWrap.querySelectorAll('button[data-notif-filter]');
+            for (var ti = 0; ti < tabs.length; ti++) {
+                var on = (tabs[ti] === btn);
+                tabs[ti].className = 'dash-tab' + (on ? ' active' : '');
+                tabs[ti].setAttribute('aria-selected', on ? 'true' : 'false');
+            }
+            renderNotifications();
+        });
+    }
+
  /* ---------- booking search inputs (debounced) ----------
        The dataset is already fully loaded and authorized, so the debounce only
        avoids re-rendering on every keystroke — no extra API requests at all. */
@@ -2811,6 +2881,15 @@ var supportForm = document.getElementById('support-form');
         setCount('count-tickets', ticketCount);
         setCount('count-favs', favCount);
         setCount('count-unread', unreadCount());
+        var notifAll = effectiveNotifications();
+        var pillAll = document.getElementById('notif-count-all');
+        if (pillAll) { pillAll.textContent = String(notifAll.length); }
+        var pillUnread = document.getElementById('notif-count-unread');
+        if (pillUnread) {
+            var nUnread = unreadCount();
+            pillUnread.textContent = String(nUnread);
+            pillUnread.classList.toggle('is-zero', nUnread === 0);
+        }
     }
 
     /* ============================================================
@@ -2956,6 +3035,25 @@ var supportForm = document.getElementById('support-form');
                 .then(function (json) {
                     if (!json || !json.success || !Array.isArray(json.notifications)) {
                         notifState = 'error';
+                    } else if (json.notifications.length === 0 && !notifSeeded) {
+                        /* A real account with no notifications yet: seed a sample
+                           feed once so the section has something to test with. */
+                        notifSeeded = true;
+                        window.fetch('api/notification.php?action=seed', {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: { 'Accept': 'application/json' }
+                        })
+                            .then(function (res) { return res.json().catch(function () { return {}; }); })
+                            .then(function () { syncRealNotifications(); })
+                            .catch(function () {
+                                realNotifs = [];
+                                notifState = 'loaded';
+                                renderNotifications();
+                                renderOverviewNotif();
+                                updateCounts();
+                            });
+                        return;
                     } else {
                         realNotifs = json.notifications.map(apiNotifToDash);
                         notifState = 'loaded';

@@ -211,6 +211,85 @@ function handle_read_all(): void
 }
 
 /* ============================================================
+   POST seed — create a small sample notification feed for a
+   passenger account that has none yet (used to test the UI).
+   Idempotent: does nothing when the passenger already has
+   notifications. Sample feed for testing the notification UI.
+   ============================================================ */
+function handle_seed(): void
+{
+    require_notification_post();
+    $user = require_active_passenger();
+
+    $userId = (int) $user['id'];
+    $pdo = db();
+
+    try {
+        $countStmt = $pdo->prepare('SELECT COUNT(*) AS c FROM notifications WHERE user_id = :uid');
+        $countStmt->execute([':uid' => $userId]);
+        if ((int) $countStmt->fetch()['c'] > 0) {
+            auth_response(200, [
+                'success' => true,
+                'message' => 'Notifications already exist.',
+                'seeded'  => false,
+            ]);
+        }
+
+        /* Sample feed — minutes ago, type, title, message, is_read. */
+        $seeds = [
+            [3,     'booking',      'Booking Confirmed',
+             'Your Selam Bus trip Addis Ababa → Arba Minch is confirmed. Ref: ET-8F4K29 · Seat 18.', 0],
+            [6,     'payment',      'Payment Received',
+             'ETB 1,300 for booking ET-8F4K29 was paid with TeleBirr.', 0],
+            [45,    'booking',      'Gate Change',
+             'Your Bahir Dar departure moved to Platform 4 at Meskel Square Terminal.', 0],
+            [1440,  'general',      'Boarding Reminder',
+             'Your bus departs tomorrow at 08:00 from Meskel Square Terminal. Please arrive 30 minutes early.', 0],
+            [1470,  'review',       'Company Replied to Your Review',
+             'Selam Bus replied: “Thanks for the feedback — happy travels!”', 0],
+            [2880,  'booking',      'Seat Changed',
+             'Your seat on ET-9B2A17 changed from 14 to 22. Your booking is still valid.', 1],
+            [5760,  'review',       'Review Your Trip',
+             'How was your trip from Addis Ababa to Hawassa? Share your feedback to help other passengers.', 1],
+            [7200,  'booking',      'Return Trip Reminder',
+             'Your return coach to Addis Ababa departs soon — check in from the My Trips page.', 1],
+            [8640,  'cancellation', 'Cancellation & Refund',
+             'Trip ET-3C7D12 was cancelled and ETB 700 was refunded to your TeleBirr account.', 1],
+            [17280, 'general',      'Welcome to ET Transport',
+             'Save your passenger info and a refund account in your profile to pre-fill every booking.', 1],
+        ];
+
+        foreach ($seeds as $seed) {
+            $createdAt = date('Y-m-d H:i:s', time() - ((int) $seed[0] * 60));
+            $insert = $pdo->prepare(
+                'INSERT INTO notifications (user_id, type, title, message, is_read, created_at)
+                 VALUES (:uid, :type, :title, :msg, :read, :created)'
+            );
+            $insert->execute([
+                ':uid'     => $userId,
+                ':type'    => $seed[1],
+                ':title'   => $seed[2],
+                ':msg'     => $seed[3],
+                ':read'    => (int) $seed[4],
+                ':created' => $createdAt,
+            ]);
+        }
+
+        auth_response(200, [
+            'success' => true,
+            'message' => 'Sample notifications created.',
+            'seeded'  => true,
+            'count'   => count($seeds),
+        ]);
+    } catch (Throwable $e) {
+        auth_response(500, [
+            'success' => false,
+            'message' => 'Notifications could not be created. Please try again.',
+        ]);
+    }
+}
+
+/* ============================================================
    Dispatcher
    ============================================================ */
 $action = notification_action();
@@ -224,8 +303,11 @@ if ($action === 'read') {
 if ($action === 'read_all') {
     handle_read_all();
 }
+if ($action === 'seed') {
+    handle_seed();
+}
 
 auth_response(400, [
     'success' => false,
-    'message' => 'Unsupported action. Use action=list, read or read_all.',
+    'message' => 'Unsupported action. Use action=list, read, read_all or seed.',
 ]);

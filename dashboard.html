@@ -248,10 +248,22 @@
 <!-- ============ Notifications ============ -->
                 <section class="dash-section" id="section-notifications" aria-labelledby="notifications-title" hidden>
                     <div class="dash-section-head">
-                        <h2 id="notifications-title" class="dash-section-title">Notifications</h2>
+                        <div>
+                            <h2 id="notifications-title" class="dash-section-title">Notifications</h2>
+                            <p class="dash-section-note">Updates about your bookings, payments and reviews &mdash; tap a notification to mark it read.</p>
+                        </div>
                         <button type="button" id="mark-all-read" class="btn btn-secondary btn-sm">Mark All as Read</button>
                     </div>
-                    <p class="dash-section-note">Mock notifications for this demo &mdash; no push, SMS or email is sent.</p>
+
+                    <div class="dash-tabs dash-notif-tabs" role="tablist" aria-label="Notification filter">
+                        <button type="button" class="dash-tab active" role="tab" aria-selected="true" data-notif-filter="all">
+                            All <span class="dash-notif-count" id="notif-count-all">0</span>
+                        </button>
+                        <button type="button" class="dash-tab" role="tab" aria-selected="false" data-notif-filter="unread">
+                            Unread <span class="dash-notif-count is-zero" id="notif-count-unread">0</span>
+                        </button>
+                    </div>
+
                     <div id="notifications-list"></div>
                 </section>
 

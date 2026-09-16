@@ -8462,5 +8462,29 @@ body.company-page .rv-demo-note {
 #profile-form .phone-info {
     min-height: 0;
 }
+
+/* ---------- 17.20 Notifications — filter tabs & typed icon chips ---------- */
+.dash-notif-tabs { margin-bottom: 0.85rem; }
+.dash-notif-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.35rem;
+    padding: 0.02rem 0.4rem;
+    border-radius: 999px;
+    background: #0b7a4b;
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 800;
+    margin-left: 0.35rem;
+}
+.dash-notif-count.is-zero { background: #dce8e1; color: #547067; }
+.dash-tab.active .dash-notif-count { background: #ffe0a6; color: #0b7a4b; }
+
+.dash-notif-icon.is-booking { background: #e2f3e9; color: #0b7a4b; }
+.dash-notif-icon.is-payment { background: #eef4fb; color: #245f9e; }
+.dash-notif-icon.is-review { background: #fdf3d9; color: #c9821f; }
+.dash-notif-icon.is-cancellation { background: #fdeaea; color: #b02f2f; }
+.dash-notif-icon.is-general { background: #edf5f0; color: #38635a; }
 =======
 >>>>>>> b58c4aa2d1a919a0aa5d927c8fdb1be8bb88d643
