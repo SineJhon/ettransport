@@ -375,9 +375,6 @@
     var chipsClear = document.getElementById('chips-clear');
     var emptyClear = document.getElementById('empty-clear');
     var emptyModify = document.getElementById('empty-modify');
-    var companyFilterRow = document.getElementById('company-filter-row');
-    var companyFilterName = document.getElementById('company-filter-name');
-    var companyFilterRemove = document.getElementById('company-filter-remove');
     var compareBar = document.getElementById('compare-bar');
     var compareCountNum = document.getElementById('compare-count-num');
     var compareNames = document.getElementById('compare-names');
@@ -616,6 +613,46 @@
         return meta ? meta.reviewCount : 0;
     }
 
+    /* ---------- Trip card icons (quiet, desaturated meta icons) ----------
+       Emoji icons matched to the amenity catalogue used by company
+       profiles (js/company.js). Rendered small + greyscale via CSS so
+       the meta line stays calm; unrecognised labels fall back to a
+       neutral check mark. */
+    var META_ICONS = {
+        bus: '\uD83D\uDE8C',    /* bus */
+        seat: '\uD83D\uDCBA'    /* seat */
+    };
+    var AMENITY_ICONS = {
+        'Reclining Seats': '\uD83D\uDECB',
+        'Headrests': '\uD83E\uDE91',
+        'Arm Support': '\uD83D\uDCAA',
+        'AC': '\u2744\uFE0F',
+        'A/C': '\u2744\uFE0F',
+        'Air Conditioning': '\u2744\uFE0F',
+        'Entertainment': '\uD83D\uDCFA',
+        'Snacks': '\uD83C\uDF7F',
+        'Water': '\uD83D\uDCA7',
+        'Wi-Fi': '\uD83D\uDCF6',
+        'WiFi': '\uD83D\uDCF6',
+        'Luggage': '\uD83E\uDDF3',
+        'Luggage Space': '\uD83E\uDDF3',
+        'Charging': '\uD83D\uDD0C',
+        'Multiple Pickup': '\uD83D\uDE8F',
+        'Restroom': '\uD83D\uDEBB'
+    };
+
+    function amenityIconFor(name) {
+        var icon = AMENITY_ICONS[String(name).trim()];
+        return icon ? icon : '\u2713';
+    }
+
+    function metaItemHtml(icon, label, extraClass) {
+        return '<span class="meta-item' + (extraClass ? ' ' + extraClass : '') + '">' +
+            '<span class="mi-ico" aria-hidden="true">' + icon + '</span>' +
+            label +
+        '</span>';
+    }
+
     /* ---------- Trip card rendering ---------- */
     function cardHtml(t, badges) {
         var badgesHtml = '';
@@ -627,30 +664,37 @@
         if (cmp && cmp.hasProfile) {
             companyHtml = '<a class="company-link" href="' + companyProfileLink(cmp.slug) + '">' +
                 escapeHtml(t.company) +
-                (cmp.verified ? '<span class="verified-sm"><span aria-hidden="true">&#10003;</span>Verified</span>' : '') +
+                (cmp.verified ? '<span class="verified-sm" title="Verified company"><span aria-hidden="true">&#10003;</span></span>' : '') +
             '</a>';
         } else {
             companyHtml = '<span class="company-link company-link-plain">' + escapeHtml(t.company) + '</span>';
         }
 
-        var amenityChips = '';
+        /* Quiet meta line: type · seats · amenities (icon + text). */
+        var metaHtml = metaItemHtml(META_ICONS.bus, escapeHtml(t.type));
+        var seatsLow = t.seats <= 5;
+        metaHtml += metaItemHtml(
+            META_ICONS.seat,
+            (seatsLow ? 'Only ' : '') + t.seats + (seatsLow ? ' seats left' : ' seats'),
+            seatsLow ? 'seats-low' : ''
+        );
         for (var a = 0; a < t.amenities.length; a++) {
-            amenityChips += '<span class="amenity-chip">' + escapeHtml(t.amenities[a]) + '</span>';
+            metaHtml += metaItemHtml(amenityIconFor(t.amenities[a]), escapeHtml(t.amenities[a]));
         }
 
         var reviews = reviewCountFor(t);
-        var ratingMeta = reviews > 0
-            ? ' <span class="rating-count">(' + reviews.toLocaleString() + ' reviews)</span>'
-            : '';
+        var ratingHtml = '<span class="bus-rating" title="' +
+                (reviews > 0 ? reviews.toLocaleString() + ' reviews' : 'No reviews yet') + '">' +
+                '<span class="star" aria-hidden="true">\u2605</span> ' + t.rating.toFixed(1) +
+                (reviews > 0 ? '<span class="rating-count"> (' + reviews.toLocaleString() + ')</span>' : '') +
+            '</span>';
 
         return '' +
             '<article class="bus-card" data-trip-id="' + t.id + '">' +
                 '<div class="card-top">' +
                     '<div class="card-badges">' + badgesHtml + '</div>' +
-                    '<div class="bus-company">' +
-                        companyHtml +
-                        '<span class="bus-rating">\u2605 ' + t.rating.toFixed(1) + ratingMeta + '</span>' +
-                    '</div>' +
+                    '<div class="bus-company">' + companyHtml + '</div>' +
+                    ratingHtml +
                     '<label class="compare-toggle" title="Add to comparison">' +
                         '<input type="checkbox" class="compare-check" data-trip-id="' + t.id + '"' + (isCompared(t.id) ? ' checked' : '') + '>' +
                         '<span class="compare-label">Compare</span>' +
@@ -670,12 +714,7 @@
                         '<span class="place">' + escapeHtml(t.to) + '</span>' +
                     '</div>' +
                 '</div>' +
-                '<div class="bus-meta">' +
-                    '<span class="bus-type">' + escapeHtml(t.type) + '</span>' +
-                    (t.busType ? '<span class="bus-bustype">' + escapeHtml(t.busType) + '</span>' : '') +
-                    '<span class="seats">' + t.seats + ' seats available</span>' +
-                '</div>' +
-                '<div class="amenities-row">' + amenityChips + '</div>' +
+                '<div class="bus-meta">' + metaHtml + '</div>' +
                 '<div class="bus-buy">' +
                     '<div class="price-block">' +
                         '<span class="price">' + formatPrice(t.price) + '</span>' +
@@ -740,36 +779,23 @@
         return null;
     }
 
-    /* ---------- Company param (pinned filter) ---------- */
-    function updateCompanyParamUI() {
-        if (!companyFilterRow || !companyFilterName) { return; }
-        var meta = companyMetaBySlug(companySlug);
-        if (companySlug && meta) {
-            companyFilterName.textContent = meta.name;
-            companyFilterRow.hidden = false;
-        } else {
-            companyFilterRow.hidden = true;
-        }
-    }
-
+    /* Remove the optional ?company= scope. It stays reachable as a removable
+       chip in the normal filters row, so users are never trapped on one company. */
     function removeCompanyParam() {
         companySlug = '';
-        updateCompanyParamUI();
         renderFilters();
         syncCheckboxes();
         refresh();
-                updateUrl();
+        updateUrl();
     }
 
     /* Clear every filter group (depart / price / type / company / amenity) as
-       well as the pinned URL company param, then rebuild checkboxes, chips,
-       results and the shareable URL. Mirrors removeCompanyParam() but is a
-       full reset. */
+       well as the URL company param, then rebuild checkboxes, chips, results
+       and the shareable URL. Mirrors removeCompanyParam() but is a full reset. */
     function clearAllFilters() {
         var keys = ['depart', 'price', 'type', 'company', 'amenity'];
         for (var i = 0; i < keys.length; i++) { active[keys[i]] = []; }
         companySlug = '';
-        updateCompanyParamUI();
         renderFilters();
         syncCheckboxes();
         updateFilterUI();
@@ -1183,12 +1209,7 @@
         });
     }
 
-    /* ---------- Pinned company filter removal ---------- */
-    if (companyFilterRemove) {
-        companyFilterRemove.addEventListener('click', removeCompanyParam);
-    }
-
- /* ---------- Bootstrap (async; runs after the dataset is ready) ---------- */
+    /* ---------- Bootstrap (async; runs after the dataset is ready) ---------- */
     function runInit() {
         if (modifyForm) {
             var mf = document.getElementById('m-from');
@@ -1202,7 +1223,6 @@
         }
         renderSummary();
         renderFilters();
-        updateCompanyParamUI();
         syncCheckboxes();
         updateFilterUI();
         refresh();

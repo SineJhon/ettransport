@@ -8563,3 +8563,472 @@ body.company-page .rv-demo-note {
 .dash-notif-icon.is-review { background: #fdf3d9; color: #c9821f; }
 .dash-notif-icon.is-cancellation { background: #fdeaea; color: #b02f2f; }
 .dash-notif-icon.is-general { background: #edf5f0; color: #38635a; }
+
+/* ============================================================
+   18. SEARCH PAGE — UI/UX POLISH (v2)
+   Scoped under `body.search-page` (search.html).
+   Calm, scan-friendly restyle. One accent colour family
+   (forest green) is reserved for actions + urgent info; amber
+   appears only on the star rating. Choice text uses charcoal
+   ink, everything else quiet muted greys, and meta data uses
+   small desaturated icons instead of coloured pill chips.
+   ============================================================ */
+
+/* ---------- 18.1 Page base ---------- */
+body.search-page {
+    --sp-green: #0b7a4b;            /* actions + important info only */
+    --sp-green-dark: #095e3a;
+    --sp-amber: #e8a33d;            /* star rating accent */
+    --sp-ink: #1f2a24;              /* headings, times, prices */
+    --sp-body: #3f4c46;             /* default text */
+    --sp-muted: #6b7f76;            /* secondary text */
+    --sp-faint: #8da096;            /* captions / tertiary */
+    --sp-line: #e4eae6;             /* hairline borders */
+    --sp-panel: #f7faf8;            /* soft panels */
+    background-color: var(--sp-panel);
+}
+
+body.search-page .results-page {
+    padding-top: var(--space-lg);
+    padding-bottom: var(--space-lg);
+}
+
+/* Filters sidebar was removed — results now span the full container width. */
+body.search-page .results-layout {
+    display: block;
+    margin-top: 2rem;
+}
+
+/* ---------- 18.2 Search summary banner ---------- */
+body.search-page .search-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.4rem;
+    padding: 1.6rem 2rem;
+    border: none;
+    border-radius: 18px;
+    overflow: hidden;
+    color: #eef7f2;
+    background:
+        radial-gradient(120% 170% at 100% 0%, rgba(232, 163, 61, 0.20) 0%, rgba(232, 163, 61, 0) 45%),
+        linear-gradient(120deg, #0b7a4b 0%, #0d6c46 55%, #095e3a 100%);
+    box-shadow: 0 12px 28px rgba(9, 64, 43, 0.20);
+}
+
+body.search-page .route-heading {
+    display: grid;
+    gap: 0.4rem;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+body.search-page .route-heading h1 {
+    font-size: 1.85rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: #ffffff;
+}
+
+body.search-page .search-eyebrow {
+    display: inline;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #ffdba1;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+}
+
+body.search-page #search-meta { color: #d6ecdf; font-size: 0.9rem; }
+body.search-page #search-availability { color: #ffe2ad; font-size: 0.85rem; font-weight: 700; }
+
+.search-summary-emblem {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    font-size: 1.9rem;
+    color: #ffffff;
+}
+
+/* ---------- 18.3 Modify search (collapsible) ---------- */
+body.search-page .modify-search { margin-top: var(--space-md); }
+
+body.search-page .modify-search > summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    list-style: none;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: var(--sp-body);
+    background: #ffffff;
+    border: 1.5px solid var(--sp-line);
+    border-radius: 999px;
+    padding: 0.5rem 1.1rem;
+    transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+body.search-page .modify-search > summary:hover {
+    border-color: #c9d5cd;
+    background: var(--sp-panel);
+}
+
+body.search-page .modify-search > summary svg {
+    width: 17px;
+    height: 17px;
+    color: var(--sp-muted);
+    flex: 0 0 auto;
+}
+
+body.search-page .modify-search[open] > summary { margin-bottom: var(--space-md); }
+
+body.search-page .modify-form {
+    margin-top: 0;
+    padding: 1.4rem 1.5rem;
+    background: #ffffff;
+    border: 1px solid var(--sp-line);
+    border-radius: 16px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr 1fr 1fr auto;
+    gap: 1rem 1.1rem;
+    align-items: end;
+    box-shadow: 0 6px 18px rgba(20, 43, 35, 0.05);
+}
+
+body.search-page .modify-form .form-group label { color: var(--sp-body); }
+
+body.search-page .modify-form .form-group input,
+body.search-page .modify-form .form-group select {
+    padding: 0.7rem 0.9rem;
+    border: 1.5px solid var(--sp-line);
+    border-radius: 12px;
+    font-size: 0.97rem;
+    color: var(--sp-body);
+    background-color: #ffffff;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+body.search-page .modify-form .form-group input:focus,
+body.search-page .modify-form .form-group select:focus {
+    outline: none;
+    border-color: var(--sp-green);
+    box-shadow: 0 0 0 4px rgba(11, 122, 75, 0.14);
+}
+
+body.search-page .modify-form .city-swap {
+    align-self: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 1.5px solid var(--sp-line);
+    color: var(--sp-muted);
+}
+
+body.search-page .modify-form .btn-search {
+    align-self: end;
+    border-radius: 12px;
+    box-shadow: 0 6px 14px rgba(11, 122, 75, 0.20);
+}
+
+/* ---------- 18.4 Results toolbar + sort ---------- */
+body.search-page #results-count { font-weight: 800; font-size: 1rem; color: var(--sp-ink); }
+body.search-page .results-toolbar { gap: 0.9rem; margin-bottom: 1.25rem; }
+body.search-page .sort-control { color: var(--sp-muted); font-weight: 600; }
+body.search-page .sort-control select {
+    border: 1.5px solid var(--sp-line);
+    border-radius: 10px;
+    padding: 0.42rem 0.8rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--sp-body);
+    background-color: #ffffff;
+    cursor: pointer;
+}
+body.search-page .sort-control select:focus {
+    outline: none;
+    border-color: var(--sp-green);
+    box-shadow: 0 0 0 4px rgba(11, 122, 75, 0.14);
+}
+
+/* ---------- 18.6 Trip result cards (scan-friendly) ---------- */
+body.search-page .bus-card {
+    background: #ffffff;
+    border: 1px solid var(--sp-line);
+    border-radius: 16px;
+    box-shadow: 0 6px 18px rgba(20, 43, 35, 0.05);
+    padding: 1.4rem 1.5rem;
+    gap: 1.25rem 1.5rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+body.search-page .bus-card:hover {
+    border-color: #c9d5cd;
+    box-shadow: 0 12px 26px rgba(20, 43, 35, 0.08);
+}
+body.search-page .results-list { gap: 1.75rem; }
+
+/* Header row: badges + company + rating + compare toggle. */
+body.search-page .card-top {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+body.search-page .card-badges {
+    position: static;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+body.search-page .badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid var(--sp-line);
+    background: #eef1ee;
+    color: var(--sp-body);
+    white-space: nowrap;
+}
+body.search-page .badge-recommended,
+body.search-page .badge-cheapest,
+body.search-page .badge-fastest,
+body.search-page .badge-rated { background: #eef1ee; color: var(--sp-body); }
+
+body.search-page .bus-company { margin-bottom: 0; }
+body.search-page .company-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: var(--sp-ink);
+    font-weight: 700;
+    font-size: 1.02rem;
+}
+body.search-page .company-link:hover { color: var(--sp-green); }
+body.search-page .company-link-plain { color: var(--sp-ink); }
+body.search-page .verified-sm {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.15rem;
+    height: 1.15rem;
+    padding: 0;
+    border-radius: 50%;
+    background: var(--sp-green);
+    color: #ffffff;
+    font-size: 0.66rem;
+    font-weight: 800;
+}
+body.search-page .bus-rating {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--sp-body);
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    padding: 0 0 0 0.15rem;
+}
+body.search-page .bus-rating .star { color: var(--sp-amber); }
+body.search-page .bus-rating .rating-count { color: var(--sp-faint); }
+body.search-page .compare-toggle {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    color: var(--sp-faint);
+}
+body.search-page .compare-check {
+    accent-color: var(--sp-green);
+    width: 1rem;
+    height: 1rem;
+}
+body.search-page .compare-label { font-size: 0.84rem; font-weight: 600; }
+
+/* Route row: the main scannable element. */
+body.search-page .bus-route {
+    margin-bottom: 0.35rem;
+    gap: 0.5rem 1.1rem;
+}
+body.search-page .time-block { display: grid; gap: 0.15rem; }
+body.search-page .time-block .time {
+    color: var(--sp-ink);
+    font-weight: 800;
+    font-size: 1.3rem;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+}
+body.search-page .time-block .place { color: var(--sp-muted); font-size: 0.9rem; }
+body.search-page .journey-line .duration { color: var(--sp-muted); font-weight: 600; font-size: 0.85rem; }
+body.search-page .journey-line .line {
+    width: 84px;
+    height: 2px;
+    border-radius: 2px;
+    background: repeating-linear-gradient(90deg, #cdd8cf 0 6px, transparent 6px 11px);
+}
+
+/* Meta line: one quiet row of icon + text (no coloured chips). */
+body.search-page .bus-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem 0.75rem;
+    padding-top: 0.15rem;
+}
+body.search-page .bus-meta .meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    font-size: 0.85rem;
+    color: var(--sp-muted);
+}
+body.search-page .bus-meta .meta-item .mi-ico {
+    font-size: 0.95rem;
+    line-height: 1;
+    filter: grayscale(1);
+    opacity: 0.85;
+}
+body.search-page .bus-meta .meta-item .mi-ico { text-transform: none; }
+body.search-page .bus-meta .meta-item + .meta-item:before {
+    content: "\00B7";
+    color: var(--sp-faint);
+    margin: 0 0.4rem 0 0;
+    font-size: 1.1rem;
+}
+body.search-page .bus-meta .meta-item.seats-low {
+    color: var(--sp-green);
+    font-weight: 700;
+}
+
+/* Buy panel: price + primary CTA, one colour, one action. */
+body.search-page .bus-buy {
+    align-self: start;
+    justify-content: center;
+    align-items: center;
+    gap: 0.55rem;
+    border-left: 1px solid var(--sp-line);
+    padding-left: 1.25rem;
+    text-align: center;
+}
+body.search-page .price-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.1rem;
+}
+body.search-page .price {
+    color: var(--sp-ink);
+    font-weight: 800;
+    font-size: 1.3rem;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+}
+body.search-page .per-passenger { color: var(--sp-muted); font-size: 0.8rem; }
+body.search-page .btn-view-seats {
+    background: var(--sp-green);
+    color: #ffffff;
+    border-radius: 10px;
+    font-weight: 700;
+    padding: 0.62rem 1.15rem;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(11, 122, 75, 0.22);
+}
+body.search-page .btn-view-seats:hover { background: var(--sp-green-dark); }
+
+/* ---------- 18.7 Compare: sticky bar + modal ---------- */
+body.search-page .compare-bar {
+    background: #ffffff;
+    border-top: 1px solid var(--sp-line);
+    box-shadow: 0 -4px 12px rgba(20, 43, 35, 0.06);
+}
+body.search-page .compare-count { color: var(--sp-ink); font-weight: 700; }
+body.search-page .compare-name { color: var(--sp-body); }
+body.search-page .btn-compare-clear {
+    background: #ffffff;
+    color: var(--sp-body);
+    border: 1.5px solid var(--sp-line);
+    border-radius: 10px;
+}
+body.search-page .btn-compare-clear:hover { background: var(--sp-panel); }
+body.search-page .compare-modal-box {
+    background: #ffffff;
+    border: 1px solid var(--sp-line);
+    border-radius: 16px;
+}
+body.search-page .compare-modal-head h2 { color: var(--sp-ink); }
+body.search-page .compare-modal-close { color: var(--sp-faint); }
+body.search-page .compare-modal-close:hover { color: var(--sp-body); }
+body.search-page .compare-grid th { color: var(--sp-body); font-weight: 700; }
+body.search-page .compare-grid th,
+body.search-page .compare-grid td { border-bottom: 1px solid var(--sp-line); }
+body.search-page .cmp-price { color: var(--sp-ink); font-weight: 800; }
+body.search-page .cmp-amenity {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: var(--sp-panel);
+    border: 1px solid var(--sp-line);
+    border-radius: 999px;
+    color: var(--sp-muted);
+    font-size: 0.78rem;
+    padding: 0.12rem 0.5rem;
+}
+body.search-page .btn-compare-select {
+    background: var(--sp-green);
+    color: #ffffff;
+    border-radius: 10px;
+    font-weight: 700;
+}
+body.search-page .btn-compare-select:hover { background: var(--sp-green-dark); }
+
+/* ---------- 18.8 Empty state + company context ---------- */
+body.search-page .results-empty {
+    background: #ffffff;
+    border: 2px dashed var(--sp-line);
+    border-radius: 16px;
+    padding: var(--space-lg);
+    color: var(--sp-muted);
+}
+body.search-page .results-empty h2 { color: var(--sp-ink); }
+body.search-page .empty-icon { opacity: 0.55; }
+
+/* ---------- 18.9 Responsive ---------- */
+@media (max-width: 992px) {
+    body.search-page .search-summary { padding: 1.3rem 1.4rem; }
+    /* Modify search: From | swap | To on the first row, Date | Passengers | Search below. */
+    body.search-page .modify-form { grid-template-columns: 1fr auto 1fr; }
+}
+@media (max-width: 640px) {
+    body.search-page .search-summary { padding: 1.1rem 1.2rem; gap: 0.9rem; }
+    body.search-page .search-summary-emblem { width: 52px; height: 52px; font-size: 1.55rem; }
+    body.search-page .route-heading h1 { font-size: 1.45rem; }
+    body.search-page .modify-form { padding: 1.25rem 1.05rem; grid-template-columns: 1fr; }
+    body.search-page .modify-form .city-swap { justify-self: center; margin: 0.15rem 0; }
+    body.search-page .bus-card { padding: 1.2rem; gap: 1.05rem; }
+    body.search-page .bus-buy {
+        border-left: none;
+        border-top: 1px solid var(--sp-line);
+        padding: 0.75rem 0 0;
+        justify-content: center;
+    }
+    body.search-page .time-block .time { font-size: 1.2rem; }
+}
