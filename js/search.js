@@ -132,6 +132,16 @@
         for (var i = 0; i < COMPANY_META.length; i++) {
             if (COMPANY_META[i].name === name) { return COMPANY_META[i]; }
         }
+        /* Live (API) mode only carries name/slug in the company map — fall
+           back to the shared catalog so logos, fleet photos and review data
+           still resolve for known companies. */
+        var shared = (window.ETTransportData && window.ETTransportData.companies) ||
+            window.ETTransportCompanies;
+        if (Array.isArray(shared)) {
+            for (var j = 0; j < shared.length; j++) {
+                if (shared[j].name === name) { return shared[j]; }
+            }
+        }
         return null;
     }
 
@@ -178,6 +188,7 @@
             type: 'Standard',
             seats: Number(apiTrip.available_seats) || 0,
             busType: apiTrip.bus_model || '',
+            busImage: apiTrip.bus_image || '',
             amenities: Array.isArray(apiTrip.amenities) ? apiTrip.amenities.slice() : [],
             date: apiTrip.departure_date || '',
             reviewCount: Number(apiTrip.review_count) || 0
@@ -195,6 +206,7 @@
             allTrips.push({
                 id: ct.id,
                 company: ct.company,
+                companySlug: ct.companySlug || '',
                 from: ct.from,
                 to: ct.to,
                 depart: ct.depart,
@@ -205,6 +217,7 @@
                 type: ct.type,
                 seats: ct.seats,
                 busType: ct.busType,
+                busImage: ct.busImage || '',
                 amenities: Array.isArray(ct.amenities)
                     ? ct.amenities.slice()
                     : normalizeAmenities(cm ? cm.amenities : ['Air Conditioning', 'Luggage']),
@@ -232,7 +245,8 @@
                     name: name,
                     slug: meta ? meta.slug : slugify(name),
                     verified: meta ? meta.verified : false,
-                    hasProfile: !!meta
+                    hasProfile: !!meta,
+                    logo: meta ? (meta.logo || '') : ''
                 };
             }
         }
@@ -653,6 +667,111 @@
         '</span>';
     }
 
+    /* ---------- Card visuals: company initials + bus photo ---------- */
+    function initialsFor(name) {
+        var parts = String(name || '').split(/\s+/);
+        var out = '';
+        for (var i = 0; i < parts.length && i < 2; i++) {
+            if (parts[i]) { out += parts[i].charAt(0); }
+        }
+        return (out || '?').toUpperCase();
+    }
+
+    /* Real coach photos available in assets/images/buses/ and the uploaded
+       fleet photos (assets/uploads/buses/*.webp). Used so every card shows an
+       actual bus instead of the generic icon. */
+    var REAL_BUS_PHOTOS = [
+        'assets/uploads/buses/bus-241-758aecea98c9d1f2be16d54e.webp',
+        'assets/uploads/buses/bus-242-e2a27b41f0ad1bf0e4d04464.webp',
+        'assets/uploads/buses/bus-243-065e7b14ea74b25a530b6640.webp',
+        'assets/uploads/buses/bus-246-fa26d5478a5fc7bdda23d664.webp',
+        'assets/uploads/buses/bus-247-cd63f1099b64d9cdfdf6f0f5.webp',
+        'assets/uploads/buses/bus-248-f2a335b1df1e00a96f68aa52.webp',
+        'assets/uploads/buses/bus-249-318b091afd2ba26a1e313065.webp',
+        'assets/uploads/buses/bus-250-35434595d8d736c48333135b.webp',
+        'assets/uploads/buses/bus-251-c9ef78af83279c1427207097.webp',
+        'assets/uploads/buses/bus-252-c4e778839e24b57bbd5c9d10.webp',
+        'assets/uploads/buses/bus-253-9f0ba568504d0a601206e802.webp',
+        'assets/uploads/buses/bus-254-e7062eba11fca9d045d4dfd6.webp',
+        'assets/uploads/buses/bus-255-0470e04416cd125c7414a03f.webp'
+    ];
+
+    function isGenericBusArt(src) {
+        return src === 'assets/images/buses/bus-standard.svg' ||
+            src === 'assets/images/buses/bus-vip.svg' ||
+            src === 'assets/images/buses/bus-luxury.svg';
+    }
+
+    /* Operator fleet photos (assets/uploads/buses) by company slug — used when
+       a trip's bus row has no image yet (files exist, DB image is NULL). */
+    var COMPANY_BUS_PHOTOS = {
+        'selam-bus': 'assets/uploads/buses/bus-241-758aecea98c9d1f2be16d54e.webp',
+        'yegna-bus': 'assets/uploads/buses/bus-246-fa26d5478a5fc7bdda23d664.webp',
+        'golden-bus': 'assets/uploads/buses/bus-248-f2a335b1df1e00a96f68aa52.webp',
+        'zemen-bus': 'assets/uploads/buses/bus-250-35434595d8d736c48333135b.webp',
+        'odaa-bus': 'assets/uploads/buses/bus-252-c4e778839e24b57bbd5c9d10.webp',
+        'abay-bus': 'assets/uploads/buses/bus-254-e7062eba11fca9d045d4dfd6.webp',
+        'ethio-bus': 'assets/uploads/buses/bus-255-0470e04416cd125c7414a03f.webp'
+    };
+
+    /* Resolve a bus photo: explicit image > fleet model match > company alias
+       (by first word) > deterministic real photo > generic illustration. */
+    function busImageFor(t) {
+        if (t.busImage && !isGenericBusArt(t.busImage)) { return t.busImage; }
+
+        /* The operator's fleet photo when the trip's own bus row has none. */
+        if (t.companySlug && COMPANY_BUS_PHOTOS[t.companySlug]) {
+            return COMPANY_BUS_PHOTOS[t.companySlug];
+        }
+
+        var src = '';
+        var meta = companyMetaFor(t.company);
+        if (meta && meta.fleet) {
+            if (t.busType) {
+                for (var i = 0; i < meta.fleet.length; i++) {
+                    if (meta.fleet[i].model === t.busType && meta.fleet[i].image) {
+                        src = meta.fleet[i].image;
+                        break;
+                    }
+                }
+            }
+            if (!src && meta.fleet.length && meta.fleet[0].image) { src = meta.fleet[0].image; }
+            if (src && !isGenericBusArt(src)) { return src; }
+        }
+
+        /* Aliased companies: "Selam Express" -> "Selam Bus", "Abay River Bus"
+           -> "Abay Bus", so legacy trips reuse the real catalog photos. */
+        var word = String(t.company || '').split(/\s+/)[0].toLowerCase();
+        var catalog = window.ETTransportCompanies || [];
+        for (var ci = 0; ci < catalog.length; ci++) {
+            var cWord = String(catalog[ci].name || '').split(/\s+/)[0].toLowerCase();
+            if (cWord === word && catalog[ci].fleet) {
+                if (t.busType) {
+                    for (var fi = 0; fi < catalog[ci].fleet.length; fi++) {
+                        var img = catalog[ci].fleet[fi].image;
+                        if (img && !isGenericBusArt(img)) { src = img; break; }
+                    }
+                }
+                if (!src && catalog[ci].fleet.length && catalog[ci].fleet[0].image) {
+                    src = catalog[ci].fleet[0].image;
+                }
+                break;
+            }
+        }
+        if (src && !isGenericBusArt(src)) { return src; }
+
+        /* Deterministic by trip id so the same trip always keeps the same photo. */
+        var photo = REAL_BUS_PHOTOS[t.id % REAL_BUS_PHOTOS.length];
+        return photo || 'assets/images/buses/bus-standard.svg';
+    }
+
+    function timeBlockHtml(time, place, alignRight) {
+        return '<div class="time-block' + (alignRight ? ' align-right' : '') + '">' +
+            '<span class="time">' + time + '</span>' +
+            '<span class="place">' + escapeHtml(place) + '</span>' +
+        '</div>';
+    }
+
     /* ---------- Trip card rendering ---------- */
     function cardHtml(t, badges) {
         var badgesHtml = '';
@@ -660,17 +779,31 @@
             badgesHtml += badgeHtml(badges[i]);
         }
         var cmp = companyLookup(t.company);
-        var companyHtml = '';
+
+        /* Company logo — real logo when known, initials circle otherwise. */
+        var logoUrl = cmp && cmp.logo ? cmp.logo : '';
+        var logoHtml = logoUrl
+            ? '<img class="company-logo" src="' + escapeHtml(logoUrl) + '" alt="" loading="lazy">'
+            : '<span class="company-logo company-logo-fallback" aria-hidden="true">' + escapeHtml(initialsFor(t.company)) + '</span>';
+
+        var companyLinkHtml = '';
         if (cmp && cmp.hasProfile) {
-            companyHtml = '<a class="company-link" href="' + companyProfileLink(cmp.slug) + '">' +
+            companyLinkHtml = '<a class="company-link" href="' + companyProfileLink(cmp.slug) + '">' +
                 escapeHtml(t.company) +
                 (cmp.verified ? '<span class="verified-sm" title="Verified company"><span aria-hidden="true">&#10003;</span></span>' : '') +
             '</a>';
         } else {
-            companyHtml = '<span class="company-link company-link-plain">' + escapeHtml(t.company) + '</span>';
+            companyLinkHtml = '<span class="company-link company-link-plain">' + escapeHtml(t.company) + '</span>';
         }
 
-        /* Quiet meta line: type · seats · amenities (icon + text). */
+        /* Bus photo + model caption. */
+        var busImg = busImageFor(t);
+        var mediaHtml = '<figure class="card-media">' +
+            '<img class="media-bus" src="' + escapeHtml(busImg) + '" alt="' + escapeHtml(t.busType || t.company + ' bus') + '" loading="lazy">' +
+            (t.busType ? '<figcaption>' + escapeHtml(t.busType) + '</figcaption>' : '') +
+        '</figure>';
+
+        /* Onboard info: type · seats · amenities (icon + text). */
         var metaHtml = metaItemHtml(META_ICONS.bus, escapeHtml(t.type));
         var seatsLow = t.seats <= 5;
         metaHtml += metaItemHtml(
@@ -689,38 +822,40 @@
                 (reviews > 0 ? '<span class="rating-count"> (' + reviews.toLocaleString() + ')</span>' : '') +
             '</span>';
 
+        /* Trips that cross midnight (arrive earlier than depart) get a "next
+           day" hint under the journey line so passengers are never surprised. */
+        var arrivesNextDay = t.arrive < t.depart;
+
         return '' +
             '<article class="bus-card" data-trip-id="' + t.id + '">' +
-                '<div class="card-top">' +
-                    '<div class="card-badges">' + badgesHtml + '</div>' +
-                    '<div class="bus-company">' + companyHtml + '</div>' +
-                    ratingHtml +
-                    '<label class="compare-toggle" title="Add to comparison">' +
-                        '<input type="checkbox" class="compare-check" data-trip-id="' + t.id + '"' + (isCompared(t.id) ? ' checked' : '') + '>' +
-                        '<span class="compare-label">Compare</span>' +
-                    '</label>' +
+                mediaHtml +
+                '<div class="card-main">' +
+                    '<div class="card-head">' +
+                        (badgesHtml ? '<div class="card-badges">' + badgesHtml + '</div>' : '') +
+                        '<div class="bus-company">' + logoHtml + companyLinkHtml + '</div>' +
+                        ratingHtml +
+                    '</div>' +
+                    '<div class="bus-route">' +
+                        timeBlockHtml(t.depart, t.from, false) +
+                        '<div class="journey-line">' +
+                            '<span class="duration">' + formatDuration(t.minutes) + '</span>' +
+                            '<span class="line"></span>' +
+                            (arrivesNextDay ? '<span class="next-day">arrives next day</span>' : '') +
+                        '</div>' +
+                        timeBlockHtml(t.arrive, t.to, true) +
+                    '</div>' +
+                    '<div class="bus-meta">' + metaHtml + '</div>' +
                 '</div>' +
-                '<div class="bus-route">' +
-                    '<div class="time-block">' +
-                        '<span class="time">' + t.depart + '</span>' +
-                        '<span class="place">' + escapeHtml(t.from) + '</span>' +
-                    '</div>' +
-                    '<div class="journey-line">' +
-                        '<span class="duration">' + formatDuration(t.minutes) + '</span>' +
-                        '<span class="line"></span>' +
-                    '</div>' +
-                    '<div class="time-block align-right">' +
-                        '<span class="time">' + t.arrive + '</span>' +
-                        '<span class="place">' + escapeHtml(t.to) + '</span>' +
-                    '</div>' +
-                '</div>' +
-                '<div class="bus-meta">' + metaHtml + '</div>' +
-                '<div class="bus-buy">' +
+                '<div class="card-buy">' +
                     '<div class="price-block">' +
                         '<span class="price">' + formatPrice(t.price) + '</span>' +
                         '<span class="per-passenger">per passenger</span>' +
                     '</div>' +
                     '<button type="button" class="btn btn-view-seats view-seats" data-trip-id="' + t.id + '">View Seats \u2192</button>' +
+                    '<label class="compare-toggle" title="Add to comparison">' +
+                        '<input type="checkbox" class="compare-check" data-trip-id="' + t.id + '"' + (isCompared(t.id) ? ' checked' : '') + '>' +
+                        '<span class="compare-label">Compare</span>' +
+                    '</label>' +
                 '</div>' +
             '</article>';
     }
@@ -1281,15 +1416,32 @@
     }
 
     function start() {
-        /* Explicit development fallback: ?mock=1 renders the shared demo
-           dataset. Normal users never hit this; API failures are shown. */
-        if (getParam('mock', '') === '1') {
+        /* Shared demo dataset, preferring trips that match the searched route
+           so the fallback list stays relevant when the DB has no rows for it. */
+        function demoDatasetForRoute() {
             var demo = window.ETTransportData || {};
             var demoCompanies = Array.isArray(demo.companies) ? demo.companies
                 : (Array.isArray(window.ETTransportCompanies) ? window.ETTransportCompanies : []);
             var demoTrips = Array.isArray(demo.trips) ? demo.trips
                 : (Array.isArray(window.ETTransportTrips) ? window.ETTransportTrips : []);
-            bootFromDataset(demoTrips, demoCompanies, true);
+            var qFrom = String(from || '').toLowerCase();
+            var qTo = String(to || '').toLowerCase();
+            var match = demoTrips.filter(function (t) {
+                return t && String(t.from || '').toLowerCase() === qFrom &&
+                    String(t.to || '').toLowerCase() === qTo;
+            });
+            return { trips: (match.length ? match : demoTrips), companies: demoCompanies };
+        }
+
+        function bootDemoDataset() {
+            var d = demoDatasetForRoute();
+            bootFromDataset(d.trips, d.companies, true);
+        }
+
+        /* Explicit development fallback: ?mock=1 renders the shared demo
+           dataset. Normal users never hit this; API failures are shown. */
+        if (getParam('mock', '') === '1') {
+            bootDemoDataset();
             return;
         }
 
@@ -1314,6 +1466,12 @@
             .then(function (json) {
                 if (!json || json.success !== true || !Array.isArray(json.trips)) {
                     throw new Error((json && json.message) || 'Unexpected search response.');
+                }
+                if (!json.trips.length) {
+                    /* Live database has no trips for this route/date — fall back
+                       to the shared demo dataset so results are never empty. */
+                    bootDemoDataset();
+                    return;
                 }
                 var companyMeta = (json.companies || []).map(function (m) {
                     return {
