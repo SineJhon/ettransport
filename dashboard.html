@@ -293,24 +293,14 @@
                 <!-- ============ Support (FAQ + contact, toggled) ============ -->
                 <section class="dash-section" id="section-support" aria-labelledby="support-title" hidden>
                     <h2 id="support-title" class="dash-section-title">Support</h2>
-                    <p class="dash-section-note">Browse the FAQ for quick answers, or pick a topic in Contact Support and tell us what happened &mdash; ET Transport support replies right here, tracked under My Requests.</p>
+                    <p class="dash-section-note">Send a request and ET Transport support replies right here, tracked under My Requests below &mdash; or browse the FAQ for quick answers.</p>
 
                     <div class="dash-tabs support-view-tabs" role="tablist" aria-label="Support views">
-                        <button type="button" class="dash-tab support-view-tab active" role="tab" aria-selected="true" data-support-view="faq">FAQ</button>
-                        <button type="button" class="dash-tab support-view-tab" role="tab" aria-selected="false" data-support-view="contact">Contact Support</button>
+                        <button type="button" class="dash-tab support-view-tab active" role="tab" aria-selected="true" data-support-view="contact">Contact Support</button>
+                        <button type="button" class="dash-tab support-view-tab" role="tab" aria-selected="false" data-support-view="faq">FAQ</button>
                     </div>
 
-                    <div id="support-view-faq" data-support-pane="faq">
-                        <h3 class="dash-block-title">Frequently Asked Questions</h3>
-                        <div class="support-faq-search">
-                            <span class="support-faq-ico" aria-hidden="true">&#128269;</span>
-                            <input type="search" id="faq-search" class="support-faq-input" placeholder="Search questions and answers&hellip;" autocomplete="off" aria-label="Search frequently asked questions">
-                        </div>
-                        <div id="faq-list" class="support-faq-list"></div>
-                        <p id="faq-empty" class="support-faq-empty" role="status" hidden>No FAQ matches your search. Switch to Contact Support above and we&rsquo;ll help.</p>
-                    </div>
-
-                    <div id="support-view-contact" data-support-pane="contact" hidden>
+                    <div id="support-view-contact" data-support-pane="contact">
                         <div class="card support-contact">
                             <h3 class="dash-card-title">Contact Support</h3>
                             <p class="support-callout">Call <a href="tel:+251936913118">+251 93 691 3118</a> or email <a href="mailto:support@ettransport.com">support@ettransport.com</a> &mdash; or pick a topic below and type your message right on the card.</p>
@@ -332,6 +322,16 @@
                         <div id="support-requests" class="dash-support-requests"></div>
                         <p id="support-requests-empty" class="dash-complaint-empty" role="status"></p>
                     </div>
+
+                    <div id="support-view-faq" data-support-pane="faq" hidden>
+                        <h3 class="dash-block-title">Frequently Asked Questions</h3>
+                        <div class="support-faq-search">
+                            <span class="support-faq-ico" aria-hidden="true">&#128269;</span>
+                            <input type="search" id="faq-search" class="support-faq-input" placeholder="Search questions and answers&hellip;" autocomplete="off" aria-label="Search frequently asked questions">
+                        </div>
+                        <div id="faq-list" class="support-faq-list"></div>
+                        <p id="faq-empty" class="support-faq-empty" role="status" hidden>No FAQ matches your search. Switch to Contact Support above and we&rsquo;ll help.</p>
+                    </div>
                 </section>
 
                 <!-- ============ Complaints ============ -->
@@ -342,50 +342,30 @@
 
                     <div class="card support-contact">
                         <h3 class="dash-card-title">File a Complaint</h3>
+                        <p class="support-callout">Had a problem with a journey, a company, or the ET Transport site itself? Choose who it&rsquo;s about, pick the issue type, and type your message right on the card.</p>
                         <form id="complaint-form" novalidate>
-                            <div class="form-group">
-                                <label for="complaint-target">Complaint about *</label>
-                                <select id="complaint-target" name="target">
-                                    <option value="company">A bus company</option>
-                                    <option value="platform">ET Transport platform</option>
-                                </select>
+                            <div class="support-step" id="complaint-target-step">
+                                <h4 class="support-step-title">Who is the complaint about?</h4>
+                                <div id="complaint-target-cards" class="complaint-target-grid" aria-label="Complaint target"></div>
                                 <span class="field-error" id="complaint-target-err" role="alert"></span>
                             </div>
-                            <div class="form-group" id="complaint-company-field">
-                                <label for="complaint-company">Bus Company *</label>
-                                <select id="complaint-company" name="company_id" required></select>
+
+                            <div class="support-step" id="complaint-company-step" hidden>
+                                <h4 class="support-step-title">Which bus company?</h4>
+                                <select id="complaint-company" name="company_id" class="complaint-company-select"></select>
                                 <span class="field-error" id="complaint-company-err" role="alert"></span>
                             </div>
-                            <div class="form-group">
-                                <label for="complaint-subject">Subject *</label>
-                                <input type="text" id="complaint-subject" name="subject" maxlength="190" required placeholder="e.g. Bus departed 45 minutes late">
-                                <span class="field-error" id="complaint-subject-err" role="alert"></span>
+
+                            <div class="support-step" id="complaint-category-step" hidden>
+                                <h4 class="support-step-title">What kind of problem?</h4>
+                                <div id="complaint-category-cards" class="support-grid" aria-label="Complaint types"></div>
+                                <span class="field-error" id="complaint-category-err" role="alert"></span>
                             </div>
-                            <div class="form-group">
-                                <label for="complaint-message">What happened? *</label>
-                                <textarea id="complaint-message" name="message" rows="4" maxlength="1000" required placeholder="Describe the issue, including the date and route where possible."></textarea>
-                                <span class="field-error" id="complaint-message-err" role="alert"></span>
+
+                            <div class="support-identity" hidden>
+                                <select id="complaint-target" name="target"></select>
+                                <select id="complaint-category" name="category"></select>
                             </div>
-                            <div class="form-group">
-                                <label for="complaint-category">Category</label>
-                                <select id="complaint-category" name="category">
-                                    <option value="refund_issue">Refund Problem</option>
-                                    <option value="lost_parcel">Lost Parcel</option>
-                                    <option value="crew_behavior">Crew Behavior</option>
-                                    <option value="comfort">Comfort</option>
-                                    <option value="luggage">Luggage</option>
-                                    <option value="late_departure">Late Departure</option>
-                                    <option value="cancelled_trip">Canceled Trip</option>
-                                    <option value="missed_bus">Missed Bus</option>
-                                    <option value="other">Other</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="complaint-booking">Booking Reference (optional)</label>
-                                <input type="text" id="complaint-booking" name="booking_reference" maxlength="30" placeholder="e.g. ET-20260820-ABC123">
-                            </div>
-                            <button type="submit" class="btn btn-primary" id="complaint-submit-btn">Submit Complaint</button>
-                            <p id="complaint-form-msg" class="continue-msg" role="status" hidden></p>
                         </form>
                     </div>
 
