@@ -762,7 +762,7 @@
 
         /* Deterministic by trip id so the same trip always keeps the same photo. */
         var photo = REAL_BUS_PHOTOS[t.id % REAL_BUS_PHOTOS.length];
-        return photo || 'assets/images/buses/bus-standard.svg';
+        return photo || 'assets/uploads/buses/bus-241-758aecea98c9d1f2be16d54e.webp';
     }
 
     function timeBlockHtml(time, place, alignRight) {
