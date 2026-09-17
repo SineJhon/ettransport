@@ -2263,6 +2263,7 @@ function closeTicket() {
     var complaintTarget = '';
     var selectedComplaintIssue = '';
     var complaintIssueDrafts = {};  // issue key -> { subject, msg, ref }
+    var complaintModal = document.getElementById('complaint-modal');
 
     function renderComplaintTargets() {
         var el = document.getElementById('complaint-target-cards');
@@ -2345,8 +2346,8 @@ function closeTicket() {
         }
     }
 
-    /* Choose who the complaint is about: unlocks the company picker (for a
-       company target) and the issue-type cards. */
+    /* Choose who the complaint is about: opens the File a Complaint pop-up
+       with the company picker (for a company target) and the issue-type cards. */
     function selectComplaintTarget(key) {
         complaintTarget = key;
         renderComplaintTargets();
@@ -2360,9 +2361,7 @@ function closeTicket() {
             if (company) { company.value = ''; }
             clearFieldError('complaint-company');
         }
-        if (categoryStep) {
-            try { categoryStep.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { categoryStep.scrollIntoView(); }
-        }
+        openComplaintModal();
     }
 
     /* Choose the issue type: expands the inline details on that card so the
@@ -2393,20 +2392,58 @@ function closeTicket() {
         renderComplaintCategories();
         clearFieldError('complaint-category');
         var fields = document.querySelector('.complaint-issue-card.selected .support-card-fields');
-        if (fields) { try { fields.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { fields.scrollIntoView(); } }
+        if (fields && complaintModal) {
+            var fTop = fields.getBoundingClientRect().top - complaintModal.getBoundingClientRect().top + complaintModal.scrollTop - 80;
+            try { complaintModal.scrollTo({ top: fTop, behavior: 'smooth' }); } catch (e) { complaintModal.scrollTop = fTop; }
+        } else if (fields) {
+            try { fields.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { fields.scrollIntoView(); }
+        }
         setTimeout(function () {
             var subj = document.querySelector('.complaint-issue-card.selected [data-complaint-subject]');
             if (subj) { try { subj.focus(); } catch (e) { /* noop */ } }
         }, 320);
     }
+    /* ============================================================
+       File a Complaint pop-up — the target cards open this modal;
+       the company picker + issue cards + message fields live here.
+       ============================================================ */
+    function openComplaintModal() {
+        if (!complaintModal) { return; }
+        complaintModal.hidden = false;
+        document.body.classList.add('modal-open');
+    }
+
+    function closeComplaintModal() {
+        if (!complaintModal) { return; }
+        complaintModal.hidden = true;
+        var otherIds = ['ticket-modal', 'cancel-modal', 'review-modal', 'profile-modal'];
+        var anyOpen = false;
+        for (var i = 0; i < otherIds.length; i++) {
+            var m = document.getElementById(otherIds[i]);
+            if (m && !m.hidden) { anyOpen = true; break; }
+        }
+        if (!anyOpen) { document.body.classList.remove('modal-open'); }
+    }
+
+    /* Back from the pop-up returns to the target cards on the page. */
+    function complaintBackToTargets() {
+        closeComplaintModal();
+        var targetStep = document.getElementById('complaint-target-step');
+        if (targetStep) {
+            try { targetStep.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { targetStep.scrollIntoView(); }
+        }
+    }
+
     function applyComplaintAccess() {
         var form = document.getElementById('complaint-form');
         var btn = document.getElementById('complaint-submit-btn');
         var guestNote = document.getElementById('complaint-guest-note');
+        var modal = document.getElementById('complaint-modal');
         if (!window.ETAuth || !window.ETAuth.getCurrentUser) { return; }
         window.ETAuth.getCurrentUser().then(function (user) {
             var loggedIn = !!(user && user.role === 'passenger');
             if (form) { form.hidden = !loggedIn; }
+            if (modal && !loggedIn) { modal.hidden = true; }
             if (btn) { btn.disabled = !loggedIn; }
             if (guestNote) { guestNote.hidden = loggedIn; }
         }).catch(function () { /* keep form visible by default */ });
@@ -2572,6 +2609,7 @@ function closeTicket() {
                 if (companyStep) { companyStep.hidden = true; }
                 if (categoryStep) { categoryStep.hidden = true; }
                 if (company) { company.value = ''; }
+                closeComplaintModal();
                 toast(isPlatform ? 'Complaint submitted. ET Transport support will respond here soon.' : 'Complaint submitted. The company will respond here soon.');
                 syncRealComplaints();
             })
@@ -3696,6 +3734,24 @@ function closeTicket() {
 
         var complaintForm = document.getElementById('complaint-form');
         if (complaintForm) { complaintForm.addEventListener('submit', submitComplaint); }
+
+        /* File a Complaint pop-up wiring: the issue-card submit button lives
+           in this form now, so bind submit here too; close on X / backdrop /
+           Back or Escape. */
+        var complaintDetailsForm = document.getElementById('complaint-details-form');
+        if (complaintDetailsForm) { complaintDetailsForm.addEventListener('submit', submitComplaint); }
+        var complaintModalCloseBtn = document.getElementById('complaint-modal-close');
+        if (complaintModalCloseBtn) { complaintModalCloseBtn.addEventListener('click', closeComplaintModal); }
+        var complaintModalBackdrop = document.querySelector('[data-complaint-close]');
+        if (complaintModalBackdrop) { complaintModalBackdrop.addEventListener('click', closeComplaintModal); }
+        var complaintBackBtn = document.getElementById('complaint-back-btn');
+        if (complaintBackBtn) { complaintBackBtn.addEventListener('click', complaintBackToTargets); }
+        var complaintModalHost = document.getElementById('complaint-modal');
+        if (complaintModalHost) {
+            complaintModalHost.addEventListener('keydown', function (ev) {
+                if (!complaintModalHost.hidden && (ev.key === 'Escape' || ev.key === 'Esc')) { closeComplaintModal(); }
+            });
+        }
 
         /* Complaint picker: target + issue-type cards (one-touch, inline input). */
         var complaintTargetCards = document.getElementById('complaint-target-cards');

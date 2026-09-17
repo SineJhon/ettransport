@@ -83,6 +83,7 @@ try {
             c.id                             AS company_id,
             c.slug                           AS company_slug,
             c.name                           AS company_name,
+            c.logo                           AS company_logo,
             c.status                         AS company_status,
             r.from_city,
             r.to_city,
@@ -176,6 +177,7 @@ try {
             $companyMap[$row['company_slug']] = [
                 'slug' => $row['company_slug'],
                 'name' => $row['company_name'],
+                'logo' => $row['company_logo'] !== null ? $row['company_logo'] : null,
                 'verified' => $row['company_status'] === 'approved',
                 'rating' => $rating,
                 'review_count' => $reviewCount,

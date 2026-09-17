@@ -6213,6 +6213,28 @@ body.companies .company-empty-hint {
 .dash-complaint-reply-input:focus { outline: 3px solid rgba(49,164,118,0.16); border-color: #3f976a; }
 .dash-complaint-empty { padding: 1.25rem; color: var(--color-muted); }
 
+/* ---------- File a Complaint pop-up (passenger dashboard) ---------- */
+#complaint-modal .dash-modal-box { max-width: 660px; }
+.complaint-modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.1rem; }
+#complaint-modal .complaint-company-select {
+    width: 100%;
+    appearance: none;
+    border: 1px solid #ccd8e6;
+    border-radius: 8px;
+    padding: 0.52rem 2rem 0.52rem 0.7rem;
+    font-size: 0.9rem;
+    font-family: inherit;
+    color: #2b3a33;
+    background-color: #ffffff;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.6rem center;
+    background-size: 0.7rem;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+#complaint-modal .complaint-company-select:focus-visible { outline: none; border-color: #0b7a4b; box-shadow: 0 0 0 3px rgba(11, 122, 75, 0.15); }
+
 /* ============================================================
    16.1  Company public profile — social sidebar layout
    Two-column "social profile" rail: cover + logo + name + menu

@@ -129,20 +129,49 @@
 
     /* Look up the canonical company profile for a trip's company name. */
     function companyMetaFor(name) {
+        var apiMeta = null;
         for (var i = 0; i < COMPANY_META.length; i++) {
-            if (COMPANY_META[i].name === name) { return COMPANY_META[i]; }
+            if (COMPANY_META[i].name === name) { apiMeta = COMPANY_META[i]; break; }
         }
-        /* Live (API) mode only carries name/slug in the company map — fall
-           back to the shared catalog so logos, fleet photos and review data
-           still resolve for known companies. */
+        /* Live (API) mode only carries name/slug + rating — enrich with the
+           shared catalog so real logos, fleet photos and review counts still
+           resolve for known companies instead of showing initials placeholders.
+           Legacy trip names (e.g. "Selam Express") also alias to their operator
+           by first word ("Selam Bus") so they get the real logo too. */
         var shared = (window.ETTransportData && window.ETTransportData.companies) ||
             window.ETTransportCompanies;
         if (Array.isArray(shared)) {
-            for (var j = 0; j < shared.length; j++) {
-                if (shared[j].name === name) { return shared[j]; }
+            var catalog = null;
+            var word = String(name || '').split(/\s+/)[0].toLowerCase();
+            var j;
+            for (j = 0; j < shared.length; j++) {
+                if (shared[j].name === name) { catalog = shared[j]; break; }
+            }
+            if (!catalog && word) {
+                for (j = 0; j < shared.length; j++) {
+                    var cw = String(shared[j].name || '').split(/\s+/)[0].toLowerCase();
+                    if (cw === word) { catalog = shared[j]; break; }
+                }
+            }
+            if (catalog) {
+                if (!apiMeta) { return catalog; }
+                if (!apiMeta.logo || !apiMeta.fleet) {
+                    var merged = {};
+                    var k;
+                    for (k in apiMeta) {
+                        if (Object.prototype.hasOwnProperty.call(apiMeta, k)) { merged[k] = apiMeta[k]; }
+                    }
+                    for (k in catalog) {
+                        if (Object.prototype.hasOwnProperty.call(catalog, k) && merged[k] === undefined) {
+                            merged[k] = catalog[k];
+                        }
+                    }
+                    return merged;
+                }
+                return apiMeta;
             }
         }
-        return null;
+        return apiMeta || null;
     }
 
     /**
@@ -783,7 +812,7 @@
         /* Company logo — real logo when known, initials circle otherwise. */
         var logoUrl = cmp && cmp.logo ? cmp.logo : '';
         var logoHtml = logoUrl
-            ? '<img class="company-logo" src="' + escapeHtml(logoUrl) + '" alt="" loading="lazy">'
+            ? '<img class="company-logo" src="' + escapeHtml(logoUrl) + '?v=20260918-logos" alt="" loading="lazy">'
             : '<span class="company-logo company-logo-fallback" aria-hidden="true">' + escapeHtml(initialsFor(t.company)) + '</span>';
 
         var companyLinkHtml = '';
@@ -1477,6 +1506,7 @@
                     return {
                         slug: m.slug,
                         name: m.name,
+                        logo: m.logo || '',
                         verified: !!m.verified,
                         rating: Number(m.rating) || 0,
                         reviewCount: Number(m.review_count) || 0

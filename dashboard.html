@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Your ET Transport passenger dashboard — upcoming trips, digital tickets, favorites, notifications, booking history and profile. Sign in to view your data.">
     <title>Dashboard | ET Transport</title>
-    <link rel="stylesheet" href="css/style.css?v=20260916-card-inputs">
+    <link rel="stylesheet" href="css/style.css?v=20260918-complaint-modal">
     <link rel="stylesheet" href="css/city-picker.css?v=20260907-swap-fix">
     <link rel="icon" type="image/x-icon" href="assets/icons/favicon.svg">
 <!-- Fonts (DM Sans + Outfit) -->
@@ -342,7 +342,7 @@
 
                     <div class="card support-contact">
                         <h3 class="dash-card-title">File a Complaint</h3>
-                        <p class="support-callout">Had a problem with a journey, a company, or the ET Transport site itself? Choose who it&rsquo;s about, pick the issue type, and type your message right on the card.</p>
+                        <p class="support-callout">Had a problem with a journey, a company, or the ET Transport site itself? Pick who it&rsquo;s about below &mdash; the next steps open in a pop-up.</p>
                         <form id="complaint-form" novalidate>
                             <div class="support-step" id="complaint-target-step">
                                 <h4 class="support-step-title">Who is the complaint about?</h4>
@@ -350,23 +350,42 @@
                                 <span class="field-error" id="complaint-target-err" role="alert"></span>
                             </div>
 
-                            <div class="support-step" id="complaint-company-step" hidden>
-                                <h4 class="support-step-title">Which bus company?</h4>
-                                <select id="complaint-company" name="company_id" class="complaint-company-select"></select>
-                                <span class="field-error" id="complaint-company-err" role="alert"></span>
-                            </div>
-
-                            <div class="support-step" id="complaint-category-step" hidden>
-                                <h4 class="support-step-title">What kind of problem?</h4>
-                                <div id="complaint-category-cards" class="support-grid" aria-label="Complaint types"></div>
-                                <span class="field-error" id="complaint-category-err" role="alert"></span>
-                            </div>
-
                             <div class="support-identity" hidden>
                                 <select id="complaint-target" name="target"></select>
                                 <select id="complaint-category" name="category"></select>
                             </div>
                         </form>
+                    </div>
+
+                    <!-- File a Complaint pop-up: opens after the passenger picks
+                         who the complaint is about; the company picker and the
+                         issue-type cards (with the message fields) live in here. -->
+                    <div id="complaint-modal" class="dash-modal" role="dialog" aria-modal="true" aria-labelledby="complaint-modal-title" hidden>
+                        <div class="dash-modal-backdrop" data-complaint-close></div>
+                        <div class="dash-modal-box">
+                            <div class="dash-modal-head">
+                                <h2 id="complaint-modal-title">File a Complaint</h2>
+                                <button type="button" id="complaint-modal-close" class="dash-modal-close" aria-label="Close">&times;</button>
+                            </div>
+
+                            <form id="complaint-details-form" novalidate>
+                                <div class="support-step" id="complaint-company-step" hidden>
+                                    <h4 class="support-step-title">Which bus company?</h4>
+                                    <select id="complaint-company" name="company_id" class="complaint-company-select"></select>
+                                    <span class="field-error" id="complaint-company-err" role="alert"></span>
+                                </div>
+
+                                <div class="support-step" id="complaint-category-step" hidden>
+                                    <h4 class="support-step-title">What kind of problem?</h4>
+                                    <div id="complaint-category-cards" class="support-grid" aria-label="Complaint types"></div>
+                                    <span class="field-error" id="complaint-category-err" role="alert"></span>
+                                </div>
+                            </form>
+
+                            <div class="complaint-modal-actions">
+                                <button type="button" id="complaint-back-btn" class="btn btn-secondary">&larr; Back</button>
+                            </div>
+                        </div>
                     </div>
 
                     <h3 class="dash-block-title">My Complaints</h3>
@@ -677,6 +696,6 @@
     <script src="js/cities.js"></script>
     <script src="js/city-picker.js?v=20260907-swap-fix-3-dispatch"></script>
     <script src="js/company.js"></script>
-    <script src="js/dashboard.js?v=20260916-card-inputs"></script>
+    <script src="js/dashboard.js?v=20260918-complaint-modal"></script>
 </body>
 </html>
