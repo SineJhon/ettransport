@@ -308,6 +308,26 @@
     }
 
     /* ---------- Seat interaction ---------- */
+
+    /* Swap one selected seat out for another (array + seat-map UI). */
+    function swapSeats(oldNum, newNum) {
+        var oldBtn = seatMap.querySelector('.seat[data-seat="' + oldNum + '"]');
+        var newBtn = seatMap.querySelector('.seat[data-seat="' + newNum + '"]');
+        if (oldBtn) { oldBtn.classList.remove('selected'); }
+        if (newBtn) { newBtn.classList.add('selected'); }
+        selected = selected.filter(function (n) { return n !== oldNum; });
+        selected.push(newNum);
+    }
+
+    /* Neutral feedback line under the seat map
+       (e.g. "Seat 51 replaced with seat 50."). */
+    function swapFeedback(text) {
+        if (!limitMsg) { return; }
+        limitMsg.textContent = text;
+        limitMsg.classList.add('swap-info');
+        limitMsg.hidden = false;
+    }
+
     seatMap.addEventListener('click', function (event) {
         var btn = event.target.closest ? event.target.closest('.seat') : null;
         if (!btn || btn.hasAttribute('disabled')) { return; }
@@ -324,13 +344,82 @@
             selected.push(num);
             btn.classList.add('selected');
             limitMsg.hidden = true;
+        } else if (selected.length === 1) {
+            // Already at the passenger limit with one chosen seat — swap it
+            // directly, so a change of mind never needs a deselect first.
+            var oldSingle = selected[0];
+            swapSeats(oldSingle, num);
+            swapFeedback('Seat ' + pad(oldSingle) + ' replaced with seat ' + pad(num) + '.');
         } else {
-            // At passenger limit
-            limitMsg.textContent = 'You can only select ' + passengers +
-                ' seat' + (passengers === 1 ? '' : 's') + '.';
-            limitMsg.hidden = false;
+            // At the limit with several chosen seats — ask which one to replace.
+            openSwapModal(num);
         }
         updateSummary();
+    });
+
+    /* ---------- Seat-swap picker ----------
+       With several seats already chosen, clicking a new free seat opens a
+       small dialog that asks which chosen seat the new one should replace. */
+    var swapTarget = null;
+    var swapModal = document.getElementById('swap-modal');
+    var swapChoicesEl = document.getElementById('swap-choices');
+    var swapNewEl = document.getElementById('swap-new');
+    var swapCountEl = document.getElementById('swap-count');
+    var swapCloseBtn = document.getElementById('swap-modal-close');
+    var swapCancelBtn = document.getElementById('swap-cancel');
+
+    function closeSwapModal() {
+        if (swapModal) { swapModal.hidden = true; }
+        document.body.classList.remove('modal-open');
+        swapTarget = null;
+    }
+
+    function openSwapModal(num) {
+        if (!swapModal || !swapChoicesEl) { return; }
+        swapTarget = num;
+        var list = selected.slice().sort(function (a, b) { return a - b; });
+        swapChoicesEl.innerHTML = '';
+        for (var i = 0; i < list.length; i++) {
+            var seatNum = list[i];
+            var li = document.createElement('li');
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'swap-choice';
+            b.textContent = 'Seat ' + pad(seatNum);
+            b.setAttribute('data-seat', String(seatNum));
+            li.appendChild(b);
+            swapChoicesEl.appendChild(li);
+        }
+        if (swapCountEl) { swapCountEl.textContent = String(selected.length); }
+        if (swapNewEl) { swapNewEl.textContent = 'Seat ' + pad(num); }
+        swapModal.hidden = false;
+        document.body.classList.add('modal-open');
+        var firstChoice = swapChoicesEl.querySelector('button');
+        if (firstChoice) { firstChoice.focus(); }
+    }
+
+    function closeSwapAfterChoice(oldNum, newNum) {
+        swapSeats(oldNum, newNum);
+        updateSummary();
+        swapFeedback('Seat ' + pad(oldNum) + ' replaced with seat ' + pad(newNum) + '.');
+        closeSwapModal();
+    }
+
+    if (swapChoicesEl) {
+        swapChoicesEl.addEventListener('click', function (event) {
+            var btnEl = event.target.closest ? event.target.closest('button[data-seat]') : null;
+            if (!btnEl || swapTarget === null) { return; }
+            closeSwapAfterChoice(parseInt(btnEl.dataset.seat, 10), swapTarget);
+        });
+    }
+    if (swapCloseBtn) { swapCloseBtn.addEventListener('click', closeSwapModal); }
+    if (swapCancelBtn) { swapCancelBtn.addEventListener('click', closeSwapModal); }
+
+    /* Escape dismisses the picker. */
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && swapModal && !swapModal.hidden) {
+            closeSwapModal();
+        }
     });
 
  /* ---------- Continue → passenger information ---------- */

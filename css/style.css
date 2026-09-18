@@ -9333,3 +9333,87 @@ body.search-page .empty-icon { opacity: 0.55; }
     .prefill-modal-box { width: min(100%, 100vw); }
     .prefill-modal-actions .btn { flex: 1 1 auto; }
 }
+
+/* ------------------------------------------------------------
+   19. Seat-swap picker (booking seat selection)
+------------------------------------------------------------ */
+.limit-msg.swap-info { color: var(--color-primary); }
+.swap-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgba(15, 23, 42, 0.55);
+}
+.swap-modal[hidden] { display: none; }
+.swap-modal-box {
+    position: relative;
+    width: min(100%, 420px);
+    background-color: var(--color-white);
+    border-radius: 16px;
+    padding: 1.4rem 1.5rem 1.3rem;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.32);
+    animation: dashModalIn 0.22s ease-out;
+}
+.swap-modal-box::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--color-primary);
+}
+.swap-modal-close {
+    position: absolute;
+    top: 0.55rem;
+    right: 0.65rem;
+    border: none;
+    background: transparent;
+    width: 2rem;
+    height: 2rem;
+    font-size: 1.35rem;
+    line-height: 1;
+    color: var(--color-muted);
+    cursor: pointer;
+    border-radius: 8px;
+}
+.swap-modal-close:hover { color: var(--color-dark); background-color: #f1f5f9; }
+.swap-modal-close:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.swap-modal-box h2 { margin: 0; font-size: 1.2rem; }
+.swap-modal-sub {
+    margin: 0.35rem 0 0.95rem;
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: var(--color-muted);
+}
+.swap-modal-sub strong { color: var(--color-primary); }
+.swap-choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    list-style: none;
+    margin: 0 0 1.1rem;
+}
+.swap-choice {
+    padding: 0.55rem 1rem;
+    border: 1px solid #cfe3d2;
+    background: #eaf6ef;
+    border-radius: 10px;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--color-dark);
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.swap-choice:hover { background: #dceee2; border-color: #31a476; }
+.swap-choice:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.swap-modal-actions { display: flex; justify-content: flex-end; }
+@media (max-width: 480px) {
+    .swap-modal-box { width: min(100%, 100vw); }
+    .swap-choices .swap-choice { flex: 1 1 auto; }
+}

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Choose your seats for your intercity bus trip with ET Transport.">
     <title>Choose Your Seats | ET Transport</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=20260918-seat-swap">
     <link rel="icon" type="image/x-icon" href="assets/icons/favicon.svg">
 <!-- Fonts (DM Sans + Outfit) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -131,6 +131,24 @@
         </div>
     </main>
 
+    <!-- ============================================
+         Seat-swap picker — when every seat is already
+         chosen and a new free seat is clicked, ask which
+         chosen seat the new one should replace. Logic in
+         js/booking.js (openSwapModal + swapSeats).
+         ============================================ -->
+    <div id="swap-modal" class="swap-modal" role="dialog" aria-modal="true" aria-labelledby="swap-modal-title" hidden>
+        <div class="swap-modal-box">
+            <button type="button" id="swap-modal-close" class="swap-modal-close" aria-label="Close dialog">&times;</button>
+            <h2 id="swap-modal-title">Swap seats</h2>
+            <p class="swap-modal-sub">You already picked <strong id="swap-count"></strong> seats. Which one should <strong id="swap-new"></strong> replace?</p>
+            <ul class="swap-choices" id="swap-choices"></ul>
+            <div class="swap-modal-actions">
+                <button type="button" id="swap-cancel" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ============ Footer ============ -->
     <footer class="site-footer">
         <div class="container footer-grid">
@@ -184,7 +202,7 @@
         <script src="js/auth.js"></script>
     <script src="js/notifications.js"></script>
     <script src="js/data.js"></script>
-    <script src="js/booking.js"></script>
+    <script src="js/booking.js?v=20260918-seat-swap"></script>
 </body>
 </html>
 
