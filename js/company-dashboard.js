@@ -4147,6 +4147,11 @@ var reviewEditingReplyId = null;
     ];
 
     var COMPLAINT_CATEGORY_LABELS = {
+        booking_issue: 'Booking Problem',
+        payment_issue: 'Payment Problem',
+        website_issue: 'Website Problem',
+        account_issue: 'Account Problem',
+        notification_issue: 'Notification Problem',
         refund_issue: 'Refund Problem',
         lost_parcel: 'Lost Parcel',
         crew_behavior: 'Crew Behavior',

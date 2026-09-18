@@ -6215,6 +6215,17 @@ body.companies .company-empty-hint {
 
 /* ---------- File a Complaint pop-up (passenger dashboard) ---------- */
 #complaint-modal .dash-modal-box { max-width: 660px; }
+#complaint-modal .complaint-modal-context { margin: -0.5rem 0 0.95rem; }
+
+/* ---------- Message pop-up (step 2) ---------- */
+#complaint-details-modal .dash-modal-box { max-width: 620px; }
+#complaint-details-modal .complaint-details-head-copy { display: grid; gap: 0.15rem; min-width: 0; }
+#complaint-details-modal .complaint-details-head-copy h2 { margin: 0; }
+#complaint-details-modal .complaint-modal-context { margin: 0; }
+#complaint-details-modal .form-group { margin-bottom: 0.95rem; }
+#complaint-details-modal .form-group:last-of-type { margin-bottom: 0.5rem; }
+#complaint-details-modal .complaint-details-actions { justify-content: space-between; }
+.complaint-category-hint { margin: 0 0 0.7rem; }
 .complaint-modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.1rem; }
 #complaint-modal .complaint-company-select {
     width: 100%;

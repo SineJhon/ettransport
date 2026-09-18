@@ -2032,6 +2032,11 @@ function closeTicket() {
     }
 
     var COMPLAINT_CATEGORY_LABELS = {
+        booking_issue: 'Booking Problem',
+        payment_issue: 'Payment Problem',
+        website_issue: 'Website Problem',
+        account_issue: 'Account Problem',
+        notification_issue: 'Notification Problem',
         refund_issue: 'Refund Problem',
         lost_parcel: 'Lost Parcel',
         crew_behavior: 'Crew Behavior',
@@ -2239,31 +2244,103 @@ function closeTicket() {
           text: 'Problem with the website, booking or payment flow.' }
     ];
 
-    var COMPLAINT_ISSUES = [
-        { key: 'refund_issue', icon: '&#128184;', title: 'Refund Problem',
-          text: 'Refund not received, or the wrong amount.' },
-        { key: 'lost_parcel', icon: '&#128230;', title: 'Lost Parcel',
-          text: 'Parcel or cargo delayed, damaged or missing.' },
-        { key: 'crew_behavior', icon: '&#128101;', title: 'Crew Behavior',
-          text: 'Unprofessional driver or onboard staff.' },
-        { key: 'comfort', icon: '&#128715;', title: 'Comfort',
-          text: 'Uncomfortable, cold or unhygienic trip.' },
-        { key: 'luggage', icon: '&#129523;', title: 'Luggage',
-          text: 'Baggage handling problems or damaged bags.' },
+    /* Issue types are separated by complaint target: bus-company complaints
+       show trip / onboard problems, platform complaints show site / booking /
+       payment problems. The hidden category select is filled from the same
+       list so the submit payload always matches a rendered card. */
+    var COMPLAINT_ISSUES_COMPANY = [
         { key: 'late_departure', icon: '&#9200;', title: 'Late Departure',
           text: 'Bus left late or arrived late at the stop.' },
         { key: 'cancelled_trip', icon: '&#128683;', title: 'Canceled Trip',
           text: 'Your trip was cancelled before departure.' },
         { key: 'missed_bus', icon: '&#127939;', title: 'Missed Bus',
           text: 'Bus left before you could board.' },
+        { key: 'refund_issue', icon: '&#128184;', title: 'Refund Problem',
+          text: 'Refund not received, or the wrong amount.' },
+        { key: 'crew_behavior', icon: '&#128101;', title: 'Crew Behavior',
+          text: 'Unprofessional driver or onboard staff.' },
+        { key: 'comfort', icon: '&#128715;', title: 'Comfort',
+          text: 'Uncomfortable, cold or unhygienic trip.' },
+        { key: 'luggage', icon: '&#129523;', title: 'Luggage',
+          text: 'Baggage handling problems or damaged bags.' },
+        { key: 'lost_parcel', icon: '&#128230;', title: 'Lost Parcel',
+          text: 'Parcel or cargo delayed, damaged or missing.' },
         { key: 'other', icon: '&#128172;', title: 'Other',
           text: 'Anything not listed — tell us what happened.' }
     ];
+
+    var COMPLAINT_ISSUES_PLATFORM = [
+        { key: 'booking_issue', icon: '&#127915;', title: 'Booking Problem',
+          text: 'Could not book, or the booking details are wrong.' },
+        { key: 'payment_issue', icon: '&#128179;', title: 'Payment Problem',
+          text: 'Payment failed, double-charged, or charged with no ticket.' },
+        { key: 'refund_issue', icon: '&#128184;', title: 'Refund Problem',
+          text: 'Refund not received, or the wrong amount.' },
+        { key: 'website_issue', icon: '&#127760;', title: 'Website Problem',
+          text: 'Page broken, slow, or something does not work on the site.' },
+        { key: 'account_issue', icon: '&#128274;', title: 'Account Problem',
+          text: 'Login, registration, or account details issues.' },
+        { key: 'notification_issue', icon: '&#128276;', title: 'Notification Problem',
+          text: 'Missing or confusing booking / payment notifications.' },
+        { key: 'other', icon: '&#128172;', title: 'Other',
+          text: 'Anything not listed — tell us what happened.' }
+    ];
+
+    function complaintIssueList() {
+        return (complaintTarget === 'platform') ? COMPLAINT_ISSUES_PLATFORM : COMPLAINT_ISSUES_COMPANY;
+    }
+
+    function complaintTargetTitle(key) {
+        for (var i = 0; i < COMPLAINT_TARGETS.length; i++) {
+            if (COMPLAINT_TARGETS[i].key === key) { return COMPLAINT_TARGETS[i].title; }
+        }
+        return '';
+    }
+
+    function complaintIssueTitle(issueKey) {
+        var list = complaintIssueList();
+        for (var i = 0; i < list.length; i++) {
+            if (list[i].key === issueKey) { return list[i].title; }
+        }
+        return '';
+    }
+
+    /* Pop-up subtitle naming the chosen target (bus company vs platform). */
+    function showComplaintModalContext(key) {
+        var el = document.getElementById('complaint-modal-context');
+        if (!el) { return; }
+        var t = complaintTargetTitle(key);
+        el.textContent = t ? ('Complaint about — ' + t) : '';
+    }
+
+    /* Message pop-up subtitle: the target plus the issue being filed. */
+    function showComplaintDetailsContext(targetKey, issueKey) {
+        var el = document.getElementById('complaint-details-context');
+        if (!el) { return; }
+        var t = complaintTargetTitle(targetKey);
+        var i = complaintIssueTitle(issueKey);
+        el.textContent = t ? ('Complaint about — ' + t + (i ? ' · ' + i : '')) : '';
+    }
+
+    /* Persist the message-field draft for the active issue so switching issues
+       or reopening the pop-up never loses typed text. */
+    function saveComplaintDraft() {
+        if (!selectedComplaintIssue) { return; }
+        var draft = complaintIssueDrafts[selectedComplaintIssue] || { subject: '', msg: '', ref: '' };
+        var subjectEl = document.getElementById('cc-subject');
+        var messageEl = document.getElementById('cc-message');
+        var bookingEl = document.getElementById('cc-booking');
+        draft.subject = subjectEl ? subjectEl.value : '';
+        draft.msg = messageEl ? messageEl.value : '';
+        draft.ref = bookingEl ? bookingEl.value : '';
+        complaintIssueDrafts[selectedComplaintIssue] = draft;
+    }
 
     var complaintTarget = '';
     var selectedComplaintIssue = '';
     var complaintIssueDrafts = {};  // issue key -> { subject, msg, ref }
     var complaintModal = document.getElementById('complaint-modal');
+    var complaintDetailsModal = document.getElementById('complaint-details-modal');
 
     function renderComplaintTargets() {
         var el = document.getElementById('complaint-target-cards');
@@ -2301,29 +2378,17 @@ function closeTicket() {
     function renderComplaintCategories() {
         var el = document.getElementById('complaint-category-cards');
         if (!el) { return; }
+        var list = complaintIssueList();
         var html = '';
-        for (var i = 0; i < COMPLAINT_ISSUES.length; i++) {
-            var t = COMPLAINT_ISSUES[i];
+        for (var i = 0; i < list.length; i++) {
+            var t = list[i];
             var selected = (selectedComplaintIssue === t.key);
-            var draft = complaintIssueDrafts[t.key];
-            var dSubj = draft ? (draft.subject || '') : '';
-            var dMsg = draft ? (draft.msg || '') : '';
-            var dRef = draft ? (draft.ref || '') : '';
             html += '<div class="support-card complaint-issue-card' + (selected ? ' selected' : '') + '" data-complaint-issue="' + escapeAttr(t.key) + '" role="button" tabindex="0" aria-pressed="' + (selected ? 'true' : 'false') + '">' +
                 '<span class="support-icon" aria-hidden="true">' + t.icon + '</span>' +
                 '<span class="support-topic-title">' + escapeHtml(t.title) + '</span>' +
                 '<p class="support-card-desc">' + escapeHtml(t.text) + '</p>' +
                 (selected
-                    ? '<div class="support-card-fields">' +
-                        '<input type="text" class="support-card-ref support-card-subject" data-complaint-subject maxlength="120" autocomplete="off" placeholder="Give it a short subject, e.g. Bus departed 45 minutes late" value="' + escapeAttr(dSubj) + '">' +
-                        '<textarea class="support-card-input" data-complaint-message maxlength="1000" placeholder="Describe what happened — include the date and route where possible.">' + escapeHtml(dMsg) + '</textarea>' +
-                        '<span class="field-error" data-complaint-err role="alert"></span>' +
-                        '<div class="support-card-subrow">' +
-                            '<input type="text" class="support-card-ref" data-complaint-booking maxlength="30" autocomplete="off" placeholder="Booking ref (optional)" value="' + escapeAttr(dRef) + '">' +
-                            '<button type="submit" class="btn btn-primary btn-sm">Submit Complaint</button>' +
-                        '</div>' +
-                        '<p class="support-card-status" data-complaint-status role="status" hidden></p>' +
-                    '</div>'
+                    ? '<span class="support-card-link">Chosen \u2713</span>'
                     : '<span class="support-card-link">Choose this &rarr;</span>') +
             '</div>';
         }
@@ -2332,10 +2397,10 @@ function closeTicket() {
         var sel = document.getElementById('complaint-category');
         if (!sel) { return; }
         while (sel.firstChild) { sel.removeChild(sel.firstChild); }
-        for (var j = 0; j < COMPLAINT_ISSUES.length; j++) {
+        for (var j = 0; j < list.length; j++) {
             var o = document.createElement('option');
-            o.value = COMPLAINT_ISSUES[j].key;
-            o.textContent = COMPLAINT_ISSUES[j].title;
+            o.value = list[j].key;
+            o.textContent = list[j].title;
             sel.appendChild(o);
         }
         sel.selectedIndex = -1;
@@ -2347,11 +2412,24 @@ function closeTicket() {
     }
 
     /* Choose who the complaint is about: opens the File a Complaint pop-up
-       with the company picker (for a company target) and the issue-type cards. */
+       with the company picker (for a company target) and the issue-type cards.
+       The issue cards themselves are different per target. */
     function selectComplaintTarget(key) {
         complaintTarget = key;
         renderComplaintTargets();
         clearFieldError('complaint-target');
+        /* A previously chosen issue from the other target list no longer
+           exists here, so drop it before showing the new cards. */
+        var allowed = complaintIssueList();
+        var stillValid = false;
+        for (var li = 0; li < allowed.length; li++) {
+            if (allowed[li].key === selectedComplaintIssue) { stillValid = true; break; }
+        }
+        if (!stillValid) {
+            selectedComplaintIssue = '';
+            renderComplaintCategories();
+        }
+        clearFieldError('complaint-category');
         var companyStep = document.getElementById('complaint-company-step');
         var categoryStep = document.getElementById('complaint-category-step');
         if (companyStep) { companyStep.hidden = (key !== 'company'); }
@@ -2361,11 +2439,13 @@ function closeTicket() {
             if (company) { company.value = ''; }
             clearFieldError('complaint-company');
         }
+        showComplaintModalContext(key);
         openComplaintModal();
     }
 
-    /* Choose the issue type: expands the inline details on that card so the
-       message can be typed right there, like the Support topic cards. */
+    /* Choose the issue type: opens the message pop-up (step 2) where the
+       subject, message and optional booking reference are typed and the
+       complaint is submitted. */
     function selectComplaintIssue(key) {
         if (!complaintTarget) {
             setFieldError('complaint-target', 'Choose who the complaint is about first.');
@@ -2373,40 +2453,40 @@ function closeTicket() {
             if (targetStep) { try { targetStep.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { targetStep.scrollIntoView(); } }
             return;
         }
-        if (selectedComplaintIssue === key) {
-            var existing = document.querySelector('.complaint-issue-card.selected [data-complaint-message]');
-            if (existing) { try { existing.focus(); } catch (e) { /* noop */ } }
-            return;
+        if (complaintTarget === 'company') {
+            var needCompany = document.getElementById('complaint-company');
+            if (!needCompany || !needCompany.value) {
+                setFieldError('complaint-company', 'Choose a bus company first.');
+                if (complaintModal) {
+                    var companyFocus = document.getElementById('complaint-company');
+                    try { complaintModal.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { /* noop */ }
+                    if (companyFocus) { setTimeout(function () { try { companyFocus.focus(); } catch (e) { /* noop */ } }, 60); }
+                }
+                return;
+            }
+            clearFieldError('complaint-company');
         }
-        if (selectedComplaintIssue) {
-            var prevSubj = document.querySelector('.complaint-issue-card.selected [data-complaint-subject]');
-            var prevMsg = document.querySelector('.complaint-issue-card.selected [data-complaint-message]');
-            var prevRef = document.querySelector('.complaint-issue-card.selected [data-complaint-booking]');
-            complaintIssueDrafts[selectedComplaintIssue] = {
-                subject: prevSubj ? prevSubj.value : '',
-                msg: prevMsg ? prevMsg.value : '',
-                ref: prevRef ? prevRef.value : ''
-            };
-        }
+        if (selectedComplaintIssue) { saveComplaintDraft(); }
         selectedComplaintIssue = key;
         renderComplaintCategories();
         clearFieldError('complaint-category');
-        var fields = document.querySelector('.complaint-issue-card.selected .support-card-fields');
-        if (fields && complaintModal) {
-            var fTop = fields.getBoundingClientRect().top - complaintModal.getBoundingClientRect().top + complaintModal.scrollTop - 80;
-            try { complaintModal.scrollTo({ top: fTop, behavior: 'smooth' }); } catch (e) { complaintModal.scrollTop = fTop; }
-        } else if (fields) {
-            try { fields.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { fields.scrollIntoView(); }
-        }
-        setTimeout(function () {
-            var subj = document.querySelector('.complaint-issue-card.selected [data-complaint-subject]');
-            if (subj) { try { subj.focus(); } catch (e) { /* noop */ } }
-        }, 320);
+        showComplaintDetailsContext(complaintTarget, key);
+        openComplaintDetailsModal();
     }
     /* ============================================================
-       File a Complaint pop-up — the target cards open this modal;
-       the company picker + issue cards + message fields live here.
+       File a Complaint pop-ups — step 1 opens the target picker
+       (company + issue cards); step 2 opens the message pop-up with
+       the subject / message / booking ref and the submit button.
        ============================================================ */
+    function anyComplaintModalOpen() {
+        var ids = ['complaint-modal', 'complaint-details-modal', 'ticket-modal', 'cancel-modal', 'review-modal', 'profile-modal'];
+        for (var i = 0; i < ids.length; i++) {
+            var m = document.getElementById(ids[i]);
+            if (m && !m.hidden) { return true; }
+        }
+        return false;
+    }
+
     function openComplaintModal() {
         if (!complaintModal) { return; }
         complaintModal.hidden = false;
@@ -2416,16 +2496,56 @@ function closeTicket() {
     function closeComplaintModal() {
         if (!complaintModal) { return; }
         complaintModal.hidden = true;
-        var otherIds = ['ticket-modal', 'cancel-modal', 'review-modal', 'profile-modal'];
-        var anyOpen = false;
-        for (var i = 0; i < otherIds.length; i++) {
-            var m = document.getElementById(otherIds[i]);
-            if (m && !m.hidden) { anyOpen = true; break; }
-        }
-        if (!anyOpen) { document.body.classList.remove('modal-open'); }
+        if (!anyComplaintModalOpen()) { document.body.classList.remove('modal-open'); }
+    }
+    /* ============================================================
+       File a Complaint pop-ups (continued) — message pop-up step 2
+       and access gating for guests.
+       ============================================================ */
+    function openComplaintDetailsModal() {
+        if (!complaintDetailsModal) { return; }
+        var draft = complaintIssueDrafts[selectedComplaintIssue] || { subject: '', msg: '', ref: '' };
+        var subjectEl = document.getElementById('cc-subject');
+        var messageEl = document.getElementById('cc-message');
+        var bookingEl = document.getElementById('cc-booking');
+        if (subjectEl) { subjectEl.value = draft.subject || ''; }
+        if (messageEl) { messageEl.value = draft.msg || ''; }
+        if (bookingEl) { bookingEl.value = draft.ref || ''; }
+        clearFieldError('cc-subject');
+        clearFieldError('cc-message');
+        clearFieldError('cc-booking');
+        var statusEl = document.getElementById('complaint-details-status');
+        if (statusEl) { statusEl.hidden = true; statusEl.textContent = ''; statusEl.className = 'cancel-msg continue-msg'; }
+        var submitBtn = document.getElementById('cc-submit');
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Submit Complaint'; }
+        if (messageEl) { messageEl.disabled = false; }
+        complaintDetailsModal.hidden = false;
+        document.body.classList.add('modal-open');
+        setTimeout(function () {
+            if (subjectEl && !subjectEl.value) { try { subjectEl.focus(); } catch (e) { /* noop */ } }
+            else if (messageEl && !messageEl.value) { try { messageEl.focus(); } catch (e) { /* noop */ } }
+        }, 60);
     }
 
-    /* Back from the pop-up returns to the target cards on the page. */
+    function closeComplaintDetailsModal() {
+        if (!complaintDetailsModal) { return; }
+        saveComplaintDraft();
+        complaintDetailsModal.hidden = true;
+        if (!anyComplaintModalOpen()) { document.body.classList.remove('modal-open'); }
+    }
+
+    /* Back from the message pop-up returns to the issue cards. */
+    function complaintDetailsBack() {
+        closeComplaintDetailsModal();
+        if (!complaintModal) { return; }
+        var selectedCard = document.querySelector('.complaint-issue-card.selected');
+        if (selectedCard) {
+            var fTop = selectedCard.getBoundingClientRect().top - complaintModal.getBoundingClientRect().top + complaintModal.scrollTop - 80;
+            try { complaintModal.scrollTo({ top: fTop, behavior: 'smooth' }); } catch (e) { complaintModal.scrollTop = fTop; }
+        }
+    }
+
+    /* Back from the target pop-up returns to the target cards on the page. */
     function complaintBackToTargets() {
         closeComplaintModal();
         var targetStep = document.getElementById('complaint-target-step');
@@ -2439,11 +2559,13 @@ function closeTicket() {
         var btn = document.getElementById('complaint-submit-btn');
         var guestNote = document.getElementById('complaint-guest-note');
         var modal = document.getElementById('complaint-modal');
+        var detailsModal = document.getElementById('complaint-details-modal');
         if (!window.ETAuth || !window.ETAuth.getCurrentUser) { return; }
         window.ETAuth.getCurrentUser().then(function (user) {
             var loggedIn = !!(user && user.role === 'passenger');
             if (form) { form.hidden = !loggedIn; }
             if (modal && !loggedIn) { modal.hidden = true; }
+            if (detailsModal && !loggedIn) { detailsModal.hidden = true; }
             if (btn) { btn.disabled = !loggedIn; }
             if (guestNote) { guestNote.hidden = loggedIn; }
         }).catch(function () { /* keep form visible by default */ });
@@ -2522,38 +2644,36 @@ function closeTicket() {
             return;
         }
         var isPlatform = (complaintTarget === 'platform');
-        var card = document.querySelector('.complaint-issue-card.selected');
-        if (!card) {
+        if (!selectedComplaintIssue) {
             setFieldError('complaint-category', 'Choose the kind of problem first.');
             return;
         }
         var targetEl = document.getElementById('complaint-target');
         var categoryEl = document.getElementById('complaint-category');
         var company = document.getElementById('complaint-company');
-        var subject = card.querySelector('[data-complaint-subject]');
-        var message = card.querySelector('[data-complaint-message]');
-        var booking = card.querySelector('[data-complaint-booking]');
-        var statusEl = card.querySelector('[data-complaint-status]');
-        var errEl = card.querySelector('[data-complaint-err]');
-        var btn = card.querySelector('button[type="submit"]');
+        var subject = document.getElementById('cc-subject');
+        var message = document.getElementById('cc-message');
+        var booking = document.getElementById('cc-booking');
+        var statusEl = document.getElementById('complaint-details-status');
+        var btn = document.getElementById('cc-submit');
         if (!targetEl || !categoryEl || !subject || !message) { return; }
 
         /* Sync the hidden selects (single source of truth for the payload). */
         targetEl.value = complaintTarget;
         categoryEl.value = selectedComplaintIssue;
 
-        function cardError(text) { if (errEl) { errEl.textContent = text || ''; } }
-
         var ok = true;
         if (!isPlatform && (!company || !company.value)) { setFieldError('complaint-company', 'Choose a bus company.'); ok = false; }
         else { clearFieldError('complaint-company'); }
-        /* Subject + message + booking validation, surfaced together on the card. */
-        var cardIssues = [];
-        if (!subject.value.trim()) { cardIssues.push('A short subject is required.'); }
-        else if (String(subject.value.trim()).length > 120) { cardIssues.push('Subject must be 120 characters or fewer.'); }
-        if (!message.value.trim()) { cardIssues.push('Describe what happened.'); }
+        /* Subject + message + booking validation, each under its field. */
+        clearFieldError('cc-subject');
+        clearFieldError('cc-message');
+        clearFieldError('cc-booking');
+        if (!subject.value.trim()) { setFieldError('cc-subject', 'A short subject is required.'); ok = false; }
+        else if (String(subject.value.trim()).length > 120) { setFieldError('cc-subject', 'Subject must be 120 characters or fewer.'); ok = false; }
+        if (!message.value.trim()) { setFieldError('cc-message', 'Describe what happened.'); ok = false; }
         var bookingRef = (booking && booking.value) ? booking.value.trim() : '';
-        if (bookingRef && bookingRef.length > 30) { cardIssues.push('Booking reference must be 30 characters or fewer.'); }
+        if (bookingRef && bookingRef.length > 30) { setFieldError('cc-booking', 'Booking reference must be 30 characters or fewer.'); ok = false; }
         else if (bookingRef) {
             var bOwned = false;
             var allBk = loadBookings();
@@ -2562,10 +2682,8 @@ function closeTicket() {
                 var ref = b0 ? (String(b0.reference || '') || String(b0.booking_reference || '')) : '';
                 if (ref === bookingRef) { bOwned = true; break; }
             }
-            if (!bOwned) { cardIssues.push('That booking reference was not found on your account.'); }
+            if (!bOwned) { setFieldError('cc-booking', 'That booking reference was not found on your account.'); ok = false; }
         }
-        if (cardIssues.length) { cardError(cardIssues.join(' ')); ok = false; }
-        else { cardError(''); }
         if (!ok) { return; }
 
         if (statusEl) { statusEl.hidden = true; statusEl.textContent = ''; }
@@ -2609,6 +2727,13 @@ function closeTicket() {
                 if (companyStep) { companyStep.hidden = true; }
                 if (categoryStep) { categoryStep.hidden = true; }
                 if (company) { company.value = ''; }
+                if (subject) { subject.value = ''; }
+                if (message) { message.value = ''; }
+                if (booking) { booking.value = ''; }
+                clearFieldError('cc-subject');
+                clearFieldError('cc-message');
+                clearFieldError('cc-booking');
+                closeComplaintDetailsModal();
                 closeComplaintModal();
                 toast(isPlatform ? 'Complaint submitted. ET Transport support will respond here soon.' : 'Complaint submitted. The company will respond here soon.');
                 syncRealComplaints();
@@ -3735,9 +3860,8 @@ function closeTicket() {
         var complaintForm = document.getElementById('complaint-form');
         if (complaintForm) { complaintForm.addEventListener('submit', submitComplaint); }
 
-        /* File a Complaint pop-up wiring: the issue-card submit button lives
-           in this form now, so bind submit here too; close on X / backdrop /
-           Back or Escape. */
+        /* Message pop-up (step 2) wiring: the submit button lives in this
+           form, and drafts are saved on every keystroke. */
         var complaintDetailsForm = document.getElementById('complaint-details-form');
         if (complaintDetailsForm) { complaintDetailsForm.addEventListener('submit', submitComplaint); }
         var complaintModalCloseBtn = document.getElementById('complaint-modal-close');
@@ -3751,6 +3875,23 @@ function closeTicket() {
             complaintModalHost.addEventListener('keydown', function (ev) {
                 if (!complaintModalHost.hidden && (ev.key === 'Escape' || ev.key === 'Esc')) { closeComplaintModal(); }
             });
+        }
+        var complaintDetailsCloseBtn = document.getElementById('complaint-details-close');
+        if (complaintDetailsCloseBtn) { complaintDetailsCloseBtn.addEventListener('click', closeComplaintDetailsModal); }
+        var complaintDetailsBackdrop = document.querySelector('[data-complaint-details-close]');
+        if (complaintDetailsBackdrop) { complaintDetailsBackdrop.addEventListener('click', closeComplaintDetailsModal); }
+        var complaintDetailsBackBtn = document.getElementById('complaint-details-back');
+        if (complaintDetailsBackBtn) { complaintDetailsBackBtn.addEventListener('click', complaintDetailsBack); }
+        var complaintDetailsModalHost = document.getElementById('complaint-details-modal');
+        if (complaintDetailsModalHost) {
+            complaintDetailsModalHost.addEventListener('keydown', function (ev) {
+                if (!complaintDetailsModalHost.hidden && (ev.key === 'Escape' || ev.key === 'Esc')) { closeComplaintDetailsModal(); }
+            });
+        }
+        var draftInputIds = ['cc-subject', 'cc-message', 'cc-booking'];
+        for (var di = 0; di < draftInputIds.length; di++) {
+            var draftInputEl = document.getElementById(draftInputIds[di]);
+            if (draftInputEl) { draftInputEl.addEventListener('input', saveComplaintDraft); }
         }
 
         /* Complaint picker: target + issue-type cards (one-touch, inline input). */

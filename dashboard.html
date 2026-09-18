@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Your ET Transport passenger dashboard — upcoming trips, digital tickets, favorites, notifications, booking history and profile. Sign in to view your data.">
     <title>Dashboard | ET Transport</title>
-    <link rel="stylesheet" href="css/style.css?v=20260918-complaint-modal">
+    <link rel="stylesheet" href="css/style.css?v=20260918-complaint-two-step">
     <link rel="stylesheet" href="css/city-picker.css?v=20260907-swap-fix">
     <link rel="icon" type="image/x-icon" href="assets/icons/favicon.svg">
 <!-- Fonts (DM Sans + Outfit) -->
@@ -357,9 +357,9 @@
                         </form>
                     </div>
 
-                    <!-- File a Complaint pop-up: opens after the passenger picks
-                         who the complaint is about; the company picker and the
-                         issue-type cards (with the message fields) live in here. -->
+                    <!-- File a Complaint pop-up (step 1): opens after the
+                         passenger picks who the complaint is about; company
+                         picker + issue-type cards live in here. -->
                     <div id="complaint-modal" class="dash-modal" role="dialog" aria-modal="true" aria-labelledby="complaint-modal-title" hidden>
                         <div class="dash-modal-backdrop" data-complaint-close></div>
                         <div class="dash-modal-box">
@@ -367,24 +367,67 @@
                                 <h2 id="complaint-modal-title">File a Complaint</h2>
                                 <button type="button" id="complaint-modal-close" class="dash-modal-close" aria-label="Close">&times;</button>
                             </div>
+                            <p id="complaint-modal-context" class="complaint-modal-context support-optional" role="note"></p>
 
-                            <form id="complaint-details-form" novalidate>
-                                <div class="support-step" id="complaint-company-step" hidden>
-                                    <h4 class="support-step-title">Which bus company?</h4>
-                                    <select id="complaint-company" name="company_id" class="complaint-company-select"></select>
-                                    <span class="field-error" id="complaint-company-err" role="alert"></span>
-                                </div>
+                            <div class="support-step" id="complaint-company-step" hidden>
+                                <h4 class="support-step-title">Which bus company?</h4>
+                                <select id="complaint-company" name="company_id" class="complaint-company-select"></select>
+                                <span class="field-error" id="complaint-company-err" role="alert"></span>
+                            </div>
 
-                                <div class="support-step" id="complaint-category-step" hidden>
-                                    <h4 class="support-step-title">What kind of problem?</h4>
-                                    <div id="complaint-category-cards" class="support-grid" aria-label="Complaint types"></div>
-                                    <span class="field-error" id="complaint-category-err" role="alert"></span>
-                                </div>
-                            </form>
+                            <div class="support-step" id="complaint-category-step" hidden>
+                                <h4 class="support-step-title">What kind of problem?</h4>
+                                <p class="complaint-category-hint support-optional">Pick an issue type &mdash; the message form opens in a second pop-up.</p>
+                                <div id="complaint-category-cards" class="support-grid" aria-label="Complaint types"></div>
+                                <span class="field-error" id="complaint-category-err" role="alert"></span>
+                            </div>
 
                             <div class="complaint-modal-actions">
                                 <button type="button" id="complaint-back-btn" class="btn btn-secondary">&larr; Back</button>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Message pop-up (step 2): the subject, message and optional
+                         booking reference are typed here and the complaint is
+                         submitted from this pop-up. -->
+                    <div id="complaint-details-modal" class="dash-modal" role="dialog" aria-modal="true" aria-labelledby="complaint-details-title" hidden>
+                        <div class="dash-modal-backdrop" data-complaint-details-close></div>
+                        <div class="dash-modal-box">
+                            <div class="dash-modal-head">
+                                <div class="complaint-details-head-copy">
+                                    <h2 id="complaint-details-title">Describe the problem</h2>
+                                    <p id="complaint-details-context" class="complaint-modal-context support-optional" role="note"></p>
+                                </div>
+                                <button type="button" id="complaint-details-close" class="dash-modal-close" aria-label="Close">&times;</button>
+                            </div>
+
+                            <form id="complaint-details-form" novalidate>
+                                <div class="form-group">
+                                    <label for="cc-subject">Subject</label>
+                                    <input type="text" id="cc-subject" class="field-input" maxlength="120" autocomplete="off" placeholder="Give it a short subject, e.g. Bus departed 45 minutes late">
+                                    <span class="field-error" id="cc-subject-err" role="alert"></span>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="cc-message">Message</label>
+                                    <textarea id="cc-message" class="field-input support-card-input" rows="4" maxlength="1000" placeholder="Describe what happened &mdash; include the date and route where possible."></textarea>
+                                    <span class="field-error" id="cc-message-err" role="alert"></span>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="cc-booking">Booking reference <span class="support-optional">(optional)</span></label>
+                                    <input type="text" id="cc-booking" class="field-input" maxlength="30" autocomplete="off" placeholder="e.g. ET-1048BX9">
+                                    <span class="field-error" id="cc-booking-err" role="alert"></span>
+                                </div>
+
+                                <p id="complaint-details-status" class="cancel-msg continue-msg" role="status" hidden></p>
+
+                                <div class="complaint-modal-actions complaint-details-actions">
+                                    <button type="button" id="complaint-details-back" class="btn btn-secondary">&larr; Back</button>
+                                    <button type="submit" id="cc-submit" class="btn btn-primary">Submit Complaint</button>
+                                </div>
+                            </form>
                         </div>
                     </div>
 
@@ -696,6 +739,6 @@
     <script src="js/cities.js"></script>
     <script src="js/city-picker.js?v=20260907-swap-fix-3-dispatch"></script>
     <script src="js/company.js"></script>
-    <script src="js/dashboard.js?v=20260918-complaint-modal"></script>
+    <script src="js/dashboard.js?v=20260918-complaint-two-step"></script>
 </body>
 </html>
