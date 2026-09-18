@@ -503,16 +503,25 @@
             rating.setAttribute('aria-label', 'Rated ' + c.rating.toFixed(1) + ' out of 5, based on ' + c.reviewCount.toLocaleString() + ' reviews');
         }
 
- /* favorite toggle in the hero (localStorage only). */
+ /* favorite toggle in the hero (localStorage only). Favorites are a passenger
+         feature — the button is shown to everyone, but only an authenticated
+         passenger sees the saved (filled) state. */
         var favBtn = document.getElementById('hero-fav');
         if (favBtn) {
-            var isFav = window.ETTransportFavorites && window.ETTransportFavorites.isFavorite(c.slug);
+            var applyHeroFav = function (isFav) {
+                favBtn.className = 'fav-btn fav-btn-hero' + (isFav ? ' is-fav' : '');
+                favBtn.textContent = (isFav ? '\u2665' : '\u2661') + ' Favorite';
+                favBtn.setAttribute('aria-pressed', isFav ? 'true' : 'false');
+                favBtn.setAttribute('aria-label', (isFav ? 'Remove ' : 'Add ') + c.name + ' to favorites');
+            };
             favBtn.hidden = false;
             favBtn.setAttribute('data-slug', c.slug);
-            favBtn.className = 'fav-btn fav-btn-hero' + (isFav ? ' is-fav' : '');
-            favBtn.textContent = (isFav ? '\u2665' : '\u2661') + ' Favorite';
-            favBtn.setAttribute('aria-pressed', isFav ? 'true' : 'false');
-            favBtn.setAttribute('aria-label', (isFav ? 'Remove ' : 'Add ') + c.name + ' to favorites');
+            applyHeroFav(false); /* guests always start in the "Add" state */
+            if (window.ETTransportFavorites && window.ETTransportFavorites.passengerOnly) {
+                window.ETTransportFavorites.passengerOnly().then(function (allowed) {
+                    applyHeroFav(!!allowed && !!window.ETTransportFavorites.isFavorite(c.slug));
+                }).catch(function () { /* keep the plain "Add" state */ });
+            }
         }
     }
 
@@ -1196,7 +1205,7 @@
     /* ---------- Home page: Bus Companies directory ---------- */
     /* One card template shared by the home directory + favorite grid. */
     function companyCardHtml(c) {
-        var isFav = window.ETTransportFavorites && window.ETTransportFavorites.isFavorite(c.slug);
+        var isFav = favoritesAllowed && window.ETTransportFavorites && window.ETTransportFavorites.isFavorite(c.slug);
         return '<article class="company-card">' +
             '<button type="button" class="fav-btn' + (isFav ? ' is-fav' : '') +
             '" data-slug="' + c.slug + '" aria-pressed="' + isFav +
@@ -1225,23 +1234,42 @@
         gridEl.innerHTML = html;
     }
 
- /* "Your Favorite Companies" section (homepage only, hidden when empty). */
+ /* "Your Favorite Companies" section (homepage only). Saved companies
+        are a passenger feature, so the section and its cards are only
+        rendered for an authenticated passenger — guests and non-passenger
+        accounts see the section hidden entirely. */
+    var favoritesAllowed = false;
     function renderFavoriteCompanies() {
         var section = document.getElementById('favorite-companies');
         var grid = document.getElementById('favorite-companies-grid');
         if (!section || !grid) { return; }
-        var favs = (window.ETTransportFavorites && window.ETTransportFavorites.get()) || [];
-        var html = '';
-        for (var i = 0; i < companies.length; i++) {
-            if (favs.indexOf(companies[i].slug) !== -1) {
-                html += companyCardHtml(companies[i]);
-            }
+        if (!window.ETTransportFavorites || !window.ETTransportFavorites.passengerOnly) {
+            favoritesAllowed = false;
+            section.hidden = true;
+            return;
         }
-        grid.innerHTML = html;
-        section.hidden = (html === '');
+        window.ETTransportFavorites.passengerOnly().then(function (allowed) {
+            favoritesAllowed = !!allowed;
+            updateFavoriteButtons();
+            if (!allowed) { section.hidden = true; return; }
+            var favs = (window.ETTransportFavorites && window.ETTransportFavorites.get()) || [];
+            var html = '';
+            for (var i = 0; i < companies.length; i++) {
+                if (favs.indexOf(companies[i].slug) !== -1) {
+                    html += companyCardHtml(companies[i]);
+                }
+            }
+            grid.innerHTML = html;
+            section.hidden = (html === '');
+        }).catch(function () {
+            favoritesAllowed = false;
+            section.hidden = true;
+            updateFavoriteButtons();
+        });
     }
 
-    /* Reflect the current favorites state on every rendered ♡ button. */
+    /* Reflect the current favorites state on every rendered ♡ button.
+       Only an authenticated passenger ever sees the saved (filled) state. */
     function updateFavoriteButtons() {
         if (!window.ETTransportFavorites) { return; }
         var btns = document.querySelectorAll('.fav-btn');
@@ -1249,7 +1277,7 @@
             var btn = btns[i];
             var slug = btn.getAttribute('data-slug');
             if (!slug) { continue; }
-            var isFav = window.ETTransportFavorites.isFavorite(slug);
+            var isFav = favoritesAllowed && window.ETTransportFavorites.isFavorite(slug);
             btn.classList.toggle('is-fav', isFav);
             btn.setAttribute('aria-pressed', isFav ? 'true' : 'false');
             if (btn.classList.contains('fav-btn-hero')) {
@@ -1260,7 +1288,8 @@
         }
     }
 
-    /* Delegate clicks on directory favorite buttons. */
+    /* Delegate clicks on directory favorite buttons. Guests/non-passengers
+       are asked to log in or register before they can save a company. */
     function bindDirectoryFavorites(gridEl) {
         if (!gridEl) { return; }
         gridEl.addEventListener('click', function (event) {
@@ -1269,9 +1298,12 @@
             var slug = btn.getAttribute('data-slug');
             if (!slug || !window.ETTransportFavorites) { return; }
             event.preventDefault();
-            window.ETTransportFavorites.toggle(slug);
-            updateFavoriteButtons();
-            renderFavoriteCompanies();
+            window.ETTransportFavorites.requirePassenger(function () {
+                favoritesAllowed = true;
+                window.ETTransportFavorites.toggle(slug);
+                updateFavoriteButtons();
+                renderFavoriteCompanies();
+            });
         });
     }
 
@@ -1291,14 +1323,18 @@
         renderContact(c);
         renderFinalCta(c);
 
- /* hero favorite toggle click handler. */
+ /* hero favorite toggle click handler. Guests/non-passengers are asked
+        to log in or register before they can save this company. */
         var heroFav = document.getElementById('hero-fav');
         if (heroFav) {
             heroFav.addEventListener('click', function () {
                 if (!window.ETTransportFavorites) { return; }
-                window.ETTransportFavorites.toggle(c.slug);
-                updateFavoriteButtons();
-                renderFavoriteCompanies();
+                window.ETTransportFavorites.requirePassenger(function () {
+                    favoritesAllowed = true;
+                    window.ETTransportFavorites.toggle(c.slug);
+                    updateFavoriteButtons();
+                    renderFavoriteCompanies();
+                });
             });
         }
     }

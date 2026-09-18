@@ -73,6 +73,60 @@ window.ETTransportFavorites = {
     set: function (list) {
         try { window.localStorage.setItem(this.KEY, JSON.stringify(list)); } catch (e) { /* ignore */ }
         return list;
+    },
+
+    /* ============================================================
+       Passenger-only favorites gate.
+       ------------------------------------------------------------
+       Favorites are a passenger account feature. Guests may browse
+       the companies directory freely, but the saved companies grid,
+       the hero button state and every ♡ click live behind a passenger
+       login. The same ?next= flow used by booking/seat selection
+       sends a guest to login.html (or register.html) and brings them
+       straight back once they sign in.
+       ============================================================ */
+
+    /* Resolve `true` only for an authenticated passenger. Guests and
+       company/admin accounts get `false`, and a failed session check
+       also falls back to `false` so favorites are never shown to or
+       edited by an anonymous browser. */
+    passengerOnly: function () {
+        if (!window.ETAuth || !window.ETAuth.getCurrentUser) {
+            return Promise.resolve(false);
+        }
+        return window.ETAuth.getCurrentUser().then(function (user) {
+            return !!(user && user.role === 'passenger');
+        }).catch(function () {
+            return false;
+        });
+    },
+
+    /* Run onAllowed only for an authenticated passenger. Guests are
+       asked to log in or register first (kept on this page via
+       ?next=); a logged-in company/admin account is not a passenger,
+       so the click is simply ignored. */
+    requirePassenger: function (onAllowed) {
+        if (typeof onAllowed !== 'function') { return; }
+        if (!window.ETAuth || !window.ETAuth.getCurrentUser) { return; }
+
+        function sendToLogin() {
+            var next = '';
+            try {
+                next = encodeURIComponent(window.location.pathname + window.location.search);
+            } catch (e) { /* fall through to plain login.html */ }
+            window.location.href = 'login.html' + (next ? '?next=' + next : '');
+        }
+
+        window.ETAuth.getCurrentUser().then(function (user) {
+            if (user && user.role === 'passenger') {
+                onAllowed();
+                return;
+            }
+            if (user) { return; } /* signed in as company/admin — passengers only */
+            sendToLogin();
+        }).catch(function () {
+            sendToLogin();
+        });
     }
 };
 

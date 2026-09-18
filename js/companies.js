@@ -15,6 +15,7 @@
 
     var companies = (window.ETTransportCompanies || []).slice();
     var fav = window.ETTransportFavorites || null;
+    var favAllowed = false; /* saved-heart state is passenger-only */
     var state = { query: '', sort: 'rating' };
 
  /* ---------- real directory from api/company.php ---------- */
@@ -198,7 +199,7 @@
     }
 
     function cardHtml(c) {
-        var isFav = fav ? fav.isFavorite(c.slug) : false;
+        var isFav = favAllowed && fav ? fav.isFavorite(c.slug) : false;
         var stars = buildStars(c.rating);
         return ''
             + '<article class="company-card">'
@@ -242,7 +243,7 @@
         for (var i = 0; i < btns.length; i++) {
             var b = btns[i];
             var s = b.getAttribute('data-slug');
-            var isF = fav.isFavorite(s);
+            var isF = favAllowed && fav.isFavorite(s);
             b.classList.toggle('is-fav', isF);
             b.setAttribute('aria-pressed', isF ? 'true' : 'false');
             b.textContent = isF ? '\u2665' : '\u2661';
@@ -276,9 +277,14 @@
             var btn = event.target.closest ? event.target.closest('.fav-btn') : null;
             if (!btn) { return; }
             var slug = btn.getAttribute('data-slug');
-            if (!slug) { return; }
-            if (fav) { fav.toggle(slug); }
-            refreshFavButtons();
+            if (!slug || !fav) { return; }
+            /* Guests/non-passengers are asked to log in or register
+               before they can save a company. */
+            fav.requirePassenger(function () {
+                favAllowed = true;
+                fav.toggle(slug);
+                refreshFavButtons();
+            });
         });
     }
 
@@ -290,4 +296,17 @@
     }
 
     loadCompaniesFromApi();
+
+    /* Saved-heart state is passenger-only: once the session resolves,
+       reflect the real favorites for passengers and keep guests/company
+       accounts on the plain "Add" state. */
+    if (fav && fav.passengerOnly) {
+        fav.passengerOnly().then(function (allowed) {
+            favAllowed = !!allowed;
+            refreshFavButtons();
+        }).catch(function () {
+            favAllowed = false;
+            refreshFavButtons();
+        });
+    }
 })();
