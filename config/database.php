@@ -306,6 +306,54 @@ function ensure_schema_columns(PDO $pdo): void
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
         );
 
+        /* refund_requests — passenger-initiated cancellation refund requests.
+           When a passenger cancels a paid booking online, api/booking.php
+           records the entitled refund (full within 24h of booking and >=6h
+           before departure, otherwise half) as a PENDING request here. The
+           company approves it from the Refund Requests section of the company
+           dashboard (supplying sender account, TXN and password); only then is
+           the refund written back to bookings.refund_type/refunded_amount and
+           the payment marked 'refunded', so revenue only counts approved
+           refunds. Idempotent, same pattern as complaints. */
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS refund_requests (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                booking_id BIGINT UNSIGNED NOT NULL,
+                company_id BIGINT UNSIGNED NOT NULL,
+                passenger_id BIGINT UNSIGNED NOT NULL,
+                amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+                refund_type ENUM('full', 'half') NOT NULL,
+                status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+                sender_account_name VARCHAR(120) DEFAULT NULL,
+                txn_reference VARCHAR(120) DEFAULT NULL,
+                notes VARCHAR(500) DEFAULT NULL,
+                processed_by BIGINT UNSIGNED DEFAULT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                processed_at TIMESTAMP NULL DEFAULT NULL,
+                PRIMARY KEY (id),
+                KEY idx_refund_requests_company_status (company_id, status),
+                KEY idx_refund_requests_company_created (company_id, created_at),
+                KEY idx_refund_requests_booking (booking_id),
+                KEY idx_refund_requests_passenger (passenger_id),
+                CONSTRAINT fk_refund_requests_booking
+                    FOREIGN KEY (booking_id) REFERENCES bookings(id)
+                    ON DELETE CASCADE
+                    ON UPDATE CASCADE,
+                CONSTRAINT fk_refund_requests_company
+                    FOREIGN KEY (company_id) REFERENCES companies(id)
+                    ON DELETE CASCADE
+                    ON UPDATE CASCADE,
+                CONSTRAINT fk_refund_requests_passenger
+                    FOREIGN KEY (passenger_id) REFERENCES users(id)
+                    ON DELETE CASCADE
+                    ON UPDATE CASCADE,
+                CONSTRAINT fk_refund_requests_processed_by
+                    FOREIGN KEY (processed_by) REFERENCES users(id)
+                    ON DELETE SET NULL
+                    ON UPDATE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+
         /* Live databases created before the two-way resolution flow: widen the
            complaints.status ENUM (resolved_pending / escalated) and add the
            kind/actor columns to complaint_responses. Idempotent — each check

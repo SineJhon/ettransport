@@ -339,6 +339,29 @@
         if (b.date && b.date < isoToday()) { return false; }
         return true;
     }
+
+    /* ---------- cancellation refund policy (mirror of the backend) ----------
+       Computed purely for the pre-confirmation notice in the cancel dialog; the
+       authoritative amount is always decided by api/booking.php?action=cancel.
+       Full refund when cancelled within 24h of booking AND still >= 6h before
+       departure; otherwise half. Only paid bookings get a refund. */
+    function bookingRefundPolicy(b) {
+        if (!b || b.payment_status !== 'paid') { return { type: 'none', amount: 0 }; }
+        var created = new Date(String(b.created_at || '').replace(' ', 'T'));
+        var dep = null;
+        if (b.date) {
+            dep = new Date(String(b.date) + 'T' + String(b.depart || '00:00') + ':00');
+        }
+        if (isNaN(created.getTime()) || !dep || isNaN(dep.getTime())) { return { type: 'none', amount: 0 }; }
+        var now = new Date();
+        var ageMs = now - created;
+        var toDepMs = dep - now;
+        var total = Number(b.total) || 0;
+        if (ageMs < 24 * 3600 * 1000 && toDepMs >= 6 * 3600 * 1000) {
+            return { type: 'full', amount: total };
+        }
+        return { type: 'half', amount: Math.round(total / 2 * 100) / 100 };
+    }
     function statusBadge(b) {
         var s = bookingStatus(b);
         return '<span class="trip-status status-' + s + '">' + s + '</span>';
@@ -908,6 +931,26 @@ function closeTicket() {
         document.getElementById('cancel-date').textContent = formatDate(b.date);
         document.getElementById('cancel-seats').textContent =
             b.seatLabel || (Array.isArray(b.seats) ? b.seats.join(', ') : '1');
+
+        /* Refund notice — the customer must see, BEFORE confirming, whether a
+           full or half refund applies (mirror of the server-side policy). */
+        var refundNote = document.getElementById('cancel-refund-note');
+        if (refundNote) {
+            var policy = bookingRefundPolicy(b);
+            if (policy.type === 'full') {
+                refundNote.textContent = 'This booking is within the free-cancellation window, so cancelling now entitles you to a FULL refund of '
+                    + formatPrice(policy.amount) + '. The refund request will be sent to the company and paid once the company processes it.';
+                refundNote.hidden = false;
+            } else if (policy.type === 'half') {
+                refundNote.textContent = 'Cancelling after 24 hours of booking entitles you to a HALF refund of '
+                    + formatPrice(policy.amount) + '. The refund will be processed by the company from their dashboard.';
+                refundNote.hidden = false;
+            } else {
+                refundNote.textContent = '';
+                refundNote.hidden = true;
+            }
+        }
+
         var keep = document.getElementById('cancel-keep-btn');
         var cf = document.getElementById('cancel-confirm-btn');
         var msg = document.getElementById('cancel-msg');
@@ -1024,7 +1067,12 @@ function closeTicket() {
                     markBookingCancelledLocally(cancelBookingRef);
                     closeTicket();
                     closeCancelModal();
-                    toast('Your booking ' + b.reference + ' was cancelled. Its seats have been released.');
+                    /* The server's message already tells the customer which refund
+                       (full / half) they are entitled to and that it will be
+                       processed by the company. */
+                    toast((json.message && json.message.indexOf('Booking cancelled') !== -1)
+                        ? json.message
+                        : 'Your booking ' + b.reference + ' was cancelled. Its seats have been released.');
                     rerenderAll();
                     syncRealBookings();
  /* make the global bell reflect the new
@@ -3810,6 +3858,11 @@ function closeTicket() {
             busType: b.busType || b.tripType || 'Standard',
             tripType: b.tripType || 'Standard',
             status: b.status || 'confirmed',
+            /* Refund-window fields — used by the cancellation dialog to tell the
+               passenger whether they are entitled to a full or half refund. */
+            created_at: b.created_at || '',
+            payment_status: b.payment_status || '',
+            refundAccount: (b.refundAccount && typeof b.refundAccount === 'object') ? b.refundAccount : {},
             real: true
         };
     }

@@ -630,6 +630,48 @@ INSERT INTO `payments` VALUES (1,2,1200.00,'cash','OFFICE-20260915-9355b4a1','pa
 UNLOCK TABLES;
 
 --
+-- Table structure for table `refund_requests`
+--
+
+DROP TABLE IF EXISTS `refund_requests`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `refund_requests` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `booking_id` bigint(20) unsigned NOT NULL,
+  `company_id` bigint(20) unsigned NOT NULL,
+  `passenger_id` bigint(20) unsigned NOT NULL,
+  `amount` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `refund_type` enum('full','half') NOT NULL,
+  `status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  `sender_account_name` varchar(120) DEFAULT NULL,
+  `txn_reference` varchar(120) DEFAULT NULL,
+  `notes` varchar(500) DEFAULT NULL,
+  `processed_by` bigint(20) unsigned DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `processed_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_refund_requests_company_status` (`company_id`,`status`),
+  KEY `idx_refund_requests_company_created` (`company_id`,`created_at`),
+  KEY `idx_refund_requests_booking` (`booking_id`),
+  KEY `idx_refund_requests_passenger` (`passenger_id`),
+  CONSTRAINT `fk_refund_requests_booking` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_refund_requests_company` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_refund_requests_passenger` FOREIGN KEY (`passenger_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_refund_requests_processed_by` FOREIGN KEY (`processed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `refund_requests`
+--
+
+LOCK TABLES `refund_requests` WRITE;
+/*!40000 ALTER TABLE `refund_requests` DISABLE KEYS */;
+/*!40000 ALTER TABLE `refund_requests` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `review_likes`
 --
 

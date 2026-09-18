@@ -3304,6 +3304,365 @@ function handle_booking_cancel(PDO $pdo): void
     }
 }
 
+/** Shape one refund-request row for the company Refund Requests section. */
+function refund_request_payload(array $row): array
+{
+    return [
+        'id' => (int) $row['id'],
+        'booking_id' => (int) $row['booking_id'],
+        'passenger_id' => (int) $row['passenger_id'],
+        'passenger_name' => $row['passenger_name'],
+        'booking_reference' => $row['booking_reference'],
+        'route_from' => $row['from_city'],
+        'route_to' => $row['to_city'],
+        'departure_date' => $row['departure_date'],
+        'departure_time' => $row['departure_time'],
+        'total_amount' => (float) $row['total_amount'],
+        'amount' => (float) $row['amount'],
+        'refund_type' => $row['refund_type'],
+        'status' => $row['status'],
+        'sender_account_name' => $row['sender_account_name'],
+        'txn_reference' => $row['txn_reference'],
+        'notes' => $row['notes'],
+        'refund_account' => [
+            'name' => $row['refund_account_name'],
+            'number' => $row['refund_account_number'],
+            'bank' => $row['refund_bank'],
+        ],
+        'created_at' => $row['created_at'],
+        'processed_at' => $row['processed_at'],
+    ];
+}
+
+/** GET /api/company.php?action=refund_requests — pending/processed refund
+ *  requests for this company, newest first (pending always on top). Scoped
+ *  strictly to the session company through refund_requests.company_id — a
+ *  browser-supplied company id is never trusted. */
+function handle_refund_requests(PDO $pdo): void
+{
+    if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
+        auth_response(405, [
+            'success' => false,
+            'message' => 'Method not allowed.',
+        ]);
+    }
+
+    $user = requireRole('company');
+    $company = require_company_scope($pdo, (int) $user['id']);
+    $companyId = (int) $company['id'];
+
+    $status = strtolower(trim((string) ($_GET['status'] ?? '')));
+    if ($status !== '' && !in_array($status, ['pending', 'approved', 'rejected'], true)) {
+        auth_response(422, [
+            'success' => false,
+            'message' => 'Refund status must be one of: pending, approved, rejected.',
+        ]);
+    }
+
+    $sql = '
+        SELECT
+            rr.id,
+            rr.booking_id,
+            rr.company_id,
+            rr.passenger_id,
+            rr.amount,
+            rr.refund_type,
+            rr.status,
+            rr.sender_account_name,
+            rr.txn_reference,
+            rr.notes,
+            rr.processed_by,
+            rr.created_at,
+            rr.processed_at,
+            b.booking_reference,
+            b.total_amount,
+            b.refund_account_name,
+            b.refund_account_number,
+            b.refund_bank,
+            t.departure_date,
+            t.departure_time,
+            r.from_city,
+            r.to_city,
+            u.name AS passenger_name
+        FROM refund_requests rr
+        JOIN bookings b ON b.id = rr.booking_id
+        JOIN trips t    ON t.id = b.trip_id
+        JOIN routes r   ON r.id = t.route_id
+        JOIN users u    ON u.id = rr.passenger_id
+        WHERE rr.company_id = :company_id';
+    $params = [':company_id' => $companyId];
+
+    if ($status !== '') {
+        $sql .= ' AND rr.status = :status';
+        $params[':status'] = $status;
+    }
+
+    $sql .= ' ORDER BY (rr.status = \'pending\') DESC, rr.created_at DESC, rr.id DESC';
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+
+    $requests = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $requests[] = refund_request_payload($row);
+    }
+
+    $pendingCount = 0;
+    foreach ($requests as $r) {
+        if ($r['status'] === 'pending') {
+            $pendingCount++;
+        }
+    }
+
+    auth_response(200, [
+        'success' => true,
+        'company_id' => $companyId,
+        'refund_requests' => $requests,
+        'pending_count' => $pendingCount,
+    ]);
+}
+/** POST /api/company.php?action=refund_request_process — the company operator
+ *  processes a pending refund request: sender account, TXN reference and the
+ *  operator password are required. Only after this succeeds is the refund
+ *  written back to the booking (refund_type / refunded_amount / payment_status
+ *  = refunded) so the revenue logic counts it. */
+function handle_refund_request_process(PDO $pdo): void
+{
+    require_company_post();
+    $user = requireRole('company');
+    $company = require_company_scope($pdo, (int) $user['id']);
+    $companyId = (int) $company['id'];
+
+    $input = company_input();
+    $requestId = positive_int_or_error($input['request_id'] ?? null, 'A valid refund request is required.');
+
+    $senderAccountName = trim((string) ($input['sender_account_name'] ?? ''));
+    if ($senderAccountName === '') {
+        auth_response(422, ['success' => false, 'message' => 'The sender account name is required to process the refund.']);
+    }
+    if (mb_strlen($senderAccountName) > 120) {
+        auth_response(422, ['success' => false, 'message' => 'Sender account name must be at most 120 characters.']);
+    }
+
+    $txnReference = trim((string) ($input['txn_reference'] ?? ''));
+    if ($txnReference === '') {
+        auth_response(422, ['success' => false, 'message' => 'The transaction (TXN) reference is required to process the refund.']);
+    }
+    if (mb_strlen($txnReference) > 120) {
+        auth_response(422, ['success' => false, 'message' => 'Transaction reference must be at most 120 characters.']);
+    }
+
+    /* The operator's own password is required for this money-moving action. */
+    $password = (string) ($input['password'] ?? '');
+    if ($password === '' || !verify_current_password($password)) {
+        auth_response(401, ['success' => false, 'message' => 'Your password was not accepted. The refund was not processed.']);
+    }
+
+    $requestStmt = $pdo->prepare('
+        SELECT rr.id, rr.booking_id, rr.passenger_id, rr.company_id, rr.amount, rr.refund_type, rr.status,
+               b.booking_reference, b.payment_status,
+               t.departure_date,
+               r.from_city, r.to_city
+        FROM refund_requests rr
+        JOIN bookings b ON b.id = rr.booking_id
+        JOIN trips t    ON t.id = b.trip_id
+        JOIN routes r   ON r.id = t.route_id
+        WHERE rr.id = :request_id AND rr.company_id = :company_id
+        LIMIT 1
+    ');
+    $requestStmt->execute([':request_id' => $requestId, ':company_id' => $companyId]);
+    $request = $requestStmt->fetch();
+
+    if ($request === false) {
+        auth_response(404, ['success' => false, 'message' => 'Refund request not found.']);
+    }
+    if ($request['status'] !== 'pending') {
+        auth_response(409, ['success' => false, 'message' => 'This refund request has already been processed.']);
+    }
+
+    $bookingId = (int) $request['booking_id'];
+    $amount = round((float) $request['amount'], 2);
+    $refundType = $request['refund_type'] === 'full' ? 'full' : 'half';
+$pdo->beginTransaction();
+    try {
+        /* Approve first — the WHERE re-checks the pending status so two
+           operators approving at the same moment cannot double-apply. */
+        $approve = $pdo->prepare("
+            UPDATE refund_requests
+            SET status = 'approved',
+                sender_account_name = :sender,
+                txn_reference = :txn,
+                processed_by = :processed_by,
+                processed_at = now()
+            WHERE id = :request_id AND company_id = :company_id AND status = 'pending'
+        ");
+        $approve->execute([
+            ':sender' => $senderAccountName,
+            ':txn' => $txnReference,
+            ':processed_by' => (int) $user['id'],
+            ':request_id' => $requestId,
+            ':company_id' => $companyId,
+        ]);
+        if ($approve->rowCount() !== 1) {
+            throw new RuntimeException('Refund request was already processed.');
+        }
+
+        /* Now the refund reaches the revenue: write it back onto the booking
+           (company revenue surfaces aggregate bookings.refund_type and
+           refunded_amount) and flip the collected payment row to 'refunded'. */
+        $updBooking = $pdo->prepare('
+            UPDATE bookings
+            SET refund_type = :refund_type,
+                refunded_amount = :amount,
+                payment_status = \'refunded\'
+            WHERE id = :booking_id
+        ');
+        $updBooking->execute([
+            ':refund_type' => $refundType,
+            ':amount' => $amount,
+            ':booking_id' => $bookingId,
+        ]);
+
+        $updPayments = $pdo->prepare("
+            UPDATE payments
+            SET status = 'refunded'
+            WHERE booking_id = :booking_id AND status = 'paid'
+        ");
+        $updPayments->execute([':booking_id' => $bookingId]);
+
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        auth_response(409, ['success' => false, 'message' => 'This refund request could not be processed. Please refresh and try again.']);
+        return;
+    }
+
+    /* Best-effort in-app notification for the passenger, strictly after the
+       commit, so a failed process is never re-notified. */
+    try {
+        createNotification(
+            $pdo,
+            (int) $request['passenger_id'],
+            'payment',
+            'Refund Processed',
+            'Your refund of ETB ' . number_format($amount, 2) . ' for booking ' . $request['booking_reference']
+                . ' (' . $request['from_city'] . ' → ' . $request['to_city'] . ') has been processed by '
+                . $company['name'] . '.',
+            'refund-processed:' . $txnReference,
+            'trips'
+        );
+    } catch (Throwable $e) {
+        /* A notification failure never changes the refund result. */
+    }
+
+    auth_response(200, [
+        'success' => true,
+        'message' => 'Refund of ETB ' . number_format($amount, 2) . ' for booking ' . $request['booking_reference'] . ' has been processed and saved to revenue.',
+        'refund_request_id' => $requestId,
+        'refunded_amount' => $amount,
+        'txn_reference' => $txnReference,
+    ]);
+}
+/** POST /api/company.php?action=refund_request_reject — the company operator
+ *  declines a pending refund request with a reason and their own password.
+ *  The booking keeps its original 'paid' payment; nothing touches revenue. */
+function handle_refund_request_reject(PDO $pdo): void
+{
+    require_company_post();
+    $user = requireRole('company');
+    $company = require_company_scope($pdo, (int) $user['id']);
+    $companyId = (int) $company['id'];
+
+    $input = company_input();
+    $requestId = positive_int_or_error($input['request_id'] ?? null, 'A valid refund request is required.');
+
+    $reason = trim((string) ($input['reason'] ?? ''));
+    if ($reason === '') {
+        auth_response(422, ['success' => false, 'message' => 'A rejection reason is required.']);
+    }
+    if (mb_strlen($reason) > 500) {
+        auth_response(422, ['success' => false, 'message' => 'Rejection reason must be at most 500 characters.']);
+    }
+
+    $password = (string) ($input['password'] ?? '');
+    if ($password === '' || !verify_current_password($password)) {
+        auth_response(401, ['success' => false, 'message' => 'Your password was not accepted. The refund request was not rejected.']);
+    }
+
+    $requestStmt = $pdo->prepare('
+        SELECT rr.id, rr.booking_id, rr.passenger_id, rr.status,
+               b.booking_reference,
+               r.from_city, r.to_city
+        FROM refund_requests rr
+        JOIN bookings b ON b.id = rr.booking_id
+        JOIN trips t    ON t.id = b.trip_id
+        JOIN routes r   ON r.id = t.route_id
+        WHERE rr.id = :request_id AND rr.company_id = :company_id
+        LIMIT 1
+    ');
+    $requestStmt->execute([':request_id' => $requestId, ':company_id' => $companyId]);
+    $request = $requestStmt->fetch();
+
+    if ($request === false) {
+        auth_response(404, ['success' => false, 'message' => 'Refund request not found.']);
+    }
+    if ($request['status'] !== 'pending') {
+        auth_response(409, ['success' => false, 'message' => 'This refund request has already been processed.']);
+    }
+
+    $pdo->beginTransaction();
+    try {
+        $reject = $pdo->prepare("
+            UPDATE refund_requests
+            SET status = 'rejected',
+                notes = :reason,
+                processed_by = :processed_by,
+                processed_at = now()
+            WHERE id = :request_id AND company_id = :company_id AND status = 'pending'
+        ");
+        $reject->execute([
+            ':reason' => $reason,
+            ':processed_by' => (int) $user['id'],
+            ':request_id' => $requestId,
+            ':company_id' => $companyId,
+        ]);
+        if ($reject->rowCount() !== 1) {
+            throw new RuntimeException('Refund request was already processed.');
+        }
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        auth_response(409, ['success' => false, 'message' => 'This refund request could not be rejected. Please refresh and try again.']);
+        return;
+    }
+
+    try {
+        createNotification(
+            $pdo,
+            (int) $request['passenger_id'],
+            'payment',
+            'Refund Request Declined',
+            'Your refund request for booking ' . $request['booking_reference'] . ' (' . $request['from_city']
+                . ' → ' . $request['to_city'] . ') was declined by ' . $company['name'] . '. Reason: ' . $reason,
+            'refund-rejected:' . $requestId,
+            'trips'
+        );
+    } catch (Throwable $e) {
+        /* Best-effort only. */
+    }
+
+    auth_response(200, [
+        'success' => true,
+        'message' => 'Refund request ' . $requestId . ' was declined.',
+        'refund_request_id' => $requestId,
+    ]);
+}
+
+/** Shape one passenger-manifest traveler row (booking_passengers fields only). */
 /** Shape one passenger-manifest traveler row (booking_passengers fields only). */
 function manifest_passenger_payload(array $row): array
 {
@@ -5489,6 +5848,15 @@ function handle_complaint_update(PDO $pdo): void
     if ($action === 'booking_cancel') {
         handle_booking_cancel($pdo);
     }
+    if ($action === 'refund_requests') {
+        handle_refund_requests($pdo);
+    }
+    if ($action === 'refund_request_process') {
+        handle_refund_request_process($pdo);
+    }
+    if ($action === 'refund_request_reject') {
+        handle_refund_request_reject($pdo);
+    }
     if ($action === 'manifest') {
         handle_manifest($pdo);
     }
@@ -5552,7 +5920,7 @@ function handle_complaint_update(PDO $pdo): void
 
     auth_response(400, [
         'success' => false,
-        'message' => 'Unsupported action. Use action=list, action=get, action=overview, action=buses, action=bus_create, action=bus_update, action=trips, action=trip_create, action=trip_update, action=trip_status, action=trip_delete, action=bookings, action=booking_create, action=booking_cancel, action=manifest, action=revenue, action=revenue_breakdown, action=payments, action=profile, action=profile_update, action=branches, action=branch_create, action=branch_update, action=branch_delete, action=parcels, action=parcel_create, action=parcel_update, action=parcel_delete, action=complaints, action=complaint_update, action=routes, action=route_create, action=route_update or action=route_delete.',
+        'message' => 'Unsupported action. Use action=list, action=get, action=overview, action=buses, action=bus_create, action=bus_update, action=trips, action=trip_create, action=trip_update, action=trip_status, action=trip_delete, action=bookings, action=booking_create, action=booking_cancel, action=refund_requests, action=refund_request_process, action=refund_request_reject, action=manifest, action=revenue, action=revenue_breakdown, action=payments, action=profile, action=profile_update, action=branches, action=branch_create, action=branch_update, action=branch_delete, action=parcels, action=parcel_create, action=parcel_update, action=parcel_delete, action=complaints, action=complaint_update, action=routes, action=route_create, action=route_update or action=route_delete.',
     ]);
 } catch (Throwable $e) {
     auth_response(500, [

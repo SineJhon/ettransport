@@ -307,6 +307,144 @@
         .cd-revenue-overview-table tbody tr.cd-revenue-overview-total td { font-weight: 800; color: #163a33; border-top: 2px solid #dce9e1; background: #f2f7f4; }
         @media (max-width: 600px) { .cd-revenue-overview-period-label { margin-left: 0; width: 100%; } }
 
+        /* ===== Refund requests (passenger-initiated cancellation refunds) ===== */
+        .cd-refunds-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: var(--space-md); flex-wrap: wrap; }
+        .cd-refunds-head h2 { font-size: 1.2rem; color: var(--color-dark); margin: 0; }
+        .cd-refunds-head .cd-refunds-eyebrow { display: block; margin: .1rem 0 0; color: var(--color-muted); font-size: .82rem; }
+        .cd-refunds-head-actions { display: flex; align-items: center; gap: .5rem; }
+
+        /* KPI summary strip — at-a-glance counts + total refunded. */
+        .cd-refund-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .55rem; padding: .85rem .95rem; margin-top: .5rem; background: #f4f9f6; border: 1px solid #dce9e1; border-radius: 14px; }
+        .cd-refund-summary[hidden] { display: none; }
+        .cd-refund-summary-stat { display: flex; flex-direction: column; gap: .1rem; min-width: 0; }
+        .cd-refund-summary-stat b { color: #163a33; font-size: 1.08rem; letter-spacing: -.01em; }
+        .cd-refund-summary-stat span { color: #5c6d67; font: 800 .64rem/1 var(--font-sans); letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .cd-refund-summary-stat.pending b { color: #b45309; }
+        .cd-refund-summary-stat.approved b { color: #15803d; }
+        .cd-refund-summary-stat.rejected b { color: #b91c1c; }
+        .cd-refund-summary-stat.total b { color: #163a33; }
+        @media (max-width: 700px) { .cd-refund-summary { grid-template-columns: repeat(2, 1fr); } }
+
+        /* Status filter toolbar */
+        .cd-refund-status-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: .45rem; padding: .65rem 0 .35rem; }
+        .cd-refund-status-filter { flex: 0 0 auto; display: inline-flex; align-items: center; gap: .35rem; padding: .52rem .8rem; color: #5c736a; background: #f2f7f4; border: 1px solid #dceae2; border-radius: 10px; cursor: pointer; font: 800 .74rem/1 var(--font-sans); transition: background .15s ease, border-color .15s ease, color .15s ease; }
+        .cd-refund-status-filter:hover { background: #e4efe8; border-color: #cbdccf; }
+        .cd-refund-status-filter.is-active { color: #102c27; background: #dcefe5; border-color: #2f9e68; box-shadow: inset 0 0 0 1px #2f9e68; }
+        .cd-refund-status-filter .cd-refund-count { background: #edf2ee; border-radius: 99px; color: #5c736a; display: inline-block; font-size: .68rem; font-weight: 800; line-height: 1; min-width: 1.1rem; padding: .14rem .36rem; }
+        .cd-refund-status-filter[data-refund-status="pending"] .cd-refund-count { background: #f59e0b; color: #fff; }
+        .cd-refund-status-filter.is-active .cd-refund-count { background: #177550; color: #fff; }
+
+        .cd-refund-msg { color: var(--color-muted); font-size: .9rem; }
+        .cd-refund-error { margin-top: .5rem; }
+        .cd-refund-empty { padding: 2.1rem 1.1rem; border: 1px dashed #d9e4de; border-radius: 14px; color: var(--color-muted); text-align: center; font-size: .88rem; }
+        .cd-refund-empty .cd-refund-empty-ico { display: inline-flex; align-items: center; justify-content: center; width: 46px; height: 46px; margin: 0 auto .6rem; border-radius: 50%; background: #e7f2ea; color: #177550; }
+        .cd-refund-empty small { display: block; margin-top: .15rem; color: #8aa299; }
+        /* Refund request cards */
+        .cd-refund-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(312px, 1fr)); gap: var(--space-sm); }
+        .cd-refund-list[hidden] { display: none; }
+        .cd-refund-card { position: relative; overflow: hidden; padding: 1rem .95rem 0.9rem; border: 1px solid #e5e7eb; border-radius: 14px; background: #fff; display: flex; flex-direction: column; gap: .55rem; box-shadow: 0 1px 3px rgba(20, 56, 47, .05); }
+        .cd-refund-card.pending::before, .cd-refund-card.approved::before, .cd-refund-card.rejected::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+        .cd-refund-card.pending::before { background: #f59e0b; }
+        .cd-refund-card.approved::before { background: #22c55e; }
+        .cd-refund-card.rejected::before { background: #ef4444; }
+
+        .cd-refund-card-head { display: flex; align-items: center; gap: .6rem; }
+        .cd-refund-avatar { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%; background: #e7f2ea; color: #177550; font: 800 .86rem/1 var(--font-sans); flex: 0 0 auto; }
+        .cd-refund-who { display: flex; flex-direction: column; min-width: 0; }
+        .cd-refund-who strong { color: var(--color-dark); font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .cd-refund-who small { color: var(--color-muted); font-size: .76rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .cd-refund-badge { display: inline-block; padding: .16rem .55rem; border-radius: 20px; font-size: .7rem; font-weight: 700; text-transform: uppercase; color: #fff; background: #d97706; margin-left: auto; white-space: nowrap; }
+        .cd-refund-badge.approved { background: #16a34a; }
+        .cd-refund-badge.rejected { background: #dc2626; }
+        .cd-refund-when { display: block; margin-top: .15rem; font-size: .74rem; color: var(--color-muted); }
+
+        .cd-refund-ref { display: inline-block; font: 700 .78rem/1 ui-monospace, 'Cascadia Mono', 'Courier New', monospace; color: #163a33; background: #f0f5f2; padding: .12rem .45rem; border-radius: 6px; }
+        .cd-refund-route { display: flex; align-items: center; gap: .4rem; font-size: .92rem; color: var(--color-dark); }
+        .cd-refund-route .cd-refund-route-arrow { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #e8f0ec; color: #177550; flex: 0 0 auto; }
+        .cd-refund-route .cd-refund-route-depart { margin-left: auto; font-size: .78rem; color: #5c6d67; white-space: nowrap; }
+        .cd-refund-route .cd-refund-route-depart em { display: block; font: 700 .72rem/1 var(--font-sans); color: #163a33; }
+
+        .cd-refund-amount-block { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .55rem .7rem; background: linear-gradient(135deg, #f4faf6, #eef5f0); border: 1px solid #dce9e1; border-radius: 10px; }
+        .cd-refund-amount-block .cd-refund-amount { font: 800 1.12rem/1 var(--font-sans); color: #14532d; letter-spacing: -.01em; }
+        .cd-refund-amount-block .cd-refund-amount small { display: block; font-size: .72rem; color: #5c6d67; }
+        .cd-refund-chip { display: inline-flex; align-items: center; gap: .3rem; padding: .3rem .55rem; border-radius: 20px; font: 800 .68rem/1 var(--font-sans); background: #e6f4ea; color: #15803d; white-space: nowrap; }
+        .cd-refund-chip.half { background: #fef3e2; color: #b45309; }
+
+        .cd-refund-dest { display: flex; align-items: flex-start; gap: .45rem; font-size: .8rem; color: var(--color-muted); line-height: 1.35; min-width: 0; }
+        .cd-refund-dest .cd-refund-dest-ico { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; flex: 0 0 auto; border-radius: 6px; background: #edf2ee; color: #5c6d67; }
+        .cd-refund-dest b { display: block; color: var(--color-dark); font-size: .82rem; }
+        .cd-refund-dest small { color: var(--color-muted); }
+
+        .cd-refund-processed-info { display: flex; align-items: flex-start; gap: .45rem; font-size: .78rem; color: var(--color-muted); line-height: 1.45; }
+        .cd-refund-processed-info .cd-refund-dest-ico { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; flex: 0 0 auto; border-radius: 6px; }
+
+        .cd-refund-card-actions { display: flex; gap: .5rem; justify-content: flex-end; padding-top: .15rem; }
+        .cd-refund-card-actions .btn { flex: 0 0 auto; }
+        @media (max-width: 600px) {
+            .cd-refund-list { grid-template-columns: 1fr; }
+            .cd-refund-card-actions .btn { flex: 1 1 auto; }
+            .cd-refund-route .cd-refund-route-depart { display: none; }
+        }
+/* ===== Refund process / reject modals ===== */
+        .cd-refund-modal { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.55); z-index: 104; padding: 1rem; }
+        .cd-refund-modal[hidden] { display: none; }
+        .cd-refund-box { position: relative; width: min(580px, 94vw); max-height: 92vh; overflow-y: auto; background: #fff; border-radius: 16px; border: 1px solid #e2eae6; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28); }
+        .cd-refund-box::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #177550, #22c55e); }
+        .cd-refund-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+        .cd-refund-head h3 { margin: 0; font-size: 1.15rem; color: #163a33; }
+        .cd-refund-head-sub { margin: .15rem 0 0; color: #687d75; font-size: .84rem; }
+        .cd-refund-close { border: 0; background: transparent; width: 1.9rem; height: 1.9rem; display: inline-flex; align-items: center; justify-content: center; font-size: 1.3rem; line-height: 1; color: #5c6d67; cursor: pointer; border-radius: 8px; }
+        .cd-refund-close:hover { color: #b91c1c; background: #fdf1f1; }
+        .cd-refund-box-inner { display: flex; flex-direction: column; gap: .95rem; padding: 1.1rem 1.2rem 1.05rem; }
+
+        /* Hero amount */
+        .cd-refund-hero { display: flex; align-items: center; gap: .6rem; padding: .7rem .8rem; background: linear-gradient(135deg, #eef5f0, #e4efe8); border: 1px solid #d3e2d7; border-radius: 12px; }
+        .cd-refund-hero-ico { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: #177550; color: #fff; flex: 0 0 auto; }
+        .cd-refund-hero-label { display: block; font: 800 .64rem/1 var(--font-sans); letter-spacing: .05em; text-transform: uppercase; color: #5c6d67; }
+        .cd-refund-hero-amount { display: block; font: 800 1.35rem/1 var(--font-sans); color: #14532d; letter-spacing: -.01em; }
+
+        /* Summary grid */
+        .cd-refund-fields { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem .95rem; padding: .8rem .9rem; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 12px; }
+        .cd-refund-fields .cd-refund-field.wide { grid-column: 1 / -1; }
+        .cd-refund-field .k { display: block; font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: #5c6d67; }
+        .cd-refund-field .v { display: block; font-weight: 700; color: #163a33; font-size: .92rem; margin-top: .12rem; word-break: break-word; }
+
+        /* Keep inline icons inside their chips always sized (never the 300x150 default). */
+        .cd-refund-hero-ico svg, .cd-refund-input-ico svg, .cd-refund-dest-ico svg, .cd-refund-empty-ico svg { display: block; width: 100%; height: 100%; }
+        .cd-refund-security-head svg { display: block; width: 18px; height: 18px; flex: 0 0 auto; }
+
+        .cd-refund-box.reject::before { background: linear-gradient(90deg, #dc2626, #f59e0b); }
+        .cd-refund-box.reject .cd-refund-hero { background: #fdf3f3; border-color: #f3d6d6; }
+        .cd-refund-box.reject .cd-refund-hero-ico { background: #dc2626; }
+        .cd-refund-box.reject .cd-refund-hero-amount { color: #b91c1c; }
+        @media (max-width: 560px) { .cd-refund-fields { grid-template-columns: 1fr; } .cd-refund-hero { flex-wrap: wrap; } }
+
+/* Form sections inside the modals */
+        .cd-refund-section { display: flex; flex-direction: column; gap: .4rem; }
+        .cd-refund-section-label { display: flex; align-items: center; gap: .45rem; padding: .28rem .55rem; border-radius: 8px; background: #eef4f1; color: #4c635b; font: 800 .72rem/1 var(--font-sans); letter-spacing: .03em; text-transform: uppercase; }
+        .cd-refund-step { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: #177550; color: #fff; font: 800 .72rem/1 var(--font-sans); flex: 0 0 auto; }
+        .cd-refund-input-wrap { position: relative; }
+        .cd-refund-input-ico { position: absolute; left: .65rem; top: 50%; transform: translateY(-50%); display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; color: #5c6d67; pointer-events: none; }
+        .cd-refund-input { width: 100%; padding: .6rem .75rem; padding-left: 2.35rem; border: 1px solid #ccdcd3; border-radius: 10px; font: inherit; background: #fff; box-sizing: border-box; }
+        .cd-refund-input:focus { outline: none; border-color: #2f9e68; box-shadow: 0 0 0 3px rgba(47, 158, 104, .14); }
+        .cd-refund-input-hint { font-size: .76rem; color: #8aa299; margin: .05rem 0 0; }
+        .cd-refund-security { display: flex; flex-direction: column; gap: .35rem; padding: .6rem .7rem; background: #fdf6f0; border: 1px solid #f3ded4; border-radius: 12px; }
+        .cd-refund-security-head { display: flex; align-items: center; gap: .45rem; color: #8a4b1f; font: 800 .74rem/1 var(--font-sans); letter-spacing: .03em; text-transform: uppercase; }
+        .cd-refund-security .password-field input { width: 100%; padding: .55rem .75rem; padding-right: 3.1rem; border: 1px solid #e4c8b9; border-radius: 10px; font: inherit; box-sizing: border-box; }
+        .cd-refund-security .password-field input:focus { outline: none; border-color: #b45309; box-shadow: 0 0 0 3px rgba(180, 83, 9, .13); }
+        .cd-refund-security-hint { font-size: .76rem; color: #9a6a48; }
+
+        .cd-refund-msg { min-height: 1.1rem; margin: 0; font-size: .83rem; color: #16a34a; font-weight: 600; }
+        .cd-refund-msg.error { color: #b91c1c; }
+        .cd-refund-actions { display: flex; justify-content: flex-end; gap: .55rem; }
+        .cd-refund-actions .btn:disabled { opacity: .55; cursor: not-allowed; }
+        .cd-refund-actions .btn-primary { background: #177550; border-color: #177550; color: #fff; }
+        .cd-refund-actions .btn-primary:hover { background: #105c3e; border-color: #105c3e; }
+        .cd-refund-actions .btn-danger { background: #dc2626; border-color: #dc2626; color: #fff; }
+        .cd-refund-actions .btn-danger:hover { background: #b91c1c; border-color: #b91c1c; }
+        .cd-refund-box.reject .cd-refund-security { background: #fdf1f1; border-color: #f3d6d6; }
+        .cd-refund-box.reject .cd-refund-security .password-field input { border-color: #e5bcbc; }
+        .cd-refund-box.reject .cd-refund-security .password-field input:focus { border-color: #b91c1c; box-shadow: 0 0 0 3px rgba(185, 28, 28, .12); }
  /* ===== Company reviews (additive, scoped to .cd-*) ===== */
         .cd-reviews { margin-top: var(--space-md); }
         .cd-reviews-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
@@ -1535,6 +1673,135 @@
                         </div>
                     </div>
                 </div>
+<!-- ============================================================
+                     Process-refund modal — opened by the "Process" action on a
+                     pending refund request. Shows the exact refund info, then asks
+                     the operator for the SENDER account name, the TXN reference
+                     and their password. Posts { request_id, sender_account_name,
+                     txn_reference, password } to
+                     api/company.php?action=refund_request_process. Only after
+                     this succeeds is the refund saved to the revenue.
+                     ============================================================ -->
+                <div id="refund-process-modal" class="cd-refund-modal" hidden>
+                    <div class="cd-refund-box" role="dialog" aria-modal="true" aria-labelledby="refund-process-title">
+                        <div class="cd-refund-box-inner">
+                            <div class="cd-refund-head">
+                                <div>
+                                    <h3 id="refund-process-title">Process Refund</h3>
+                                    <p class="cd-refund-head-sub">Verify the request, then record the payment you sent to the passenger.</p>
+                                </div>
+                                <button type="button" id="refund-process-close" class="cd-refund-close" aria-label="Close refund dialog">&times;</button>
+                            </div>
+
+                            <div class="cd-refund-hero">
+                                <span class="cd-refund-hero-ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M8 6h8M8 10h8M8 14h8"/><circle cx="12" cy="18.5" r="1.4"/></svg></span>
+                                <span class="cd-refund-hero-label">Refund to passenger</span>
+                                <strong class="cd-refund-hero-amount" id="refund-p-amount">ETB 0</strong>
+                                <span class="cd-refund-chip" id="refund-p-type">&mdash;</span>
+                            </div>
+
+                            <div class="cd-refund-fields">
+                                <div class="cd-refund-field wide"><span class="k">Booking</span><span class="v" id="refund-p-booking"></span></div>
+                                <div class="cd-refund-field"><span class="k">Passenger</span><span class="v" id="refund-p-passenger"></span></div>
+                                <div class="cd-refund-field"><span class="k">Route</span><span class="v" id="refund-p-route"></span></div>
+                                <div class="cd-refund-field"><span class="k">Departure</span><span class="v" id="refund-p-departure"></span></div>
+                                <div class="cd-refund-field"><span class="k">Paid amount</span><span class="v" id="refund-p-total"></span></div>
+                                <div class="cd-refund-field wide"><span class="k">Refund account</span><span class="v" id="refund-p-account">&mdash;</span></div>
+                            </div>
+
+                            <div class="cd-refund-section">
+                                <div class="cd-refund-section-label"><span class="cd-refund-step" aria-hidden="true">1</span>Payment sent from</div>
+                                <div class="cd-refund-input-wrap">
+                                    <span class="cd-refund-input-ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="12" rx="2"/><path d="M7 9h10M7 13h6"/></svg></span>
+                                    <input id="refund-sender-account" class="cd-refund-input" type="text" maxlength="120" autocomplete="off" placeholder="e.g. Selam Bus Plc — CBE branch account" aria-label="Sender account name">
+                                </div>
+                                <p class="cd-refund-input-hint">The account this refund was paid out from.</p>
+                            </div>
+
+                            <div class="cd-refund-section">
+                                <div class="cd-refund-section-label"><span class="cd-refund-step" aria-hidden="true">2</span>Transaction (TXN) reference</div>
+                                <div class="cd-refund-input-wrap">
+                                    <span class="cd-refund-input-ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 5h14M5 9h10M5 13h12M5 17h7"/></svg></span>
+                                    <input id="refund-txn-reference" class="cd-refund-input" type="text" maxlength="120" autocomplete="off" placeholder="e.g. TXN-20260918-XXXXXXXX" aria-label="Transaction reference">
+                                </div>
+                                <p class="cd-refund-input-hint">Keep the same reference shown in your mobile-money / bank statement.</p>
+                            </div>
+
+                        <div class="cd-refund-security">
+                                <div class="cd-refund-security-head" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="7" width="12" height="12" rx="2"/><circle cx="12" cy="13" r="2"/><path d="M9 7l0-4M15 7l0-4"/></svg> Confirm with your password</div>
+                                <div class="password-field">
+                                    <input id="refund-process-password" type="password" autocomplete="current-password" placeholder="Enter your password" aria-label="Your account password">
+                                    <button class="password-toggle" type="button" aria-controls="refund-process-password" aria-pressed="false" aria-label="Show password">
+                                        <svg class="password-toggle-icon password-toggle-icon--show" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.75"/></svg>
+                                        <svg class="password-toggle-icon password-toggle-icon--hide" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18M10.6 6.2A10.8 10.8 0 0 1 12 6c6.1 0 9.5 6 9.5 6a18.2 18.2 0 0 1-3.3 3.8M6.1 6.1A18.5 18.5 0 0 0 2.5 12S5.9 18 12 18c1.3 0 2.5-.3 3.5-.7"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+                                        <span class="sr-only">Show password</span>
+                                    </button>
+                                </div>
+                                <p id="refund-process-password-error" class="cd-cancel-pw-error" role="alert" hidden></p>
+                                <p class="cd-refund-security-hint">Processing is signed by your account for the money-movement audit trail.</p>
+                            </div>
+
+                            <p id="refund-process-msg" class="cd-refund-msg" role="alert" hidden></p>
+                            <div class="cd-refund-actions">
+                                <button type="button" id="refund-process-keep-btn" class="btn btn-secondary">Cancel</button>
+                                <button type="button" id="refund-process-confirm-btn" class="btn btn-primary" disabled>Process &amp; Save Refund</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================================================
+                     Reject-refund modal — opened by the "Reject" action on a
+                     pending refund request. Asks for a reason and the operator's
+                     password. Posts { request_id, reason, password } to
+                     api/company.php?action=refund_request_reject. Rejecting keeps
+                     the booking's original paid payment; no refund touches revenue.
+                     ============================================================ -->
+                <div id="refund-reject-modal" class="cd-refund-modal" hidden>
+                    <div class="cd-refund-box reject" role="dialog" aria-modal="true" aria-labelledby="refund-reject-title">
+                        <div class="cd-refund-box-inner">
+                            <div class="cd-refund-head">
+                                <div>
+                                    <h3 id="refund-reject-title">Reject Refund Request</h3>
+                                    <p class="cd-refund-head-sub">Declining keeps the passenger's payment as-is — nothing is deducted from your revenue.</p>
+                                </div>
+                                <button type="button" id="refund-reject-close" class="cd-refund-close" aria-label="Close rejection dialog">&times;</button>
+                            </div>
+
+                            <div class="cd-refund-hero">
+                                <span class="cd-refund-hero-ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M7 6L17 18M17 6L7 18"/></svg></span>
+                                <span class="cd-refund-hero-label">Refund request</span>
+                                <strong class="cd-refund-hero-amount" id="refund-r-amount">ETB 0</strong>
+                                <span class="cd-refund-chip" id="refund-r-booking">&mdash;</span>
+                            </div>
+
+                            <div class="cd-refund-section">
+                                <div class="cd-refund-section-label"><span class="cd-refund-step" aria-hidden="true">1</span>Why are you rejecting?</div>
+                                <textarea id="refund-reject-reason" class="cd-refund-input" rows="3" maxlength="500" required placeholder="e.g. Booking was past the refund window, payment reversed, passenger agreed to cancel request..."></textarea>
+                                <p class="cd-refund-input-hint">This reason is shared with the passenger in their notification.</p>
+                            </div>
+
+                            <div class="cd-refund-security">
+                                <div class="cd-refund-security-head">Confirm with your password</div>
+                                <div class="password-field">
+                                    <input id="refund-reject-password" type="password" autocomplete="current-password" placeholder="Enter your password" aria-label="Your account password">
+                                    <button class="password-toggle" type="button" aria-controls="refund-reject-password" aria-pressed="false" aria-label="Show password">
+                                        <svg class="password-toggle-icon password-toggle-icon--show" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.75"/></svg>
+                                        <svg class="password-toggle-icon password-toggle-icon--hide" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18M10.6 6.2A10.8 10.8 0 0 1 12 6c6.1 0 9.5 6 9.5 6a18.2 18.2 0 0 1-3.3 3.8M6.1 6.1A18.5 18.5 0 0 0 2.5 12S5.9 18 12 18c1.3 0 2.5-.3 3.5-.7"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+                                        <span class="sr-only">Show password</span>
+                                    </button>
+                                </div>
+                                <p id="refund-reject-password-error" class="cd-cancel-pw-error" role="alert" hidden></p>
+                            </div>
+
+                            <p id="refund-reject-msg" class="cd-refund-msg" role="alert" hidden></p>
+                            <div class="cd-refund-actions">
+                                <button type="button" id="refund-reject-keep-btn" class="btn btn-secondary">Keep Request</button>
+                                <button type="button" id="refund-reject-confirm-btn" class="btn btn-danger" disabled>Reject Request</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- ============================================================
                      Trip-delete confirmation modal — opened by the "Delete"
@@ -1903,6 +2170,49 @@
             <div id="payment-list" class="cd-payment-list" hidden></div>
         </section>
 
+<!-- ===== Refund Requests — passenger-initiated cancellation refunds. =====
+             Pending requests appear here when a passenger cancels a paid
+             booking online (full refund within 24h of booking and >= 6h before
+             departure, otherwise half). The operator opens a request, verifies
+             the refund info, then processes it with a sender account name, TXN
+             reference and password. Only a processed refund is written to the
+             revenue. -->
+        <section id="company-refunds" class="cd-refunds" hidden>
+            <div class="cd-refunds-head">
+                <div>
+                    <h2>Refund Requests</h2>
+                    <p class="cd-refunds-eyebrow">Passenger cancellation refunds. Approve one to record it on your revenue; the refund is only deducted once processed.</p>
+                </div>
+                <div class="cd-refunds-head-actions">
+                    <button type="button" id="btn-refresh-refunds" class="btn btn-secondary btn-sm">Refresh</button>
+                </div>
+            </div>
+
+            <div class="cd-refund-summary" id="refund-summary" hidden>
+                <div class="cd-refund-summary-stat pending"><b id="refund-sum-pending">0</b><span>Pending</span></div>
+                <div class="cd-refund-summary-stat approved"><b id="refund-sum-approved">0</b><span>Approved</span></div>
+                <div class="cd-refund-summary-stat rejected"><b id="refund-sum-rejected">0</b><span>Rejected</span></div>
+                <div class="cd-refund-summary-stat total"><b id="refund-sum-total">ETB 0</b><span>Total refunded</span></div>
+            </div>
+
+            <div class="cd-refund-status-toolbar" id="refund-status-toolbar" role="group" aria-label="Filter refund requests by status">
+                <button type="button" class="cd-refund-status-filter is-active" data-refund-status="all" aria-pressed="true">All requests</button>
+                <button type="button" class="cd-refund-status-filter" data-refund-status="pending" aria-pressed="false">Pending</button>
+                <button type="button" class="cd-refund-status-filter" data-refund-status="approved" aria-pressed="false">Approved</button>
+                <button type="button" class="cd-refund-status-filter" data-refund-status="rejected" aria-pressed="false">Rejected</button>
+            </div>
+
+            <p id="refund-loading" class="cd-refund-msg" hidden>Loading refund requests&hellip;</p>
+            <div id="refund-error" class="cd-refund-error auth-message" hidden></div>
+            <div id="refund-empty" class="cd-refund-empty" hidden>
+                <span class="cd-refund-empty-ico" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M8 6h8M8 10h8M8 14h8"/><circle cx="12" cy="18.5" r="1.4"/></svg></span>
+                No refund requests yet
+                <small>When a passenger cancels a paid booking, their refund request appears here for you to review and process.</small>
+            </div>
+            <div id="refund-list" class="cd-refund-list" hidden></div>
+        </section>
+
+        <!-- ===== Routes ===== -->
         <!-- ===== Routes ===== -->
         <section id="company-routes" class="cd-routes" hidden>
             <div class="cd-routes-head">

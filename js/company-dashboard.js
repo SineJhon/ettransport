@@ -148,6 +148,7 @@
                 renderOverview(data);
                 loadReviews();
                 loadComplaints();
+                loadRefundRequests();
             })
             .catch(function () {
                 if (rid !== overviewRequestId) { return; }
@@ -172,7 +173,7 @@
         var nodes = {
             identity: byId('auth-identity'), loading: byId('company-loading'), error: byId('company-error'),
             banner: byId('company-banner'), stats: byId('company-stats'), fleet: byId('company-fleet'),
-            trips: byId('company-trips'), bookings: byId('company-bookings'), revenue: byId('company-revenue'), profile: byId('company-profile'), routes: byId('company-routes'), reviews: byId('company-reviews'), parcel: byId('company-parcel'), complaints: byId('company-complaints')
+            trips: byId('company-trips'), bookings: byId('company-bookings'), revenue: byId('company-revenue'), profile: byId('company-profile'), routes: byId('company-routes'), reviews: byId('company-reviews'), parcel: byId('company-parcel'), complaints: byId('company-complaints'), refunds: byId('company-refunds')
         };
         var icon = {
             overview: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
@@ -183,7 +184,8 @@
             profile: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.4-4 4-6 8-6s6.6 2 8 6"/></svg>',
             reviews: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2  L14.25 8.91  L21.51 8.91  L15.63 13.18  L17.88 20.09  L12 15.82  L6.12 20.09  L8.37 13.18  L2.49 8.91  L9.75 8.91  Z"/></svg>',
             parcel: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>',
-            complaint: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13c0 4-4 6-8 6-1.5 0-3-.2-4-.6L4 20l1-3.2C3.6 15.4 3 13.8 3 12 3 7.5 7 4 12 4s9 3.5 9 8c0 .4 0 .7-.1 1Z"/><path d="M8 10h8M8 13h5"/></svg>'
+            complaint: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13c0 4-4 6-8 6-1.5 0-3-.2-4-.6L4 20l1-3.2C3.6 15.4 3 13.8 3 12 3 7.5 7 4 12 4s9 3.5 9 8c0 .4 0 .7-.1 1Z"/><path d="M8 10h8M8 13h5"/></svg>',
+            refund: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 12h10M12 7v10"/></svg>'
         };
         main.className = 'container cd-page';
         main.innerHTML =
@@ -198,6 +200,7 @@
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-passengers" data-cd-view="passengers">' + icon.passengers + '<span>Passengers</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-parcel" data-cd-view="parcel">' + icon.parcel + '<span>Parcel</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-revenue" data-cd-view="revenue">' + icon.revenue + '<span>Revenue</span></button>' +
+                  '<button type="button" role="tab" aria-selected="false" aria-controls="cd-refunds" data-cd-view="refunds">' + icon.refund + '<span>Refund requests</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-reviews" data-cd-view="reviews">' + icon.reviews + '<span>Reviews</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-complaints" data-cd-view="complaints">' + icon.complaint + '<span>Complaints</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-profile" data-cd-view="profile">' + icon.profile + '<span>Public profile</span></button>' +
@@ -208,6 +211,7 @@
                   '<section id="cd-passengers" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Passengers &amp; bookings</h2><p>Review bookings and view each passenger\'s digital ticket.</p></div></div></section>' +
                   '<section id="cd-parcel" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Parcel &amp; freight</h2><p>Register and track parcels travelling with your buses.</p></div></div></section>' +
                   '<section id="cd-revenue" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Revenue &amp; payments</h2><p>Review paid and refunded passenger payments.</p></div></div></section>' +
+                  '<section id="cd-refunds" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Refund requests</h2><p>Approve or reject passenger cancellation refunds — a refund is only saved to your revenue once you process it.</p></div></div></section>' +
                   '<section id="cd-routes" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Routes</h2></div></div></section>' +
                   '<section id="cd-reviews" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Reviews</h2><p>What passengers say about travelling with your company.</p></div></div></section>' +
                   '<section id="cd-complaints" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Complaints</h2><p>Passenger complaints about your service — triage, reply and close them out.</p></div></div></section>' +
@@ -221,6 +225,7 @@
         if (nodes.bookings) { byId('cd-passengers').appendChild(nodes.bookings); }
         if (nodes.parcel) { byId('cd-parcel').appendChild(nodes.parcel); }
         if (nodes.revenue) { byId('cd-revenue').appendChild(nodes.revenue); }
+        if (nodes.refunds) { byId('cd-refunds').appendChild(nodes.refunds); }
         if (nodes.routes) { byId('cd-routes').appendChild(nodes.routes); }
         if (nodes.reviews) {
             var reviewsPane = byId('cd-reviews');
@@ -247,12 +252,17 @@
                 /* Refresh complaints whenever the tab is opened, so items filed
                    after this page loaded show up without a full reload. */
                 if (view === 'complaints') { loadComplaints(); }
+                if (view === 'refunds') { loadRefundRequests(); }
             });
         }
         var quickActions = document.querySelectorAll('[data-cd-go]');
         for (var q = 0; q < quickActions.length; q++) { quickActions[q].addEventListener('click', function () { selectView(this.getAttribute('data-cd-go')); var target = byId(this.getAttribute('data-cd-action')); if (target) { target.click(); } }); }
         var requested = window.location.hash.replace('#', '');
-        if (requested === 'fleet' || requested === 'trips' || requested === 'passengers' || requested === 'parcel' || requested === 'revenue' || requested === 'routes' || requested === 'reviews' || requested === 'complaints' || requested === 'profile') { selectView(requested); }
+        if (requested === 'fleet' || requested === 'trips' || requested === 'passengers' || requested === 'parcel' || requested === 'revenue' || requested === 'refunds' || requested === 'routes' || requested === 'reviews' || requested === 'complaints' || requested === 'profile') {
+            selectView(requested);
+            if (requested === 'refunds') { loadRefundRequests(); }
+            if (requested === 'complaints') { loadComplaints(); }
+        }
 
         var busForm = byId('bus-form');
         if (busForm) {
@@ -4325,6 +4335,457 @@ var reviewEditingReplyId = null;
         return null;
     }
 
+/* ===== Refund requests — passenger-initiated cancellation refunds =====
+       Pending requests appear when a passenger cancels a paid booking online.
+       Processing requires a sender account name, a TXN reference and the
+       operator's password (api/company.php?action=refund_request_process).
+       A refund is only saved to the revenue once it is processed. */
+    var refundsRequestId = 0;
+    var refundFilter = 'all';                // 'all' | 'pending' | 'approved' | 'rejected'
+    var currentRefundRequests = [];
+    var pendingRefundCount = 0;
+    var refundCounts = { pending: 0, approved: 0, rejected: 0 };
+    var activeRefundProcessReq = null;       // refund request being processed
+    var activeRefundRejectReq = null;        // refund request being rejected
+
+    function refundBadge(status) {
+        var cls = status === 'approved' ? ' approved' : (status === 'rejected' ? ' rejected' : '');
+        return '<span class="cd-refund-badge' + cls + '">' + escHtml(status) + '</span>';
+    }
+
+    function refundTypeLabel(t) {
+        return t === 'full' ? 'Full refund' : (t === 'half' ? 'Half refund' : '\u2014');
+    }
+
+    function refundWhen(s) {
+        if (!s) { return ''; }
+        var d = new Date(String(s).replace(' ', 'T'));
+        if (isNaN(d.getTime())) { return String(s); }
+        return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+            + ' ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function refundAccountLabel(r) {
+        var acc = (r && r.refund_account) || {};
+        var parts = [];
+        if (acc.name) { parts.push(acc.name); }
+        if (acc.bank) { parts.push(acc.bank); }
+        if (acc.number) { parts.push(acc.number); }
+        return parts.length ? parts.join(' \u00B7 ') : '\u2014';
+    }
+
+    function refundCardHtml(r) {
+        var chipCls = r.refund_type === 'half' ? ' half' : '';
+        var worked = '';
+        if (r.status !== 'pending') {
+            var when = refundWhen(r.processed_at);
+            var glyph = r.status === 'approved' ? '&#10003;' : '&#10007;';
+            var line = '';
+            if (r.status === 'approved') {
+                line = (r.sender_account_name ? 'From ' + escHtml(r.sender_account_name) : 'Processed');
+                if (r.txn_reference) { line += ' \u00B7 TXN ' + escHtml(r.txn_reference); }
+            } else {
+                line = r.notes ? escHtml(r.notes) : 'Rejected';
+            }
+            worked = '<span class="cd-refund-processed-info"><span class="cd-refund-dest-ico" aria-hidden="true">' + glyph + '</span><span>' + line
+                + (when ? ' <small> \u00B7 ' + when + '</small>' : '') + '</span></span>';
+        }
+        var actions = '';
+        if (r.status === 'pending') {
+            actions += '<button type="button" class="btn btn-primary btn-sm" data-refund-process="' + r.id + '">Process Refund</button>'
+                + '<button type="button" class="btn btn-secondary btn-sm" data-refund-reject="' + r.id + '">Reject</button>';
+        }
+        var initial = String(r.passenger_name || 'P').trim().charAt(0).toUpperCase() || 'P';
+        return '<article class="cd-refund-card ' + escHtml(r.status || 'pending') + '">' +
+            '<div class="cd-refund-card-head">' +
+                '<span class="cd-refund-avatar" aria-hidden="true">' + escHtml(initial) + '</span>' +
+                '<span class="cd-refund-who"><strong>' + escHtml(r.passenger_name || '') + '</strong>' +
+                    '<small>' + escHtml(r.booking_reference || '') + (r.created_at ? ' \u00B7 ' + escHtml(refundWhen(r.created_at)) : '') + '</small></span>' +
+                refundBadge(r.status) +
+            '</div>' +
+            '<div class="cd-refund-route">' +
+                '<span>' + escHtml(r.route_from || '\u2014') + '</span>' +
+                '<span class="cd-refund-route-arrow" aria-hidden="true">\u2192</span>' +
+                '<span>' + escHtml(r.route_to || '\u2014') + '</span>' +
+                '<span class="cd-refund-route-depart"><em>Departs ' + escHtml(r.departure_date || '') + (r.departure_time ? ' ' + escHtml(String(r.departure_time).slice(0, 5)) : '') + '</em></span>' +
+            '</div>' +
+            '<div class="cd-refund-amount-block">' +
+                '<span class="cd-refund-amount">ETB ' + formatMoney(r.amount) + '<small>refund to passenger</small></span>' +
+                '<span class="cd-refund-chip' + chipCls + '">' + escHtml(refundTypeLabel(r.refund_type)) + '</span>' +
+            '</div>' +
+            '<span class="cd-refund-dest"><span class="cd-refund-dest-ico" aria-hidden="true">T</span><span><b>Refund account</b><small>' + escHtml(refundAccountLabel(r)) + '</small></span></span>' +
+            worked +
+            '<div class="cd-refund-card-actions">' + actions + '</div>' +
+        '</article>';
+    }
+
+    function refundStatusActive(r) {
+        return refundFilter === 'all' || r.status === refundFilter;
+    }
+function renderRefundCards() {
+        var list = byId('refund-list');
+        var empty = byId('refund-empty');
+        var filtered = currentRefundRequests.filter(refundStatusActive);
+        if (filtered.length) {
+            if (list) { list.innerHTML = filtered.map(refundCardHtml).join(''); list.hidden = false; }
+            if (empty) { empty.hidden = true; }
+        } else {
+            if (list) { list.innerHTML = ''; list.hidden = true; }
+            if (empty) {
+                empty.hidden = false;
+                var emptyMsg = refundFilter === 'all' ? 'No refund requests yet' : 'No ' + escHtml(refundFilter) + ' refund requests';
+                var emptySub = refundFilter === 'all'
+                    ? 'When a passenger cancels a paid booking, their refund request appears here for you to review and process.'
+                    : 'Try a different filter, or check back after passengers cancel paid bookings.';
+                empty.innerHTML = '<span class="cd-refund-empty-ico" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M8 6h8M8 10h8M8 14h8"/><circle cx="12" cy="18.5" r="1.4"/></svg></span>'
+                    + escHtml(emptyMsg) + '<small>' + escHtml(emptySub) + '</small>';
+            }
+        }
+    }
+
+    function makeRefundFilterButton(val, label, count, active) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cd-refund-status-filter' + (active ? ' is-active' : '');
+        btn.setAttribute('data-refund-status', val);
+        btn.setAttribute('aria-pressed', String(active));
+        btn.textContent = label;
+        if (Number(count) > 0) {
+            var badge = document.createElement('span');
+            badge.className = 'cd-refund-count';
+            badge.textContent = String(count);
+            btn.appendChild(badge);
+        }
+        return btn;
+    }
+
+    function renderRefundStatusToolbar() {
+        var bar = byId('refund-status-toolbar');
+        if (!bar) { return; }
+        bar.innerHTML = '';
+        var options = [
+            ['all', 'All requests', null],
+            ['pending', 'Pending', refundCounts.pending],
+            ['approved', 'Approved', refundCounts.approved],
+            ['rejected', 'Rejected', refundCounts.rejected]
+        ];
+        for (var i = 0; i < options.length; i++) {
+            bar.appendChild(makeRefundFilterButton(options[i][0], options[i][1], options[i][2], refundFilter === options[i][0]));
+        }
+    }
+
+    function renderRefundSummary() {
+        var counts = { pending: 0, approved: 0, rejected: 0 };
+        var total = 0;
+        for (var i = 0; i < currentRefundRequests.length; i++) {
+            var r = currentRefundRequests[i];
+            if (r.status === 'approved') {
+                counts.approved++;
+                total += Number(r.amount) || 0;
+            } else if (r.status === 'rejected') {
+                counts.rejected++;
+            } else {
+                counts.pending++;
+            }
+        }
+        refundCounts = counts;
+        pendingRefundCount = counts.pending;
+        var summary = byId('refund-summary');
+        if (summary) { summary.hidden = currentRefundRequests.length === 0; }
+        var setNum = function (id, val) { var el = byId(id); if (el) { el.textContent = String(val); } };
+        setNum('refund-sum-pending', counts.pending);
+        setNum('refund-sum-approved', counts.approved);
+        setNum('refund-sum-rejected', counts.rejected);
+        var totalEl = byId('refund-sum-total');
+        if (totalEl) { totalEl.textContent = 'ETB ' + formatMoney(total); }
+    }
+
+    function renderRefunds(data) {
+        var sec = byId('company-refunds'); if (sec) { sec.hidden = false; }
+        var loading = byId('refund-loading'); if (loading) { loading.hidden = true; }
+        var error = byId('refund-error'); if (error) { error.hidden = true; }
+        currentRefundRequests = data.refund_requests || [];
+        renderRefundSummary();
+        renderRefundStatusToolbar();
+        renderRefundCards();
+    }
+
+    function showRefundsError(message) {
+        var loading = byId('refund-loading'); if (loading) { loading.hidden = true; }
+        var list = byId('refund-list'); if (list) { list.innerHTML = ''; list.hidden = true; }
+        var empty = byId('refund-empty'); if (empty) { empty.hidden = true; }
+        var summary = byId('refund-summary'); if (summary) { summary.hidden = true; }
+        var error = byId('refund-error');
+        if (error) {
+            error.hidden = false;
+            error.textContent = message || 'Unable to load your refund requests. Please try again later.';
+        }
+    }
+
+    function loadRefundRequests() {
+        var loading = byId('refund-loading'); if (loading) { loading.hidden = false; }
+        var error = byId('refund-error'); if (error) { error.hidden = true; }
+        var empty = byId('refund-empty'); if (empty) { empty.hidden = true; }
+        var list = byId('refund-list'); if (list) { list.innerHTML = ''; list.hidden = true; }
+        /* No client company-id guard: the endpoint resolves the company from the
+           server-side session, so a refresh always works — even before the
+           overview request has finished or if the overview failed. */
+
+        var rid = ++refundsRequestId;
+        /* Always fetch the full list: the status toolbar + summary are rendered
+           client-side so every count stays correct regardless of the filter. */
+        var url = 'api/company.php?action=refund_requests';
+        fetch(url, {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(function (res) {
+                return res.json().catch(function () {
+                    return { success: false, message: 'Invalid server response.' };
+                }).then(function (json) {
+                    return { ok: res.ok, status: res.status, data: json };
+                });
+            })
+            .then(function (result) {
+                if (rid !== refundsRequestId) { return; }
+                var loadEl = byId('refund-loading'); if (loadEl) { loadEl.hidden = true; }
+                var data = result.data || {};
+                if (!result.ok || result.status !== 200 || !data.success) {
+                    showRefundsError(data.message || 'Unable to load your refund requests.');
+                    return;
+                }
+                renderRefunds(data);
+            })
+            .catch(function () {
+                if (rid !== refundsRequestId) { return; }
+                showRefundsError('Network error while loading your refund requests.');
+            });
+    }
+
+    function currentRefundById(id) {
+        for (var i = 0; i < currentRefundRequests.length; i++) {
+            if (currentRefundRequests[i].id === Number(id)) { return currentRefundRequests[i]; }
+        }
+        return null;
+    }
+/* ----- Process-refund modal ----- */
+    function openRefundProcessModal(id) {
+        var req = currentRefundById(id);
+        var modal = byId('refund-process-modal');
+        if (!req || !modal) { return; }
+        activeRefundProcessReq = req;
+        byId('refund-p-booking').textContent = req.booking_reference || '';
+        byId('refund-p-passenger').textContent = req.passenger_name || '';
+        byId('refund-p-route').textContent = String(req.route_from || '') + ' \u2192 ' + String(req.route_to || '');
+        byId('refund-p-departure').textContent = req.departure_date || '';
+        var typeChip = byId('refund-p-type');
+        if (typeChip) {
+            typeChip.textContent = refundTypeLabel(req.refund_type);
+            typeChip.className = 'cd-refund-chip' + (req.refund_type === 'half' ? ' half' : '');
+        }
+        byId('refund-p-amount').textContent = 'ETB ' + formatMoney(req.amount);
+        byId('refund-p-total').textContent = 'ETB ' + formatMoney(req.total_amount);
+        byId('refund-p-account').textContent = refundAccountLabel(req);
+        var sender = byId('refund-sender-account'); if (sender) { sender.value = ''; }
+        var txn = byId('refund-txn-reference'); if (txn) { txn.value = ''; }
+        var pw = byId('refund-process-password'); if (pw) { pw.value = ''; }
+        var pwErr = byId('refund-process-password-error'); if (pwErr) { pwErr.hidden = true; pwErr.textContent = ''; }
+        var msg = byId('refund-process-msg'); if (msg) { msg.hidden = true; msg.textContent = ''; msg.className = 'cd-refund-msg'; }
+        syncRefundProcessConfirm();
+        modal.hidden = false;
+    }
+
+    function closeRefundProcessModal() {
+        var modal = byId('refund-process-modal');
+        if (modal) { modal.hidden = true; }
+        activeRefundProcessReq = null;
+    }
+
+    function syncRefundProcessConfirm() {
+        var confirmBtn = byId('refund-process-confirm-btn');
+        if (!confirmBtn) { return; }
+        var sender = byId('refund-sender-account');
+        var txn = byId('refund-txn-reference');
+        var pw = byId('refund-process-password');
+        confirmBtn.disabled = !(sender && sender.value.trim() && txn && txn.value.trim() && pw && pw.value);
+    }
+
+    function submitRefundProcess() {
+        var req = activeRefundProcessReq;
+        if (!req) { closeRefundProcessModal(); return; }
+        var sender = byId('refund-sender-account') ? byId('refund-sender-account').value.trim() : '';
+        var txn = byId('refund-txn-reference') ? byId('refund-txn-reference').value.trim() : '';
+        var pw = byId('refund-process-password') ? byId('refund-process-password').value : '';
+        if (!sender || !txn || !pw) { return; }
+
+        var confirmBtn = byId('refund-process-confirm-btn');
+        var keepBtn = byId('refund-process-keep-btn');
+        var msg = byId('refund-process-msg');
+        if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Processing...'; }
+        if (keepBtn) { keepBtn.disabled = true; }
+        if (msg) { msg.hidden = true; msg.textContent = ''; msg.className = 'cd-refund-msg'; }
+
+        var body = new FormData();
+        body.append('request_id', String(req.id));
+        body.append('sender_account_name', sender);
+        body.append('txn_reference', txn);
+        body.append('password', pw);
+
+        fetch('api/company.php?action=refund_request_process', {
+            method: 'POST',
+            credentials: 'same-origin',
+            body: body,
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(function (res) {
+                return res.json().catch(function () {
+                    return { success: false, message: 'Invalid server response.' };
+                }).then(function (json) {
+                    return { ok: res.ok, status: res.status, data: json };
+                });
+            })
+            .then(function (result) {
+                var data = result.data || {};
+                if (result.status === 401) {
+                    var pwErr = byId('refund-process-password-error');
+                    if (pwErr) {
+                        pwErr.textContent = data.message || 'Your password was not accepted.';
+                        pwErr.hidden = false;
+                    }
+                    var pwInput = byId('refund-process-password');
+                    if (pwInput) { pwInput.select(); pwInput.focus(); }
+                    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Process & Mark Refunded'; }
+                    if (keepBtn) { keepBtn.disabled = false; }
+                    return;
+                }
+                if (!result.ok || result.status !== 200 || !data.success) {
+                    if (msg) {
+                        msg.textContent = data.message || 'Unable to process the refund request.';
+                        msg.className = 'cd-refund-msg error';
+                        msg.hidden = false;
+                    }
+                    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Process & Save Refund'; }
+                    if (keepBtn) { keepBtn.disabled = false; }
+                    return;
+                }
+                closeRefundProcessModal();
+                toast(data.message || 'Refund processed and saved to revenue.');
+                loadRefundRequests();
+                loadPayments();
+            })
+            .catch(function () {
+                if (msg) {
+                    msg.textContent = 'Network error while processing the refund.';
+                    msg.className = 'cd-refund-msg error';
+                    msg.hidden = false;
+                }
+                if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Process & Save Refund'; }
+                if (keepBtn) { keepBtn.disabled = false; }
+            });
+    }
+/* ----- Reject-refund modal ----- */
+    function openRefundRejectModal(id) {
+        var req = currentRefundById(id);
+        var modal = byId('refund-reject-modal');
+        if (!req || !modal) { return; }
+        activeRefundRejectReq = req;
+        byId('refund-r-booking').textContent = req.booking_reference || '';
+        byId('refund-r-amount').textContent = 'ETB ' + formatMoney(req.amount);
+        var reason = byId('refund-reject-reason'); if (reason) { reason.value = ''; }
+        var pw = byId('refund-reject-password'); if (pw) { pw.value = ''; }
+        var pwErr = byId('refund-reject-password-error'); if (pwErr) { pwErr.hidden = true; pwErr.textContent = ''; }
+        var msg = byId('refund-reject-msg'); if (msg) { msg.hidden = true; msg.textContent = ''; msg.className = 'cd-refund-msg'; }
+        syncRefundRejectConfirm();
+        modal.hidden = false;
+    }
+
+    function closeRefundRejectModal() {
+        var modal = byId('refund-reject-modal');
+        if (modal) { modal.hidden = true; }
+        activeRefundRejectReq = null;
+    }
+
+    function syncRefundRejectConfirm() {
+        var confirmBtn = byId('refund-reject-confirm-btn');
+        if (!confirmBtn) { return; }
+        var reason = byId('refund-reject-reason');
+        var pw = byId('refund-reject-password');
+        confirmBtn.disabled = !(reason && reason.value.trim() && pw && pw.value);
+    }
+
+    function submitRefundReject() {
+        var req = activeRefundRejectReq;
+        if (!req) { closeRefundRejectModal(); return; }
+        var reason = byId('refund-reject-reason') ? byId('refund-reject-reason').value.trim() : '';
+        var pw = byId('refund-reject-password') ? byId('refund-reject-password').value : '';
+        if (!reason || !pw) { return; }
+
+        var confirmBtn = byId('refund-reject-confirm-btn');
+        var keepBtn = byId('refund-reject-keep-btn');
+        var msg = byId('refund-reject-msg');
+        if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Rejecting...'; }
+        if (keepBtn) { keepBtn.disabled = true; }
+        if (msg) { msg.hidden = true; msg.textContent = ''; msg.className = 'cd-refund-msg'; }
+
+        var body = new FormData();
+        body.append('request_id', String(req.id));
+        body.append('reason', reason);
+        body.append('password', pw);
+
+        fetch('api/company.php?action=refund_request_reject', {
+            method: 'POST',
+            credentials: 'same-origin',
+            body: body,
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(function (res) {
+                return res.json().catch(function () {
+                    return { success: false, message: 'Invalid server response.' };
+                }).then(function (json) {
+                    return { ok: res.ok, status: res.status, data: json };
+                });
+            })
+            .then(function (result) {
+                var data = result.data || {};
+                if (result.status === 401) {
+                    var pwErr = byId('refund-reject-password-error');
+                    if (pwErr) {
+                        pwErr.textContent = data.message || 'Your password was not accepted.';
+                        pwErr.hidden = false;
+                    }
+                    var pwInput = byId('refund-reject-password');
+                    if (pwInput) { pwInput.select(); pwInput.focus(); }
+                    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Reject Request'; }
+                    if (keepBtn) { keepBtn.disabled = false; }
+                    return;
+                }
+                if (!result.ok || result.status !== 200 || !data.success) {
+                    if (msg) {
+                        msg.textContent = data.message || 'Unable to reject the refund request.';
+                        msg.className = 'cd-refund-msg error';
+                        msg.hidden = false;
+                    }
+                    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Reject Request'; }
+                    if (keepBtn) { keepBtn.disabled = false; }
+                    return;
+                }
+                closeRefundRejectModal();
+                toast(data.message || 'Refund request declined.');
+                loadRefundRequests();
+            })
+            .catch(function () {
+                if (msg) {
+                    msg.textContent = 'Network error while rejecting the refund request.';
+                    msg.className = 'cd-refund-msg error';
+                    msg.hidden = false;
+                }
+                if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Reject Request'; }
+                if (keepBtn) { keepBtn.disabled = false; }
+            });
+    }
+
+    /* ===== Handle-complaint modal ===== */
     /* ===== Handle-complaint modal ===== */
 
     /* Statuses a company can choose; resolved/escalated are locked for the
@@ -6767,6 +7228,7 @@ function submitBranchForm() {
         loadProfile();
         loadBranches();
         loadComplaints();
+        loadRefundRequests();
         initParcel();
 
         var refreshReviews = byId('btn-refresh-reviews');
@@ -7289,6 +7751,111 @@ function submitBranchForm() {
             });
         }
 
+/* ----- Refund requests section + modals wiring ----- */
+        var refundRefresh = byId('btn-refresh-refunds');
+        if (refundRefresh) { refundRefresh.addEventListener('click', loadRefundRequests); }
+
+        var refundFilterBar = byId('refund-status-toolbar');
+        if (refundFilterBar) {
+            refundFilterBar.addEventListener('click', function (ev) {
+                var btn = ev.target.closest ? ev.target.closest('.cd-refund-status-filter') : null;
+                if (!btn) { return; }
+                refundFilter = btn.getAttribute('data-refund-status') || 'all';
+                var buttons = document.querySelectorAll('.cd-refund-status-filter');
+                for (var rf = 0; rf < buttons.length; rf++) {
+                    buttons[rf].className = 'cd-refund-status-filter' + (refundFilter === (buttons[rf].getAttribute('data-refund-status') || 'all') ? ' is-active' : '');
+                    buttons[rf].setAttribute('aria-pressed', String(refundFilter === (buttons[rf].getAttribute('data-refund-status') || 'all')));
+                }
+                renderRefundCards();
+                loadRefundRequests();
+            });
+        }
+
+        var refundListEl = byId('refund-list');
+        if (refundListEl) {
+            refundListEl.addEventListener('click', function (ev) {
+                if (!ev.target.closest) { return; }
+                var processBtn = ev.target.closest('[data-refund-process]');
+                if (processBtn) { openRefundProcessModal(processBtn.getAttribute('data-refund-process')); return; }
+                var rejectBtn = ev.target.closest('[data-refund-reject]');
+                if (rejectBtn) { openRefundRejectModal(rejectBtn.getAttribute('data-refund-reject')); return; }
+            });
+        }
+
+        /* ----- Process-refund modal wiring ----- */
+        var refundProcessModal = byId('refund-process-modal');
+        if (refundProcessModal) {
+            if (refundProcessModal.parentNode !== document.body) {
+                document.body.appendChild(refundProcessModal);
+            }
+            refundProcessModal.style.zIndex = '104';
+            refundProcessModal.addEventListener('click', function (ev) {
+                if (ev.target === refundProcessModal) { closeRefundProcessModal(); }
+            });
+        }
+        var refundProcessClose = byId('refund-process-close');
+        if (refundProcessClose) { refundProcessClose.addEventListener('click', closeRefundProcessModal); }
+        var refundProcessKeep = byId('refund-process-keep-btn');
+        if (refundProcessKeep) { refundProcessKeep.addEventListener('click', closeRefundProcessModal); }
+        var refundProcessConfirm = byId('refund-process-confirm-btn');
+        if (refundProcessConfirm) { refundProcessConfirm.addEventListener('click', submitRefundProcess); }
+        var refundSenderInput = byId('refund-sender-account');
+        if (refundSenderInput) {
+            refundSenderInput.addEventListener('input', function () {
+                var msg = byId('refund-process-msg'); if (msg) { msg.hidden = true; msg.textContent = ''; }
+                syncRefundProcessConfirm();
+            });
+        }
+        var refundTxnInput = byId('refund-txn-reference');
+        if (refundTxnInput) {
+            refundTxnInput.addEventListener('input', function () {
+                var msg = byId('refund-process-msg'); if (msg) { msg.hidden = true; msg.textContent = ''; }
+                syncRefundProcessConfirm();
+            });
+        }
+        var refundProcessPwInput = byId('refund-process-password');
+        if (refundProcessPwInput) {
+            refundProcessPwInput.addEventListener('input', function () {
+                var pwErr = byId('refund-process-password-error');
+                if (pwErr) { pwErr.hidden = true; pwErr.textContent = ''; }
+                syncRefundProcessConfirm();
+            });
+        }
+
+        /* ----- Reject-refund modal wiring ----- */
+        var refundRejectModal = byId('refund-reject-modal');
+        if (refundRejectModal) {
+            if (refundRejectModal.parentNode !== document.body) {
+                document.body.appendChild(refundRejectModal);
+            }
+            refundRejectModal.style.zIndex = '104';
+            refundRejectModal.addEventListener('click', function (ev) {
+                if (ev.target === refundRejectModal) { closeRefundRejectModal(); }
+            });
+        }
+        var refundRejectClose = byId('refund-reject-close');
+        if (refundRejectClose) { refundRejectClose.addEventListener('click', closeRefundRejectModal); }
+        var refundRejectKeep = byId('refund-reject-keep-btn');
+        if (refundRejectKeep) { refundRejectKeep.addEventListener('click', closeRefundRejectModal); }
+        var refundRejectConfirm = byId('refund-reject-confirm-btn');
+        if (refundRejectConfirm) { refundRejectConfirm.addEventListener('click', submitRefundReject); }
+        var refundRejectReasonInput = byId('refund-reject-reason');
+        if (refundRejectReasonInput) {
+            refundRejectReasonInput.addEventListener('input', function () {
+                var msg = byId('refund-reject-msg'); if (msg) { msg.hidden = true; msg.textContent = ''; }
+                syncRefundRejectConfirm();
+            });
+        }
+        var refundRejectPwInput = byId('refund-reject-password');
+        if (refundRejectPwInput) {
+            refundRejectPwInput.addEventListener('input', function () {
+                var pwErr = byId('refund-reject-password-error');
+                if (pwErr) { pwErr.hidden = true; pwErr.textContent = ''; }
+                syncRefundRejectConfirm();
+            });
+        }
+
+        /* ----- Trip-cancel confirmation modal wiring ----- */
         /* ----- Trip-cancel confirmation modal wiring ----- */
         var tripCancelModal = byId('trip-cancel-modal');
         if (tripCancelModal) {

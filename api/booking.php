@@ -1125,9 +1125,22 @@ function handle_cancel(): void
         $pdo->beginTransaction();
 
         $stmt = $pdo->prepare('
-            SELECT b.id, b.booking_status, b.payment_status, b.total_amount, t.departure_date
+            SELECT
+                b.id,
+                b.booking_status,
+                b.payment_status,
+                b.total_amount,
+                b.created_at,
+                b.refund_account_name,
+                b.refund_account_number,
+                b.refund_bank,
+                t.departure_date,
+                t.departure_time,
+                c.id AS company_id,
+                c.name AS company_name
             FROM bookings b
-            JOIN trips t ON t.id = b.trip_id
+            JOIN trips t      ON t.id = b.trip_id
+            JOIN companies c  ON c.id = t.company_id
             WHERE b.id = :id AND b.passenger_id = :uid
             FOR UPDATE');
         $stmt->execute([':id' => $id, ':uid' => (int) $user['id']]);
@@ -1149,8 +1162,59 @@ function handle_cancel(): void
             throw new BookingBusinessException('This trip has already departed and cannot be cancelled.', 409);
         }
 
-        $upd = $pdo->prepare('UPDATE bookings SET booking_status = \'cancelled\' WHERE id = :id AND passenger_id = :uid');
+        /* --- Refund policy (cancellation window) ----------------------------
+           The customer's entitled refund is decided ONLY by server-side
+           timestamps (the browser is never trusted for money):
+             - cancelled within 24 hours of the booking AND with at least
+               6 hours still before departure  -> FULL refund
+             - otherwise (e.g. later than 24h after booking, or less than
+               6h before departure)            -> HALF refund
+           Only bookings whose payment was received ('paid') get a refund.
+           The money is NOT applied to revenue yet: a PENDING refund request
+           is created for the company dashboard, and the refund is only saved
+           to the revenue once the company processes it. ------------------ */
+        $refundType = 'none';
+        $refundedAmount = null;
+        if ((string) $book['payment_status'] === 'paid' && (float) $book['total_amount'] > 0) {
+            $nowTs = time();
+            $ageHours = ($nowTs - strtotime((string) $book['created_at'])) / 3600.0;
+            $departureTs = strtotime((string) $book['departure_date'] . ' ' . substr((string) $book['departure_time'], 0, 5) . ':00');
+            $hoursToDeparture = ($departureTs - $nowTs) / 3600.0;
+
+            if ($ageHours < 24.0 && $hoursToDeparture >= 6.0) {
+                $refundType = 'full';
+                $refundedAmount = round((float) $book['total_amount'], 2);
+            } else {
+                $refundType = 'half';
+                $refundedAmount = round((float) $book['total_amount'] / 2, 2);
+            }
+        }
+
+        $upd = $pdo->prepare('
+            UPDATE bookings
+            SET booking_status = \'cancelled\', cancellation_reason = \'Cancelled by passenger\'
+            WHERE id = :id AND passenger_id = :uid');
         $upd->execute([':id' => $id, ':uid' => (int) $user['id']]);
+
+        /* Create the refund REQUEST row. The booking keeps its original 'paid'
+           payment status and no refund reaches the revenue until the company
+           approves the request from the company dashboard. The booking-status
+           guard above guarantees the cancellation (and therefore the request)
+           can only ever happen once. */
+        if ($refundType !== 'none') {
+            $insRefund = $pdo->prepare('
+                INSERT INTO refund_requests
+                    (booking_id, company_id, passenger_id, amount, refund_type, status)
+                VALUES
+                    (:booking_id, :company_id, :passenger_id, :amount, :refund_type, \'pending\')');
+            $insRefund->execute([
+                ':booking_id' => $id,
+                ':company_id' => (int) $book['company_id'],
+                ':passenger_id' => (int) $user['id'],
+                ':amount' => $refundedAmount,
+                ':refund_type' => $refundType,
+            ]);
+        }
 
         $pdo->commit();
 
@@ -1160,6 +1224,11 @@ function handle_cancel(): void
            cancellation is persisted (a failed/second cancellation throws before
            this point and never creates a notification). The booking reference
            is the application-level dedup token. */
+        $refundNote = $refundType === 'full'
+            ? ' A full refund of ETB ' . number_format((float) $refundedAmount, 2) . ' was entitled, and the refund request has been sent to ' . $book['company_name'] . ' for processing.'
+            : ($refundType === 'half'
+                ? ' Per the 24-hour cancellation policy, a half refund of ETB ' . number_format((float) $refundedAmount, 2) . ' will be processed by ' . $book['company_name'] . '.'
+                : ' No refund was issued because the booking was not paid.');
         try {
             if ($row !== null) {
                 createNotification(
@@ -1168,7 +1237,7 @@ function handle_cancel(): void
                     'booking',
                     'Booking Cancelled',
                     'Your booking ' . $row['booking_reference'] . ' (' . $row['from_city'] . ' → '
-                        . $row['to_city'] . ') on ' . $row['departure_date'] . ' has been cancelled.',
+                        . $row['to_city'] . ') on ' . $row['departure_date'] . ' has been cancelled.' . $refundNote,
                     'booking-cancelled:' . $row['booking_reference'],
                     'trips'
                 );
@@ -1177,9 +1246,20 @@ function handle_cancel(): void
             /* Best-effort only — never let a notification failure alter the response. */
         }
 
+        if ($refundType === 'full') {
+            $message = 'Your booking was cancelled. You will be fully refunded ETB ' . number_format((float) $refundedAmount, 2) . ' — the refund request has been sent to ' . $book['company_name'] . ' and is paid once the company processes it.';
+        } elseif ($refundType === 'half') {
+            $message = 'Your booking was cancelled. Per the 24-hour cancellation policy, a half refund of ETB ' . number_format((float) $refundedAmount, 2) . ' will be processed by ' . $book['company_name'] . ' — the refund request has been sent to the company.';
+        } else {
+            $message = 'Booking cancelled.';
+        }
+
         auth_response(200, [
             'success' => true,
-            'message' => 'Booking cancelled.',
+            'message' => $message,
+            'refund_type' => $refundType,
+            'refunded_amount' => $refundedAmount,
+            'refund_status' => $refundType === 'none' ? 'none' : 'requested',
             'booking' => booking_payload($pdo, $row),
         ]);
     } catch (BookingBusinessException $e) {
