@@ -81,6 +81,54 @@
         return apiCall('logout', 'POST', {});
     }
 
+    /* ---------- Required account setup (passenger registration) ----------
+       After a passenger registers they must complete their account data
+       (passenger info + refund account) before they can use the account.
+       The dashboard (dashboard.js) opens the profile editor in required
+       mode; this flag remembers the requirement across pages so a fresh
+       registrant cannot bypass it by visiting another page first. */
+    var KEY_PROFILE_REQUIRED = 'etProfileRequired';
+
+    function setProfileRequiredFlag(userId) {
+        if (!window.ETTransportStore || !userId) { return; }
+        window.ETTransportStore.set(KEY_PROFILE_REQUIRED, {
+            userId: String(userId),
+            at: Date.now()
+        });
+    }
+
+    function profileRequiredUserId() {
+        if (!window.ETTransportStore) { return null; }
+        var record = window.ETTransportStore.get(KEY_PROFILE_REQUIRED);
+        return (record && typeof record === 'object' && record.userId)
+            ? String(record.userId) : null;
+    }
+
+    function clearProfileRequiredFlag() {
+        if (window.ETTransportStore) { window.ETTransportStore.remove(KEY_PROFILE_REQUIRED); }
+    }
+
+    /* A freshly registered passenger must complete their account details
+       before proceeding anywhere. Every page except the dashboard sends
+       them to the dashboard's profile editor (which runs the required-mode
+       editor); `next` keeps the original destination so the user returns
+       straight back after the account is complete. */
+    function enforceProfileGate() {
+        getSession().then(function (result) {
+            var data = result.data || {};
+            if (!data.authenticated || !data.user) { return; }
+            if (data.user.role !== 'passenger') { return; }
+
+            var requiredId = profileRequiredUserId();
+            if (!requiredId || requiredId !== String(data.user.id)) { return; }
+            if (/dashboard\.html/i.test(window.location.pathname)) { return; }
+
+            var target = 'dashboard.html?next=' + encodeURIComponent(currentHere()) + '#profile-edit';
+            try { window.location.replace(target); }
+            catch (e) { window.location.href = target; }
+        }).catch(function () { /* no session — nothing to enforce */ });
+    }
+
     var sessionCache = null;
 
     function getSession(force) {
@@ -486,6 +534,15 @@
 
                 setMessage(result.data.message || 'Registration successful.', 'success');
 
+                /* Enforce account data completion after registering: a fresh
+                   passenger must fill their passenger details AND a refund
+                   account. The dashboard opens the editor in required mode
+                   (and the cross-page gate keeps sending them there) until
+                   both are saved. */
+                if (payload.role !== 'company' && result.data.user && result.data.user.id) {
+                    setProfileRequiredFlag(result.data.user.id);
+                }
+
                 if (payload.role === 'company') {
                     form.reset();
                     toggleCompanyFields('passenger');
@@ -738,7 +795,11 @@
         requireAuth: requireAuth,
         requireRole: requireRole,
         roleHome: roleHome,
-        enforcePageGuard: enforcePageGuard
+        enforcePageGuard: enforcePageGuard,
+        enforceProfileGate: enforceProfileGate,
+        setProfileRequiredFlag: setProfileRequiredFlag,
+        profileRequiredUserId: profileRequiredUserId,
+        clearProfileRequiredFlag: clearProfileRequiredFlag
     };
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -750,5 +811,6 @@
         bindAuthCrossLinks();
         fillIdentity();
         enforcePageGuard();
+        enforceProfileGate();
     });
 })();

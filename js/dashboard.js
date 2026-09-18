@@ -1667,8 +1667,99 @@ function closeTicket() {
        profile and greeting can fall back to the real account identity. */
     var sessionUser = null;
 
-    function openProfileModal() {
+    /* Required-account-setup mode. After a passenger registers they must
+       complete their account data (passenger info + refund account) before
+       using the account. While true the profile editor cannot be dismissed
+       until both are saved and the account is marked complete. */
+    var requiredProfileActive = false;
+
+    /* ---------- Required account setup (registration enforcement) ----------
+       The completion state is derived from real data rather than a one-off
+       flag: gender/date-of-birth come from the account (per-user, server
+       backed) and the refund account from the saved profile, so the gate
+       re-applies to any account that is not actually complete. The
+       `etProfileRequired` record armed at registration additionally keeps
+       enforcing the step across pages until it is cleared. */
+    function pendingProfileMatches(user) {
+        if (!user || !window.ETAuth || !window.ETAuth.profileRequiredUserId) { return false; }
+        var id = window.ETAuth.profileRequiredUserId();
+        return !!(id && user.id && id === String(user.id));
+    }
+
+    function savedRefundComplete(p) {
+        var ra = (p && p.refundAccount && typeof p.refundAccount === 'object') ? p.refundAccount : null;
+        if (!ra) { return false; }
+        /* Legacy "my TeleBirr account" records are complete on their own. */
+        if (ra.mode === 'mine') { return true; }
+        return !!(ra.name && ra.bank && ra.number);
+    }
+
+    /* Returns { passenger, refund } for whatever is still missing, or null
+       when the account data is complete. */
+    function profileCompletionMissing(user) {
+        if (!user || user.role !== 'passenger') { return null; }
+        var missing = {};
+        missing.passenger = !(user.gender && user.date_of_birth);
+        missing.refund = !savedRefundComplete(effectiveProfile(user));
+        if (!missing.passenger && !missing.refund) { return null; }
+        return missing;
+    }
+
+    function setPendingProfileRequirement(userId) {
+        if (window.ETAuth && window.ETAuth.setProfileRequiredFlag) {
+            window.ETAuth.setProfileRequiredFlag(userId);
+        }
+    }
+
+    function clearPendingProfileRequirement() {
+        if (window.ETAuth && window.ETAuth.clearProfileRequiredFlag) {
+            window.ETAuth.clearProfileRequiredFlag();
+        }
+    }
+
+    /* Same-site `next` target (mirror of auth.js safeNext): only relative or
+       root-relative page URLs are honoured — never schemes or host names. */
+    function sameSiteNext() {
+        var raw = '';
+        try { raw = new URLSearchParams(window.location.search).get('next') || ''; }
+        catch (e) { return ''; }
+        if (!raw) { return ''; }
+        if (/^[a-z0-9]/i.test(raw) === false && raw.charAt(0) !== '/') { return ''; }
+        if (raw.indexOf('//') === 0) { return ''; }
+        if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) { return ''; }
+        return raw;
+    }
+
+    /* Toggles every piece of chrome that communicates "this is required":
+       the dashboard banner, the modal notice/subtitle, the save label and
+       the disabled close / cancel affordances. */
+    function applyRequiredProfileUI() {
+        var banner = document.getElementById('profile-required-banner');
+        if (banner) { banner.hidden = !requiredProfileActive; }
+        var note = document.getElementById('profile-required-note');
+        if (note) { note.hidden = !requiredProfileActive; }
+        var subtitle = document.getElementById('profile-modal-subtitle');
+        if (subtitle) { subtitle.hidden = requiredProfileActive; }
+        var intro = document.getElementById('profile-form-intro');
+        if (intro) {
+            intro.textContent = requiredProfileActive
+                ? 'These details are required right after registering — fill them once and they are used on every booking.'
+                : 'Pre-fills the passenger form and refund account.';
+        }
+        var titleEl = document.getElementById('profile-modal-title');
+        if (titleEl) { titleEl.textContent = requiredProfileActive ? 'Complete Your Account' : 'Edit Profile'; }
+        var closeX = document.getElementById('profile-modal-close');
+        if (closeX) { closeX.hidden = requiredProfileActive; }
+        var cancel = document.getElementById('profile-cancel-btn');
+        if (cancel) { cancel.hidden = requiredProfileActive; }
+        var saveBtn = document.getElementById('profile-save-btn');
+        if (saveBtn) { saveBtn.textContent = requiredProfileActive ? 'Save & Continue' : 'Save Profile'; }
+    }
+
+    function openProfileModal(required) {
         if (!profileModal) { return; }
+        requiredProfileActive = !!required;
+        applyRequiredProfileUI();
         var p = effectiveProfile(sessionUser);
         document.getElementById('p-full-name').value = p.fullName || '';
         document.getElementById('p-phone-input').value = normalizeLocalPhone(p.phone);
@@ -1715,15 +1806,31 @@ function closeTicket() {
         clearFieldError('p-refund-name');
         clearFieldError('p-refund-bank');
         clearFieldError('p-refund-number');
+        var genderErrReset = document.getElementById('p-gender-err');
+        if (genderErrReset) { genderErrReset.textContent = ''; }
         var info = document.getElementById('p-phone-info');
         if (info) { info.textContent = ''; info.classList.remove('show'); }
         if (profileFormMsg) { profileFormMsg.hidden = true; }
         profileModal.hidden = false;
         document.body.classList.add('modal-open');
+        if (requiredProfileActive) { showSection('profile'); }
         document.getElementById('p-full-name').focus();
     }
 
+    /* While required-account-setup is active every close affordance (the
+       ✕ button, Cancel, the backdrop and the Escape key) is a no-op — the
+       passenger cannot continue until both account sections are saved. */
     function closeProfileModal() {
+        if (requiredProfileActive) { return; }
+        if (!profileModal) { return; }
+        profileModal.hidden = true;
+        document.body.classList.remove('modal-open');
+    }
+
+    /* Programmatic close used after a successful required-mode save. */
+    function forceCloseProfileModal() {
+        requiredProfileActive = false;
+        applyRequiredProfileUI();
         if (!profileModal) { return; }
         profileModal.hidden = true;
         document.body.classList.remove('modal-open');
@@ -2785,7 +2892,7 @@ function closeTicket() {
         var t = String(target).trim();
         if (t === 'profile-edit') {
             showSection('profile');
-            setTimeout(function () { openProfileModal(); }, 60);
+            setTimeout(function () { openProfileModal(requiredProfileActive); }, 60);
             return;
         }
         if (SECTIONS.indexOf(t) !== -1) { showSection(t); return; }
@@ -3250,7 +3357,7 @@ function closeTicket() {
     });
 
     var editProfileBtn = document.getElementById('edit-profile-btn');
-    if (editProfileBtn) { editProfileBtn.addEventListener('click', openProfileModal); }
+    if (editProfileBtn) { editProfileBtn.addEventListener('click', function () { openProfileModal(false); }); }
 
     var markAllBtn = document.getElementById('mark-all-read');
     if (markAllBtn) { markAllBtn.addEventListener('click', markAllRead); }
@@ -3361,6 +3468,7 @@ function closeTicket() {
         profileForm.addEventListener('submit', function (event) {
             event.preventDefault();
             var ok = true;
+            var requireAll = requiredProfileActive;
             var name = document.getElementById('p-full-name').value.trim();
             var email = document.getElementById('p-email-input').value.trim();
             var digits = normalizeLocalPhone(document.getElementById('p-phone-input').value);
@@ -3374,6 +3482,11 @@ function closeTicket() {
             } else {
                 clearFieldError('p-dob');
             }
+            /* Required after registering, optional when editing otherwise. */
+            if (requireAll && !dobIso) {
+                setFieldError('p-dob', 'Date of birth is required.');
+                ok = false;
+            }
 
             if (!name) { setFieldError('p-full-name', 'Full name is required.'); ok = false; }
             else { clearFieldError('p-full-name'); }
@@ -3384,10 +3497,21 @@ function closeTicket() {
             if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setFieldError('p-email-input', 'Please enter a valid email address.'); ok = false; }
             else { clearFieldError('p-email-input'); }
 
+            /* Gender is optional when editing a profile, but REQUIRED right
+               after registering — the passenger data must be complete. */
+            var genderErrEl = document.getElementById('p-gender-err');
+            if (requireAll && !gender) {
+                if (genderErrEl) { genderErrEl.textContent = 'Please select your gender.'; }
+                ok = false;
+            } else if (genderErrEl) {
+                genderErrEl.textContent = '';
+            }
+
             /* Refund account — read directly, the same way as the booking section's
-               form. Fields are optional, but once the user starts an account
-               keep it internally consistent (a bank is needed, and "Other"
-               needs its bank name). */
+               form. Fields are optional in normal edits, but once the user starts
+               an account keep it internally consistent (a bank is needed, and
+               "Other" needs its bank name). Right after registering the whole
+               account is required. */
             var refundBankValue = document.getElementById('p-refund-bank').value;
             var refundAccount = {
                 name: document.getElementById('p-refund-name').value.trim(),
@@ -3404,7 +3528,7 @@ function closeTicket() {
             clearFieldError('p-refund-bank');
             clearFieldError('p-refund-number');
             clearFieldError('p-refund-other');
-            if (refundStarted) {
+            if (refundStarted || requireAll) {
                 if (!refundAccount.name) { setFieldError('p-refund-name', 'Please enter the account name.'); ok = false; }
                 if (!refundAccount.bank) { setFieldError('p-refund-bank', 'Please choose a bank.'); ok = false; }
                 if (refundBankValue === 'Other' && !refundAccount.otherBank) {
@@ -3442,6 +3566,19 @@ function closeTicket() {
                 if (updatedUser) { sessionUser = updatedUser; }
                 setJSON(KEY_PROFILE, savedProfile);
                 renderProfile();
+                if (requiredProfileActive) {
+                    /* Required-mode completed: settle the requirement, unlock
+                       the dashboard and return to the original destination
+                       (booking etc.) when one was waiting. */
+                    clearPendingProfileRequirement();
+                    forceCloseProfileModal();
+                    var capturedNext = sameSiteNext();
+                    toast('Account complete — passenger details and refund account saved.');
+                    if (capturedNext) {
+                        setTimeout(function () { window.location.href = capturedNext; }, 350);
+                    }
+                    return;
+                }
                 closeProfileModal();
                 toast('Your profile has been updated.');
             }
@@ -4015,7 +4152,7 @@ function closeTicket() {
         if (hash === 'profile-edit') { hash = 'profile'; }
         showSection(hash);
         if ((window.location.hash || '').slice(1) === 'profile-edit') {
-            setTimeout(function () { openProfileModal(); }, 60);
+            setTimeout(function () { openProfileModal(requiredProfileActive); }, 60);
         }
     }
 
@@ -4061,6 +4198,30 @@ function closeTicket() {
         if (dashUI) { dashUI.hidden = false; }
     }
 
+    /* Opens the profile editor in required mode and shows the setup banner
+       until the passenger's own details AND a refund account are both saved.
+       Runs every time the dashboard loads for an account that isn't complete;
+       the requirement flag is also re-armed so leaving the page keeps
+       returning here until the account is done. */
+    function enforceProfileCompletionGate(user) {
+        if (!user || user.role !== 'passenger') { return; }
+
+        var missing = profileCompletionMissing(user);
+        var pending = pendingProfileMatches(user);
+
+        /* Data completeness is the source of truth: a genuinely complete
+           account is never gated, even if a stale requirement flag is left
+           over from an earlier visit. */
+        if (!missing) {
+            if (pending) { clearPendingProfileRequirement(); }
+            return;
+        }
+
+        if (!pending && user.id) { setPendingProfileRequirement(user.id); }
+
+        openProfileModal(true);
+    }
+
     function start() {
         if (!window.ETAuth || !window.ETAuth.getCurrentUser) {
             /* Auth layer unavailable — keep the page fail-closed on the gate. */
@@ -4072,6 +4233,10 @@ function closeTicket() {
                 sessionUser = user;
                 revealDashboard();
                 init(user);
+                /* After registering (or for any account still missing its
+                   required data), hold the profile editor open until the
+                   passenger info and refund account are both saved. */
+                enforceProfileCompletionGate(user);
             } else {
                 showDashboardGate(user);
             }

@@ -121,6 +121,18 @@
             <!-- ============ Dashboard content ============ -->
             <div class="dashboard-content">
 
+                <!-- ============ Required profile setup banner ============
+                     Shown after a passenger registers (and kept up until the
+                     account is complete): the passenger must fill their own
+                     details and a refund account before using the dashboard. -->
+                <div id="profile-required-banner" class="profile-required-banner" role="alert" hidden>
+                    <span class="profile-required-banner-ic" aria-hidden="true">&#128203;</span>
+                    <div class="profile-required-banner-copy">
+                        <strong>Action required &mdash; finish your account setup</strong>
+                        <p>Fill in your passenger details (gender and date of birth) and a refund account. Until both are saved you can&rsquo;t continue booking.</p>
+                    </div>
+                </div>
+
                 <!-- ============ Overview ============ -->
                 <section class="dash-section" id="section-overview" aria-labelledby="overview-title">
                     <div class="dash-section-head">
@@ -553,12 +565,13 @@
             <div class="dash-modal-head">
                 <div class="profile-modal-head-copy">
                     <h2 id="profile-modal-title">Edit Profile</h2>
-                    <p>Saved once, used on every booking.</p>
+                    <p id="profile-modal-subtitle">Saved once, used on every booking.</p>
+                    <p id="profile-required-note" class="profile-required-note" hidden>Completing your account &mdash; passenger details and a refund account are required after registering. Please fill both to continue.</p>
                 </div>
                 <button type="button" id="profile-modal-close" class="dash-modal-close" aria-label="Close profile editor">&times;</button>
             </div>
             <form id="profile-form" novalidate>
-                <p class="profile-form-intro">Pre-fills the passenger form and refund account.</p>
+                <p id="profile-form-intro" class="profile-form-intro">Pre-fills the passenger form and refund account.</p>
 
                 <!-- 1. Contact -->
                 <section class="profile-edit-section">
@@ -611,6 +624,7 @@
                                 <label class="profile-pill"><input type="radio" name="gender" value="Female"><span>Female</span></label>
                                 <label class="profile-pill"><input type="radio" name="gender" value="Prefer not to say"><span>Prefer not to say</span></label>
                             </div>
+                            <span class="field-error" id="p-gender-err" role="alert"></span>
                         </div>
                         <div class="form-row profile-info-row">
                             <div class="form-group">

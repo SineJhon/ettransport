@@ -8405,6 +8405,58 @@ body.company-page .rv-demo-note {
 
 #profile-form .profile-form-intro { margin: 0 0 0.9rem; font-size: 0.87rem; line-height: 1.5; color: #6b7f76; }
 
+/* Required-account-setup notice used right after passenger registration:
+   a page banner on the dashboard plus a notice inside the editor. */
+.profile-required-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    margin: 0 0 1.25rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid #d9b84a;
+    border-left: 4px solid #c59b2b;
+    background: #fff8e6;
+    border-radius: 12px;
+    box-shadow: 0 5px 16px rgba(140, 110, 30, 0.10);
+}
+.profile-required-banner[hidden] { display: none; }
+.profile-required-banner-ic {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 10px;
+    background: #f6e2ae;
+    color: #7a5b10;
+    font-size: 1.05rem;
+}
+.profile-required-banner-copy { display: grid; gap: 0.15rem; min-width: 0; }
+.profile-required-banner-copy strong {
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: #6b4f0a;
+}
+.profile-required-banner-copy p {
+    margin: 0;
+    font-size: 0.84rem;
+    line-height: 1.5;
+    color: #8a6d1f;
+}
+
+#profile-modal .profile-required-note {
+    margin: 0.3rem 0 0;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    font-weight: 700;
+    color: #8a5a00;
+}
+#profile-modal .profile-required-note[hidden] { display: none; }
+#profile-modal .dash-modal-close[hidden] { display: none; }
+#profile-cancel-btn[hidden] { display: none; }
+#profile-form #p-gender-err { margin: 0.35rem 0 0; }
+
 /* Section cards: header (icon + title + description) over a soft body. */
 .profile-edit-section + .profile-edit-section { margin-top: 1.1rem; }
 .profile-edit-head {
