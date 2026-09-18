@@ -346,21 +346,33 @@
        Full refund when cancelled within 24h of booking AND still >= 6h before
        departure; otherwise half. Only paid bookings get a refund. */
     function bookingRefundPolicy(b) {
-        if (!b || b.payment_status !== 'paid') { return { type: 'none', amount: 0 }; }
+        if (!b || b.payment_status !== 'paid') { return { type: 'none', amount: 0, ageHours: null, toDepartHours: null }; }
         var created = new Date(String(b.created_at || '').replace(' ', 'T'));
         var dep = null;
         if (b.date) {
             dep = new Date(String(b.date) + 'T' + String(b.depart || '00:00') + ':00');
         }
-        if (isNaN(created.getTime()) || !dep || isNaN(dep.getTime())) { return { type: 'none', amount: 0 }; }
+        if (isNaN(created.getTime()) || !dep || isNaN(dep.getTime())) { return { type: 'none', amount: 0, ageHours: null, toDepartHours: null }; }
         var now = new Date();
-        var ageMs = now - created;
-        var toDepMs = dep - now;
+        var ageHours = (now - created) / 3600000.0;
+        var toDepartHours = (dep - now) / 3600000.0;
         var total = Number(b.total) || 0;
-        if (ageMs < 24 * 3600 * 1000 && toDepMs >= 6 * 3600 * 1000) {
-            return { type: 'full', amount: total };
+        if (ageHours < 24.0 && toDepartHours >= 6.0) {
+            return { type: 'full', amount: total, ageHours: ageHours, toDepartHours: toDepartHours };
         }
-        return { type: 'half', amount: Math.round(total / 2 * 100) / 100 };
+        return { type: 'half', amount: Math.round(total / 2 * 100) / 100, ageHours: ageHours, toDepartHours: toDepartHours };
+    }
+
+    /* Compact duration label, e.g. 2d 3h / 9h 15m / 40m. */
+    function durationLabel(totalMin) {
+        totalMin = Math.max(0, Math.round(totalMin));
+        if (totalMin < 1) { return 'a moment'; }
+        var d = Math.floor(totalMin / 1440);
+        var h = Math.floor((totalMin % 1440) / 60);
+        var m = totalMin % 60;
+        if (d > 0) { return d + 'd' + (h ? ' ' + h + 'h' : '') + (m ? ' ' + m + 'm' : ''); }
+        if (h > 0) { return h + (m ? 'h ' + m + 'm' : 'h'); }
+        return m + 'm';
     }
     function statusBadge(b) {
         var s = bookingStatus(b);
@@ -932,23 +944,45 @@ function closeTicket() {
         document.getElementById('cancel-seats').textContent =
             b.seatLabel || (Array.isArray(b.seats) ? b.seats.join(', ') : '1');
 
-        /* Refund notice — the customer must see, BEFORE confirming, whether a
-           full or half refund applies (mirror of the server-side policy). */
-        var refundNote = document.getElementById('cancel-refund-note');
-        if (refundNote) {
-            var policy = bookingRefundPolicy(b);
-            if (policy.type === 'full') {
-                refundNote.textContent = 'This booking is within the free-cancellation window, so cancelling now entitles you to a FULL refund of '
-                    + formatPrice(policy.amount) + '. The refund request will be sent to the company and paid once the company processes it.';
-                refundNote.hidden = false;
-            } else if (policy.type === 'half') {
-                refundNote.textContent = 'Cancelling after 24 hours of booking entitles you to a HALF refund of '
-                    + formatPrice(policy.amount) + '. The refund will be processed by the company from their dashboard.';
-                refundNote.hidden = false;
-            } else {
-                refundNote.textContent = '';
-                refundNote.hidden = true;
+        /* Refund policy panel — the customer must see, BEFORE confirming, which
+           refund law applies (24h booking window / 6h departure window), the
+           exact amount they will get back and where it will be sent. Mirror of
+           the server-side rule in api/booking.php?action=cancel. */
+        var policy = bookingRefundPolicy(b);
+        var panel = document.getElementById('cancel-refund-note');
+        if (panel && policy.type !== 'none') {
+            var chip = document.getElementById('cancel-refund-chip');
+            if (chip) {
+                chip.textContent = policy.type === 'full' ? 'Full refund' : 'Half refund';
+                chip.className = 'cancel-refund-chip ' + policy.type;
             }
+            var rule = document.getElementById('cancel-refund-rule');
+            if (rule) {
+                rule.textContent = policy.type === 'full'
+                    ? 'Within 24 hours of booking and at least 6 hours before departure — you get 100% of the ticket price back.'
+                    : 'More than 24 hours after booking (or under 6 hours before departure) — you get 50% of the ticket price back.';
+            }
+            var meta = document.getElementById('cancel-refund-meta');
+            if (meta) {
+                var ageMin = Math.round(policy.ageHours * 60);
+                var depMin = Math.round(policy.toDepartHours * 60);
+                meta.textContent = 'Booked ' + durationLabel(ageMin) + ' ago \u00B7 '
+                    + (depMin < 0 ? 'bus has already departed' : 'departs in ' + durationLabel(depMin));
+            }
+            var amt = document.getElementById('cancel-refund-amount');
+            if (amt) { amt.textContent = formatPrice(policy.amount); }
+            var dest = document.getElementById('cancel-refund-dest');
+            if (dest) {
+                var acc = (b && b.refundAccount) || {};
+                var parts = [];
+                if (acc.name) { parts.push(acc.name); }
+                if (acc.bank) { parts.push(acc.bank); }
+                if (acc.number) { parts.push(acc.number); }
+                dest.textContent = parts.length ? parts.join(' \u00B7 ') : 'your saved refund account';
+            }
+            panel.hidden = false;
+        } else if (panel) {
+            panel.hidden = true;
         }
 
         var keep = document.getElementById('cancel-keep-btn');
@@ -3914,8 +3948,17 @@ function closeTicket() {
                     if (!b0 || !b0.reference) { continue; }
                     var api0 = byRef[b0.reference];
                     if (api0) {
+                        /* Server record wins: refresh every user-facing field so
+                           the cancel dialog always sees payment_status /
+                           created_at / refundAccount (the refund-window inputs). */
                         b0.id = api0.id;
-                        if (api0.status) { b0.status = api0.status; }
+                        b0.status = api0.status;
+                        b0.date = api0.date;
+                        b0.depart = api0.depart;
+                        b0.total = api0.total;
+                        b0.created_at = api0.created_at;
+                        b0.payment_status = api0.payment_status;
+                        b0.refundAccount = api0.refundAccount;
                     }
                     if (!seen[b0.reference]) { seen[b0.reference] = 1; merged.push(b0); }
                 }

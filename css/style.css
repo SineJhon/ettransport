@@ -5763,7 +5763,21 @@ body.companies .company-empty-hint {
 .cancel-summary dt { color: var(--color-muted); font-size: 0.9rem; }
 .cancel-summary dd { color: var(--color-dark); font-weight: 700; margin: 0; text-align: right; }
 .cancel-note { color: var(--color-muted); font-size: 0.85rem; margin-bottom: var(--space-md); }
-.cancel-refund-note { color: #1d7a3f; background-color: #e7f6ec; border: 1px solid #b9dbc4; border-radius: var(--radius); padding: 0.6rem 0.8rem; margin: 0 0 var(--space-md); font-size: 0.85rem; line-height: 1.45; }
+.cancel-refund-note { display: block; background-color: #eef7f0; border: 1px solid #c3dcc9; border-radius: 12px; padding: .7rem .85rem; margin: 0 0 var(--space-md); font-size: .84rem; line-height: 1.5; }
+.cancel-refund-note[hidden] { display: none; }
+.cancel-refund-head { display: flex; align-items: center; }
+.cancel-refund-head .cancel-refund-title { font: 800 .7rem/1 var(--font-sans); letter-spacing: .05em; text-transform: uppercase; color: #5c6d67; }
+.cancel-refund-chip { display: inline-block; margin-left: auto; padding: .16rem .6rem; border-radius: 20px; font-size: .7rem; font-weight: 800; text-transform: uppercase; white-space: nowrap; }
+.cancel-refund-chip.full { background: #dcf5e6; color: #157a3c; }
+.cancel-refund-chip.half { background: #fdeeca; color: #8a4b1f; }
+.cancel-refund-rule { margin: .25rem 0 .1rem; color: #163a33; }
+.cancel-refund-meta { margin: 0; color: #68787a; font-size: .76rem; }
+.cancel-refund-amount-row { display: flex; align-items: center; justify-content: space-between; padding: .35rem .55rem; background: #e3f1e7; border-radius: 9px; }
+.cancel-refund-amount-row span { font-size: .78rem; color: #5c6d67; font-weight: 600; }
+.cancel-refund-amount-row strong { font-size: 1.02rem; color: #14532d; font-weight: 800; }
+.cancel-refund-dest { margin: .1rem 0 0; color: #5c6d67; font-size: .78rem; }
+.cancel-refund-dest b { color: #163a33; font-weight: 700; }
+.cancel-refund-sub { margin: .15rem 0 0; color: #8aa299; font-size: .74rem; }
 .cancel-msg.error {
     color: #b91c1c;
     background-color: #fee2e2;

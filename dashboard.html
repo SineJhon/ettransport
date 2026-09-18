@@ -521,7 +521,20 @@
                 <div><dt>Seats</dt><dd id="cancel-seats"></dd></div>
             </dl>
             <p class="cancel-note">Your booked seats will be released and can be booked by other passengers.</p>
-            <p id="cancel-refund-note" class="cancel-refund-note" hidden role="status"></p>
+            <div id="cancel-refund-note" class="cancel-refund-note" hidden role="status">
+                <div class="cancel-refund-head">
+                    <span class="cancel-refund-title">Refund policy</span>
+                    <span class="cancel-refund-chip" id="cancel-refund-chip">&mdash;</span>
+                </div>
+                <p class="cancel-refund-rule" id="cancel-refund-rule"></p>
+                <p class="cancel-refund-meta" id="cancel-refund-meta"></p>
+                <div class="cancel-refund-amount-row">
+                    <span>You will be refunded</span>
+                    <strong id="cancel-refund-amount">ETB 0</strong>
+                </div>
+                <p class="cancel-refund-dest">Sent to <b id="cancel-refund-dest"></b></p>
+                <p class="cancel-refund-sub">A refund request is sent to the company and is paid after the company processes it.</p>
+            </div>
             <p id="cancel-msg" class="cancel-msg" role="alert" hidden></p>
             <div class="cancel-actions">
                 <button type="button" id="cancel-keep-btn" class="btn btn-secondary">Keep my booking</button>

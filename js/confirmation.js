@@ -265,7 +265,13 @@ var appEl = document.getElementById('confirmation-app');
             tripType: trip.type || '',
             status: bookingStatusText,
             real: true,
-            bookedAt: new Date().toISOString()
+            bookedAt: new Date().toISOString(),
+            /* Alias the creation time + payment state so the dashboard's
+               cancellation refund-policy panel can compute the 24h/6h window
+               even before the server sync enriches this record. */
+            created_at: new Date().toISOString(),
+            payment_status: 'paid',
+            refundAccount: {}
         };
 
         var existing = historyList();
