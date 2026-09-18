@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Enter passenger details for your intercity bus trip with ET Transport.">
     <title>Passenger Information | ET Transport</title>
-    <link rel="stylesheet" href="css/style.css?v=20260903-refund-bank-toggle">
+    <link rel="stylesheet" href="css/style.css?v=20260918-prefill-prompt">
     <link rel="icon" type="image/x-icon" href="assets/icons/favicon.svg">
 <!-- Fonts (DM Sans + Outfit) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -123,6 +123,28 @@
         </div>
     </main>
 
+    <!-- ============================================
+         Saved-details prefill prompt — asks whether to
+         reuse the passenger profile details for this
+         booking. "Use saved details" fills passenger 1
+         and the refund account, then LOCKS the filled
+         fields (see js/passenger.js + css/style.css).
+         ============================================ -->
+    <div id="prefill-modal" class="prefill-modal" role="dialog" aria-modal="true" aria-labelledby="prefill-modal-title" hidden>
+        <div class="prefill-modal-box">
+            <button type="button" id="prefill-modal-close" class="prefill-modal-close" aria-label="Close dialog">&times;</button>
+            <div class="prefill-modal-icon" aria-hidden="true">&#128100;</div>
+            <h2 id="prefill-modal-title">Use your saved details?</h2>
+            <p class="prefill-modal-sub">We found a passenger profile saved on this device. Using it fills the form for passenger 1 and the refund account, then locks those fields for this booking.</p>
+            <dl class="prefill-preview" id="prefill-preview"></dl>
+            <div class="prefill-modal-actions">
+                <button type="button" id="prefill-yes" class="btn btn-primary">Use saved details</button>
+                <button type="button" id="prefill-no" class="btn btn-secondary">Enter manually</button>
+            </div>
+            <p class="prefill-modal-foot">You can unlock and edit any filled field on this page at any time.</p>
+        </div>
+    </div>
+
     <!-- ============ Footer ============ -->
     <footer class="site-footer">
         <div class="container footer-grid">
@@ -176,6 +198,6 @@
         <script src="js/auth.js"></script>
     <script src="js/notifications.js"></script>
     <script src="js/data.js"></script>
-    <script src="js/passenger.js?v=20260903-refund-bank"></script>
+    <script src="js/passenger.js?v=20260918-prefill-prompt"></script>
 </body>
 </html>

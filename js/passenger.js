@@ -360,10 +360,9 @@
     /* ============================================================
        Saved-profile pre-fill — the dashboard's "Edit Profile" modal
        stores reusable passenger details plus a refund account. When
-       the passenger enabled "pre-fill my bookings", apply the saved
-       details to their own card (passenger 1) and the saved refund
-       account to the refund card, so details are entered once and
-       reused on every booking.
+       a profile is saved on this device, the passenger page asks
+       whether to reuse it; choosing "Use saved details" fills
+       passenger 1 and the refund account, then locks those fields.
        ============================================================ */
     function loadSavedProfile() {
         if (!window.ETTransportStore) { return null; }
@@ -382,62 +381,225 @@
         return (age >= 1 && age <= 100) ? String(age) : '';
     }
 
-    function prefillFromProfile() {
-        var profile = loadSavedProfile();
-        if (!profile) { return; }
+    /* ============================================================
+       Saved-profile pre-fill — gated behind an explicit prompt.
+       When a profile is found, the popup asks whether to reuse it.
+       "Use saved details" fills passenger 1 + the refund account
+       and LOCKS the filled fields (inputs read-only, selects
+       disabled); each locked banner has an "Edit" link to break
+       the lock. "Enter manually" keeps the whole form blank.
+       ============================================================ */
+    var savedProfile = loadSavedProfile();
 
-        /* Refund account — reused on every booking once entered in the profile. */
+    /* Convert a stored international number (+251 9XX...) back to the
+       local 9-digit value the phone field expects. */
+    function localFromStored(full) {
+        var d = String(full || '').replace(/\D/g, '');
+        if (d.length === 12 && d.slice(0, 3) === '251') { d = d.slice(3); }
+        return d;
+    }
+
+    /* Lock / unlock one field — inputs become read-only, selects disabled. */
+    function lockField(el) {
+        if (!el) { return; }
+        el.dataset.prefilled = '1';
+        if (el.tagName === 'SELECT') { el.disabled = true; }
+        else { el.readOnly = true; }
+    }
+
+    function unlockField(el) {
+        if (!el) { return; }
+        el.dataset.prefilled = '';
+        if (el.tagName === 'SELECT') { el.disabled = false; }
+        else { el.readOnly = false; }
+    }
+
+    /* Fill a field only when a value exists, then lock it. */
+    function fillLocked(input, value) {
+        if (!input || !value) { return; }
+        input.value = value;
+        lockField(input);
+    }
+
+    function fillRefundFromProfile(profile) {
         var ra = profile.refundAccount;
         var rName = document.getElementById('refund-account-name');
         var rBank = document.getElementById('refund-account-type');
         var rOther = document.getElementById('refund-account-other');
         var rOtherWrap = document.getElementById('refund-account-other-wrap');
         var rNum = document.getElementById('refund-account-number');
-        if (ra && rName && rBank) {
-            var nameVal, bankVal, otherVal = '', numVal;
-            if (ra.mode === 'mine') {
-                nameVal = profile.fullName || '';
-                bankVal = 'TeleBirr';
-                numVal = ra.number || normalizeLocal(profile.phone || '');
-            } else {
-                nameVal = ra.name || '';
-                bankVal = ra.bank || '';
-                otherVal = (ra.bank === 'Other' && ra.otherBank) ? ra.otherBank : '';
-                numVal = ra.number || '';
-            }
-            rName.value = nameVal;
-            rBank.value = bankVal;
-            if (rNum) { rNum.value = numVal; }
-            if (rOther) { rOther.value = otherVal; }
-            if (rOtherWrap) { rOtherWrap.hidden = (bankVal !== 'Other'); }
-        }
+        if (!ra || !rName || !rBank) { return; }
 
-        /* Passenger card 1 (the traveller themselves) — only when pre-fill was
-           enabled in the profile so a new booking can still start blank. */
-        if (!profile.prefillBooking || passengerCards.length < 1) { return; }
+        var nameVal = '', bankVal = '', otherVal = '', numVal = '';
+        if (ra.mode === 'mine') {
+            nameVal = profile.fullName || '';
+            bankVal = 'TeleBirr';
+            numVal = ra.number || localFromStored(profile.phone || '');
+        } else {
+            nameVal = ra.name || '';
+            bankVal = ra.bank || '';
+            otherVal = (ra.bank === 'Other' && ra.otherBank) ? ra.otherBank : '';
+            numVal = ra.number || '';
+        }
+        fillLocked(rName, nameVal);
+        fillLocked(rBank, bankVal);
+        if (rNum) { fillLocked(rNum, numVal); }
+        if (rOther) { fillLocked(rOther, otherVal); }
+        if (rOtherWrap) { rOtherWrap.hidden = (bankVal !== 'Other'); }
+    }
+
+    function fillPassengerFromProfile(profile) {
         var card = passengerCards[0];
-        var nameInput = card.querySelector('.p-name');
-        if (nameInput && profile.fullName) { nameInput.value = profile.fullName; }
+        if (!card) { return; }
+        fillLocked(card.querySelector('.p-name'), profile.fullName);
         if (profile.phone) {
             var phoneInput = card.querySelector('.p-phone');
-            if (phoneInput) { phoneInput.value = normalizeLocal(profile.phone); }
+            if (phoneInput) {
+                phoneInput.value = localFromStored(profile.phone);
+                lockField(phoneInput);
+            }
         }
-        if (profile.email) {
-            var emailInput = card.querySelector('.p-email');
-            if (emailInput) { emailInput.value = profile.email; }
-        }
+        fillLocked(card.querySelector('.p-email'), profile.email);
         if (profile.gender === 'Male' || profile.gender === 'Female') {
             var genderSel = card.querySelector('.p-gender');
-            if (genderSel) { genderSel.value = profile.gender; }
+            if (genderSel) { genderSel.value = profile.gender; lockField(genderSel); }
         }
         var ageInput = card.querySelector('.p-age');
         if (ageInput) {
             var savedAge = ageFromDob(profile.dob);
-            if (savedAge) { ageInput.value = savedAge; }
+            if (savedAge) { ageInput.value = savedAge; lockField(ageInput); }
         }
     }
 
-    prefillFromProfile();
+    /* -------- Locked-banner notes + unlock links -------- */
+    function hasPrefilled(el) {
+        return !!(el && el.querySelector('[data-prefilled="1"]'));
+    }
+
+    function addPassengerLockNote(card) {
+        var head = card.querySelector('.passenger-head');
+        var note = document.createElement('div');
+        note.className = 'prefill-lock-note';
+        note.innerHTML =
+            '<span class="prefill-lock-ic" aria-hidden="true">&#128274;</span>' +
+            '<span class="prefill-lock-copy">Filled from your saved profile &mdash; locked for this booking.</span>' +
+            '<button type="button" class="prefill-unlock-link" data-unlock="passenger">Edit</button>';
+        if (head && head.nextElementSibling) { card.insertBefore(note, head.nextElementSibling); }
+        else { card.appendChild(note); }
+    }
+
+    function addRefundLockNote() {
+        var card = document.getElementById('refund-account-card');
+        if (!card) { return; }
+        var hint = card.querySelector('.refund-account-hint');
+        var note = document.createElement('div');
+        note.className = 'prefill-lock-note';
+        note.innerHTML =
+            '<span class="prefill-lock-ic" aria-hidden="true">&#128274;</span>' +
+            '<span class="prefill-lock-copy">Filled from your saved profile &mdash; locked for this booking.</span>' +
+            '<button type="button" class="prefill-unlock-link" data-unlock="refund">Edit</button>';
+        if (hint && hint.nextElementSibling) { card.insertBefore(note, hint.nextElementSibling); }
+        else { card.appendChild(note); }
+    }
+
+    function unlockCardFields() {
+        var card = passengerCards[0];
+        if (!card) { return; }
+        ['.p-name', '.p-age', '.p-gender', '.p-phone', '.p-email'].forEach(function (sel) {
+            unlockField(card.querySelector(sel));
+        });
+        var note = card.querySelector('.prefill-lock-note');
+        if (note) { note.remove(); }
+    }
+
+    function unlockRefundFields() {
+        ['refund-account-name', 'refund-account-type', 'refund-account-other', 'refund-account-number'].forEach(function (id) {
+            unlockField(document.getElementById(id));
+        });
+        var card = document.getElementById('refund-account-card');
+        var note = card ? card.querySelector('.prefill-lock-note') : null;
+        if (note) { note.remove(); }
+    }
+
+    function applyPrefill(profile) {
+        fillRefundFromProfile(profile);
+        fillPassengerFromProfile(profile);
+
+        if (hasPrefilled(passengerCards[0])) { addPassengerLockNote(passengerCards[0]); }
+        if (hasPrefilled(document.getElementById('refund-account-card'))) { addRefundLockNote(); }
+
+        closePrefillModal();
+        if (cardsAllValid()) { updatePayState(); }
+    }
+
+    /* -------- Prefill prompt modal (ask before filling anything) -------- */
+    var prefillModal = document.getElementById('prefill-modal');
+    var prefillYesBtn = document.getElementById('prefill-yes');
+    var prefillNoBtn = document.getElementById('prefill-no');
+    var prefillCloseBtn = document.getElementById('prefill-modal-close');
+
+    function closePrefillModal() {
+        if (prefillModal) { prefillModal.hidden = true; }
+        document.body.classList.remove('modal-open');
+    }
+
+    function openPrefillModal(profile) {
+        if (!prefillModal) { return; }
+        var preview = document.getElementById('prefill-preview');
+        if (preview) {
+            preview.innerHTML = '';
+            var ra = profile.refundAccount || null;
+            var rows = [
+                ['Passenger', profile.fullName || ''],
+                ['Phone', profile.phone || ''],
+                ['Email', profile.email || ''],
+                ['Refund account', (ra && (ra.mode === 'mine' ? 'TeleBirr' : ra.bank)) || '']
+            ];
+            for (var i = 0; i < rows.length; i++) {
+                if (!rows[i][1]) { continue; }
+                var dt = document.createElement('dt');
+                dt.textContent = rows[i][0];
+                var dd = document.createElement('dd');
+                dd.textContent = rows[i][1];
+                preview.appendChild(dt);
+                preview.appendChild(dd);
+            }
+        }
+        prefillModal.hidden = false;
+        document.body.classList.add('modal-open');
+        /* The profile's own prefill preference sets the default choice. */
+        var defaultBtn = profile.prefillBooking ? prefillYesBtn : prefillNoBtn;
+        if (defaultBtn) { defaultBtn.focus(); }
+    }
+
+    function skipPrefill() {
+        closePrefillModal();   /* form stays blank & editable */
+    }
+
+    if (prefillYesBtn) {
+        prefillYesBtn.addEventListener('click', function () {
+            if (savedProfile) { applyPrefill(savedProfile); }
+        });
+    }
+    if (prefillNoBtn) { prefillNoBtn.addEventListener('click', skipPrefill); }
+    if (prefillCloseBtn) { prefillCloseBtn.addEventListener('click', skipPrefill); }
+
+    /* Unlock links inside the locked banners (both cards). */
+    document.addEventListener('click', function (event) {
+        var el = event.target;
+        var btn = (el && el.closest) ? el.closest('.prefill-unlock-link') : null;
+        if (!btn) { return; }
+        if (btn.dataset.unlock === 'passenger') { unlockCardFields(); }
+        else if (btn.dataset.unlock === 'refund') { unlockRefundFields(); }
+        updatePayState();
+    });
+
+    /* Escape also backs out of the prompt. */
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && prefillModal && !prefillModal.hidden) {
+            skipPrefill();
+        }
+    });
 
     /* Enable "Continue to Payment" only when the pre-filled details are
        complete; skip early error markers so "Prefer not to say" profiles
@@ -454,7 +616,13 @@
         }
         return true;
     }
-    if (cardsAllValid()) { updatePayState(); }
+    /* Ask once before filling anything — the popup only appears when a
+       saved profile exists; otherwise the form simply starts blank. */
+    if (savedProfile) {
+        openPrefillModal(savedProfile);
+    } else if (cardsAllValid()) {
+        updatePayState();
+    }
 
     /* -------- Refund account bank toggle (show "Other" text when selected) -------- */
     var refundBankTypeEl = document.getElementById('refund-account-type');
