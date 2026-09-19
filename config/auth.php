@@ -40,6 +40,10 @@ function normalize_user_row(array $row): array
         'phone' => $row['phone'],
         'gender' => $row['gender'] ?? null,
         'date_of_birth' => $row['date_of_birth'] ?? null,
+        'refund_account_name' => $row['refund_account_name'] ?? null,
+        'refund_account_number' => $row['refund_account_number'] ?? null,
+        'refund_bank' => $row['refund_bank'] ?? null,
+        'prefill_booking' => isset($row['prefill_booking']) ? (int) $row['prefill_booking'] : 0,
         'role' => $row['role'],
         'status' => $row['status'],
         'company_status' => $row['company_status'] ?? null,
@@ -49,7 +53,9 @@ function normalize_user_row(array $row): array
 
 function fetch_user_by_id(int $userId): ?array
 {
-    $sql = 'SELECT u.id, u.name, u.email, u.phone, u.gender, u.date_of_birth, u.role, u.status, c.status AS company_status, c.listed AS company_listed
+    $sql = 'SELECT u.id, u.name, u.email, u.phone, u.gender, u.date_of_birth,
+                   u.refund_account_name, u.refund_account_number, u.refund_bank, u.prefill_booking,
+                   u.role, u.status, c.status AS company_status, c.listed AS company_listed
             FROM users u
             LEFT JOIN companies c ON c.user_id = u.id
             WHERE u.id = :id

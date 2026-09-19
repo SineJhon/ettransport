@@ -582,6 +582,61 @@ function ensure_schema_columns(PDO $pdo): void
         if ((int) $stmt->fetchColumn() === 0) {
             $pdo->exec("ALTER TABLE notifications ADD COLUMN target VARCHAR(120) DEFAULT NULL AFTER type");
         }
+
+        /* users.refund_account_name / refund_account_number / refund_bank /
+           users.prefill_booking — the passenger's saved refund destination
+           and "pre-save my data" toggle, persisted per-account so the
+           post-registration completion requirement survives logins and
+           devices instead of living only in the browser's sessionStorage.
+           Fresh installs already get the columns from schema.sql; this adds
+           them to databases created before they existed. */
+        $stmt = $pdo->prepare(
+            "SELECT COUNT(*)
+               FROM information_schema.columns
+              WHERE table_schema = DATABASE()
+                AND table_name = 'users'
+                AND column_name = 'refund_account_name'"
+        );
+        $stmt->execute();
+        if ((int) $stmt->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE users ADD COLUMN refund_account_name VARCHAR(120) DEFAULT NULL AFTER date_of_birth");
+        }
+
+        $stmt = $pdo->prepare(
+            "SELECT COUNT(*)
+               FROM information_schema.columns
+              WHERE table_schema = DATABASE()
+                AND table_name = 'users'
+                AND column_name = 'refund_account_number'"
+        );
+        $stmt->execute();
+        if ((int) $stmt->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE users ADD COLUMN refund_account_number VARCHAR(50) DEFAULT NULL AFTER refund_account_name");
+        }
+
+        $stmt = $pdo->prepare(
+            "SELECT COUNT(*)
+               FROM information_schema.columns
+              WHERE table_schema = DATABASE()
+                AND table_name = 'users'
+                AND column_name = 'refund_bank'"
+        );
+        $stmt->execute();
+        if ((int) $stmt->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE users ADD COLUMN refund_bank VARCHAR(50) DEFAULT NULL AFTER refund_account_number");
+        }
+
+        $stmt = $pdo->prepare(
+            "SELECT COUNT(*)
+               FROM information_schema.columns
+              WHERE table_schema = DATABASE()
+                AND table_name = 'users'
+                AND column_name = 'prefill_booking'"
+        );
+        $stmt->execute();
+        if ((int) $stmt->fetchColumn() === 0) {
+            $pdo->exec("ALTER TABLE users ADD COLUMN prefill_booking TINYINT(1) NOT NULL DEFAULT 0 AFTER refund_bank");
+        }
     } catch (Throwable $e) {
         /* Non-fatal on upgrade path — surfaces only if the app cannot query the schema. */
     }

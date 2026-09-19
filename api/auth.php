@@ -86,6 +86,10 @@ function user_payload(array $user): array
         'phone' => $user['phone'],
         'gender' => $user['gender'] ?? null,
         'date_of_birth' => $user['date_of_birth'] ?? null,
+        'refund_account_name' => $user['refund_account_name'] ?? null,
+        'refund_account_number' => $user['refund_account_number'] ?? null,
+        'refund_bank' => $user['refund_bank'] ?? null,
+        'prefill_booking' => isset($user['prefill_booking']) ? (int) $user['prefill_booking'] : 0,
         'role' => $user['role'],
         'status' => $user['status'],
         'companyStatus' => $user['company_status'] ?? null,
@@ -438,6 +442,35 @@ function handle_update_profile(): void
         $dobValue = $dobTime->format('Y-m-d');
     }
 
+    /* Refund destination account + "pre-save my data" toggle. These are
+       persisted per-account (like gender / date_of_birth), NOT just in the
+       browser, so the post-registration account-completion requirement is
+       satisfied once and stays satisfied across logins and devices. */
+    $refundAccountName = clean_text($input['refund_account_name'] ?? '');
+    $refundAccountNumber = clean_text($input['refund_account_number'] ?? '');
+    $refundBank = clean_text($input['refund_bank'] ?? '');
+    $refundBankOther = clean_text($input['refund_bank_other'] ?? '');
+
+    /* "Other" keeps the passenger-typed bank name: the real bank label is
+       stored so the value round-trips instead of being dropped. */
+    if ($refundBank === 'Other' && $refundBankOther !== '') {
+        $refundBank = $refundBankOther;
+    }
+
+    if (mb_strlen($refundAccountName) > 120) {
+        auth_response(422, ['success' => false, 'message' => 'The refund account name is too long.']);
+    }
+    if (mb_strlen($refundAccountNumber) > 50) {
+        auth_response(422, ['success' => false, 'message' => 'The refund account number is too long.']);
+    }
+    if (mb_strlen($refundBank) > 50) {
+        auth_response(422, ['success' => false, 'message' => 'The bank name is too long.']);
+    }
+
+    $prefillBooking = (!empty($input['prefill_booking'])
+        && $input['prefill_booking'] !== '0'
+        && strtolower((string) $input['prefill_booking']) !== 'false') ? 1 : 0;
+
     $userId = (int) $user['id'];
     $pdo = db();
 
@@ -459,7 +492,11 @@ function handle_update_profile(): void
         $update = $pdo->prepare(
             'UPDATE users
              SET name = :name, email = :email, phone = :phone,
-                 gender = :gender, date_of_birth = :date_of_birth
+                 gender = :gender, date_of_birth = :date_of_birth,
+                 refund_account_name = :refund_account_name,
+                 refund_account_number = :refund_account_number,
+                 refund_bank = :refund_bank,
+                 prefill_booking = :prefill_booking
              WHERE id = :id'
         );
         $update->execute([
@@ -468,6 +505,10 @@ function handle_update_profile(): void
             ':phone' => $normalizedPhone,
             ':gender' => $gender !== '' ? $gender : null,
             ':date_of_birth' => $dobValue,
+            ':refund_account_name' => $refundAccountName !== '' ? $refundAccountName : null,
+            ':refund_account_number' => $refundAccountNumber !== '' ? $refundAccountNumber : null,
+            ':refund_bank' => $refundBank !== '' ? $refundBank : null,
+            ':prefill_booking' => $prefillBooking,
             ':id' => $userId,
         ]);
     } catch (Throwable $e) {

@@ -391,6 +391,53 @@
        ============================================================ */
     var savedProfile = loadSavedProfile();
 
+    /* Build a pre-fill profile from an authenticated account. The refund
+       destination and "pre-save my data" toggle are stored on the account
+       itself (users table), so a profile can be restored anywhere the
+       passenger is signed in. */
+    function accountToProfile(user) {
+        var bank = user.refund_bank || '';
+        var otherBank = '';
+        var KNOWN_BANKS = ['CBE', 'CBE Birr', 'TeleBirr', 'Bank Of Abisiniya', 'Dashen Bank'];
+        if (bank && KNOWN_BANKS.indexOf(bank) === -1) {
+            otherBank = bank;
+            bank = 'Other';
+        }
+        var hasRefund = !!(user.refund_account_name || user.refund_account_number || bank);
+        return {
+            fullName: user.name || '',
+            phone: user.phone || '',
+            email: user.email || '',
+            gender: user.gender || '',
+            dob: user.date_of_birth || '',
+            prefillBooking: !!user.prefill_booking,
+            refundAccount: hasRefund
+                ? {
+                    name: user.refund_account_name || '',
+                    number: user.refund_account_number || '',
+                    bank: bank,
+                    otherBank: otherBank
+                }
+                : null
+        };
+    }
+
+    /* Server-backed fallback: when this browser has no cached profile (a
+       fresh login in a new tab, or a different device — the browser copy
+       lives in sessionStorage), load it from the passenger's account so the
+       pre-fill prompt still works. */
+    if (!savedProfile && window.ETAuth && window.ETAuth.getCurrentUser) {
+        window.ETAuth.getCurrentUser().then(function (user) {
+            if (savedProfile || !user || user.role !== 'passenger') { return; }
+            if (!user.name && !(user.refund_account_name || user.refund_account_number || user.refund_bank)) { return; }
+            savedProfile = accountToProfile(user);
+            if (window.ETTransportStore) {
+                window.ETTransportStore.set('etTransportProfile', savedProfile);
+            }
+            openPrefillModal(savedProfile);
+        }).catch(function () { /* no session — nothing to prefill */ });
+    }
+
     /* Convert a stored international number (+251 9XX...) back to the
        local 9-digit value the phone field expects. */
     function localFromStored(full) {

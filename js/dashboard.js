@@ -280,14 +280,35 @@
     }
 
     /* ---------- Passenger identity ----------
-       A signed-in passenger sees their REAL account name, email and
-       phone on the dashboard. A profile the passenger explicitly saved
-       in this browser still takes priority; demoProfile() is only the
-       last resort when no session user is available at all. */
+       A signed-in passenger sees their REAL account name, email, phone,
+       gender/DOB, refund account and pre-save toggle — all stored on the
+       account (server-backed). demoProfile() is only the last resort when
+       no session user is available at all. */
+    /* Refund account stored on the account itself (users table). The bank
+       column keeps the passenger-typed name for "Other"; mapping it back to
+       { bank:'Other', otherBank } preserves the round-trip. Returns null when
+       the account has no refund destination saved. */
+    function refundFromAccount(user) {
+        var name = user.refund_account_name || '';
+        var number = user.refund_account_number || '';
+        var bank = user.refund_bank || '';
+        var otherBank = '';
+        if (bank) {
+            var KNOWN_BANKS = ['CBE', 'CBE Birr', 'TeleBirr', 'Bank Of Abisiniya', 'Dashen Bank'];
+            if (KNOWN_BANKS.indexOf(bank) === -1) {
+                otherBank = bank;
+                bank = 'Other';
+            }
+        }
+        var any = !!(name || number || bank);
+        return any ? { name: name, number: number, bank: bank, otherBank: otherBank } : null;
+    }
+
     function effectiveProfile(user) {
-        /* Browser-saved extras (pre-fill toggle + refund account) are kept
-           separate from the account fields because the database has no
-           columns for them — merge them onto whichever identity wins. */
+        /* Browser-saved extras (pre-fill toggle + refund account) used to be
+           the only place these lived. They are now persisted on the account
+           itself; the browser copy is only a legacy fallback for accounts
+           that have not saved them to the server yet. */
         var saved = getJSON(KEY_PROFILE, null);
         var extras = (saved && typeof saved === 'object')
             ? { prefillBooking: !!saved.prefillBooking, refundAccount: saved.refundAccount || null }
@@ -300,8 +321,8 @@
                 email: user.email || '',
                 gender: user.gender || '',
                 dob: user.date_of_birth || '',
-                prefillBooking: extras ? extras.prefillBooking : false,
-                refundAccount: extras ? extras.refundAccount : null
+                prefillBooking: !!user.prefill_booking,
+                refundAccount: refundFromAccount(user) || (extras ? extras.refundAccount : null) || null
             };
         }
         if (saved && typeof saved === 'object' && (saved.fullName || saved.phone || saved.email)) {
@@ -3643,6 +3664,14 @@ function closeTicket() {
             body.append('phone', fullPhone);
             body.append('gender', gender || '');
             body.append('date_of_birth', dobIso || '');
+            /* Refund destination + "pre-save my data" toggle are persisted on
+               the account too, so they survive logins and devices (previously
+               browser-only, which is why the requirement re-appeared). */
+            body.append('refund_account_name', refundAccount.name || '');
+            body.append('refund_account_number', refundAccount.number || '');
+            body.append('refund_bank', refundAccount.bank || '');
+            body.append('refund_bank_other', refundAccount.otherBank || '');
+            body.append('prefill_booking', prefillBooking ? '1' : '0');
 
             function applyProfile(updatedUser) {
                 if (updatedUser) { sessionUser = updatedUser; }
