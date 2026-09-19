@@ -10386,3 +10386,249 @@ body.company-page .cp-tab:active {
         padding: 0.5rem 0.8rem;
     }
 }
+/* ============================================================
+   20.13 Search results page — mobile polish (scoped)
+   ------------------------------------------------------------
+   Fixes the phone layout of the passenger search page the same
+   way home / about / dashboard were handled: the desktop rules
+   are untouched, and every rule below lives inside a media
+   query, scoped under `body.search-page`.
+
+   What was broken on phones:
+     1. Trip cards kept the desktop column math at small widths
+        (92px photo + a fixed 84px dashed journey line inside a
+        1fr middle column), so the depart/arrive times were
+        crushed and clipped on ~360-430px screens.
+     2. The modify-search swap button was left-flushed instead
+        of centred, and its fields were below the 46px touch
+        minimum.
+     3. The old `.bus-buy` mobile rules targeted a class the
+        current markup no longer uses, so the priced CTA /
+        Compare row had no real phone layout (markup uses
+        `.card-buy`).
+     4. Long route names ("Addis Ababa → Arba Minch") could not
+        wrap cleanly inside the green summary banner.
+   ============================================================ */
+
+/* ---- Phones + portrait tablets: touch targets & controls ---- */
+@media (max-width: 640px) {
+    body.search-page .modify-form .city-swap {
+        width: 2.75rem;
+        height: 2.75rem;
+        justify-self: center;
+        margin: 0.1rem 0 0;
+    }
+
+    body.search-page .modify-form .btn-search {
+        width: 100%;
+        min-height: 46px;
+    }
+
+    body.search-page .btn-view-seats {
+        min-height: 44px;
+    }
+
+    body.search-page .compare-check {
+        width: 1.15rem;
+        height: 1.15rem;
+    }
+
+    body.search-page .compare-modal-body {
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* ---- Phones: compact, stacked trip cards ---- */
+@media (max-width: 560px) {
+    body.search-page .results-layout {
+        margin-top: 1.25rem;
+    }
+
+    body.search-page .modify-search {
+        margin-top: 1rem;
+    }
+
+    body.search-page .modify-search > summary {
+        min-height: 44px;
+        padding: 0.65rem 1.1rem;
+    }
+
+    body.search-page .modify-search[open] > summary {
+        margin-bottom: 0.8rem;
+    }
+
+    body.search-page .modify-form {
+        padding: 1.05rem 0.9rem;
+        row-gap: 0.8rem;
+    }
+
+    body.search-page .modify-form .form-group input,
+    body.search-page .modify-form .form-group select {
+        min-height: 46px;
+    }
+
+    body.search-page .results-toolbar {
+        margin-bottom: 1rem;
+    }
+
+    body.search-page #results-count {
+        font-size: 0.95rem;
+    }
+
+    body.search-page .sort-control select {
+        min-height: 44px;
+    }
+
+    body.search-page .results-list {
+        gap: 1.1rem;
+    }
+
+    /* Summary banner: long routes wrap mid-phrase instead of clipping. */
+    body.search-page .route-heading h1 {
+        font-size: 1.3rem;
+        overflow-wrap: anywhere;
+    }
+
+    /* Trip card: the photo becomes a full-width banner on its own row so
+       the depart / journey / arrive row keeps the full track width. The
+       track is minmax(0,1fr) so long swipeable amenity strips (Selam Bus)
+       can never stretch the card — they scroll inside instead. */
+    body.search-page .bus-card {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.55rem 0.9rem;
+    }
+
+    body.search-page .card-main {
+        min-width: 0;
+    }
+
+    /* Multi-badge cards (e.g. "Cheapest + Fastest + Recommended") make a strip
+       wider than a phone card — let the pills wrap onto a second row instead of
+       hanging past the rounded edge. */
+    body.search-page .card-badges {
+        flex-wrap: wrap;
+    }
+
+    body.search-page .card-media {
+        width: 100%;
+        max-width: none;
+    }
+
+    body.search-page .card-media .media-bus {
+        width: 100%;
+        height: 72px;
+    }
+
+    body.search-page .bus-route {
+        column-gap: 0.5rem;
+    }
+
+    body.search-page .journey-line .line {
+        width: 2.4rem;
+    }
+
+    body.search-page .time-block .time {
+        font-size: 1.15rem;
+    }
+
+    body.search-page .bus-meta {
+        padding: 0.34rem 0.7rem;
+        font-size: 0.82rem;
+    }
+
+    body.search-page .results-empty {
+        padding: 1.2rem;
+    }
+
+    body.search-page .results-empty .empty-icon {
+        font-size: 2.2rem;
+    }
+
+    body.search-page .empty-actions .btn {
+        flex: 1 1 100%;
+    }
+}
+
+/* ---- Small phones: price / CTA / Compare stack ---- */
+@media (max-width: 480px) {
+    body.search-page .search-summary {
+        padding: 0.95rem 1rem;
+    }
+
+    body.search-page .route-heading h1 {
+        font-size: 1.18rem;
+    }
+
+    body.search-page .card-buy .price-block {
+        flex: 0 0 auto;
+    }
+
+    body.search-page .btn-view-seats {
+        flex: 1 1 100%;
+        min-height: 46px;
+    }
+
+    body.search-page .compare-toggle {
+        width: 100%;
+        margin: 0;
+        justify-content: center;
+        min-height: 44px;
+        background: var(--sp-panel);
+        border: 1.5px solid var(--sp-line);
+        border-radius: 12px;
+    }
+}
+
+/* ---- Narrowest phones ---- */
+@media (max-width: 420px) {
+    body.search-page .search-summary-emblem {
+        width: 44px;
+        height: 44px;
+        font-size: 1.35rem;
+    }
+
+    body.search-page .route-heading h1 {
+        font-size: 1.12rem;
+    }
+
+    body.search-page .bus-card {
+        padding: 0.9rem;
+        gap: 0.5rem 0.8rem;
+    }
+
+    body.search-page .card-media .media-bus {
+        height: 64px;
+    }
+}
+/* The legacy base sheet swaps the v2 route grid to `1fr 1fr` AND hides
+   `.journey-line` at <=600px. The v2 card keeps depart | duration-track |
+   arrive on ONE row on every screen, so both are restored here (scoped to
+   this page, so no other page's mobile look changes). */
+@media (max-width: 600px) {
+    body.search-page .bus-route {
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+    }
+
+    body.search-page .bus-route .journey-line {
+        display: grid;
+        justify-items: center;
+        row-gap: 0.15rem;
+    }
+}
+/* Long amenity lists (company-profile fallback, e.g. Selam Bus has 10 items)
+   wrap into a 200px+ wall on phones and dwarf every other card. On phones
+   the meta band becomes a swipeable strip (same pattern as the company
+   profile section tabs) so the card stays compact and nothing is hidden. */
+@media (max-width: 560px) {
+    body.search-page .bus-meta {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    body.search-page .bus-meta::-webkit-scrollbar {
+        display: none;
+    }
+}

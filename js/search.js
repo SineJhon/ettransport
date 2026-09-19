@@ -254,6 +254,20 @@
             });
         }
 
+        /* The shared demo dataset (js/data.js) mirrors the legacy trips with
+           the SAME ids (1–8) for the Arba Minch route, so the fallback merge
+           would otherwise show every trip twice. Trip ids are unique keys
+           across the whole app, so keep the first occurrence per id. */
+        var seenIds = {};
+        var deduped = [];
+        for (var d = 0; d < allTrips.length; d++) {
+            var trip = allTrips[d];
+            if (trip && seenIds[trip.id]) { continue; }
+            seenIds[trip.id] = true;
+            deduped.push(trip);
+        }
+        allTrips = deduped;
+
         /* Only trips on the searched route participate in the results. */
         routeTrips = [];
         for (var r = 0; r < allTrips.length; r++) {
