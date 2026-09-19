@@ -82,6 +82,38 @@ function normalize_payment_method(?string $value): ?string
     return null;
 }
 
+/**
+ * Local Ethiopian phone check for a given payment method. Accepts the
+ * common written forms (+251…, 251…, 0…) and enforces the provider's
+ * network prefix:
+ *   - mpesa    → must start with 7 (Safaricom Ethiopia)
+ *   - telebirr → must start with 9 (Ethio Telecom)
+ *   - cbe_birr → any valid Ethiopian number (mobile 7/9 or landline 1…)
+ */
+function payment_phone_valid_for_method(?string $raw, ?string $method): bool
+{
+    $digits = preg_replace('/\D/', '', (string) $raw) ?? '';
+
+    if (strlen($digits) === 12 && strncmp($digits, '251', 3) === 0) {
+        $digits = substr($digits, 3);
+    } elseif (strlen($digits) === 10 && $digits[0] === '0') {
+        $digits = substr($digits, 1);
+    }
+
+    if (preg_match('/^[1-9][0-9]{8}$/', $digits) !== 1) {
+        return false;
+    }
+
+    if ($method === 'mpesa') {
+        return $digits[0] === '7';
+    }
+    if ($method === 'telebirr') {
+        return $digits[0] === '9';
+    }
+
+    return true; /* cbe_birr — any valid Ethiopian number */
+}
+
 function require_active_passenger(): array
 {
     $user = requireRole('passenger');
@@ -164,8 +196,14 @@ function handle_pay(): void
         auth_response(422, ['success' => false, 'message' => 'Unsupported payment method.']);
     }
 
-    if ($phone === '' || strlen($phone) < 7) {
-        auth_response(422, ['success' => false, 'message' => 'A valid payment phone number is required.']);
+    if (!payment_phone_valid_for_method($phone, $method)) {
+        if ($method === 'mpesa') {
+            auth_response(422, ['success' => false, 'message' => 'M-Pesa numbers start with 7, e.g. +2517XXXXXXXX.']);
+        }
+        if ($method === 'telebirr') {
+            auth_response(422, ['success' => false, 'message' => 'Telebirr numbers start with 9, e.g. +2519XXXXXXXX.']);
+        }
+        auth_response(422, ['success' => false, 'message' => 'A valid Ethiopian payment phone number is required, e.g. +2519XXXXXXXX.']);
     }
 
  /* Payment provider gate: the authoritative server-side

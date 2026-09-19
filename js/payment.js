@@ -165,11 +165,31 @@
         return digits;
     }
 
-    function validLocal(digits) {
+    /* Every Ethiopian mobile number keeps the usual 9-digit shape; the first
+       digit identifies the network / wallet:
+         - Telebirr / Ethio Telecom  → starts with 9
+         - M-Pesa / Safaricom        → starts with 7
+         - CBE Birr                  → any registered Ethiopian number
+       The 9-digit shape is always required; the per-method prefix rules
+       below tighten it once a payment method is selected. */
+    function validLocalShape(digits) {
         return /^[1-9][0-9]{8}$/.test(digits);
     }
 
+    /* True when the digits pass the 9-digit shape AND the first-digit rule of
+       the chosen provider ('' prefix = no prefix restriction). */
+    function validLocalForMethod(digits, prefix) {
+        if (!validLocalShape(digits)) { return false; }
+        return prefix === '' || digits.charAt(0) === prefix;
+    }
+
     /* ---------- Payment method selection ---------- */
+    var METHOD_PHONE_RULES = {
+        'Telebirr': { prefix: '9', placeholder: '9XX XXX XXXX', hint: 'Telebirr numbers start with 9, e.g. 09XX XXX XXX.' },
+        'M-Pesa':   { prefix: '7', placeholder: '7XX XXX XXXX', hint: 'M-Pesa numbers start with 7, e.g. 07XX XXX XXX.' },
+        'CBE Birr': { prefix: '',  placeholder: '9XX XXX XXXX', hint: 'Use the mobile number registered to your CBE Birr account.' }
+    };
+
     var methodInputs = document.querySelectorAll('input[name="pay-method"]');
     var methodErrorEl = document.getElementById('method-error');
     var detailsCard = document.getElementById('payment-details');
@@ -188,30 +208,69 @@
                 other.closest('.pay-option').classList.toggle('selected', other === input);
             });
             detailsCard.hidden = false;
-            updatePayButton();
+            var rule = METHOD_PHONE_RULES[selectedMethod] || {};
+            phoneInput.placeholder = rule.placeholder || '9XX XXX XXXX';
+            if (phoneInput.value === '') {
+                phoneInfoEl.textContent = rule.hint || '';
+                phoneInfoEl.classList.toggle('show', !!rule.hint);
+                phoneInfoEl.classList.toggle('is-hint', !!rule.hint);
+                phoneErrEl.textContent = '';
+                phoneInput.classList.remove('field-invalid');
+            }
+            /* The chosen provider changes what counts as a valid number
+               (e.g. M-Pesa requires a 7-prefix), so re-validate right away. */
+            validatePaymentPhone();
         });
     });
 
-    /* Validate the payment phone; keep screen value normalised (same as passenger page). */
+    /* Validate the payment phone; keep screen value normalised (same as
+       passenger page). The accepted prefix follows the selected provider. */
     function validatePaymentPhone() {
         var digits = normalizeLocal(phoneInput.value);
         phoneInput.value = digits;
-        if (validLocal(digits)) {
+        var rule = METHOD_PHONE_RULES[selectedMethod] || {};
+        var good = validLocalForMethod(digits, rule.prefix || '');
+
+        if (good) {
             phoneInfoEl.textContent = 'Stored as +251' + digits;
             phoneInfoEl.classList.add('show');
+            phoneInfoEl.classList.remove('is-hint');
             phoneErrEl.textContent = '';
             phoneInput.classList.remove('field-invalid');
             validPhone = true;
+        } else if (digits === '') {
+            validPhone = false;
+            phoneInfoEl.textContent = rule.hint || '';
+            phoneInfoEl.classList.toggle('show', !!rule.hint);
+            phoneInfoEl.classList.toggle('is-hint', !!rule.hint);
+            phoneErrEl.textContent = '';
+            phoneInput.classList.remove('field-invalid');
         } else {
             validPhone = false;
             phoneInfoEl.textContent = '';
             phoneInfoEl.classList.remove('show');
-            phoneErrEl.textContent = 'Please enter a valid Ethiopian phone number.';
+            phoneInfoEl.classList.remove('is-hint');
+            phoneErrEl.textContent = phoneErrorMessage(selectedMethod, digits);
             phoneInput.classList.add('field-invalid');
         }
         // Store the full number for the confirmation ticket
         phoneInput.dataset.full = validPhone ? ('+251' + digits) : '';
         updatePayButton();
+    }
+
+    /* Provider-specific phone error message. The digit-shape check always
+       comes first; the network-prefix branch fires on a mismatched prefix. */
+    function phoneErrorMessage(method, digits) {
+        if (!validLocalShape(digits)) {
+            return 'Please enter a valid Ethiopian phone number.';
+        }
+        if (method === 'M-Pesa') {
+            return 'M-Pesa numbers start with 7, e.g. 07XX XXX XXX.';
+        }
+        if (method === 'Telebirr') {
+            return 'Telebirr numbers start with 9, e.g. 09XX XXX XXX.';
+        }
+        return 'Please enter a valid Ethiopian phone number.';
     }
 
     phoneInput.addEventListener('input', validatePaymentPhone);
@@ -220,7 +279,6 @@
     var payBtn = document.getElementById('pay-btn');
     var payMsg = document.getElementById('pay-msg');
     var payError = document.getElementById('pay-error');
-    var failToggle = document.getElementById('fail-toggle');
     var processing = false;
 
     function updatePayButton() {
@@ -330,12 +388,10 @@
     }
 
     /* Hide previous payment result as soon as the user edits the form again. */
-    [failToggle, phoneInput].forEach(function (el) {
-        el.addEventListener('input', function () {
-            payMsg.hidden = true;
-            payError.hidden = true;
-            if (!processing) { updatePayButton(); }
-        });
+    phoneInput.addEventListener('input', function () {
+        payMsg.hidden = true;
+        payError.hidden = true;
+        if (!processing) { updatePayButton(); }
     });
     methodInputs.forEach(function (input) {
         input.addEventListener('change', function () {
@@ -374,22 +430,6 @@
         payBtn.textContent = 'Processing payment...';
         payMsg.hidden = true;
         payError.hidden = true;
-
-        var simulateFailure = failToggle.checked;
-
-        if (simulateFailure) {
-            // ---- Simulated failure state: show reason + Try Again ----
-            setTimeout(function () {
-                payError.textContent =
-                    'Payment failed: ' + selectedMethod +
-                    ' declined the transaction (simulated). Please check the number and try again.';
-                payError.hidden = false;
-                processing = false;
-                payBtn.disabled = false;
-                payBtn.textContent = 'Try Again \u2014 Pay ' + totalText;
-            }, 1600);
-            return;
-        }
 
         // Real database flow for authenticated passengers; the legacy demo
         // flow is kept for guests so the prototype keeps working offline.
