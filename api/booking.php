@@ -276,10 +276,13 @@ function booking_base_sql(): string
             b2.seat_count,
             b2.bus_type,
             b2.model                     AS bus_model,
+            b2.image                     AS bus_image,
             c.slug                       AS company_slug,
             c.name                       AS company_name,
             r.from_city,
             r.to_city,
+            r.pickup_stations,
+            r.dropoff_stations,
             r.duration
         FROM bookings b
         JOIN trips t     ON t.id = b.trip_id
@@ -370,6 +373,9 @@ function booking_payload(PDO $pdo, array $row): array
         'companyId' => $row['company_slug'],
         'busType' => $row['bus_model'] !== null ? $row['bus_model'] : $row['bus_type'],
         'tripType' => bus_type_label($row['bus_type']),
+        'busImage' => $row['bus_image'] ?? '',
+        'pickupStations' => decode_route_stations($row['pickup_stations'] ?? null),
+        'dropoffStations' => decode_route_stations($row['dropoff_stations'] ?? null),
         'seats' => $seatNumbers,
         'seatLabel' => $seatLabel,
         'passengerCount' => count($passengers),

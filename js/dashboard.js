@@ -193,6 +193,9 @@
                 passengerNames: ['Amanuel Passenger'],
                 total: 1300, paymentMethod: 'Telebirr',
                 busType: 'Higer A90', tripType: 'Standard',
+                busImage: 'assets/uploads/buses/bus-241-758aecea98c9d1f2be16d54e.webp',
+                pickupStations: ['Meskel Square Terminal', 'Tor Hailoch'],
+                dropoffStations: ['Arba Minch Bus Station'],
                 status: 'confirmed', demo: true
             },
             {
@@ -204,6 +207,9 @@
                 passengerNames: ['Amanuel Passenger'],
                 total: 820, paymentMethod: 'M-Pesa',
                 busType: 'Neoplan Skyliner', tripType: 'Standard',
+                busImage: 'assets/uploads/buses/bus-255-0470e04416cd125c7414a03f.webp',
+                pickupStations: ['Meskel Square Terminal', 'Kality'],
+                dropoffStations: ['Dire Dawa Bus Station'],
                 status: 'cancelled', demo: true
             }
         ];
@@ -473,7 +479,7 @@
             actions = '<div class="trip-card-actions">' +
                 '<button type="button" class="btn btn-ticket-view" data-ref="' + escapeHtml(b.reference) + '">View Ticket</button>' +
                 (opts.showDetails
-                    ? '<a class="btn btn-trip-details" href="company.html?company=' + escapeHtml(companySlugFor(b)) + '">Trip Details</a>'
+                    ? '<button type="button" class="btn btn-trip-details" data-details-ref="' + escapeHtml(b.reference) + '">Trip Details</button>'
                     : '') +
                 (canCancelBooking(b)
                     ? '<button type="button" class="btn btn-danger btn-cancel-booking btn-sm" data-ref="' + escapeHtml(b.reference) + '">Cancel Booking</button>'
@@ -561,7 +567,7 @@
             '</dl>' +
             '<div class="dash-upcoming-actions">' +
                 '<button type="button" class="btn btn-primary btn-ticket-view" data-ref="' + escapeHtml(next.reference) + '">View Ticket</button>' +
-                '<a class="btn btn-secondary" href="company.html?company=' + escapeHtml(companySlugFor(next)) + '">Trip Details</a>' +
+                '<button type="button" class="btn btn-secondary btn-trip-details" data-details-ref="' + escapeHtml(next.reference) + '">Trip Details</button>' +
             '</div>' +
         '</div>';
     }
@@ -905,6 +911,142 @@ function closeTicket() {
         ticketModal.hidden = true;
         document.body.classList.remove('modal-open');
         currentTicket = null;
+    }
+
+    /* ============================================================
+       Trip details modal — the Overview upcoming trip's "Trip Details"
+       action opens this pop-up with the full journey, passenger and
+       payment information instead of redirecting to the operator's
+       public profile.
+       ============================================================ */
+    var tripDetailsModal = document.getElementById('trip-details-modal');
+
+    /* Resolve a bus photo for the trip details modal: the booked bus's own
+       photo first, then the operator's fleet photo matching the bus model
+       name, then any fleet photo as a fallback. */
+    function busPhotoFor(b) {
+        if (b.busImage) { return b.busImage; }
+        var c = companyByTripName(b.company) || companyBySlug(b.companyId);
+        if (c && Array.isArray(c.fleet) && c.fleet.length) {
+            var i;
+            if (b.busType) {
+                for (i = 0; i < c.fleet.length; i++) {
+                    if (c.fleet[i].model === b.busType && c.fleet[i].image) { return c.fleet[i].image; }
+                }
+            }
+            for (i = 0; i < c.fleet.length; i++) {
+                if (c.fleet[i].image) { return c.fleet[i].image; }
+            }
+        }
+        return '';
+    }
+
+    /* Pickup / drop-off station list for the trip details modal. Returns ''
+       when the booking has no stations saved for that side. */
+    function stationsBlockHtml(label, list) {
+        if (!Array.isArray(list)) { return ''; }
+        var lis = '';
+        for (var si = 0; si < list.length; si++) {
+            var name = String(list[si] || '').trim();
+            if (name) { lis += '<li>' + escapeHtml(name) + '</li>'; }
+        }
+        if (!lis) { return ''; }
+        return '<div class="trip-station-block">' +
+                '<span class="trip-station-label">' + escapeHtml(label) + '</span>' +
+                '<ul>' + lis + '</ul>' +
+            '</div>';
+    }
+
+    function tripDetailsBodyHtml(b) {
+        var logo = companyLogoFor(b);
+        var logoHtml = logo
+            ? '<img class="trip-details-logo" src="' + escapeHtml(logo) + '" width="34" height="34" alt="' + escapeHtml(b.company) + ' logo">'
+            : '<span class="trip-details-avatar" aria-hidden="true">' + escapeHtml(String(b.company || 'B').charAt(0)) + '</span>';
+        var busPhoto = busPhotoFor(b);
+        var busLabel = (typeof b.busType === 'string' && b.busType.trim()) ? b.busType.trim() : 'Fleet vehicle';
+        var mediaHtml = busPhoto
+            ? '<figure class="trip-details-media">' +
+                '<img class="trip-details-media-img" src="' + escapeHtml(busPhoto) + '" width="96" height="60" alt="' + escapeHtml(busLabel) + '" loading="lazy">' +
+                '<figcaption class="trip-details-media-caption">' +
+                    '<span class="trip-details-media-eyebrow">Bus / Fleet</span>' +
+                    '<span class="trip-details-media-name">' + escapeHtml(busLabel) + '</span>' +
+                '</figcaption>' +
+              '</figure>'
+            : '';
+        var stationsWrap = stationsBlockHtml('Pickup', b.pickupStations) + stationsBlockHtml('Drop-off', b.dropoffStations);
+        var stationsHtml = stationsWrap ? '<div class="trip-details-stations">' + stationsWrap + '</div>' : '';
+        var pax = (Array.isArray(b.passengerNames) && b.passengerNames.length)
+            ? b.passengerNames.join(', ')
+            : ('Passenger ' + (b.passengerCount || 1));
+        var seats = b.seatLabel || (Array.isArray(b.seats) && b.seats.length ? b.seats.join(', ') : '\u2014');
+        var paymentRow = b.paymentMethod
+            ? '<div class="t-cell"><dt>Payment method</dt><dd>' + escapeHtml(b.paymentMethod) + '</dd></div>'
+            : '';
+        var refundText = '';
+        var ra = b.refundAccount;
+        if (ra && typeof ra === 'object') {
+            var rParts = [];
+            if (ra.mode === 'mine') { rParts.push('TeleBirr'); }
+            if (ra.bank) { rParts.push(ra.bank); }
+            if (ra.number) { rParts.push(ra.number); }
+            refundText = rParts.join(' \u00b7 ');
+        }
+        var refundRow = refundText
+            ? '<div class="t-cell"><dt>Refund account</dt><dd>' + escapeHtml(refundText) + '</dd></div>'
+            : '';
+        return mediaHtml +
+            '<div class="trip-details-company-row">' +
+                logoHtml +
+                '<div class="trip-details-company-copy">' +
+                    '<h3>' + escapeHtml(b.company) + '</h3>' +
+                    '<span class="trip-details-slug mono">' + escapeHtml(companySlugFor(b)) + '</span>' +
+                '</div>' +
+                statusBadge(b) +
+            '</div>' +
+            '<div class="ticket-body">' +
+                '<div class="ticket-route">' +
+                    '<div class="ticket-city-block"><span class="t-city">' + escapeHtml(b.from) + '</span><span class="t-time">' + escapeHtml(b.depart || '') + '</span></div>' +
+                    '<div class="ticket-journey"><span class="journey-arrow" aria-hidden="true">&rarr;</span><span class="t-duration">' + formatDuration(b.minutes) + '</span></div>' +
+                    '<div class="ticket-city-block right"><span class="t-city">' + escapeHtml(b.to) + '</span><span class="t-time">' + escapeHtml(b.arrive || '') + '</span></div>' +
+                '</div>' +
+                '<dl class="ticket-grid">' +
+                    '<div class="t-cell"><dt>Travel date</dt><dd>' + escapeHtml(formatDate(b.date)) + '</dd></div>' +
+                    '<div class="t-cell"><dt>Departure</dt><dd>' + escapeHtml(b.depart || '\u2014') + '</dd></div>' +
+                    '<div class="t-cell"><dt>Arrival</dt><dd>' + escapeHtml(b.arrive || '\u2014') + '</dd></div>' +
+                    '<div class="t-cell"><dt>Duration</dt><dd>' + formatDuration(b.minutes) + '</dd></div>' +
+                    '<div class="t-cell"><dt>Bus type</dt><dd>' + escapeHtml(b.busType || b.tripType || 'Standard') + '</dd></div>' +
+                    '<div class="t-cell"><dt>Passenger(s)</dt><dd>' + escapeHtml(pax) + '</dd></div>' +
+                    '<div class="t-cell"><dt>Seat(s)</dt><dd>' + escapeHtml(seats) + '</dd></div>' +
+                    '<div class="t-cell"><dt>Booking ref</dt><dd class="mono">' + escapeHtml(b.reference) + '</dd></div>' +
+                    paymentRow +
+                    refundRow +
+                    '<div class="t-cell total-cell"><dt>Total paid</dt><dd>' + formatPrice(b.total) + '</dd></div>' +
+                '</dl>' +
+                stationsHtml +
+                '<div class="trip-details-actions">' +
+                    '<button type="button" class="btn btn-primary btn-ticket-view" data-ref="' + escapeHtml(b.reference) + '">View Ticket</button>' +
+                    '<button type="button" class="btn btn-secondary" data-trip-details-dismiss>Close</button>' +
+                '</div>' +
+            '</div>';
+    }
+
+    function openTripDetails(reference) {
+        var b = bookingByRef(reference);
+        if (!b || !tripDetailsModal) { return; }
+        var body = document.getElementById('trip-details-body');
+        if (body) { body.innerHTML = tripDetailsBodyHtml(b); }
+        var companyLine = document.getElementById('trip-details-company');
+        if (companyLine) { companyLine.textContent = b.from + ' \u2192 ' + b.to; }
+        tripDetailsModal.hidden = false;
+        document.body.classList.add('modal-open');
+        var closeBtn = document.getElementById('trip-details-close');
+        if (closeBtn) { closeBtn.focus(); }
+    }
+
+    function closeTripDetails() {
+        if (!tripDetailsModal) { return; }
+        tripDetailsModal.hidden = true;
+        if (!anyComplaintModalOpen()) { document.body.classList.remove('modal-open'); }
     }
 
     var shareMsg = document.getElementById('dt-share-msg');
@@ -2689,7 +2831,7 @@ function closeTicket() {
        the subject / message / booking ref and the submit button.
        ============================================================ */
     function anyComplaintModalOpen() {
-        var ids = ['complaint-modal', 'complaint-details-modal', 'ticket-modal', 'cancel-modal', 'review-modal', 'profile-modal'];
+        var ids = ['complaint-modal', 'complaint-details-modal', 'ticket-modal', 'cancel-modal', 'review-modal', 'profile-modal', 'trip-details-modal'];
         for (var i = 0; i < ids.length; i++) {
             var m = document.getElementById(ids[i]);
             if (m && !m.hidden) { return true; }
@@ -3414,10 +3556,24 @@ function closeTicket() {
             if (rref) { openReviewModal(rref); return; }
         }
 
+        var detailsBtn = el.closest('.btn-trip-details');
+        if (detailsBtn) {
+            var dref = detailsBtn.getAttribute('data-details-ref');
+            if (dref) { openTripDetails(dref); return; }
+        }
+
+        var dismissDetails = el.closest('[data-trip-details-dismiss]');
+        if (dismissDetails) { closeTripDetails(); return; }
+
         var view = el.closest('.btn-ticket-view');
         if (view) {
             var ref = view.getAttribute('data-ref');
-            if (ref) { openTicket(ref); return; }
+            if (ref) {
+                /* "View Ticket" inside the trip details modal should swap the
+                   pop-up for the ticket instead of stacking both modals. */
+                if (tripDetailsModal && !tripDetailsModal.hidden) { closeTripDetails(); }
+                openTicket(ref); return;
+            }
         }
 
         var favDel = el.closest('.btn-remove-fav');
@@ -3447,12 +3603,17 @@ function closeTicket() {
     if (profileCancelBtn) { profileCancelBtn.addEventListener('click', closeProfileModal); }
     var ticketBackdrop = document.querySelector('[data-ticket-close]');
     if (ticketBackdrop) { ticketBackdrop.addEventListener('click', closeTicket); }
+    var tripDetailsCloseBtn = document.getElementById('trip-details-close');
+    if (tripDetailsCloseBtn) { tripDetailsCloseBtn.addEventListener('click', closeTripDetails); }
+    var tripDetailsBackdrop = document.querySelector('[data-trip-details-close]');
+    if (tripDetailsBackdrop) { tripDetailsBackdrop.addEventListener('click', closeTripDetails); }
     var profileBackdrop = document.querySelector('[data-profile-close]');
     if (profileBackdrop) { profileBackdrop.addEventListener('click', closeProfileModal); }
 
     document.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') {
             closeTicket();
+            closeTripDetails();
             closeProfileModal();
             closeCancelModal();
             closeReviewModal();
@@ -3920,6 +4081,9 @@ function closeTicket() {
             paymentMethod: b.paymentMethod || b.payment_method || '',
             busType: b.busType || b.tripType || 'Standard',
             tripType: b.tripType || 'Standard',
+            busImage: b.busImage || '',
+            pickupStations: Array.isArray(b.pickupStations) ? b.pickupStations.slice() : [],
+            dropoffStations: Array.isArray(b.dropoffStations) ? b.dropoffStations.slice() : [],
             status: b.status || 'confirmed',
             /* Refund-window fields — used by the cancellation dialog to tell the
                passenger whether they are entitled to a full or half refund. */
@@ -3988,6 +4152,11 @@ function closeTicket() {
                         b0.created_at = api0.created_at;
                         b0.payment_status = api0.payment_status;
                         b0.refundAccount = api0.refundAccount;
+                        /* Bus photo + pickup/drop-off stations feed the trip
+                           details modal, so fresh server copies win here too. */
+                        b0.busImage = api0.busImage || '';
+                        b0.pickupStations = Array.isArray(api0.pickupStations) ? api0.pickupStations.slice() : [];
+                        b0.dropoffStations = Array.isArray(api0.dropoffStations) ? api0.dropoffStations.slice() : [];
                     }
                     if (!seen[b0.reference]) { seen[b0.reference] = 1; merged.push(b0); }
                 }

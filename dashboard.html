@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Your ET Transport passenger dashboard — upcoming trips, digital tickets, favorites, notifications, booking history and profile. Sign in to view your data.">
     <title>Dashboard | ET Transport</title>
-    <link rel="stylesheet" href="css/style.css?v=20260918-complaint-two-step">
+    <link rel="stylesheet" href="css/style.css?v=20260919-trip-details-small">
     <link rel="stylesheet" href="css/city-picker.css?v=20260907-swap-fix">
     <link rel="icon" type="image/x-icon" href="assets/icons/favicon.svg">
 <!-- Fonts (DM Sans + Outfit) -->
@@ -504,6 +504,23 @@
         </div>
     </div>
 <!-- ============================================================
+     Trip details modal (Overview upcoming trip — pop-up, no
+     redirect to the operator's public profile)
+     ============================================================ -->
+    <div id="trip-details-modal" class="dash-modal" role="dialog" aria-modal="true" aria-labelledby="trip-details-title" hidden>
+        <div class="dash-modal-backdrop" data-trip-details-close></div>
+        <div class="dash-modal-box dash-modal-ticket trip-details-box">
+            <div class="dash-modal-head">
+                <div class="trip-details-head-copy">
+                    <h2 id="trip-details-title">Trip Details</h2>
+                    <p id="trip-details-company" class="trip-details-company"></p>
+                </div>
+                <button type="button" id="trip-details-close" class="dash-modal-close" aria-label="Close trip details">&times;</button>
+            </div>
+            <div id="trip-details-body"></div>
+        </div>
+    </div>
+<!-- ============================================================
      Cancel booking confirmation modal
      ============================================================ -->
     <div id="cancel-modal" class="dash-modal" role="dialog" aria-modal="true" aria-labelledby="cancel-modal-title" hidden>
@@ -767,6 +784,6 @@
     <script src="js/cities.js"></script>
     <script src="js/city-picker.js?v=20260907-swap-fix-3-dispatch"></script>
     <script src="js/company.js"></script>
-    <script src="js/dashboard.js?v=20260918-complaint-two-step"></script>
+    <script src="js/dashboard.js?v=20260919-trip-details-small"></script>
 </body>
 </html>
