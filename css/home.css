@@ -148,16 +148,30 @@ body.home {
     isolation: isolate;
 }
 
-/* Full-bleed photography: Ethiopian landscape, road and ET bus. */
+/* Full-bleed photography: Ethiopian landscape, road and ET bus.
+   Mobile ships a 750px optimised frame; tablets get 1280px and
+   large screens keep the full-resolution photo. */
 .hp-hero-bg {
     position: absolute;
     inset: 0;
     z-index: -2;
-    background-image: url('../assets/images/content.webp');
+    background-image: url('../assets/images/content-mobile.webp');
     background-size: cover;
     background-repeat: no-repeat;
     background-position: center 30%;
     background-color: #0b1c14;
+}
+
+@media (min-width: 768px) {
+    .hp-hero-bg {
+        background-image: url('../assets/images/content-tablet.webp');
+    }
+}
+
+@media (min-width: 1280px) {
+    .hp-hero-bg {
+        background-image: url('../assets/images/content.webp');
+    }
 }
 
 /* Localised gradients only: dark left scrim for the headline,
@@ -900,14 +914,42 @@ body.home {
 
 /* Tablet / small laptop: stacked hero */
 @media (max-width: 768px) {
+    /* The hamburger owns the navbar on the homepage too: links and the
+       auth actions (Login / Register / Dashboard / Logout) open together
+       as one full-width dropdown over the hero. */
     .home .nav-actions {
         display: none;
     }
     .home .nav-links {
         top: 76px;
     }
+    .home .nav-links a {
+        font-size: 1rem;
+    }
     .home .nav-links a::after {
         display: none;
+    }
+    .home .nav-links.open ~ .nav-actions {
+        display: flex;
+        padding-bottom: 1.1rem;
+    }
+    .home .nav-actions .btn-login {
+        justify-content: center;
+        width: 100%;
+        min-height: 46px;
+        border-radius: 10px;
+        padding: 0.6rem 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        background: rgba(255, 255, 255, 0.08);
+    }
+    .home .nav-actions .btn-login:hover {
+        background: #ffffff;
+        color: var(--hp-green);
+        border-color: #ffffff;
+    }
+    .home .navbar {
+        height: auto;
+        min-height: 76px;
     }
 
     .hp-hero {

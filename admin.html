@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Admin dashboard — company approval controls for ET Transport">
     <title>Admin Dashboard | ET Transport</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=20260919-mobile-resp">
     <link rel="icon" type="image/x-icon" href="assets/icons/favicon.svg">
     <style>
  /* admin dashboard shell styles. Scoped to .ad-* on this
@@ -514,6 +514,35 @@
         .ad-review-reply-input:focus { outline:3px solid rgba(49,164,118,.16); border-color:#3f976a; }
         .ad-review-reply-editor-actions { display:flex; justify-content:space-between; align-items:center; gap:.5rem; margin-top:.6rem; }
         @media (max-width:680px) { .ad-reviews-summary { grid-template-columns:1fr; gap:1rem; }.ad-review-score-panel { padding:0 0 1rem; border-right:0; border-bottom:1px solid #cfe4d7; }.ad-review-card.is-editing { grid-column:auto; }.ad-review-filterbar::before { width:100%; }.ad-review-rating { margin-left:0; }.ad-review-card-head { align-items:flex-start; } }
+
+        /* ===== Admin workspace mobile (aligned with the company dashboard) ===== */
+        @media (max-width: 900px) {
+            .ad-layout { grid-template-columns: 1fr; gap: 1rem; }
+            .ad-sidebar { position: static; }
+            .ad-nav { display: flex; gap: .3rem; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+            .ad-nav::-webkit-scrollbar { display: none; }
+            .ad-nav .ad-tab { flex: 0 0 auto; width: auto; white-space: nowrap; padding: .6rem .8rem; }
+            .ad-workspace-head { align-items: flex-start; }
+        }
+        @media (max-width: 620px) {
+            .ad-page { padding: 1.15rem 0 2.25rem; }
+            .ad-workspace-head { flex-direction: column; align-items: stretch; gap: .7rem; margin-bottom: 1.15rem; }
+            .ad-workspace-head h1 { font-size: 1.75rem; }
+            .ad-live { align-self: flex-start; padding: .4rem .65rem; border-radius: 99px; background: #e7f4ec; }
+            .ad-content .ad-card { padding: 1rem; }
+            .ad-content .ad-card-head { flex-direction: column; align-items: flex-start; gap: .6rem; }
+            .ad-content .ad-card-head .btn { width: 100%; }
+            .ad-filter-bar { padding: .8rem; }
+            .ad-filter-bar .ad-field { min-width: 0; width: 100%; }
+            .ad-filter-bar .ad-grow { flex-basis: 100%; }
+            .ad-filter-bar .btn { width: 100%; align-self: stretch; }
+            .ad-status-toolbar { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: .4rem; scrollbar-width: none; }
+            .ad-status-toolbar::-webkit-scrollbar { display: none; }
+            .ad-status-filter { white-space: nowrap; }
+            .ad-stats { grid-template-columns: repeat(2, 1fr); gap: .6rem; }
+            .ad-table { min-width: 640px; }
+            .ad-manage-box { width: 100%; max-width: 100%; padding: 1.1rem; }
+        }
     </style>
 <!-- Fonts (DM Sans + Outfit) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

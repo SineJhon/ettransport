@@ -9530,3 +9530,746 @@ body.search-page .empty-icon { opacity: 0.55; }
     .swap-modal-box { width: min(100%, 100vw); }
     .swap-choices .swap-choice { flex: 1 1 auto; }
 }
+
+/* ============================================================
+   20. Mobile responsiveness — additive polish layer
+   ------------------------------------------------------------
+   Keeps the desktop experience untouched while fixing the gaps
+   found in a full-width mobile audit:
+     1. auth actions (Login / Register / Dashboard / Logout) are
+        now reachable from the hamburger menu at <=768px,
+     2. phones can no longer scroll sideways (about-hero & friends),
+     3. comfortable touch targets and tidier card/toolbar rhythm
+        on phones, tablets and small laptops.
+   ============================================================ */
+
+/* ---- Global safety: never let stray widths cause side-scroll ----
+   Important: the horizontal clip lives on <html> only. Setting any
+   overflow on <body> turns it into a scroll container, which breaks
+   `position: sticky` for the header (it would stop sticking to the
+   top of the viewport). overflow-x on the root element propagates to
+   the viewport, so stray widths are clipped without affecting
+   stickiness. */
+html {
+    -webkit-text-size-adjust: 100%;
+    overflow-x: hidden;
+}
+
+body {
+    overflow-x: visible;
+}
+
+/* ------------------------------------------------------------
+   20.1 Mobile navigation — auth actions join the dropdown menu
+   ------------------------------------------------------------ */
+@media (max-width: 768px) {
+    .navbar {
+        flex-wrap: wrap;
+        position: relative;
+    }
+
+    .nav-links {
+        position: static;
+        top: auto;
+        left: auto;
+        right: auto;
+        order: 5;
+        flex: 1 1 100%;
+        flex-direction: column;
+        gap: 0;
+        width: 100%;
+        display: none;
+        padding: 0.5rem 1rem 0.75rem;
+        background: linear-gradient(180deg, #1b2936, var(--color-dark-2));
+        box-shadow: 0 22px 34px rgba(0, 0, 0, 0.3);
+    }
+
+    .nav-links.open {
+        display: flex;
+    }
+
+    .nav-links a {
+        display: flex;
+        align-items: center;
+        min-height: 46px;
+        padding: 0.55rem 0.4rem;
+        font-size: 1rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .nav-links li:last-child a {
+        border-bottom: none;
+    }
+
+    .nav-links a.active {
+        color: var(--color-accent);
+    }
+
+    /* Auth actions sit under the links. The sibling selector maps
+       1:1 to the DOM order (.logo → .nav-links → .nav-actions →
+       .nav-toggle), so only the open menu reveals them. */
+    .nav-actions {
+        order: 6;
+        flex: 1 1 100%;
+        flex-direction: column;
+        gap: 0.5rem;
+        width: 100%;
+        display: none;
+        padding: 0.85rem 1rem 1.05rem;
+        background: linear-gradient(180deg, var(--color-dark-2), #11161d);
+        box-shadow: 0 26px 40px rgba(0, 0, 0, 0.32);
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .nav-links.open ~ .nav-actions {
+        display: flex;
+    }
+
+    .nav-actions .btn-login {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        min-height: 46px;
+        margin: 0;
+        padding: 0.6rem 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.07);
+        color: #ffffff;
+        font-size: 0.98rem;
+        letter-spacing: 0.01em;
+        transform: none;
+    }
+
+    .nav-actions .btn-login:hover {
+        background: #ffffff;
+        color: var(--color-primary);
+        border-color: #ffffff;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+    }
+
+    /* Hamburger → close (X) morph. js/main.js toggles .nav-toggle.open. */
+    .nav-toggle.open .bar:nth-child(1) {
+        transform: translateY(8px) rotate(45deg);
+    }
+
+    .nav-toggle.open .bar:nth-child(2) {
+        opacity: 0;
+    }
+
+    .nav-toggle.open .bar:nth-child(3) {
+        transform: translateY(-8px) rotate(-45deg);
+    }
+
+    /* Auth-only pages (login / register) have no hamburger — keep the
+       single header action reachable instead of hiding it. */
+    body[data-auth-guest-only="1"] .navbar {
+        flex-wrap: nowrap;
+    }
+
+    body[data-auth-guest-only="1"] .nav-actions {
+        order: 0;
+        flex: 0 0 auto;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.5rem;
+        width: auto;
+        display: flex;
+        padding: 0;
+        background: none;
+        border-top: none;
+        box-shadow: none;
+    }
+
+    body[data-auth-guest-only="1"] .nav-actions .btn-login {
+        width: auto;
+        min-height: 40px;
+        padding: 0.5rem 1.2rem;
+    }
+}
+
+/* ------------------------------------------------------------
+   20.2 About page — hero layout on phones
+   ------------------------------------------------------------ */
+@media (max-width: 560px) {
+    body.about .about-hero-grid {
+        gap: 2rem;
+    }
+
+    body.about .about-hero-copy {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    /* 2×2 stat cards instead of a 118px-min-width flex row that
+       previously spilled past the 390px viewport. */
+    body.about .about-hero-stats {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.75rem;
+        justify-content: stretch;
+        width: 100%;
+        margin-top: 1rem;
+    }
+
+    body.about .about-hero-stats .stat-card {
+        min-width: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0.65rem 0.4rem;
+        border: 1px solid #e7ede9;
+        border-radius: 12px;
+        background: #ffffff;
+        box-shadow: 0 2px 10px rgba(8, 34, 22, 0.06);
+    }
+
+    body.about .about-hero-stats .stat-value {
+        font-size: 1.6rem;
+    }
+
+    body.about .about-hero-stats .stat-label {
+        font-size: 0.68rem;
+    }
+
+    body.about .about-hero-bus {
+        max-width: 100%;
+        width: 100%;
+    }
+
+    body.about .about-contact-item {
+        padding: 0.9rem 1rem;
+    }
+}
+
+/* ------------------------------------------------------------
+   20.3 Search / results on phones
+   ------------------------------------------------------------ */
+@media (max-width: 600px) {
+    body.search-page .modify-form {
+        grid-template-columns: 1fr;
+    }
+
+    body.search-page .modify-form .city-swap {
+        justify-self: start;
+        margin: 0;
+    }
+
+    .results-toolbar {
+        gap: 0.6rem;
+    }
+
+    .sort-control {
+        flex: 1 1 100%;
+        justify-content: space-between;
+        gap: 0.5rem;
+    }
+
+    .sort-control select {
+        flex: 1 1 auto;
+        min-width: 0;
+        padding: 0.5rem 0.6rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .bus-card {
+        padding: 1.05rem;
+        gap: 0.9rem;
+    }
+
+    .bus-route {
+        gap: 0.5rem;
+    }
+
+    .time-block .time {
+        font-size: 1.4rem;
+    }
+
+    /* Price / CTA stack full-width under the trip on the smallest phones */
+    .bus-buy {
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: flex-start;
+        gap: 0.6rem;
+        border-top: 1px solid #eef0f3;
+        padding-top: 0.9rem;
+        text-align: center;
+    }
+
+    .bus-buy .btn-view-seats,
+    .bus-buy .btn-secondary {
+        width: 100%;
+    }
+
+    body.search-page .search-summary {
+        padding: 1rem;
+    }
+
+    body.search-page .route-heading h1 {
+        font-size: 1.25rem;
+    }
+}
+
+/* Compare: sticky bar + modal on small screens */
+@media (max-width: 520px) {
+    .compare-bar-inner {
+        flex-wrap: wrap;
+        gap: 0.45rem;
+    }
+
+    .compare-names {
+        flex: 1 1 100%;
+    }
+
+    .compare-actions {
+        width: 100%;
+    }
+
+    .compare-actions .btn {
+        flex: 1 1 auto;
+        padding: 0.6rem 0.9rem;
+    }
+
+    .compare-modal {
+        padding: 0;
+        align-items: flex-end;
+    }
+
+    .compare-modal-box {
+        max-height: 92vh;
+        border-radius: 18px 18px 0 0;
+    }
+
+    .compare-modal-head,
+    .compare-modal-body {
+        padding: 1rem;
+    }
+}
+
+/* ------------------------------------------------------------
+   20.4 Booking / passenger / payment on phones
+   ------------------------------------------------------------ */
+@media (max-width: 520px) {
+    .booking-gate-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .booking-gate-actions .btn {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .trip-head h2 {
+        font-size: 1.1rem;
+    }
+
+    .pay-option-body {
+        flex-wrap: wrap;
+        gap: 0.35rem 0.5rem;
+    }
+
+    .sum-price {
+        font-size: 1.35rem;
+    }
+
+    .booking-summary {
+        padding: 1rem;
+    }
+}
+
+/* ------------------------------------------------------------
+   20.5 Confirmation ticket on phones
+   ------------------------------------------------------------ */
+@media (max-width: 420px) {
+    .ticket-body {
+        padding: 1rem 0.9rem;
+    }
+
+    .ticket-grid .t-cell dd,
+    .ticket-grid dd {
+        word-break: break-word;
+        overflow-wrap: anywhere;
+    }
+
+    .ticket-actions .btn,
+    .next-actions .btn {
+        flex: 1 1 100%;
+    }
+
+    .booking-ref {
+        padding: 0.7rem 1.2rem;
+    }
+
+    .ref-value {
+        font-size: 1.3rem;
+    }
+
+    .success-icon {
+        width: 60px;
+        height: 60px;
+        font-size: 1.8rem;
+    }
+}
+
+/* ------------------------------------------------------------
+   20.6 Company profile on phones
+   ------------------------------------------------------------ */
+@media (max-width: 600px) {
+    body.company-page .cp-tabs {
+        left: 0;
+        right: 0;
+        top: 70px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    body.company-page .cp-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    body.company-page .cp-tabs .cp-tab {
+        flex: 0 0 auto;
+        white-space: nowrap;
+        padding: 0.7rem 0.85rem;
+    }
+
+    body.company-page .cp-id-actions .btn-hero-cta,
+    body.company-page .cp-id-actions .fav-btn-hero {
+        flex: 1 1 100%;
+    }
+
+    body.company-page .company-section {
+        padding: 1.75rem 0;
+    }
+}
+
+/* ------------------------------------------------------------
+   20.7 Dashboard widgets on phones
+   ------------------------------------------------------------ */
+@media (max-width: 480px) {
+    .dashboard-head h1 {
+        font-size: 1.4rem;
+    }
+
+    .dash-stats {
+        gap: 0.6rem;
+    }
+
+    .dash-upcoming-details {
+        grid-template-columns: 1fr;
+    }
+
+    .dash-modal {
+        padding: 0.5rem;
+        align-items: flex-end;
+    }
+
+    .dash-modal-box {
+        max-width: 100%;
+        max-height: 92vh;
+        border-radius: 16px 16px 8px 8px;
+        padding: 0.9rem;
+    }
+
+    .dash-nav-btn {
+        font-size: 0.82rem;
+    }
+
+    .dash-notif-item {
+        padding: 0.8rem 0.9rem;
+    }
+}
+
+/* ------------------------------------------------------------
+   20.8 Footer + shared shells on phones
+   ------------------------------------------------------------ */
+@media (max-width: 560px) {
+    .site-footer .footer-grid {
+        padding-top: 2.5rem;
+        padding-bottom: 1.25rem;
+        gap: 1.5rem;
+    }
+
+    .footer-bottom-row {
+        flex-direction: column;
+        gap: 0.35rem;
+        text-align: center;
+        padding: 1rem 0 1.25rem;
+    }
+
+    .search-card {
+        padding: 1.4rem 1.15rem;
+    }
+}
+
+@media (max-width: 420px) {
+    .container {
+        padding: 0 1rem;
+    }
+
+    .page-title {
+        font-size: 1.35rem;
+    }
+
+    .results-page,
+    .booking-page {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+}
+
+/* ------------------------------------------------------------
+   20.9 Company public profile — mobile containment
+   ------------------------------------------------------------
+   Root cause found by a rendered DOM audit: the six-item section
+   menu (.cp-tabs → repeat(6, auto)) can never shrink, so below
+   900px its ~755px natural width stretched the whole .cp-shell and
+   clipped every profile section on phones. These rules let the
+   rail shrink, turn the menu into a swipeable sticky strip, and
+   keep the panes flowing full-width.
+   ------------------------------------------------------------ */
+@media (max-width: 900px) {
+    body.company-page .cp-shell {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    body.company-page .cp-sidebar,
+    body.company-page .cp-side-card,
+    body.company-page .cp-id-copy,
+    body.company-page .cp-tabs {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    body.company-page .cp-tabs {
+        grid-template-columns: repeat(6, max-content);
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    body.company-page .cp-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    body.company-page .cp-tab {
+        flex: 0 0 auto;
+        white-space: nowrap;
+        padding: .5rem .8rem;
+    }
+}
+
+/* Phones / portrait tablets: the sidebar identity (logo + name +
+   rating + CTA) duplicates the overview header rendered right under
+   the cover photo, so the rail hands its space to the section menu
+   and the identity stays in the flow. The menu becomes a sticky,
+   horizontally swipeable strip under the site header. */
+@media (max-width: 620px) {
+    body.company-page .cp-sidebar .cp-id-copy {
+        display: none;
+    }
+
+    body.company-page .cp-side-card {
+        overflow: visible;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+        border-radius: 0;
+    }
+
+    body.company-page .cp-tabs {
+        position: sticky;
+        top: 70px;
+        left: 0;
+        right: 0;
+        z-index: 40;
+        margin: 0;
+        padding: .6rem .7rem;
+        background: #ffffff;
+        border-top: 1px solid #e3ece6;
+        border-bottom: 1px solid #e3ece6;
+        border-radius: 0;
+    }
+
+    body.company-page .cp-tab {
+        min-height: 44px;
+        padding: .55rem .75rem;
+    }
+
+    body.company-page .cp-pane {
+        padding: 1.05rem;
+    }
+
+    body.company-page .cp-cover-wrap {
+        border-radius: 14px;
+    }
+
+    body.company-page .cp-overview-meta {
+        padding: 1rem 1.1rem;
+    }
+
+    body.company-page .cp-overview-logo {
+        width: 64px;
+        height: 64px;
+    }
+
+    body.company-page .cp-overview-meta .cp-id-actions .btn-hero-cta {
+        padding: .62rem 1rem;
+    }
+
+    /* Deep containment for the Reviews + Contact panes: the rating
+       band, its fixed bar columns and the contact tile grid must all
+       be allowed to shrink into the track instead of stretching the
+       pane past the screen edge on the narrowest phones. */
+    body.company-page .cp-main > *,
+    body.company-page .cp-pane .cp-head,
+    body.company-page .rv-summary,
+    body.company-page .rv-left,
+    body.company-page .rv-score,
+    body.company-page .rv-bars,
+    body.company-page .rv-toolbar,
+    body.company-page .rv-cards,
+    body.company-page .contact-grid,
+    body.company-page .contact-card {
+        min-width: 0;
+    }
+
+    body.company-page .rv-toolbar {
+        flex-wrap: wrap;
+    }
+
+    body.company-page .rv-cta .btn {
+        width: 100%;
+    }
+
+    body.company-page .rv-score .rv-score-num {
+        font-size: 2.3rem;
+    }
+
+    body.company-page .rv-bar-row {
+        grid-template-columns: 36px minmax(0, 1fr) 66px;
+        gap: .45rem;
+    }
+
+    body.company-page .contact-card {
+        padding: .9rem 1rem;
+    }
+}
+
+@media (max-width: 560px) {
+    body.company-page .cmc-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ------------------------------------------------------------
+   20.10 Passenger dashboard — mobile refinements
+   ------------------------------------------------------------
+   The 8-section nav is a swipeable strip on tablets, but on phones
+   only 2–3 sections are visible at once (the rest sit off-screen).
+   On phones it becomes a tidy 2-column grid so every section is
+   visible and tappable. Also stops long emails/names from pushing
+   the profile card wider than the screen.
+   ------------------------------------------------------------ */
+@media (max-width: 768px) {
+    #dashboard-sidebar {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: .4rem;
+        padding: .65rem;
+        overflow: visible;
+    }
+
+    .dash-nav-btn {
+        min-width: 0;
+        justify-content: center;
+        padding: .68rem .55rem;
+    }
+
+    .dash-nav-label {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 620px) {
+    .dash-profile-card {
+        padding: 1.15rem 1rem;
+        gap: .8rem;
+    }
+
+    .profile-summary {
+        min-width: 0;
+    }
+
+    .profile-summary h3,
+    .profile-meta,
+    .profile-detail dt,
+    .profile-detail dd {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    .profile-details {
+        padding: 1.15rem 1rem;
+    }
+
+    .dash-stat .dash-stat-label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+/* ------------------------------------------------------------
+   20.11 Modal sheets — internal scroll
+   ------------------------------------------------------------
+   Fixes the ticket / trip-details / profile / complaint pop-ups on
+   phones: tall content used to spill out past the 92vh-capped sheet
+   (the “container length” bug), with the actions buttons floating
+   over the dimmed backdrop. The sheet now scrolls internally and the
+   header (title + close) sticks to the top, so the close button is
+   always reachable and every modal reads as one contained card.
+   ------------------------------------------------------------ */
+@media (max-width: 620px) {
+    .dash-modal-box {
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        scrollbar-width: none;
+    }
+
+    .dash-modal-box::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Children keep their natural height so the sheet scrolls instead of
+       squeezing the content to fit the capped height. */
+    .dash-modal-box > * {
+        flex: 0 0 auto;
+    }
+
+    .dash-modal-head {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        flex: 0 0 auto;
+        padding: 0.7rem 0.9rem 0.75rem;
+        background: #ffffff;
+        border-bottom: 1px solid #e3ece7;
+        box-shadow: 0 1px 6px rgba(20, 56, 47, 0.07);
+    }
+
+    /* Keep the last action inside the sheet instead of hugging the rounded
+       bottom edge after an internal scroll. */
+    .dash-modal-box > .ticket-actions,
+    .dash-modal-box > .trip-details-actions,
+    .dash-modal-box > .profile-form-actions {
+        padding-bottom: 0.9rem;
+    }
+}

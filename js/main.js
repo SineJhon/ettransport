@@ -6,29 +6,63 @@
 /**
  * Mobile Navigation
  * Toggles the navigation links and the hamburger icon state.
+ * The navbar is shared across every page, so this applies to the
+ * whole site: links AND the auth actions (Login / Register /
+ * Dashboard / Logout) open together as one mobile dropdown.
  */
 (function () {
     var navToggle = document.getElementById('nav-toggle');
     var navLinks = document.getElementById('nav-links');
+    var siteHeader = document.querySelector('.site-header');
 
     if (!navToggle || !navLinks) {
         return;
     }
 
-    navToggle.addEventListener('click', function () {
-        var isOpen = navLinks.classList.toggle('open');
-
-        // Update accessibility state on the toggle button
+    function setMenuState(isOpen) {
+        navLinks.classList.toggle('open', isOpen);
+        navToggle.classList.toggle('open', isOpen);
         navToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        if (siteHeader) {
+            siteHeader.classList.toggle('menu-open', isOpen);
+        }
+    }
+
+    function closeMenu() {
+        if (navLinks.classList.contains('open')) {
+            setMenuState(false);
+        }
+    }
+
+    navToggle.addEventListener('click', function () {
+        setMenuState(!navLinks.classList.contains('open'));
     });
 
-    // Close the mobile menu when a link is clicked
-    navLinks.addEventListener('click', function (event) {
-        if (event.target.tagName === 'A') {
-            navLinks.classList.remove('open');
-            navToggle.setAttribute('aria-expanded', 'false');
+    // Close the mobile menu when tapping anywhere outside the dropdown,
+    // or when any link inside the nav is clicked (nav links and auth
+    // buttons alike). Clicks on the hamburger are ignored here — the
+    // toggle handler above owns that behaviour.
+    document.addEventListener('click', function (event) {
+        var target = event.target;
+        while (target && target !== document) {
+            if (target === navLinks || target === navToggle) { return; }
+            target = target.parentNode;
         }
+        closeMenu();
     });
+
+    // Close the menu when the viewport grows back to desktop size.
+    if (window.matchMedia) {
+        var mq = window.matchMedia('(min-width: 769px)');
+        var onDesktop = function (e) {
+            if (e.matches) { closeMenu(); }
+        };
+        if (typeof mq.addEventListener === 'function') {
+            mq.addEventListener('change', onDesktop);
+        } else if (typeof mq.addListener === 'function') {
+            mq.addListener(onDesktop);
+        }
+    }
 })();
 
 /* ============================================================
