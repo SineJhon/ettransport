@@ -10028,8 +10028,9 @@ body {
    menu (.cp-tabs → repeat(6, auto)) can never shrink, so below
    900px its ~755px natural width stretched the whole .cp-shell and
    clipped every profile section on phones. These rules let the
-   rail shrink, turn the menu into a swipeable sticky strip, and
-   keep the panes flowing full-width.
+   rail shrink and keep the panes flowing full-width. The menu
+   itself is restyled to match the dashboard sidebar menu (20.12):
+   a 2-column button grid on phones, a swipeable strip on tablets.
    ------------------------------------------------------------ */
 @media (max-width: 900px) {
     body.company-page .cp-shell {
@@ -10065,8 +10066,7 @@ body {
 /* Phones / portrait tablets: the sidebar identity (logo + name +
    rating + CTA) duplicates the overview header rendered right under
    the cover photo, so the rail hands its space to the section menu
-   and the identity stays in the flow. The menu becomes a sticky,
-   horizontally swipeable strip under the site header. */
+   and the identity stays in the flow. */
 @media (max-width: 620px) {
     body.company-page .cp-sidebar .cp-id-copy {
         display: none;
@@ -10074,29 +10074,10 @@ body {
 
     body.company-page .cp-side-card {
         overflow: visible;
-        border: 0;
-        background: transparent;
-        box-shadow: none;
-        border-radius: 0;
-    }
-
-    body.company-page .cp-tabs {
-        position: sticky;
-        top: 70px;
-        left: 0;
-        right: 0;
-        z-index: 40;
-        margin: 0;
-        padding: .6rem .7rem;
-        background: #ffffff;
-        border-top: 1px solid #e3ece6;
-        border-bottom: 1px solid #e3ece6;
-        border-radius: 0;
     }
 
     body.company-page .cp-tab {
         min-height: 44px;
-        padding: .55rem .75rem;
     }
 
     body.company-page .cp-pane {
@@ -10109,6 +10090,27 @@ body {
 
     body.company-page .cp-overview-meta {
         padding: 1rem 1.1rem;
+    }
+
+    /* The CTA row (favorite + "View Available Trips") must be allowed to
+       shrink into the track on the smallest phones instead of pushing
+       past the screen edge. */
+    body.company-page .cp-overview-meta,
+    body.company-page .cp-overview-meta .cp-id-actions,
+    body.company-page .cp-overview-meta .cp-id-actions .btn-hero-cta,
+    body.company-page .cp-overview-meta .cp-id-actions .fav-btn-hero {
+        min-width: 0;
+    }
+
+    body.company-page .cp-overview-meta .cp-id-actions {
+        width: 100%;
+    }
+
+    body.company-page .cp-overview-meta .cp-id-actions .btn-hero-cta,
+    body.company-page .cp-overview-meta .cp-id-actions .fav-btn-hero {
+        flex: 1 1 100%;
+        padding: 0.6rem 0.85rem;
+        white-space: normal;
     }
 
     body.company-page .cp-overview-logo {
@@ -10271,5 +10273,116 @@ body {
     .dash-modal-box > .trip-details-actions,
     .dash-modal-box > .profile-form-actions {
         padding-bottom: 0.9rem;
+    }
+}
+
+/* ------------------------------------------------------------
+   20.12 Company profile — section menu styled like the dashboard
+   ------------------------------------------------------------
+   The company profile's section menu (.cp-tabs) now mirrors the
+   passenger dashboard sidebar (.dashboard-sidebar / .dash-nav-btn):
+   the same white card, the same row of icon + label buttons, the
+   same hover and active states, and the same 2-column button grid
+   on phones.
+   ------------------------------------------------------------ */
+
+/* Card shell: identical to .dashboard-sidebar */
+body.company-page .cp-side-card {
+    border: 1px solid #e2ece6;
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 8px 22px rgba(20, 56, 47, 0.06);
+}
+
+/* Menu container: plain column inside the card (same rhythm as
+   .dashboard-sidebar's button stack) */
+body.company-page .cp-tabs {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    margin: 0;
+    gap: 0.4rem;
+    padding: 0.6rem;
+}
+
+/* Menu buttons: same as .dash-nav-btn */
+body.company-page .cp-tab {
+    justify-content: flex-start;
+    gap: 0.75rem;
+    padding: 0.74rem 0.85rem;
+    border-radius: 11px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #40554c;
+    transition: background-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease, transform 0.1s ease;
+    transform: none;
+}
+
+body.company-page .cp-tab .cp-tab-ic {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 8px;
+    background: #edf4ef;
+    color: var(--cp-green);
+    font-size: 0.9rem;
+}
+
+body.company-page .cp-tab:hover {
+    background-color: #edf6f1;
+    color: #0b7a4b;
+}
+
+body.company-page .cp-tab:hover .cp-tab-ic {
+    background: #e2efe7;
+    color: #0b7a4b;
+}
+
+body.company-page .cp-tab.is-active {
+    background: linear-gradient(135deg, #0b7a4b, #0e9157);
+    color: #ffffff;
+    box-shadow: 0 6px 16px rgba(11, 122, 75, 0.28);
+}
+
+body.company-page .cp-tab.is-active .cp-tab-ic {
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffe0a6;
+}
+
+body.company-page .cp-tab:active {
+    transform: translateY(1px);
+}
+
+/* Phones: same 2-column grid as the dashboard sidebar (20.10) so
+   every section is visible and tappable without swiping. */
+@media (max-width: 768px) {
+    body.company-page .cp-tabs {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.4rem;
+        padding: 0.65rem;
+        overflow: visible;
+        position: static;
+    }
+
+    body.company-page .cp-tab {
+        justify-content: center;
+        min-height: 44px;
+        padding: 0.68rem 0.55rem;
+    }
+}
+
+/* Tablets (single-column page shell): keep the same swipeable strip
+   the dashboard sidebar uses at this size. */
+@media (min-width: 769px) and (max-width: 900px) {
+    body.company-page .cp-tabs {
+        grid-template-columns: repeat(6, max-content);
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    body.company-page .cp-tab {
+        flex: 0 0 auto;
+        white-space: nowrap;
+        padding: 0.5rem 0.8rem;
     }
 }
