@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Search available intercity buses across Ethiopia — compare companies, prices and schedules.">
     <title>Search Buses | ET Transport</title>
-    <link rel="stylesheet" href="css/style.css?v=20260919-search-mobile5">
+    <link rel="stylesheet" href="css/style.css?v=20260920-compare-amenities">
     <link rel="stylesheet" href="css/city-picker.css?v=20260907-swap-fix">
     <link rel="icon" type="image/x-icon" href="assets/icons/favicon.svg">
 <!-- Fonts (DM Sans + Outfit) -->
@@ -129,12 +129,18 @@
  <!-- Sticky compare bar -->
     <!-- ============================================= -->
     <div id="compare-bar" class="compare-bar" role="region" aria-label="Selected trips for comparison" hidden>
+        <p id="compare-bar-msg" class="compare-bar-msg" role="status" hidden>You can compare up to 3 trips</p>
         <div class="compare-bar-inner container">
-            <p class="compare-count"><strong id="compare-count-num">0</strong> trips selected</p>
-            <div id="compare-names" class="compare-names" aria-live="polite"></div>
+            <div class="compare-bar-summary">
+                <span class="compare-count-badge" aria-hidden="true"><span id="compare-count-num">0</span></span>
+                <div class="compare-bar-text">
+                    <p class="compare-count">Trips selected</p>
+                    <div id="compare-names" class="compare-names" aria-live="polite"></div>
+                </div>
+            </div>
             <div class="compare-actions">
-                <button type="button" id="compare-btn" class="btn btn-compare">Compare</button>
                 <button type="button" id="compare-clear" class="btn btn-compare-clear">Clear</button>
+                <button type="button" id="compare-btn" class="btn btn-compare">Compare <span class="btn-compare-arrow" aria-hidden="true">&rarr;</span></button>
             </div>
         </div>
     </div>
@@ -146,13 +152,20 @@
         <div class="compare-modal-backdrop" data-compare-close></div>
         <div class="compare-modal-box" role="document">
             <div class="compare-modal-head">
-                <h2 id="compare-modal-title">Compare Trips</h2>
+                <div class="compare-modal-title-wrap">
+                    <span class="compare-modal-icon" aria-hidden="true">&#9878;</span>
+                    <div class="compare-modal-title-text">
+                        <h2 id="compare-modal-title">Compare Trips</h2>
+                        <p class="compare-modal-subtitle">Side-by-side view of your selected journeys</p>
+                    </div>
+                    <span class="compare-head-count" aria-hidden="true"><span id="compare-head-count-num">0</span> selected</span>
+                </div>
                 <button type="button" id="compare-modal-close" class="compare-modal-close" aria-label="Close comparison">&times;</button>
             </div>
             <p id="compare-limit-msg" class="compare-limit-msg" role="status" hidden>You can compare up to 3 trips.</p>
-            <p class="compare-scroll-hint" aria-hidden="true">Scroll sideways to see all trips.</p>
             <div class="compare-modal-body">
                 <div id="compare-table" class="compare-table" tabindex="0"></div>
+                <p class="compare-scroll-hint" aria-hidden="true">Swipe or scroll sideways to see all trips</p>
             </div>
         </div>
     </div>
@@ -213,7 +226,7 @@
     <script src="js/cities.js"></script>
     <script src="js/city-picker.js?v=20260907-swap-fix-3-dispatch"></script>
     <script src="js/company.js?v=20260918-images"></script>
-    <script src="js/search.js?v=20260919-dedupe"></script>
+    <script src="js/search.js?v=20260920-compare-amenities"></script>
 </body>
 </html>
 

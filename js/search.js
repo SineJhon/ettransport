@@ -1,5 +1,5 @@
 /* ============================================================
-   ET Transport â€” search.js
+   ET Transport Ã¢â‚¬â€ search.js
    Advanced search, discovery, comparison and passenger
    discovery (frontend-only, mock data).
 
@@ -8,7 +8,7 @@
    removable filter chips, a max-3 comparison (sticky bar +
    modal), and company-specific search (?company=<slug>).
 
-   Deep-links into the existing booking â†’ passenger â†’ payment â†’
+   Deep-links into the existing booking Ã¢â€ â€™ passenger Ã¢â€ â€™ payment Ã¢â€ â€™
    confirmation flow. No external libraries, ES5 + IIFE + var.
    ============================================================ */
 
@@ -105,7 +105,7 @@
        js/company.js is loaded BEFORE this file and exposes the
        canonical company profiles (window.ETTransportCompanies)
        and the 12 company trips
-       (window.ETTransportTrips). The 8 legacy trips (IDs 1â€“8)
+       (window.ETTransportTrips). The 8 legacy trips (IDs 1Ã¢â‚¬â€œ8)
        are kept here unchanged. Booking/passenger/payment/
        confirmation already resolve every one of these IDs. */
  /* the dataset comes from the boot loader at the bottom of
@@ -133,7 +133,7 @@
         for (var i = 0; i < COMPANY_META.length; i++) {
             if (COMPANY_META[i].name === name) { apiMeta = COMPANY_META[i]; break; }
         }
-        /* Live (API) mode only carries name/slug + rating — enrich with the
+        /* Live (API) mode only carries name/slug + rating â€” enrich with the
            shared catalog so real logos, fleet photos and review counts still
            resolve for known companies instead of showing initials placeholders.
            Legacy trip names (e.g. "Selam Express") also alias to their operator
@@ -189,7 +189,18 @@
         return out.length ? out : fallback;
     }
 
-    /* Build the complete searchable dataset: legacy (1â€“8) + company. */
+    /* Resolve the amenity list for one trip: use the trip's own list when
+       present, otherwise fall back to the operator's catalog amenities, and
+       finally to a sensible standard default so cards and the compare modal
+       never render an empty amenity row. */
+    function tripAmenities(companyName, src) {
+        var safe = Array.isArray(src) ? src : [];
+        if (safe.length) { return safe.slice(); }
+        var meta = companyMetaFor(companyName);
+        return normalizeAmenities(meta && meta.amenities ? meta.amenities : null);
+    }
+
+    /* Build the complete searchable dataset: legacy (1Ã¢â‚¬â€œ8) + company. */
     var allTrips = [];
     var routeTrips = [];
 
@@ -218,7 +229,7 @@
             seats: Number(apiTrip.available_seats) || 0,
             busType: apiTrip.bus_model || '',
             busImage: apiTrip.bus_image || '',
-            amenities: Array.isArray(apiTrip.amenities) ? apiTrip.amenities.slice() : [],
+            amenities: tripAmenities(apiTrip.company_name, apiTrip.amenities),
             date: apiTrip.departure_date || '',
             reviewCount: Number(apiTrip.review_count) || 0
         };
@@ -247,15 +258,13 @@
                 seats: ct.seats,
                 busType: ct.busType,
                 busImage: ct.busImage || '',
-                amenities: Array.isArray(ct.amenities)
-                    ? ct.amenities.slice()
-                    : normalizeAmenities(cm ? cm.amenities : ['Air Conditioning', 'Luggage']),
+                amenities: tripAmenities(ct.company, ct.amenities),
                 date: ct.date || ''
             });
         }
 
         /* The shared demo dataset (js/data.js) mirrors the legacy trips with
-           the SAME ids (1–8) for the Arba Minch route, so the fallback merge
+           the SAME ids (1â€“8) for the Arba Minch route, so the fallback merge
            would otherwise show every trip twice. Trip ids are unique keys
            across the whole app, so keep the first occurrence per id. */
         var seenIds = {};
@@ -318,16 +327,16 @@
 
     function departureSlot(t) {
         var mins = timeToMinutes(t);
-        if (mins < 720) { return 'morning'; }   // 05:00 â€“ 12:00
-        if (mins < 1020) { return 'afternoon'; } // 12:00 â€“ 17:00
-        return 'evening';                         // 17:00 â€“ 22:00
+        if (mins < 720) { return 'morning'; }   // 05:00 Ã¢â‚¬â€œ 12:00
+        if (mins < 1020) { return 'afternoon'; } // 12:00 Ã¢â‚¬â€œ 17:00
+        return 'evening';                         // 17:00 Ã¢â‚¬â€œ 22:00
     }
 
     /* ---------- Dynamic price buckets ----------
        Buckets are generated from the actual dataset so they are
        always sensible (no hardcoded ranges). Boundaries are the
        25th / 50th / 75th percentile prices rounded up to a nice
-       number (nearest 50 ETB), producing 3â€“4 labelled ranges. */
+       number (nearest 50 ETB), producing 3Ã¢â‚¬â€œ4 labelled ranges. */
     var priceBuckets = [];
 
     function buildPriceBuckets() {
@@ -442,6 +451,7 @@
     var compareTable = document.getElementById('compare-table');
     var compareModalClose = document.getElementById('compare-modal-close');
     var compareLimitMsg = document.getElementById('compare-limit-msg');
+    var compareHeadCount = document.getElementById('compare-head-count-num');
 
     /* ---------- Filter group rendering (data-driven) ---------- */
     function uniqueSorted(list) {
@@ -500,7 +510,7 @@
         }
         html += '</div>';
 
-        /* Bus type — only shown when the dataset really distinguishes classes.
+        /* Bus type â€” only shown when the dataset really distinguishes classes.
            Platform policy: every bus is Standard, so this stays hidden. */
         var types = uniqueSorted(routeTrips.map(function (t) { return t.type; }));
         if (types.length > 1) {
@@ -549,17 +559,17 @@
     /* ---------- Filtering ----------
        Deterministic pipeline:
        VALID ROUTE (already applied when routeTrips was built)
-       → VALID DATE → ENOUGH SEATS → COMPANY PARAM → DEPARTURE
-       → PRICE → BUS TYPE → COMPANY → AMENITY.
+       â†’ VALID DATE â†’ ENOUGH SEATS â†’ COMPANY PARAM â†’ DEPARTURE
+       â†’ PRICE â†’ BUS TYPE â†’ COMPANY â†’ AMENITY.
        An empty filter state / empty string is treated as "no filter". */
     function applyFilters(source) {
         var out = [];
         for (var i = 0; i < source.length; i++) {
             var t = source[i];
-            /* VALID DATE — only trips that carry an explicit date are checked;
+            /* VALID DATE â€” only trips that carry an explicit date are checked;
                dateless trips are treated as operating every day. */
             if (t.date && normalizeDate(t.date) !== dateNorm) { continue; }
-            /* ENOUGH SEATS — passengers must fit; never require an exact count. */
+            /* ENOUGH SEATS â€” passengers must fit; never require an exact count. */
             if (typeof t.seats === 'number' && t.seats < passengers) { continue; }
             /* COMPANY PARAM (pinned from the URL, e.g. ?company=selam-bus).
                Only applied when the slug references a known company; an absent
@@ -745,7 +755,7 @@
             src === 'assets/images/buses/bus-luxury.svg';
     }
 
-    /* Operator fleet photos (assets/uploads/buses) by company slug — used when
+    /* Operator fleet photos (assets/uploads/buses) by company slug â€” used when
        a trip's bus row has no image yet (files exist, DB image is NULL). */
     var COMPANY_BUS_PHOTOS = {
         'selam-bus': 'assets/uploads/buses/bus-241-758aecea98c9d1f2be16d54e.webp',
@@ -823,7 +833,7 @@
         }
         var cmp = companyLookup(t.company);
 
-        /* Company logo — real logo when known, initials circle otherwise. */
+        /* Company logo â€” real logo when known, initials circle otherwise. */
         var logoUrl = cmp && cmp.logo ? cmp.logo : '';
         var logoHtml = logoUrl
             ? '<img class="company-logo" src="' + escapeHtml(logoUrl) + '?v=20260918-logos" alt="" loading="lazy">'
@@ -846,7 +856,7 @@
             (t.busType ? '<figcaption>' + escapeHtml(t.busType) + '</figcaption>' : '') +
         '</figure>';
 
-        /* Onboard info: type · seats · amenities (icon + text). */
+        /* Onboard info: type Â· seats Â· amenities (icon + text). */
         var metaHtml = metaItemHtml(META_ICONS.bus, escapeHtml(t.type));
         var seatsLow = t.seats <= 5;
         metaHtml += metaItemHtml(
@@ -1138,16 +1148,31 @@
                 var t = tripById(id);
                 return t ? t.company : '';
             });
-            compareNames.innerHTML = names.map(function (n, i) {
-                return '<span class="compare-name">' + escapeHtml(n) + (i < names.length - 1 ? ',' : '') + '</span>';
-            }).join(' ');
+            if (names.length <= 1) {
+                compareNames.innerHTML = names.map(function (n) {
+                    return '<span class="compare-name"><span class="compare-name-txt">' + escapeHtml(n) + '</span></span>';
+                }).join(' ');
+            } else {
+                compareNames.innerHTML = names.map(function (n, i) {
+                    return '<span class="compare-name">' +
+                        '<span class="compare-name-txt">' + escapeHtml(n) + '</span>' +
+                        '<button type="button" class="compare-name-remove" data-cmp-i="' + i + '" aria-label="Remove ' + escapeHtml(n) + ' from comparison">&times;</button>' +
+                    '</span>';
+                }).join(' ');
+            }
         }
         if (compareBtn) { compareBtn.disabled = compareList.length === 0; }
     }
 
     /* ---------- Compare: modal view ---------- */
-    function compareRow(label, html) {
-        return '<tr><th scope="row">' + label + '</th>' + html + '</tr>';
+    function compareRow(icon, label, tdHtml) {
+        return '<tr>' +
+            '<th scope="row" class="compare-row-label">' +
+                '<span class="cmp-row-ico" aria-hidden="true">' + icon + '</span>' +
+                '<span class="cmp-row-label-txt">' + label + '</span>' +
+            '</th>' +
+            tdHtml +
+        '</tr>';
     }
 
     function renderCompareModal() {
@@ -1157,61 +1182,128 @@
         var selected = compareList.map(tripById);
         var html = '<table class="compare-grid">';
 
-        /* Header: company names */
-        html += '<thead><tr><th scope="col">Trip</th>';
-        for (var i = 0; i < selected.length; i++) {
+        /* Header: company identity (fleet photo + logo + name + route) */
+        html += '<thead><tr><th scope="col" class="compare-corner">Trip</th>';
+        for (var i=0; i < selected.length; i++) {
             var t = selected[i];
             var cmp = companyLookup(t.company);
+            var cmpLogoUrl = cmp && cmp.logo ? cmp.logo : '';
+            var cmpLogo = cmpLogoUrl
+                ? '<img class="cmp-col-logo" src="' + escapeHtml(cmpLogoUrl) + '?v=20260918-logos" alt="' + escapeHtml(t.company) + ' logo">'
+                : '<span class="cmp-col-logo cmp-avatar cmp-avatar-' + (i%4) + '" aria-hidden="true">' + escapeHtml(initialsFor(t.company)) + '</span>';
+            var cmpModel = '<span class="cmp-model"><span class="cmp-model-ico" aria-hidden="true">' + META_ICONS.bus + '</span>' +
+                escapeHtml(t.busType || t.type) + '</span>';
+            var cmpAmenities = '';
+            if (t.amenities && t.amenities.length) {
+                var shownAmenities = t.amenities.slice(0, 3);
+                var extraAmenities = t.amenities.length - shownAmenities.length;
+                var amenChips = '';
+                for (var am = 0; am < shownAmenities.length; am++) {
+                    amenChips += '<span class="cmp-amenity" title="' + escapeHtml(shownAmenities[am]) + '">' +
+                        '<span class="cmp-amenity-ico" aria-hidden="true">' + amenityIconFor(shownAmenities[am]) + '</span>' +
+                        escapeHtml(shownAmenities[am]) + '</span>';
+                }
+                cmpAmenities = '<span class="cmp-col-amenities">' + amenChips +
+                    (extraAmenities > 0 ? '<span class="cmp-amenity cmp-amenity-more">+' + extraAmenities + '</span>' : '') +
+                '</span>';
+            }
             html += '<th scope="col" class="compare-col-head">' +
-                (cmp && cmp.hasProfile
-                    ? '<a class="compare-company-link" href="' + companyProfileLink(cmp.slug) + '">' + escapeHtml(t.company) + '</a>'
-                    : '<span>' + escapeHtml(t.company) + '</span>') +
-                (cmp && cmp.verified ? '<span class="verified-sm"><span aria-hidden="true">&#10003;</span>Verified</span>' : '') +
-                '<span class="compare-depart-time">' + t.depart + ' \u2192 ' + t.arrive + '</span>' +
+                '<div class="cmp-col-inner">' +
+                    '<div class="cmp-col-media">' +
+                        '<img class="cmp-col-bus" src="' + escapeHtml(busImageFor(t)) + '" alt="' + escapeHtml(t.busType || t.company + ' bus') + '" loading="lazy">' +
+                        '<span class="cmp-col-logo-wrap" data-initials="' + escapeHtml(initialsFor(t.company)) + '">' + cmpLogo + '</span>' +
+                    '</div>' +
+                    '<div class="cmp-col-meta">' +
+                        '<span class="cmp-name">' +
+                            (cmp && cmp.hasProfile
+                                ? '<a class="compare-company-link" href="' + companyProfileLink(cmp.slug) + '\">' + escapeHtml(t.company) + '</a>'
+                                : '<span>' + escapeHtml(t.company) + '</span>') +
+                        '</span>' +
+                        (cmp && cmp.verified ? '<span class="cmp-verified" title="Verified operator"><span aria-hidden="true">&#10003;</span>Verified</span>' : '') +
+                        '<span class="cmp-route">' + t.depart + '<span class="cmp-arrow" aria-hidden="true">&rarr;</span>' + t.arrive + '</span>' +
+                        cmpModel + cmpAmenities +
+                    '</div>' +
+                '</div>' +
             '</th>';
         }
         html += '</tr></thead><tbody>';
 
         function cols(fn) {
             var out = '';
-            for (var c = 0; c < selected.length; c++) { out += '<td>' + fn(selected[c], c) + '</td>'; }
+            for (var c=0; c < selected.length; c++) { out += '<td>' + fn(selected[c], c) + '</td>'; }
             return out;
         }
 
-        html += compareRow('Rating', cols(function (t) {
+        /* Best-value highlights (only when a field actually differs) */
+        var minPrice = Infinity;
+        var maxRating = -Infinity;
+        var minDur = Infinity;
+        function tie(fn, bestValue) {
+            for (var q=0; q < selected.length; q++) {
+                if (fn(selected[q]) !== bestValue) { return true; }
+            }
+            return false;
+        }
+        for (var k=0; k < selected.length; k++) {
+            if (selected[k].price < minPrice) { minPrice = selected[k].price; }
+            if (selected[k].minutes < minDur) { minDur = selected[k].minutes; }
+            if (selected[k].rating > maxRating) { maxRating = selected[k].rating; }
+        }
+        var bestPrice = tie(function (t) { return t.price; }, minPrice) ? minPrice : -1;
+        var bestDur = tie(function (t) { return t.minutes; }, minDur) ? minDur : -1;
+        var bestRating = tie(function (t) { return t.rating; }, maxRating) ? maxRating : -1;
+
+        html += compareRow('\u2605', 'Rating', cols(function (t) {
             var rev = reviewCountFor(t);
-            return '\u2605 ' + t.rating.toFixed(1) + (rev > 0 ? '<span class="cmp-sub"> (' + rev.toLocaleString() + ' reviews)</span>' : '');
+            return '<span class="cmp-value">' + t.rating.toFixed(1) + '<span class="cmp-star" aria-hidden="true">\u2605</span></span>' +
+                (rev>0 ? '<span class="cmp-sub"> (' + rev.toLocaleString() + ' reviews)</span>' : '') +
+                (bestRating === t.rating ? '<span class="cmp-best">Best rated</span>' : '');
         }));
-        html += compareRow('Departure', cols(function (t) {
-            return '<strong>' + t.depart + '</strong><span class="cmp-sub">' + escapeHtml(t.from) + '</span>';
+        html += compareRow('\uD83D\uDD50', 'Departure', cols(function (t) {
+            return '<span class="cmp-value">' + t.depart + '</span>' +
+                '<span class="cmp-sub">' + escapeHtml(t.from) + '</span>';
         }));
-        html += compareRow('Arrival', cols(function (t) {
-            return '<strong>' + t.arrive + '</strong><span class="cmp-sub">' + escapeHtml(t.to) + '</span>';
+        html += compareRow('\uD83C\uDFC1', 'Arrival', cols(function (t) {
+            return '<span class="cmp-value">' + t.arrive + '</span>' +
+                '<span class="cmp-sub">' + escapeHtml(t.to) + '</span>';
         }));
-        html += compareRow('Duration', cols(function (t) { return formatDuration(t.minutes); }));
-        html += compareRow('Price', cols(function (t) {
-            return '<strong class="cmp-price">' + formatPrice(t.price) + '</strong><span class="cmp-sub">per passenger</span>';
+        html += compareRow('\u23F1', 'Duration', cols(function (t) {
+            return '<span class="cmp-value">' + formatDuration(t.minutes) + '</span>' +
+                (bestDur === t.minutes ? '<span class="cmp-best">Fastest</span>' : '');
         }));
-        html += compareRow('Bus Type', cols(function (t) {
-            return t.type + (t.busType ? '<span class="cmp-sub">' + escapeHtml(t.busType) + '</span>' : '');
+        html += compareRow('\uD83D\uDCB2', 'Price', cols(function (t) {
+            return '<span class="cmp-value cmp-price">' + formatPrice(t.price) + '</span>' +
+                '<span class="cmp-sub">per passenger</span>' +
+                (bestPrice === t.price ? '<span class="cmp-best">Lowest fare</span>' : '');
         }));
-        html += compareRow('Available Seats', cols(function (t) {
-            return '<strong>' + t.seats + '</strong><span class="cmp-sub">seats</span>';
+        html += compareRow('\uD83D\uDE8C', 'Bus Type', cols(function (t) {
+            return '<span class="cmp-value">' + escapeHtml(t.type) + '</span>' +
+                (t.busType ? '<span class="cmp-sub">' + escapeHtml(t.busType) + '</span>' : '');
         }));
-        html += compareRow('Amenities', cols(function (t) {
-            if (!t.amenities.length) { return '\u2014'; }
+        html += compareRow('\uD83D\uDCBA', 'Available Seats', cols(function (t) {
+            var low = t.seats<=5;
+            return '<span class="cmp-value' + (low ? ' cmp-seats-low' : '') + '">' + t.seats + '</span>' +
+                '<span class="cmp-sub">seats left</span>' +
+                (low ? '<span class="cmp-best cmp-best-warn">Low availability</span>' : '');
+        }));
+        html += compareRow('\u2728', 'Amenities', cols(function (t) {
+            if (!t.amenities.length) { return '<span class="cmp-none">\u2014</span>'; }
             var chips = '';
-            for (var a = 0; a < t.amenities.length; a++) {
-                chips += '<span class="cmp-amenity">\u2713 ' + escapeHtml(t.amenities[a]) + '</span>';
+            for (var a=0; a < t.amenities.length; a++) {
+                chips += '<span class="cmp-amenity">' +
+                    '<span class="cmp-amenity-ico" aria-hidden="true">' + amenityIconFor(t.amenities[a]) + '</span>' +
+                    escapeHtml(t.amenities[a]) +
+                '</span>';
             }
             return chips;
         }));
-        html += compareRow('Select', cols(function (t) {
-            return '<button type="button" class="btn btn-compare-select" data-trip-id="' + t.id + '">Select Trip</button>';
+        html += compareRow('\uD83C\uDFC6', 'Select', cols(function (t) {
+            return '<button type="button" class="btn btn-compare-select" data-trip-id="' + t.id + '\">Select Trip <span class="btn-select-arrow" aria-hidden="true">\u2192</span></button>';
         }));
 
         html += '</tbody></table>';
         compareTable.innerHTML = html;
+        if (compareHeadCount) { compareHeadCount.textContent = compareList.length; }
     }
 
     function openCompareModal() {
@@ -1265,7 +1357,7 @@
         });
     }
 
-    /* "View Seats" â†’ seat selection (existing booking flow) */
+    /* "View Seats" Ã¢â€ â€™ seat selection (existing booking flow) */
     if (listEl) {
         listEl.addEventListener('click', function (event) {
             var btn = event.target.closest ? event.target.closest('.view-seats') : null;
@@ -1312,6 +1404,24 @@
         });
     }
 
+    /* Compare bar: remove an individual trip via its chip button */
+    if (compareNames) {
+        compareNames.addEventListener('click', function (event) {
+            var btn = event.target.closest ? event.target.closest('.compare-name-remove') : null;
+            if (!btn) { return; }
+            var idx = parseInt(btn.getAttribute('data-cmp-i'), 10);
+            if (isNaN(idx) || idx < 0 || idx >= compareList.length) { return; }
+            compareList.splice(idx, 1);
+            syncCheckboxes();
+            updateCompareUI();
+            if (compareModal && !compareModal.hidden) {
+                if (compareList.length) { renderCompareModal(); }
+                else { closeCompareModal(); }
+            }
+            render(filtered);
+        });
+    }
+
     /* ---------- Modal close (button, backdrop, Escape) ---------- */
     if (compareModalClose) {
         compareModalClose.addEventListener('click', closeCompareModal);
@@ -1329,8 +1439,37 @@
         }
     });
 
-    /* ---------- Compare modal: "Select Trip" → booking.html ---------- */
+    /* ---------- Compare modal: "Select Trip" â†’ booking.html ---------- */
     if (compareTable) {
+        /* Broken fleet/logo photos degrade to the initials avatar instead of
+           leaving a broken-image icon behind. */
+        compareTable.addEventListener('error', function (event) {
+            var img = event.target;
+            if (!img || !img.tagName || String(img.tagName).toLowerCase() !== 'img') { return; }
+            if (img.classList && img.classList.contains('cmp-col-bus')) {
+                img.style.display = 'none';
+                var media = img.parentNode;
+                if (media && media.classList) { media.classList.add('has-fallback'); }
+                return;
+            }
+            if (img.classList && img.classList.contains('cmp-col-logo')) {
+                var wrap = img.parentNode;
+                if (wrap && wrap.getAttribute) {
+                    var initials = wrap.getAttribute('data-initials');
+                    if (initials) {
+                        var fb = document.createElement('span');
+                        fb.className = 'cmp-col-logo cmp-avatar cmp-avatar-0';
+                        fb.setAttribute('aria-hidden', 'true');
+                        fb.textContent = initials;
+                        fb.style.display = 'inline-flex';
+                        wrap.replaceChild(fb, img);
+                        return;
+                    }
+                }
+                img.remove();
+            }
+        }, true);
+
         compareTable.addEventListener('click', function (event) {
             var btn = event.target.closest ? event.target.closest('.btn-compare-select') : null;
             if (!btn) { return; }
@@ -1361,7 +1500,7 @@
     }
 
 
-/* ---------- Modify Search form → rebuild URL (keeps ?company= when active) ---------- */
+/* ---------- Modify Search form â†’ rebuild URL (keeps ?company= when active) ---------- */
     if (modifyForm) {
         modifyForm.addEventListener('submit', function (event) {
             event.preventDefault();
@@ -1430,10 +1569,10 @@
                 busType: t.busType,
                 date: t.date || ''
             }}));
-        } catch (e) { /* storage unavailable — booking then falls back to demo data */ }
+        } catch (e) { /* storage unavailable â€” booking then falls back to demo data */ }
     }
 
-    /* Cleaner error state — never silently falls back to mock data. */
+    /* Cleaner error state â€” never silently falls back to mock data. */
     function showSearchError(message) {
         if (countEl) { countEl.textContent = '0 trips found'; }
         if (availEl) { availEl.textContent = 'Live search data unavailable'; }
@@ -1511,7 +1650,7 @@
                     throw new Error((json && json.message) || 'Unexpected search response.');
                 }
                 if (!json.trips.length) {
-                    /* Live database has no trips for this route/date — fall back
+                    /* Live database has no trips for this route/date â€” fall back
                        to the shared demo dataset so results are never empty. */
                     bootDemoDataset();
                     return;
