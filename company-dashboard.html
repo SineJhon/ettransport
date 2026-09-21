@@ -1074,6 +1074,254 @@
         .cd-parcel-modal .cd-parcel-form label { margin-top: .8rem; color: #254a40; font-size: .78rem; font-weight: 800; letter-spacing: .025em; }
         .cd-parcel-modal .cd-parcel-form input, .cd-parcel-modal .cd-parcel-form select, .cd-parcel-modal .cd-parcel-form textarea { min-height: 2.7rem; background: #fbfdfc; }
         @media (max-width: 600px) { .cd-parcel-list { grid-template-columns: 1fr; }.cd-parcel-people { grid-template-columns: 1fr; }.cd-parcel-form-row { grid-template-columns: 1fr; }.cd-parcel-filters { align-items: stretch; flex-direction: column; }.cd-parcel-modal { align-items: end; padding: .5rem; }.cd-parcel-modal-box { max-height: 94vh; border-radius: 16px 16px 10px 10px; padding: 1.1rem; } }
+
+        /* ============================================================
+           MOBILE RESPONSIVENESS — Company dashboard
+           Appended last so these rules win the cascade over the shell
+           styles above. Mirrors the passenger-side treatment:
+           900px = tablet stack + swipeable nav rail,
+           768px = condensed grids, 600px = phone layouts,
+           560 / 480px = small-phone refinements.
+           ============================================================ */
+
+        /* ---------- 1. Workspace shell & header ---------- */
+        @media (max-width: 900px) {
+            .cd-workspace-head { align-items: flex-start; gap: .8rem; }
+            .cd-workspace-head h1 { font-size: 2.05rem; }
+            .cd-layout { grid-template-columns: 1fr; }
+            /* Critical: without min-width:0 the sidebar's min-content
+               (a nowrap 11-chip nav rail) forces the 1fr grid track to
+               ~1500px wide and the whole page scrolls horizontally. */
+            .cd-sidebar { position: static; min-width: 0; }
+            .cd-content, .cd-pane { min-width: 0; }
+        }
+        @media (max-width: 640px) {
+            .cd-workspace-head h1 { font-size: 1.7rem; }
+        }
+
+        /* ---------- 2. Sidebar navigation — passenger-side treatment ---------- */
+        /* Tablet (769–900px): swipeable labeled chip rail like the passenger
+           dashboard's top strip. Phones (≤768px): all eleven sections in a
+           tidy two-column button grid, mirroring #dashboard-sidebar exactly
+           so every section stays visible and tappable without scrolling. */
+        @media (min-width: 769px) and (max-width: 900px) {
+            .cd-nav {
+                display: flex;
+                flex-wrap: nowrap;
+                gap: .4rem;
+                overflow-x: auto;
+                padding: .15rem 0 .35rem;
+                -webkit-overflow-scrolling: touch;
+                scroll-snap-type: x proximity;
+                scrollbar-width: none;
+            }
+            .cd-nav::-webkit-scrollbar { display: none; }
+            .cd-nav button {
+                flex: 0 0 auto;
+                width: auto;
+                white-space: nowrap;
+                padding: .72rem .9rem;
+                scroll-snap-align: start;
+            }
+            .cd-nav button span { display: inline; }
+        }
+        @media (max-width: 768px) {
+            .cd-nav {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: .4rem;
+                padding: .65rem 0 .8rem;
+                overflow: visible;
+            }
+            .cd-sidebar { padding: .7rem; }
+            .cd-company-mini { padding: .45rem .35rem .7rem; }
+            .cd-nav button {
+                min-width: 0;
+                justify-content: center;
+                padding: .7rem .5rem;
+                text-align: center;
+            }
+            .cd-nav button span {
+                display: block;
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+        }
+        @media (max-width: 560px) {
+            .cd-nav button { padding: .62rem .45rem; font-size: .78rem; }
+            .cd-nav button[aria-selected='true'] { box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+        }
+
+        /* ---------- 3. Section header rows & action buttons ---------- */
+        @media (max-width: 700px) {
+            .cd-fleet-head, .cd-trips-head, .cd-bookings-head, .cd-parcel-head,
+            .cd-revenue-head, .cd-profile-head, .cd-refunds-head, .cd-routes-head {
+                align-items: flex-start;
+                flex-wrap: wrap;
+                gap: .65rem;
+            }
+        }
+        @media (max-width: 560px) {
+            .cd-fleet-head .btn, .cd-trips-head .btn, .cd-bookings-head .btn,
+            .cd-parcel-head .btn, .cd-profile-head .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            .cd-parcel-head-actions, .cd-revenue-head-actions, .cd-refunds-head-actions {
+                width: 100%;
+            }
+            .cd-revenue-head-actions .btn, .cd-refunds-head-actions .btn,
+            .cd-parcel-head-actions .btn { flex: 1 1 auto; }
+        }
+
+        /* ---------- 4. Stats & quick actions ---------- */
+        @media (max-width: 600px) {
+            .cd-pane .cd-stat { padding: .9rem .85rem; }
+            .cd-pane .cd-stat-value { font-size: 1.3rem; }
+        }
+
+        /* ---------- 5. Card lists & record rows ---------- */
+        @media (max-width: 768px) {
+            .cd-booking-list, .cd-payment-list, .cd-complaint-list,
+            .cd-route-list, .cd-refund-list { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 600px) {
+            .cd-booking-actions, .cd-bus-actions, .cd-route-actions,
+            .cd-parcel-actions, .cd-refund-card-actions { flex-wrap: wrap; }
+            .cd-booking-actions .btn, .cd-route-actions .btn,
+            .cd-parcel-actions .btn, .cd-refund-card-actions .btn { flex: 1 1 100%; }
+        }
+
+        /* ---------- 6. Refund KPI strip ---------- */
+        @media (max-width: 700px) {
+            .cd-refund-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+
+        /* ---------- 7. Modals → bottom sheets on phones ---------- */
+        @media (max-width: 600px) {
+            .cd-bus-modal, .cd-trip-modal, .cd-cancel-modal, .cd-trip-cancel-modal,
+            .cd-trip-delete-modal, .cd-refund-modal, .cd-revenue-overview-modal,
+            .cd-walkin-booking-modal, .cd-walkin-ticket-modal, .cd-parcel-modal {
+                align-items: end;
+                padding: .4rem;
+            }
+            .cd-bus-modal-box, .cd-trip-modal-box, .cd-cancel-box, .cd-trip-cancel-box,
+            .cd-trip-delete-box, .cd-refund-box, .cd-revenue-overview-box,
+            .cd-walkin-booking-box, .cd-walkin-ticket-box, .cd-parcel-modal-box {
+                max-height: 94vh;
+                border-radius: 18px 18px 8px 8px;
+            }
+            .cd-walkin-ticket-box { padding: 1rem; }
+            .cd-refund-box-inner { padding: 1rem .9rem .95rem; }
+            .cd-revenue-overview-box { width: 100%; padding: 1rem; }
+        }
+        @media (max-width: 480px) {
+            .cd-cancel-actions, .cd-trip-cancel-actions, .cd-trip-delete-actions,
+            .cd-profile-form-actions { flex-wrap: wrap; }
+            .cd-cancel-actions .btn, .cd-trip-cancel-actions .btn,
+            .cd-trip-delete-actions .btn, .cd-profile-form-actions .btn { flex: 1 1 100%; }
+            .cd-trip-cancel-row { flex-wrap: wrap; }
+        }
+
+        /* ---------- 8. Reviews ---------- */
+        @media (max-width: 768px) {
+            .cd-reviews-summary { grid-template-columns: 1fr; gap: 1rem; padding: 1rem; }
+            .cd-review-score-panel {
+                padding-right: 0;
+                padding-bottom: 1rem;
+                border-right: 0;
+                border-bottom: 1px solid #cfe4d7;
+            }
+            .cd-review-filterbar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+            .cd-review-filterbar::-webkit-scrollbar { display: none; }
+            .cd-review-filter { flex: 0 0 auto; }
+        }
+        @media (max-width: 600px) {
+            .cd-pane-title { flex-wrap: wrap; }
+            .cd-pane-title .btn { width: 100%; justify-content: center; }
+        }
+
+        /* ---------- 9. Profile / branches / amenities ---------- */
+        @media (max-width: 768px) {
+            .cd-profile-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .cd-profile-branch-list { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 560px) {
+            .cd-profile-grid { grid-template-columns: 1fr; }
+            .cd-profile-card-body { padding: 0 1rem 1rem; }
+            .cd-profile-cover { height: 84px; }
+            .cd-profile-logo {
+                width: 62px;
+                height: 62px;
+                flex-basis: 62px;
+                margin-top: -1.7rem;
+            }
+            .cd-phone-row { flex-wrap: wrap; }
+            .cd-image-upload { grid-template-columns: 3.2rem 1fr; gap: .6rem; padding: .6rem; }
+            .cd-image-upload-preview, .cd-image-upload-preview.cover { width: 3.2rem; height: 3.2rem; }
+            .cd-branch-form-meta { gap: .6rem 1rem; }
+            .cd-amenity-available { grid-template-columns: 1fr; }
+        }
+
+        /* ---------- 10. Parcel cards ---------- */
+        @media (max-width: 600px) {
+            .cd-parcel-top { flex-direction: column; align-items: flex-start; }
+            .cd-parcel-route b { max-width: 100%; }
+        }
+
+        /* ---------- 11. Complaint summary & chat ---------- */
+        @media (max-width: 768px) {
+            .cd-complaint-summary {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+            .cd-complaint-summary-stat { min-width: 0; }
+        }
+        @media (max-width: 480px) {
+            .cd-complaint-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .cd-complaint-card-head { flex-wrap: wrap; }
+            .cd-complaint-card-head .cd-complaint-status-badge { margin-left: 0; }
+        }
+
+        /* ---------- 12. Revenue overview modal form ---------- */
+        @media (max-width: 600px) {
+            .cd-revenue-overview-period .cd-ov-field { flex: 1 1 calc(50% - .5rem); min-width: 0; }
+            .cd-revenue-overview-period-label { margin-left: 0; }
+        }
+        @media (max-width: 480px) {
+            .cd-revenue-overview-period .cd-ov-field { flex: 1 1 100%; }
+            .cd-revenue-overview-stats {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .cd-revenue-overview-stat { min-width: 0; }
+            .cd-revenue-overview-table { min-width: 560px; }
+            .cd-walkin-booking-head { padding: 1.4rem 1.1rem .9rem; }
+            .cd-walkin-stepper { padding: .8rem 1.1rem; }
+            .cd-walkin-booking-form { padding: 1.1rem; }
+        }
+
+        /* ---------- 13. Banner & card-inner rows ---------- */
+        @media (max-width: 560px) {
+            .cd-banner { flex-wrap: wrap; }
+            .cd-status { margin-left: 0; }
+            .cd-refund-route { flex-wrap: wrap; }
+            .cd-route-top { flex-direction: column; align-items: flex-start; }
+            .cd-bus-form-actions, .cd-trip-form-actions, .cd-route-form-actions { flex-wrap: wrap; }
+            .cd-bus-form-actions .btn, .cd-trip-form-actions .btn,
+            .cd-route-form-actions .btn { flex: 1 1 100%; }
+        }
+
+        /* ---------- 14. Toolbar pill rows — clean swiping on touch ---------- */
+        @media (max-width: 900px) {
+            .cd-trip-toolbar, .cd-booking-toolbar, .cd-payment-toolbar,
+            .cd-parcel-toolbar, .cd-complaint-toolbar { scrollbar-width: none; }
+            .cd-trip-toolbar::-webkit-scrollbar, .cd-booking-toolbar::-webkit-scrollbar,
+            .cd-payment-toolbar::-webkit-scrollbar, .cd-parcel-toolbar::-webkit-scrollbar,
+            .cd-complaint-toolbar::-webkit-scrollbar { display: none; }
+        }
     </style>
 </head>
 <body data-auth-required="1" data-auth-role="company" data-auth-company-approved="1">
