@@ -1453,6 +1453,71 @@
         @media (max-width: 400px) {
             main.container { padding-left: .85rem; padding-right: .85rem; }
         }
+
+        /* ---------- 18. Final fixes ----------
+           1) Hard-stop any accidental horizontal page scroll (dashboard only).
+           2) Revenue overview: the wide 5-column table forces money values
+              off-screen behind a tiny scrollbar on phones. Up to 640px it
+              turns into labeled cards — every ETB amount readable at a glance.
+           3) Parcel filter box: at ≤600px the flex container becomes a column,
+              and the search row's flex-basis (22rem) is then applied to HEIGHT,
+              stretching it to ~350px of empty space. A single-column grid
+              removes that gap entirely. */
+        @media (max-width: 900px) {
+            html, body { overflow-x: hidden; }
+        }
+
+        @media (max-width: 640px) {
+            .cd-revenue-overview-table,
+            .cd-revenue-overview-table tbody,
+            .cd-revenue-overview-table tr,
+            .cd-revenue-overview-table td { display: block; }
+            .cd-revenue-overview-table { min-width: 0; border: 0; }
+            .cd-revenue-overview-table thead { display: none; }
+            .cd-revenue-overview-table tr {
+                padding: .7rem .8rem;
+                margin: .45rem 0 0;
+                border: 1px solid #e2eae5;
+                border-radius: 12px;
+                background: #f6faf7;
+            }
+            .cd-revenue-overview-table tr:first-child { margin-top: 0; }
+            .cd-revenue-overview-table td {
+                display: flex;
+                align-items: baseline;
+                justify-content: space-between;
+                gap: .5rem;
+                border: 0;
+                white-space: normal;
+                text-align: right;
+            }
+            .cd-revenue-overview-table td::before {
+                flex: 0 0 auto;
+                font-weight: 800;
+                color: #5c6d67;
+                font-size: .72rem;
+                text-transform: uppercase;
+                letter-spacing: .03em;
+            }
+            .cd-revenue-overview-table td:nth-child(1)::before { content: "Channel"; }
+            .cd-revenue-overview-table td:nth-child(2)::before { content: "Records"; }
+            .cd-revenue-overview-table td:nth-child(3)::before { content: "Paid (ETB)"; }
+            .cd-revenue-overview-table td:nth-child(4)::before { content: "Refunds (ETB)"; }
+            .cd-revenue-overview-table td:nth-child(5)::before { content: "Net Revenue (ETB)"; }
+        }
+
+        @media (max-width: 600px) {
+            .cd-parcel-filters {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr);
+                gap: .7rem;
+                padding: .9rem;
+                align-items: stretch;
+            }
+            .cd-parcel-filters .cd-day-picker,
+            .cd-parcel-filters .cd-parcel-search-row,
+            .cd-parcel-filters .cd-filter-actions { min-width: 0; }
+        }
     </style>
 </head>
 <body data-auth-required="1" data-auth-role="company" data-auth-company-approved="1">
