@@ -1405,6 +1405,23 @@
             .cd-profile-card-body { padding: 0 .85rem .85rem; }
             .cd-bus-modal-box, .cd-trip-modal-box, .cd-refund-box,
             .cd-revenue-overview-box { padding: 1rem; }
+            /* Office/call-in booking (walk-in) passenger info on phones:
+               the two-column form rows collapse — the Full name cell squeezes
+               to a 41px stub while Phone grabs the row. Stack every row and
+               make inputs fill it; 16px input text also stops iOS auto-zoom
+               on focus. */
+            .cd-walkin-booking-form .cd-walkin-booking-form-row {
+                grid-template-columns: 1fr;
+            }
+            .cd-walkin-booking-form .cd-walkin-booking-form-row > div {
+                min-width: 0;
+            }
+            .cd-walkin-booking-form input,
+            .cd-walkin-booking-form select {
+                width: 100%;
+                min-width: 0;
+                font-size: 16px;
+            }
         }
         @media (max-width: 400px) {
             .cd-workspace-head h1 { font-size: 1.4rem; }
