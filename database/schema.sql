@@ -44,6 +44,14 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Current Database: `ethio_transport`
+--
+
+CREATE DATABASE /*!32312 IF NOT EXISTS*/ `ethio_transport` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */;
+
+USE `ethio_transport`;
+
+--
 -- Table structure for table `booking_passengers`
 --
 
@@ -62,7 +70,7 @@ CREATE TABLE `booking_passengers` (
   PRIMARY KEY (`id`),
   KEY `idx_booking_passengers_booking` (`booking_id`),
   CONSTRAINT `fk_booking_passengers_booking` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -71,7 +79,7 @@ CREATE TABLE `booking_passengers` (
 
 LOCK TABLES `booking_passengers` WRITE;
 /*!40000 ALTER TABLE `booking_passengers` DISABLE KEYS */;
-INSERT INTO `booking_passengers` VALUES (1,1,'Hanna Alem',28,'female','+251 91 234 5566','A1','2026-09-14 21:28:48'),(2,2,'Debebe Jakson',45,'male','+251936913118','51','2026-09-15 03:50:29'),(3,3,'Debebe Jakson',34,'male','+251936913118','1','2026-09-17 20:12:03'),(4,4,'SY Tech Solutions',23,'male','+251936913118','51','2026-09-17 20:29:14'),(5,7,'Hanna Alem',22,'female','+251912345566','51','2026-09-18 08:52:40'),(6,8,'Hanna Alem',22,'female','+251912345566','51','2026-09-18 09:35:57');
+INSERT INTO `booking_passengers` VALUES (1,1,'Hanna Alem',28,'female','+251 91 234 5566','A1','2026-09-14 21:28:48'),(2,2,'Debebe Jakson',45,'male','+251936913118','51','2026-09-15 03:50:29'),(3,3,'Debebe Jakson',34,'male','+251936913118','1','2026-09-17 20:12:03'),(4,4,'SY Tech Solutions',23,'male','+251936913118','51','2026-09-17 20:29:14'),(5,7,'Hanna Alem',22,'female','+251912345566','51','2026-09-18 08:52:40'),(6,8,'Hanna Alem',22,'female','+251912345566','51','2026-09-18 09:35:57'),(7,9,'Hanna Alem',22,'female','+251912345566','1','2026-09-19 08:04:40'),(8,10,'Debebe Jakson',45,'male','+251936913118','50','2026-09-22 04:53:12');
 /*!40000 ALTER TABLE `booking_passengers` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -109,7 +117,7 @@ CREATE TABLE `bookings` (
   CONSTRAINT `fk_bookings_passenger` FOREIGN KEY (`passenger_id`) REFERENCES `users` (`id`) ON UPDATE CASCADE,
   CONSTRAINT `fk_bookings_trip` FOREIGN KEY (`trip_id`) REFERENCES `trips` (`id`) ON UPDATE CASCADE,
   CONSTRAINT `chk_bookings_total` CHECK (`total_amount` >= 0)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -118,7 +126,7 @@ CREATE TABLE `bookings` (
 
 LOCK TABLES `bookings` WRITE;
 /*!40000 ALTER TABLE `bookings` DISABLE KEYS */;
-INSERT INTO `bookings` VALUES (1,162,2941,'BK-SEED-HANNA01',900.00,'cash','online','paid','completed',NULL,'none',NULL,NULL,NULL,NULL,'2026-09-02 20:28:48','2026-09-02 20:28:48'),(2,163,2958,'ET-20260915-DNZDV7',1200.00,'cash','office','paid','confirmed',NULL,'none',NULL,'Debebe Jakson','10001634578','CBE','2026-09-15 03:50:29','2026-09-15 03:50:29'),(3,163,2968,'ET-20260917-Z63N8S',1250.00,'cash','office','paid','confirmed',NULL,'none',NULL,'Debebe Jakson','10001634578','CBE','2026-09-17 20:12:03','2026-09-17 20:12:03'),(4,162,3000,'ET-20260917-RG2QBX',850.00,'telebirr','online','paid','cancelled',NULL,'none',NULL,'ssssssssssssssssss','11111111111111111111','CBE','2026-09-17 20:29:14','2026-09-17 20:54:19'),(7,162,2947,'ET-20260918-85T9E4',900.00,'telebirr','online','refunded','cancelled','Cancelled by passenger','full',900.00,'Hanna Alem','1000245798234','CBE','2026-09-18 08:52:40','2026-09-18 09:34:24'),(8,162,2946,'ET-20260918-AEXS7Q',880.00,'telebirr','online','paid','confirmed',NULL,'none',NULL,'Hanna Alem','1000245798234','CBE','2026-09-18 09:35:57','2026-09-18 09:35:57');
+INSERT INTO `bookings` VALUES (1,162,2941,'BK-SEED-HANNA01',900.00,'cash','online','paid','completed',NULL,'none',NULL,NULL,NULL,NULL,'2026-09-02 20:28:48','2026-09-02 20:28:48'),(2,163,2958,'ET-20260915-DNZDV7',1200.00,'cash','office','paid','confirmed',NULL,'none',NULL,'Debebe Jakson','10001634578','CBE','2026-09-15 03:50:29','2026-09-15 03:50:29'),(3,163,2968,'ET-20260917-Z63N8S',1250.00,'cash','office','paid','confirmed',NULL,'none',NULL,'Debebe Jakson','10001634578','CBE','2026-09-17 20:12:03','2026-09-17 20:12:03'),(4,162,3000,'ET-20260917-RG2QBX',850.00,'telebirr','online','paid','cancelled',NULL,'none',NULL,'ssssssssssssssssss','11111111111111111111','CBE','2026-09-17 20:29:14','2026-09-17 20:54:19'),(7,162,2947,'ET-20260918-85T9E4',900.00,'telebirr','online','refunded','cancelled','Cancelled by passenger','full',900.00,'Hanna Alem','1000245798234','CBE','2026-09-18 08:52:40','2026-09-18 09:34:24'),(8,162,2946,'ET-20260918-AEXS7Q',880.00,'telebirr','online','paid','confirmed',NULL,'none',NULL,'Hanna Alem','1000245798234','CBE','2026-09-18 09:35:57','2026-09-18 09:35:57'),(9,162,2946,'ET-20260919-5PLJBN',880.00,'mpesa','online','refunded','cancelled','Cancelled by passenger','half',440.00,'Hanna Alem','1000234687362','CBE','2026-09-19 08:04:40','2026-09-19 08:06:48'),(10,163,2956,'ET-20260922-L9E77M',1250.00,'cash','office','paid','confirmed',NULL,'none',NULL,'Debebe Jakson','100985674321','CBE','2026-09-22 04:53:12','2026-09-22 04:53:12');
 /*!40000 ALTER TABLE `bookings` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -460,7 +468,7 @@ CREATE TABLE `notifications` (
   KEY `idx_notifications_user_read` (`user_id`,`is_read`),
   KEY `idx_notifications_is_read` (`is_read`),
   CONSTRAINT `fk_notifications_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=28 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=103 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -469,7 +477,7 @@ CREATE TABLE `notifications` (
 
 LOCK TABLES `notifications` WRITE;
 /*!40000 ALTER TABLE `notifications` DISABLE KEYS */;
-INSERT INTO `notifications` VALUES (1,163,'Ticket booked by office','Your ticket for Addis Ababa → Mekelle has been booked and confirmed. Seat 51 is reserved under booking ET-20260915-DNZDV7.','booking',NULL,0,'2026-09-15 03:50:29'),(2,164,'Complaint Update','The company updated the status of your complaint \"Bus departed over an hour late to Mekelle\".','complaint',NULL,0,'2026-09-15 09:25:09'),(3,162,'Booking Confirmed','Your Selam Bus trip Addis Ababa ? Bahir Dar is confirmed. Ref: BK-SEED-HANNA01 ? Seat A1.','booking','tickets',1,'2026-09-16 14:58:02'),(4,162,'Payment Received','Payment of ETB 900.00 for booking BK-SEED-HANNA01 was received.','payment','tickets',1,'2026-09-16 14:55:02'),(5,162,'Gate Change','Your Bahir Dar departure moved to Platform 4 at Meskel Square Terminal.','booking','tickets',1,'2026-09-16 14:16:02'),(6,162,'Boarding Reminder','Your bus to Bahir Dar departs 2026-09-14 at 06:30 from Meskel Square Terminal. Please arrive 30 minutes early.','general','trips',1,'2026-09-15 15:01:02'),(9,162,'Review Your Trip','How was your trip with Selam Bus from Addis Ababa ? Bahir Dar? Share your feedback to help other passengers.','review','company-reviews:selam-bus',1,'2026-09-12 15:01:02'),(10,162,'Return Trip Reminder','Your return coach to Addis Ababa departs soon ? check in from the My Trips page.','booking','trips',1,'2026-09-11 15:01:02'),(12,162,'Welcome to ET Transport','Save your passenger info and a refund account in your profile to pre-fill every booking.','general','profile-edit',1,'2026-09-04 15:01:02'),(13,162,'Complaint Submitted','Your complaint \"Technical Support\" has been submitted. ET Transport support will respond soon.','complaint','complaints',1,'2026-09-16 22:21:39'),(14,152,'Platform Complaint Received','A passenger submitted a platform complaint: \"Technical Support\".','complaint',NULL,0,'2026-09-16 22:21:39'),(15,152,'Complaint Update','A passenger requested admin help on a complaint. (\"Technical Support\")','complaint',NULL,0,'2026-09-16 22:32:12'),(16,162,'Admin Support','An administrator updated your complaint \"Technical Support\".','complaint','complaints',1,'2026-09-17 07:54:31'),(17,162,'Admin Support','An administrator updated your complaint \"Technical Support\".','complaint','complaints',1,'2026-09-17 07:54:36'),(18,163,'Ticket booked by office','Your ticket for Addis Ababa → Mekelle has been booked and confirmed. Seat 1 is reserved under booking ET-20260917-Z63N8S.','booking','tickets',0,'2026-09-17 20:12:03'),(19,162,'Booking Confirmed','Your booking ET-20260917-RG2QBX for Addis Ababa → Bahir Dar on 2026-09-17 with Yegna Bus for 1 seat(s) is confirmed.','booking','tickets',1,'2026-09-17 20:29:14'),(20,162,'Payment Successful','Payment of ETB 850.00 for booking ET-20260917-RG2QBX was successful (ref TXN-20260917-KVZEZ6CV).','payment','tickets',1,'2026-09-17 20:29:14'),(21,162,'Booking Cancelled','Your booking ET-20260917-RG2QBX (Addis Ababa → Bahir Dar) on 2026-09-17 has been cancelled.','booking','trips',1,'2026-09-17 20:54:19'),(22,162,'Booking Confirmed','Your booking ET-20260918-85T9E4 for Addis Ababa → Bahir Dar on 2026-09-20 with Selam Bus for 1 seat(s) is confirmed.','booking','tickets',1,'2026-09-18 08:52:40'),(23,162,'Payment Successful','Payment of ETB 900.00 for booking ET-20260918-85T9E4 was successful (ref TXN-20260918-MT3MU2WM).','payment','tickets',1,'2026-09-18 08:52:40'),(24,162,'Booking Cancelled','Your booking ET-20260918-85T9E4 (Addis Ababa → Bahir Dar) on 2026-09-20 has been cancelled. A full refund of ETB 900.00 was entitled, and the refund request has been sent to Selam Bus for processing.','booking','trips',1,'2026-09-18 08:52:55'),(25,162,'Refund Processed','Your refund of ETB 900.00 for booking ET-20260918-85T9E4 (Addis Ababa → Bahir Dar) has been processed by Selam Bus.','payment','trips',1,'2026-09-18 09:34:24'),(26,162,'Booking Confirmed','Your booking ET-20260918-AEXS7Q for Addis Ababa → Bahir Dar on 2026-09-19 with Selam Bus for 1 seat(s) is confirmed.','booking','tickets',1,'2026-09-18 09:35:57'),(27,162,'Payment Successful','Payment of ETB 880.00 for booking ET-20260918-AEXS7Q was successful (ref TXN-20260918-BFF9DQYT).','payment','tickets',1,'2026-09-18 09:35:57');
+INSERT INTO `notifications` VALUES (1,163,'Ticket booked by office','Your ticket for Addis Ababa → Mekelle has been booked and confirmed. Seat 51 is reserved under booking ET-20260915-DNZDV7.','booking',NULL,0,'2026-09-15 03:50:29'),(2,164,'Complaint Update','The company updated the status of your complaint \"Bus departed over an hour late to Mekelle\".','complaint',NULL,0,'2026-09-15 09:25:09'),(3,162,'Booking Confirmed','Your Selam Bus trip Addis Ababa ? Bahir Dar is confirmed. Ref: BK-SEED-HANNA01 ? Seat A1.','booking','tickets',1,'2026-09-16 14:58:02'),(4,162,'Payment Received','Payment of ETB 900.00 for booking BK-SEED-HANNA01 was received.','payment','tickets',1,'2026-09-16 14:55:02'),(5,162,'Gate Change','Your Bahir Dar departure moved to Platform 4 at Meskel Square Terminal.','booking','tickets',1,'2026-09-16 14:16:02'),(6,162,'Boarding Reminder','Your bus to Bahir Dar departs 2026-09-14 at 06:30 from Meskel Square Terminal. Please arrive 30 minutes early.','general','trips',1,'2026-09-15 15:01:02'),(9,162,'Review Your Trip','How was your trip with Selam Bus from Addis Ababa ? Bahir Dar? Share your feedback to help other passengers.','review','company-reviews:selam-bus',1,'2026-09-12 15:01:02'),(10,162,'Return Trip Reminder','Your return coach to Addis Ababa departs soon ? check in from the My Trips page.','booking','trips',1,'2026-09-11 15:01:02'),(12,162,'Welcome to ET Transport','Save your passenger info and a refund account in your profile to pre-fill every booking.','general','profile-edit',1,'2026-09-04 15:01:02'),(13,162,'Complaint Submitted','Your complaint \"Technical Support\" has been submitted. ET Transport support will respond soon.','complaint','complaints',1,'2026-09-16 22:21:39'),(14,152,'Platform Complaint Received','A passenger submitted a platform complaint: \"Technical Support\".','complaint',NULL,0,'2026-09-16 22:21:39'),(15,152,'Complaint Update','A passenger requested admin help on a complaint. (\"Technical Support\")','complaint',NULL,0,'2026-09-16 22:32:12'),(16,162,'Admin Support','An administrator updated your complaint \"Technical Support\".','complaint','complaints',1,'2026-09-17 07:54:31'),(17,162,'Admin Support','An administrator updated your complaint \"Technical Support\".','complaint','complaints',1,'2026-09-17 07:54:36'),(18,163,'Ticket booked by office','Your ticket for Addis Ababa → Mekelle has been booked and confirmed. Seat 1 is reserved under booking ET-20260917-Z63N8S.','booking','tickets',0,'2026-09-17 20:12:03'),(19,162,'Booking Confirmed','Your booking ET-20260917-RG2QBX for Addis Ababa → Bahir Dar on 2026-09-17 with Yegna Bus for 1 seat(s) is confirmed.','booking','tickets',1,'2026-09-17 20:29:14'),(20,162,'Payment Successful','Payment of ETB 850.00 for booking ET-20260917-RG2QBX was successful (ref TXN-20260917-KVZEZ6CV).','payment','tickets',1,'2026-09-17 20:29:14'),(21,162,'Booking Cancelled','Your booking ET-20260917-RG2QBX (Addis Ababa → Bahir Dar) on 2026-09-17 has been cancelled.','booking','trips',1,'2026-09-17 20:54:19'),(22,162,'Booking Confirmed','Your booking ET-20260918-85T9E4 for Addis Ababa → Bahir Dar on 2026-09-20 with Selam Bus for 1 seat(s) is confirmed.','booking','tickets',1,'2026-09-18 08:52:40'),(23,162,'Payment Successful','Payment of ETB 900.00 for booking ET-20260918-85T9E4 was successful (ref TXN-20260918-MT3MU2WM).','payment','tickets',1,'2026-09-18 08:52:40'),(24,162,'Booking Cancelled','Your booking ET-20260918-85T9E4 (Addis Ababa → Bahir Dar) on 2026-09-20 has been cancelled. A full refund of ETB 900.00 was entitled, and the refund request has been sent to Selam Bus for processing.','booking','trips',1,'2026-09-18 08:52:55'),(25,162,'Refund Processed','Your refund of ETB 900.00 for booking ET-20260918-85T9E4 (Addis Ababa → Bahir Dar) has been processed by Selam Bus.','payment','trips',1,'2026-09-18 09:34:24'),(26,162,'Booking Confirmed','Your booking ET-20260918-AEXS7Q for Addis Ababa → Bahir Dar on 2026-09-19 with Selam Bus for 1 seat(s) is confirmed.','booking','tickets',1,'2026-09-18 09:35:57'),(27,162,'Payment Successful','Payment of ETB 880.00 for booking ET-20260918-AEXS7Q was successful (ref TXN-20260918-BFF9DQYT).','payment','tickets',1,'2026-09-18 09:35:57'),(28,162,'Booking Confirmed','Your booking ET-20260919-5PLJBN for Addis Ababa → Bahir Dar on 2026-09-19 with Selam Bus for 1 seat(s) is confirmed.','booking','tickets',1,'2026-09-19 08:04:40'),(29,162,'Payment Successful','Payment of ETB 880.00 for booking ET-20260919-5PLJBN was successful (ref TXN-20260919-HGF5QTZS).','payment','tickets',1,'2026-09-19 08:04:40'),(30,162,'Booking Cancelled','Your booking ET-20260919-5PLJBN (Addis Ababa → Bahir Dar) on 2026-09-19 has been cancelled. Per the 24-hour cancellation policy, a half refund of ETB 440.00 will be processed by Selam Bus.','booking','trips',1,'2026-09-19 08:04:58'),(31,162,'Refund Processed','Your refund of ETB 440.00 for booking ET-20260919-5PLJBN (Addis Ababa → Bahir Dar) has been processed by Selam Bus.','payment','trips',1,'2026-09-19 08:06:48'),(102,163,'Ticket booked by office','Your ticket for Addis Ababa → Mekelle has been booked and confirmed. Seat 50 is reserved under booking ET-20260922-L9E77M.','booking','tickets',0,'2026-09-22 04:53:12');
 /*!40000 ALTER TABLE `notifications` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -528,7 +536,7 @@ CREATE TABLE `parcel_payments` (
   KEY `idx_parcel_payments_company` (`company_id`,`created_at`),
   CONSTRAINT `fk_parcel_payments_company` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_parcel_payments_parcel` FOREIGN KEY (`parcel_id`) REFERENCES `parcels` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=319 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=388 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -639,7 +647,7 @@ CREATE TABLE `payments` (
   KEY `idx_payments_booking` (`booking_id`),
   CONSTRAINT `fk_payments_booking` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `chk_payments_amount` CHECK (`amount` >= 0)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -648,7 +656,7 @@ CREATE TABLE `payments` (
 
 LOCK TABLES `payments` WRITE;
 /*!40000 ALTER TABLE `payments` DISABLE KEYS */;
-INSERT INTO `payments` VALUES (1,2,1200.00,'cash','OFFICE-20260915-9355b4a1','paid','2026-09-15 03:50:29','2026-09-15 03:50:29'),(2,3,1250.00,'cash','OFFICE-20260917-24d43185','paid','2026-09-17 20:12:03','2026-09-17 20:12:03'),(3,4,850.00,'telebirr','TXN-20260917-KVZEZ6CV','paid','2026-09-17 20:29:14','2026-09-17 20:29:14'),(6,7,900.00,'telebirr','TXN-20260918-MT3MU2WM','refunded','2026-09-18 08:52:40','2026-09-18 09:34:24'),(7,8,880.00,'telebirr','TXN-20260918-BFF9DQYT','paid','2026-09-18 09:35:57','2026-09-18 09:35:57');
+INSERT INTO `payments` VALUES (1,2,1200.00,'cash','OFFICE-20260915-9355b4a1','paid','2026-09-15 03:50:29','2026-09-15 03:50:29'),(2,3,1250.00,'cash','OFFICE-20260917-24d43185','paid','2026-09-17 20:12:03','2026-09-17 20:12:03'),(3,4,850.00,'telebirr','TXN-20260917-KVZEZ6CV','paid','2026-09-17 20:29:14','2026-09-17 20:29:14'),(6,7,900.00,'telebirr','TXN-20260918-MT3MU2WM','refunded','2026-09-18 08:52:40','2026-09-18 09:34:24'),(7,8,880.00,'telebirr','TXN-20260918-BFF9DQYT','paid','2026-09-18 09:35:57','2026-09-18 09:35:57'),(8,9,880.00,'mpesa','TXN-20260919-HGF5QTZS','refunded','2026-09-19 08:04:40','2026-09-19 08:06:48'),(9,10,1250.00,'cash','OFFICE-20260922-01f0d03d','paid','2026-09-22 04:53:12','2026-09-22 04:53:12');
 /*!40000 ALTER TABLE `payments` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -683,7 +691,7 @@ CREATE TABLE `refund_requests` (
   CONSTRAINT `fk_refund_requests_company` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_refund_requests_passenger` FOREIGN KEY (`passenger_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_refund_requests_processed_by` FOREIGN KEY (`processed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -692,7 +700,7 @@ CREATE TABLE `refund_requests` (
 
 LOCK TABLES `refund_requests` WRITE;
 /*!40000 ALTER TABLE `refund_requests` DISABLE KEYS */;
-INSERT INTO `refund_requests` VALUES (3,7,136,162,900.00,'full','approved','Selam BUS','297TG4355G',NULL,153,'2026-09-18 08:52:55','2026-09-18 09:34:24');
+INSERT INTO `refund_requests` VALUES (3,7,136,162,900.00,'full','approved','Selam BUS','297TG4355G',NULL,153,'2026-09-18 08:52:55','2026-09-18 09:34:24'),(4,9,136,162,440.00,'half','approved','Selam Bus','TX544537',NULL,153,'2026-09-19 08:04:58','2026-09-19 08:06:48');
 /*!40000 ALTER TABLE `refund_requests` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -879,7 +887,7 @@ CREATE TABLE `users` (
   UNIQUE KEY `uq_users_phone` (`phone`),
   KEY `idx_users_role` (`role`),
   KEY `idx_users_status` (`status`)
-) ENGINE=InnoDB AUTO_INCREMENT=169 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=196 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -901,4 +909,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-19  9:54:56
+-- Dump completed on 2026-09-22  9:56:08
