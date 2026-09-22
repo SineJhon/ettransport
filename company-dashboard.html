@@ -1322,6 +1322,120 @@
             .cd-payment-toolbar::-webkit-scrollbar, .cd-parcel-toolbar::-webkit-scrollbar,
             .cd-complaint-toolbar::-webkit-scrollbar { display: none; }
         }
+
+        /* ---------- 15. Date picker — quick-day chips wrap like the home page ----------
+           The dashboard filters' horizontal day scrubber is janky on phones: most
+           chips sit off-screen behind a tiny scrollbar and a swipe feels flaky.
+           On mobile the day lists mirror the passenger-facing home screen
+           (.hp-date-quick): the chips flow into tidy rows so every quick date is
+           visible and tappable with zero horizontal scrolling. Exactly FOUR
+           chips per row keeps each date big enough to read and hit reliably,
+           and makes the grid predictable on any phone width. Desktop and
+           tablets keep the compact single-row scrubber. */
+        @media (max-width: 768px) {
+            .cd-day-list {
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: .45rem;
+                padding: .55rem 0 .15rem;
+                overflow: visible;
+                scrollbar-width: none;
+            }
+            .cd-day-list::-webkit-scrollbar { display: none; }
+            /* Filter chips (Trips / Passengers / Parcel / Revenue). */
+            .cd-day-button {
+                min-width: 0;
+                min-height: 3.7rem;
+                padding: .42rem .3rem;
+            }
+            /* Walk-in booking + parcel travel-date chips share the .cd-day-btn
+               card style (two/three-line) — same four-per-row grid. */
+            .cd-day-list .cd-day-btn {
+                min-width: 0;
+                min-height: 3.5rem;
+            }
+            /* The parcel travel-date list carries its own ID-level scrubber
+               rule; re-assert the four-column grid at equal specificity. */
+            #parcel-travel-day-list {
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: .35rem;
+                padding: .3rem 0 .2rem;
+                overflow: visible;
+                scrollbar-width: none;
+            }
+            #parcel-travel-day-list .cd-day-btn {
+                min-width: 0;
+                min-height: 3.5rem;
+            }
+            .cd-date-head { flex-wrap: wrap; row-gap: .35rem; }
+        }
+
+        /* ---------- 16. Small-phone compression ----------
+           A gentle density pass so operator views use less vertical space:
+           tighter pane/card padding, smaller stat tiles and quick actions,
+           compact nav grid and filter boxes. Phone widths only — desktop
+           and tablet spacing is untouched. */
+        @media (max-width: 560px) {
+            .cd-page { padding: .9rem 0 1.75rem; }
+            .cd-workspace-head { margin-bottom: .9rem; }
+            .cd-workspace-head h1 { font-size: 1.5rem; }
+            .cd-nav { gap: .35rem; padding: .5rem 0 .65rem; }
+            .cd-nav button { padding: .58rem .4rem; font-size: .75rem; }
+            .cd-pane { padding: .85rem; }
+            .cd-pane-title { padding-bottom: .85rem; margin-bottom: .85rem; gap: .5rem; }
+            .cd-pane-title h2 { font-size: 1.35rem; }
+            .cd-pane .cd-stat { padding: .68rem .7rem; }
+            .cd-pane .cd-stat-value { font-size: 1.1rem; }
+            .cd-pane .cd-stat-label { font-size: .6rem; }
+            .cd-quick-action { padding: .62rem .68rem; gap: .55rem; }
+            .cd-quick-icon { width: 1.95rem; height: 1.95rem; }
+            .cd-passenger-filter { padding: .7rem; margin: .7rem 0 .9rem; }
+            .cd-filter-actions { flex-wrap: wrap; gap: .45rem; }
+            .cd-filter-actions .btn { flex: 1 1 100%; min-height: 2.5rem; }
+            .cd-bus-form, .cd-trip-form, .cd-route-form,
+            .cd-profile-form, .cd-parcel-form { padding: .9rem; }
+            .cd-bus-card, .cd-trip-card, .cd-booking-card, .cd-payment-card,
+            .cd-route-card, .cd-parcel-card, .cd-refund-card,
+            .cd-complaint-card, .cd-review-card { padding: .85rem; }
+            .cd-record-meta { gap: .35rem; margin: .7rem 0; }
+            .cd-record-meta span { padding: .45rem .5rem; }
+            .cd-refund-summary { gap: .4rem; padding: .6rem .65rem; }
+            .cd-complaint-summary { gap: .4rem; }
+            .cd-profile-card-body { padding: 0 .85rem .85rem; }
+            .cd-bus-modal-box, .cd-trip-modal-box, .cd-refund-box,
+            .cd-revenue-overview-box { padding: 1rem; }
+        }
+        @media (max-width: 400px) {
+            .cd-workspace-head h1 { font-size: 1.4rem; }
+            .cd-pane { padding: .75rem; }
+            .cd-pane .cd-stat { padding: .6rem .65rem; }
+            .cd-day-button { min-height: 3.4rem; }
+            .cd-pane .cd-bus-list, .cd-pane .cd-trip-list { gap: .8rem; }
+        }
+
+        /* ---------- 17. Page gutters — keep content off the screen edges ----------
+           main.container.cd-page uses the padding SHORTHAND (padding: 2rem 0 …),
+           which resets the shared .container's horizontal padding to 0 — so on
+           phones every card/panel sat flush against the viewport border. Restore
+           comfortable side gutters here with longhand so the cascade keeps them:
+           panels get real air around them and the mobile views look seamless. */
+        @media (max-width: 900px) {
+            main.container { padding-left: 1.25rem; padding-right: 1.25rem; }
+        }
+        @media (max-width: 600px) {
+            main.container { padding-left: 1rem; padding-right: 1rem; }
+            /* Slim full-width sheets slightly too — a little air at the edges. */
+            .cd-bus-modal, .cd-trip-modal, .cd-cancel-modal, .cd-trip-cancel-modal,
+            .cd-trip-delete-modal, .cd-refund-modal, .cd-revenue-overview-modal,
+            .cd-walkin-booking-modal, .cd-walkin-ticket-modal, .cd-parcel-modal {
+                padding: .6rem;
+            }
+            .cd-nav { padding: .55rem 0 .6rem; }
+        }
+        @media (max-width: 400px) {
+            main.container { padding-left: .85rem; padding-right: .85rem; }
+        }
     </style>
 </head>
 <body data-auth-required="1" data-auth-role="company" data-auth-company-approved="1">
