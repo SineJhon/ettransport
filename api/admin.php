@@ -980,7 +980,7 @@ function handle_admin_passengers(PDO $pdo): void
                          AND bk2.payment_status = \'paid\'), 0) AS total_spent
         FROM users u
         WHERE u.role = \'passenger\'
-          AND u.email NOT LIKE \'walkin-%@ettransport.local\'
+          AND u.email NOT LIKE \'walkin-%@ettransport.local\' AND u.email <> \'deleted-account@ettransport.local\'
     ';
     $params = [];
 
@@ -1044,7 +1044,7 @@ function handle_admin_passenger(PDO $pdo): void
         FROM users u
         WHERE u.id = :id
           AND u.role = :role
-          AND u.email NOT LIKE \'walkin-%@ettransport.local\'
+          AND u.email NOT LIKE \'walkin-%@ettransport.local\' AND u.email <> \'deleted-account@ettransport.local\'
         LIMIT 1
     ');
     $stmt->execute([':id' => $userId, ':role' => 'passenger']);

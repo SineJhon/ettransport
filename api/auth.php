@@ -117,6 +117,12 @@ function handle_register(): void
     $email = strtolower(clean_text($input['email'] ?? ''));
     $phone = clean_text($input['phone'] ?? '');
     $password = (string) ($input['password'] ?? '');
+
+    /* Reserved for the shared "Deleted Account" placeholder used when a
+       passenger deletes their account. Never handed to a real sign-up. */
+    if ($email === 'deleted-account@ettransport.local') {
+        auth_response(422, ['success' => false, 'message' => 'This email address cannot be used for a new account.']);
+    }
     $role = strtolower(clean_text($input['role'] ?? 'passenger'));
 
     $companyName = clean_text($input['company_name'] ?? '');
@@ -548,6 +554,164 @@ function handle_update_profile(): void
     ]);
 }
 
+/* ============================================================
+   POST clear_history — wipe every record this passenger owns on
+   the passenger side: bookings (with their passengers, payments
+   and refund requests), notifications, favorites, review likes,
+   reviews and complaints (with their responses). The account
+   itself is NOT touched — the passenger keeps the same login,
+   email and profile, just with a clean slate.
+   ============================================================ */
+function handle_clear_history(): void
+{
+    require_post();
+    $user = requireRole('passenger');
+    $userId = (int) $user['id'];
+    $pdo = db();
+
+    try {
+        $pdo->beginTransaction();
+
+        /* Passenger-side rows only — nothing that belongs to
+           companies, admins or other passengers is touched. */
+        $delNotif = $pdo->prepare('DELETE FROM notifications WHERE user_id = :uid');
+        $delNotif->execute([':uid' => $userId]);
+
+        $delFavs = $pdo->prepare('DELETE FROM favorites WHERE user_id = :uid');
+        $delFavs->execute([':uid' => $userId]);
+
+        $delLikes = $pdo->prepare('DELETE FROM review_likes WHERE user_id = :uid');
+        $delLikes->execute([':uid' => $userId]);
+
+        $delReviews = $pdo->prepare('DELETE FROM reviews WHERE passenger_id = :uid');
+        $delReviews->execute([':uid' => $userId]);
+
+        /* complaint_responses cascade delete with their complaint. */
+        $delComplaints = $pdo->prepare('DELETE FROM complaints WHERE passenger_id = :uid');
+        $delComplaints->execute([':uid' => $userId]);
+
+        /* booking_passengers, payments and refund_requests cascade
+           delete with their booking. */
+        $delBookings = $pdo->prepare('DELETE FROM bookings WHERE passenger_id = :uid');
+        $delBookings->execute([':uid' => $userId]);
+
+        $pdo->commit();
+
+        auth_response(200, [
+            'success' => true,
+            'message' => 'Your history has been cleared.',
+        ]);
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        auth_response(500, [
+            'success' => false,
+            'message' => 'Unable to clear your history. Please try again later.',
+        ]);
+    }
+}
+
+/* ============================================================
+   POST delete_account — permanently remove this passenger account
+   (its login credentials) from the database.
+
+   The passenger's bookings, refund requests, reviews and
+   complaints are KEPT so companies and admins still see them.
+   Because those rows keep a NOT NULL passenger_id, they are
+   re-ownershipped to ONE shared, unloggable "Deleted Account"
+   placeholder before the account row is removed — no orphaned
+   rows, no lost history.
+
+   Passenger-only rows that mean nothing once the account is gone
+   (notifications, favorites, review likes) are deleted with it.
+   ============================================================ */
+function handle_delete_account(): void
+{
+    require_post();
+    $user = requireRole('passenger');
+    $userId = (int) $user['id'];
+    $pdo = db();
+
+    try {
+        $pdo->beginTransaction();
+
+        $delNotif = $pdo->prepare('DELETE FROM notifications WHERE user_id = :uid');
+        $delNotif->execute([':uid' => $userId]);
+
+        $delFavs = $pdo->prepare('DELETE FROM favorites WHERE user_id = :uid');
+        $delFavs->execute([':uid' => $userId]);
+
+        $delLikes = $pdo->prepare('DELETE FROM review_likes WHERE user_id = :uid');
+        $delLikes->execute([':uid' => $userId]);
+
+        /* Make sure the shared placeholder account exists. */
+        $ghostEmail = 'deleted-account@ettransport.local';
+        $ghostStmt = $pdo->prepare('SELECT id FROM users WHERE email = :email LIMIT 1');
+        $ghostStmt->execute([':email' => $ghostEmail]);
+        $ghostRow = $ghostStmt->fetch();
+        $ghostId = 0;
+        if ($ghostRow !== false) {
+            $ghostId = (int) $ghostRow['id'];
+        } else {
+            $insGhost = $pdo->prepare(
+                'INSERT INTO users (name, email, phone, password_hash, role, status)
+                 VALUES (:name, :email, NULL, :hash, :role, :status)'
+            );
+            $insGhost->execute([
+                ':name'   => 'Deleted Account',
+                ':email'  => $ghostEmail,
+                ':hash'   => password_hash('ettransport-deleted-' . $userId . '-' . time(), PASSWORD_DEFAULT),
+                ':role'   => 'passenger',
+                ':status' => 'suspended',
+            ]);
+            $ghostId = (int) $pdo->lastInsertId();
+        }
+
+        /* Keep shared records for the company and admin sides by
+           transferring ownership to the placeholder account. */
+        $reBookings = $pdo->prepare('UPDATE bookings SET passenger_id = :ghost WHERE passenger_id = :uid');
+        $reBookings->execute([':ghost' => $ghostId, ':uid' => $userId]);
+
+        $reRefunds = $pdo->prepare('UPDATE refund_requests SET passenger_id = :ghost WHERE passenger_id = :uid');
+        $reRefunds->execute([':ghost' => $ghostId, ':uid' => $userId]);
+
+        $reReviews = $pdo->prepare('UPDATE reviews SET passenger_id = :ghost WHERE passenger_id = :uid');
+        $reReviews->execute([':ghost' => $ghostId, ':uid' => $userId]);
+
+        $reComplaints = $pdo->prepare('UPDATE complaints SET passenger_id = :ghost WHERE passenger_id = :uid');
+        $reComplaints->execute([':ghost' => $ghostId, ':uid' => $userId]);
+
+        $delUser = $pdo->prepare('DELETE FROM users WHERE id = :uid AND role = :role');
+        $delUser->execute([':uid' => $userId, ':role' => 'passenger']);
+
+        $pdo->commit();
+
+        /* Log the browser out — the account no longer exists. */
+        try {
+            logoutUser();
+        } catch (Throwable $e) {
+            /* Session cleanup is best-effort. */
+        }
+
+        auth_response(200, [
+            'success' => true,
+            'message' => 'Your account has been deleted. Your bookings, refunds, and some reviews and complaints stay with the companies and admins.',
+            'accountDeleted' => true,
+        ]);
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        auth_response(500, [
+            'success' => false,
+            'message' => 'Unable to delete your account. Please try again later.',
+        ]);
+    }
+}
+
 $action = request_action();
 
 if ($action === 'register') {
@@ -564,6 +728,13 @@ if ($action === 'session') {
 }
 if ($action === 'update_profile') {
     handle_update_profile();
+}
+
+if ($action === 'clear_history') {
+    handle_clear_history();
+}
+if ($action === 'delete_account') {
+    handle_delete_account();
 }
 
 auth_response(400, [

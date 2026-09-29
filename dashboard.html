@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Your ET Transport passenger dashboard — upcoming trips, digital tickets, favorites, notifications, booking history and profile. Sign in to view your data.">
     <title>Dashboard | ET Transport</title>
-    <link rel="stylesheet" href="css/style.css?v=20260919-mobile-resp">
+    <link rel="stylesheet" href="css/style.css?v=20260929-account-actions">
     <link rel="stylesheet" href="css/city-picker.css?v=20260907-swap-fix">
     <link rel="icon" type="image/x-icon" href="assets/icons/favicon.svg">
 <!-- Fonts (DM Sans + Outfit) -->
@@ -300,6 +300,15 @@
                         <div class="profile-detail"><dt>Date of Birth</dt><dd id="p-dob"></dd></div>
                         <div class="profile-detail"><dt>Refund Account</dt><dd id="p-refund"></dd></div>
                     </dl>
+
+                    <div class="card profile-account-card">
+                        <h3 class="profile-account-title">Account</h3>
+                        <p class="profile-account-copy">Manage the records stored for your account. These actions affect only the passenger side and cannot be undone.</p>
+                        <div class="profile-account-actions">
+                            <button type="button" id="clear-history-btn" class="btn btn-secondary">Clear My History</button>
+                            <button type="button" id="delete-account-btn" class="btn btn-danger">Delete My Account</button>
+                        </div>
+                    </div>
                 </section>
 
                 <!-- ============ Support (FAQ + contact, toggled) ============ -->
@@ -560,6 +569,44 @@
         </div>
     </div>
 <!-- ============================================================
+     Clear My History confirmation modal
+     ============================================================ -->
+    <div id="clear-history-modal" class="dash-modal" role="dialog" aria-modal="true" aria-labelledby="clear-history-title" hidden>
+        <div class="dash-modal-backdrop" data-clear-history-close></div>
+        <div class="dash-modal-box account-modal-box">
+            <div class="dash-modal-head">
+                <h2 id="clear-history-title">Clear my history?</h2>
+                <button type="button" id="clear-history-close" class="dash-modal-close" aria-label="Close">&times;</button>
+            </div>
+            <p class="account-modal-intro">Deletes all your bookings, refunds, notifications, reviews and complaints.</p>
+            <p class="account-modal-warn">Your account and login stay. This cannot be undone.</p>
+            <p id="clear-history-msg" class="account-modal-msg" role="alert" hidden></p>
+            <div class="account-modal-actions">
+                <button type="button" id="clear-history-keep-btn" class="btn btn-secondary">Keep my history</button>
+                <button type="button" id="clear-history-confirm-btn" class="btn btn-danger">Yes, clear my history</button>
+            </div>
+        </div>
+    </div>
+<!-- ============================================================
+     Delete My Account confirmation modal
+     ============================================================ -->
+    <div id="delete-account-modal" class="dash-modal" role="dialog" aria-modal="true" aria-labelledby="delete-account-title" hidden>
+        <div class="dash-modal-backdrop" data-delete-account-close></div>
+        <div class="dash-modal-box account-modal-box">
+            <div class="dash-modal-head">
+                <h2 id="delete-account-title">Delete my account?</h2>
+                <button type="button" id="delete-account-close" class="dash-modal-close" aria-label="Close">&times;</button>
+            </div>
+            <p class="account-modal-intro">Deletes your account and login for good.</p>
+            <p class="account-modal-warn">Bookings, refunds and some reviews and complaints stay with companies and admins. This cannot be undone.</p>
+            <p id="delete-account-msg" class="account-modal-msg" role="alert" hidden></p>
+            <div class="account-modal-actions">
+                <button type="button" id="delete-account-keep-btn" class="btn btn-secondary">Keep my account</button>
+                <button type="button" id="delete-account-confirm-btn" class="btn btn-danger">Yes, delete my account</button>
+            </div>
+        </div>
+    </div>
+<!-- ============================================================
      Review modal
      ============================================================ -->
     <div id="review-modal" class="dash-modal" role="dialog" aria-modal="true" aria-labelledby="review-modal-title" hidden>
@@ -784,6 +831,6 @@
     <script src="js/cities.js"></script>
     <script src="js/city-picker.js?v=20260907-swap-fix-3-dispatch"></script>
     <script src="js/company.js"></script>
-    <script src="js/dashboard.js?v=20260919-trip-details-small"></script>
+    <script src="js/dashboard.js?v=20260929-account-actions"></script>
 </body>
 </html>

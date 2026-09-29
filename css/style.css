@@ -5887,6 +5887,21 @@ body.companies .company-empty-hint {
 .cancel-actions { display: flex; justify-content: flex-end; gap: var(--space-sm); flex-wrap: wrap; }
 .cancel-actions .btn { flex: 1 1 auto; }
 
+/* ---------- Profile: Clear My History / Delete My Account ---------- */
+.profile-account-card { display: flex; flex-direction: column; gap: 0.65rem; border-radius: 16px; }
+.profile-account-title { margin: 0; font-size: 1.05rem; font-weight: 800; color: #163a33; letter-spacing: -0.01em; }
+.profile-account-copy { margin: 0; font-size: 0.82rem; line-height: 1.5; color: #7d9189; }
+.profile-account-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.profile-account-actions .btn { flex: 1 1 auto; }
+
+.account-modal-box { max-width: 460px; }
+.account-modal-intro { color: var(--color-dark); font-weight: 600; margin: 0 0 0.4rem; font-size: 0.95rem; }
+.account-modal-warn { margin: 0.15rem 0 0; color: #9f1239; font-size: 0.85rem; line-height: 1.45; }
+.account-modal-msg { margin: 0 0 var(--space-sm); color: #b91c1c; }
+.account-modal-msg.error { color: #b91c1c; background-color: #fee2e2; border: 1px solid #fecaca; padding: 0.6rem 0.8rem; border-radius: var(--radius); }
+.account-modal-actions { display: flex; justify-content: flex-end; gap: var(--space-sm); flex-wrap: wrap; }
+.account-modal-actions .btn { flex: 1 1 auto; }
+
 .dash-toast {
     position: fixed;
     right: 1rem;

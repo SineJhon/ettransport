@@ -4499,6 +4499,162 @@ function closeTicket() {
         openProfileModal(true);
     }
 
+    /* ============================================================
+       Account — "Clear My History" / "Delete My Account"
+       (passenger profile). Both affect only the passenger side:
+       clear_history wipes the passenger-owned records, delete_account
+       removes the login while keeping bookings / refunds / reviews /
+       complaints for companies and admins.
+       ============================================================ */
+    var clearHistoryModal = document.getElementById('clear-history-modal');
+    var deleteAccountModal = document.getElementById('delete-account-modal');
+
+    function anyAccountModalOpen() {
+        return (!!clearHistoryModal && !clearHistoryModal.hidden) ||
+               (!!deleteAccountModal && !deleteAccountModal.hidden);
+    }
+
+    function openClearHistoryModal() {
+        var msg = document.getElementById('clear-history-msg');
+        if (msg) { msg.hidden = true; msg.textContent = ''; msg.className = 'account-modal-msg'; }
+        var cf = document.getElementById('clear-history-confirm-btn');
+        if (cf) { cf.disabled = false; cf.textContent = 'Yes, clear my history'; }
+        var keep = document.getElementById('clear-history-keep-btn');
+        if (keep) { keep.disabled = false; }
+        if (clearHistoryModal) {
+            clearHistoryModal.hidden = false;
+            document.body.classList.add('modal-open');
+        }
+    }
+    function closeClearHistoryModal() {
+        if (clearHistoryModal) { clearHistoryModal.hidden = true; }
+        if (!anyAccountModalOpen()) { document.body.classList.remove('modal-open'); }
+    }
+
+    function openDeleteAccountModal() {
+        var msg = document.getElementById('delete-account-msg');
+        if (msg) { msg.hidden = true; msg.textContent = ''; msg.className = 'account-modal-msg'; }
+        var cf = document.getElementById('delete-account-confirm-btn');
+        if (cf) { cf.disabled = false; cf.textContent = 'Yes, delete my account'; }
+        var keep = document.getElementById('delete-account-keep-btn');
+        if (keep) { keep.disabled = false; }
+        if (deleteAccountModal) {
+            deleteAccountModal.hidden = false;
+            document.body.classList.add('modal-open');
+        }
+    }
+    function closeDeleteAccountModal() {
+        if (deleteAccountModal) { deleteAccountModal.hidden = true; }
+        if (!anyAccountModalOpen()) { document.body.classList.remove('modal-open'); }
+    }
+
+    /* Remove the browser-cached passenger copies (sessionStorage + the
+       localStorage favorites list) so nothing passenger-side persists. */
+    function clearPassengerBrowserData() {
+        var keys = ['etTransportBookings', 'etTransportNotifications', 'etTransportProfile',
+            'etTransportFavoriteRoutes', 'etTransportReviewedBookings', 'etTransportNotifVersion'];
+        for (var i = 0; i < keys.length; i++) {
+            try { window.sessionStorage.removeItem(keys[i]); } catch (e) { /* ignore */ }
+        }
+        try { window.localStorage.removeItem('etTransportFavorites'); } catch (e) { /* ignore */ }
+    }
+
+    function accountApiPost(action) {
+        return window.fetch('api/auth.php?action=' + encodeURIComponent(action), {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams().toString()
+        }).then(function (res) {
+            return res.json().catch(function () {
+                return { success: false, message: 'Invalid server response.' };
+            }).then(function (json) {
+                return { ok: res.ok, status: res.status, data: json };
+            });
+        });
+    }
+
+    function setAccountMsg(prefix, text, isError) {
+        var msg = document.getElementById(prefix + '-msg');
+        if (!msg) { return; }
+        msg.textContent = text || '';
+        msg.className = 'account-modal-msg' + (isError ? ' error' : '');
+        msg.hidden = false;
+    }
+
+    function confirmClearHistory() {
+        var cf = document.getElementById('clear-history-confirm-btn');
+        var keep = document.getElementById('clear-history-keep-btn');
+        if (cf) { cf.disabled = true; cf.textContent = 'Clearing\u2026'; }
+        if (keep) { keep.disabled = true; }
+        setAccountMsg('clear-history', '');
+
+        accountApiPost('clear_history').then(function (result) {
+            var json = result.data || {};
+            if (!result.ok || result.status !== 200 || !json.success) {
+                if (cf) { cf.disabled = false; cf.textContent = 'Yes, clear my history'; }
+                if (keep) { keep.disabled = false; }
+                setAccountMsg('clear-history', json.message || 'Unable to clear your history. Please try again.', true);
+                return;
+            }
+            clearPassengerBrowserData();
+            window.location.reload();
+        }).catch(function () {
+            if (cf) { cf.disabled = false; cf.textContent = 'Yes, clear my history'; }
+            if (keep) { keep.disabled = false; }
+            setAccountMsg('clear-history', 'Network error \u2014 please try again.', true);
+        });
+    }
+
+    function confirmDeleteAccount() {
+        var cf = document.getElementById('delete-account-confirm-btn');
+        var keep = document.getElementById('delete-account-keep-btn');
+        if (cf) { cf.disabled = true; cf.textContent = 'Deleting\u2026'; }
+        if (keep) { keep.disabled = true; }
+        setAccountMsg('delete-account', '');
+
+        accountApiPost('delete_account').then(function (result) {
+            var json = result.data || {};
+            if (!result.ok || result.status !== 200 || !json.success) {
+                if (cf) { cf.disabled = false; cf.textContent = 'Yes, delete my account'; }
+                if (keep) { keep.disabled = false; }
+                setAccountMsg('delete-account', json.message || 'Unable to delete your account. Please try again.', true);
+                return;
+            }
+            clearPassengerBrowserData();
+            window.location.href = 'index.html';
+        }).catch(function () {
+            if (cf) { cf.disabled = false; cf.textContent = 'Yes, delete my account'; }
+            if (keep) { keep.disabled = false; }
+            setAccountMsg('delete-account', 'Network error \u2014 please try again.', true);
+        });
+    }
+
+    /* Profile page buttons. */
+    var clearHistoryBtn = document.getElementById('clear-history-btn');
+    if (clearHistoryBtn) { clearHistoryBtn.addEventListener('click', openClearHistoryModal); }
+    var deleteAccountBtn = document.getElementById('delete-account-btn');
+    if (deleteAccountBtn) { deleteAccountBtn.addEventListener('click', openDeleteAccountModal); }
+
+    /* Clear-my-history modal wiring. */
+    var clearHistoryClose = document.getElementById('clear-history-close');
+    if (clearHistoryClose) { clearHistoryClose.addEventListener('click', closeClearHistoryModal); }
+    var clearHistoryBackdrop = document.querySelector('[data-clear-history-close]');
+    if (clearHistoryBackdrop) { clearHistoryBackdrop.addEventListener('click', closeClearHistoryModal); }
+    var clearHistoryKeep = document.getElementById('clear-history-keep-btn');
+    if (clearHistoryKeep) { clearHistoryKeep.addEventListener('click', closeClearHistoryModal); }
+    var clearHistoryConfirm = document.getElementById('clear-history-confirm-btn');
+    if (clearHistoryConfirm) { clearHistoryConfirm.addEventListener('click', confirmClearHistory); }
+
+    /* Delete-account modal wiring. */
+    var deleteAccountClose = document.getElementById('delete-account-close');
+    if (deleteAccountClose) { deleteAccountClose.addEventListener('click', closeDeleteAccountModal); }
+    var deleteAccountBackdrop = document.querySelector('[data-delete-account-close]');
+    if (deleteAccountBackdrop) { deleteAccountBackdrop.addEventListener('click', closeDeleteAccountModal); }
+    var deleteAccountKeep = document.getElementById('delete-account-keep-btn');
+    if (deleteAccountKeep) { deleteAccountKeep.addEventListener('click', closeDeleteAccountModal); }
+    var deleteAccountConfirm = document.getElementById('delete-account-confirm-btn');
+    if (deleteAccountConfirm) { deleteAccountConfirm.addEventListener('click', confirmDeleteAccount); }
     function start() {
         if (!window.ETAuth || !window.ETAuth.getCurrentUser) {
             /* Auth layer unavailable — keep the page fail-closed on the gate. */
