@@ -187,13 +187,16 @@
                 for (var j = 0; j < state.items.length; j++) {
                     var n = state.items[j];
                     var hasGo = !!(n.target && String(n.target).trim());
-                    html += '<button type="button" class="nav-bell-item ' + (n.read ? 'is-read' : 'is-unread') + '" data-id="' + esc(n.id) + '"' +
+                    html += '<div class="nav-bell-li">' +
+                    '<button type="button" class="nav-bell-item ' + (n.read ? 'is-read' : 'is-unread') + '" data-id="' + esc(n.id) + '"' +
                         (hasGo ? ' data-target="' + esc(n.target) + '"' : '') + '>' +
                         '<span class="nav-bell-ico-small" aria-hidden="true">' + (n.icon || '&#128276;') + '</span>' +
                         '<span class="nav-bell-body"><strong>' + esc(n.title) + '</strong>' +
                         '<span class="nav-bell-msg">' + esc(n.message) + '</span>' +
                         '<span class="nav-bell-time">' + esc(n.time || '') + '</span></span>' +
-                        (hasGo ? '<span class="nav-bell-go" aria-hidden="true">&rsaquo;</span>' : '') + '</button>';
+                        (hasGo ? '<span class="nav-bell-go" aria-hidden="true">&rsaquo;</span>' : '') + '</button>' +
+                        '<button type="button" class="nav-bell-del" data-del="' + esc(n.id) + '" aria-label="Remove notification">&times;</button>' +
+                    '</div>';
                 }
             }
             w.list.innerHTML = html;
@@ -201,6 +204,7 @@
             var headCount = w.head.querySelector ? w.head.querySelector('.nav-bell-head-count') : null;
             if (headCount) { headCount.textContent = state.unread > 0 ? (state.unread + ' unread') : 'All caught up'; }
             if (w.markAllBtn) { w.markAllBtn.hidden = (state.mode === 'loaded' && state.unread > 0) ? false : true; }
+            if (w.clearAllBtn) { w.clearAllBtn.hidden = (state.mode === 'loaded' && state.items.length > 0) ? false : true; }
         }
     }
 
@@ -233,6 +237,35 @@
                 if (!(res.ok && res.data && res.data.success)) { loadList(true); }
             });
         }
+    }
+
+    /* Remove ONE notification permanently. Optimistic UI, then persist to DB;
+       if the authoritative API did not confirm, re-fetch (do not fake success). */
+    function deleteOne(id) {
+        if (!id) { return; }
+        var idx = -1;
+        for (var i = 0; i < state.items.length; i++) {
+            if (state.items[i].id === String(id)) { idx = i; break; }
+        }
+        var wasUnread = idx >= 0 && !state.items[idx].read;
+        if (idx >= 0) { state.items.splice(idx, 1); }
+        if (wasUnread) { state.unread = Math.max(0, state.unread - 1); }
+        syncBadges();
+        renderPanel();
+        postForm(API + '?action=delete', { id: id }).then(function (res) {
+            if (!(res.ok && res.data && res.data.success)) { loadList(true); }
+        });
+    }
+
+    /* Remove EVERY notification permanently (own rows only). */
+    function clearAll() {
+        state.items = [];
+        state.unread = 0;
+        syncBadges();
+        renderPanel();
+        postForm(API + '?action=clear_all', {}).then(function (res) {
+            if (!(res.ok && res.data && res.data.success)) { loadList(true); }
+        });
     }
 
     /* Resolve a notification deep link. On dashboard.html the section switch
@@ -293,7 +326,7 @@
                     '<span class="nav-bell-head-title">Notifications</span>' +
                     '<span class="nav-bell-head-count"></span>' +
                 '</div>' +
-                '<div class="nav-bell-actions"><button type="button" class="nav-bell-markall btn btn-secondary btn-sm">Mark all as read</button></div>' +
+                '<div class="nav-bell-actions"><button type="button" class="nav-bell-markall btn btn-secondary btn-sm">Mark all as read</button> <button type="button" class="nav-bell-clearall btn btn-danger btn-sm">Clear all</button></div>' +
                 '<div class="nav-bell-list"></div>' +
             '</div>';
         container.appendChild(wrap);
@@ -305,7 +338,8 @@
             panel: wrap.querySelector('#nav-bell-panel'),
             head: wrap.querySelector('.nav-bell-head'),
             list: wrap.querySelector('.nav-bell-list'),
-            markAllBtn: wrap.querySelector('.nav-bell-markall')
+            markAllBtn: wrap.querySelector('.nav-bell-markall'),
+            clearAllBtn: wrap.querySelector('.nav-bell-clearall')
         };
         wrappers.push(w);
         container._etBell = w;
@@ -317,6 +351,16 @@
         });
         w.panel.addEventListener('click', function (e) {
             var t = e.target;
+            var delBtn = t && t.closest ? t.closest('.nav-bell-del') : null;
+            if (delBtn) {
+                e.stopPropagation();
+                deleteOne(delBtn.getAttribute('data-del'));
+                return;
+            }
+            var markAllBtn = t && t.closest ? t.closest('.nav-bell-markall') : null;
+            if (markAllBtn) { e.stopPropagation(); markAll(); return; }
+            var clearAllBtn = t && t.closest ? t.closest('.nav-bell-clearall') : null;
+            if (clearAllBtn) { e.stopPropagation(); clearAll(); return; }
             var item = t && t.closest ? t.closest('.nav-bell-item') : null;
             if (item) {
                 e.stopPropagation();
@@ -328,8 +372,6 @@
                 }
                 return;
             }
-            var markAllBtn = t && t.closest ? t.closest('.nav-bell-markall') : null;
-            if (markAllBtn) { e.stopPropagation(); markAll(); }
         });
 
         syncBadges();

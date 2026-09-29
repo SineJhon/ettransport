@@ -13,10 +13,14 @@ declare(strict_types=1);
  *       → mark ONE of the passenger's OWN notifications as read
  *   POST api/notification.php?action=read_all   (passenger)
  *       → mark all of the passenger's notifications as read
+ *   POST api/notification.php?action=delete     { id }   (passenger)
+ *       → permanently remove ONE of the passenger's OWN notifications
+ *   POST api/notification.php?action=clear_all           (passenger)
+ *       → permanently remove EVERY notification of the passenger
  *
  * Ownership is always enforced server-side from the session: a user can only
- * ever list / mark-read their OWN rows (WHERE user_id = session id). The
- * existence of another user's notification is never leaked.
+ * ever list / mark-read / delete their OWN rows (WHERE user_id = session id).
+ * The existence of another user's notification is never leaked.
  *
  * Uses the existing `notifications` table as-is (user_id, title, message,
  * type, is_read, created_at) — no schema change was required.
@@ -259,6 +263,87 @@ function purge_old_sample_notifications(PDO $pdo, int $userId): void
 }
 
 /* ============================================================
+   POST delete — permanently remove ONE of the passenger's OWN
+   notifications. Ownership is part of the WHERE clause, so
+   someone else's notification simply does not match (404).
+   ============================================================ */
+function handle_delete(): void
+{
+    require_notification_post();
+    $user = require_active_passenger();
+
+    $input = notification_input();
+    $id = (int) ($input['id'] ?? 0);
+
+    if ($id <= 0) {
+        auth_response(422, [
+            'success' => false,
+            'message' => 'A notification id is required.',
+        ]);
+    }
+
+    try {
+        $pdo = db();
+
+        $stmt = $pdo->prepare(
+            'DELETE FROM notifications
+             WHERE id = :id AND user_id = :uid'
+        );
+        $stmt->execute([
+            ':id'  => $id,
+            ':uid' => (int) $user['id'],
+        ]);
+
+        if ($stmt->rowCount() === 0) {
+            auth_response(404, [
+                'success' => false,
+                'message' => 'Notification not found.',
+            ]);
+        }
+
+        auth_response(200, [
+            'success' => true,
+            'message' => 'Notification removed.',
+        ]);
+    } catch (Throwable $e) {
+        auth_response(500, [
+            'success' => false,
+            'message' => 'Could not remove the notification. Please try again.',
+        ]);
+    }
+}
+
+/* ============================================================
+   POST clear_all — permanently remove EVERY notification of the
+   passenger (their own rows only).
+   ============================================================ */
+function handle_clear_all(): void
+{
+    require_notification_post();
+    $user = require_active_passenger();
+
+    try {
+        $pdo = db();
+
+        $stmt = $pdo->prepare(
+            'DELETE FROM notifications
+             WHERE user_id = :uid'
+        );
+        $stmt->execute([':uid' => (int) $user['id']]);
+
+        auth_response(200, [
+            'success' => true,
+            'message' => 'All notifications cleared.',
+        ]);
+    } catch (Throwable $e) {
+        auth_response(500, [
+            'success' => false,
+            'message' => 'Could not clear your notifications. Please try again.',
+        ]);
+    }
+}
+
+/* ============================================================
    Dispatcher
    ============================================================ */
 $action = notification_action();
@@ -272,8 +357,14 @@ if ($action === 'read') {
 if ($action === 'read_all') {
     handle_read_all();
 }
+if ($action === 'delete') {
+    handle_delete();
+}
+if ($action === 'clear_all') {
+    handle_clear_all();
+}
 
 auth_response(400, [
     'success' => false,
-    'message' => 'Unsupported action. Use action=list, read or read_all.',
+    'message' => 'Unsupported action. Use action=list, read, read_all, delete or clear_all.',
 ]);

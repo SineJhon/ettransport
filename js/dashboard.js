@@ -1733,6 +1733,7 @@ function closeTicket() {
                     '<span class="dash-notif-dot" aria-hidden="true"></span>' +
                     (hasTarget ? '<span class="dash-notif-go" aria-hidden="true">&rsaquo;</span>' : '') +
                 '</button>' +
+                '<button type="button" class="dash-notif-del" data-notif-del="' + escapeHtml(n.id) + '" aria-label="Remove notification">&times;</button>' +
             '</li>';
         }
         el.innerHTML = html + '</ul>';
@@ -1807,6 +1808,76 @@ function closeTicket() {
         renderNotifications();
         renderOverviewNotif();
         updateCounts();
+    }
+
+    /* Remove ONE notification permanently. Real accounts delete through the
+       API (optimistic UI, reverts by re-syncing on failure); guests mutate the
+       sessionStorage demo list. */
+    function removeNotification(id) {
+        if (realNotifs !== null) { deleteRealNotif(id); return; }
+        var list = loadNotifications();
+        for (var i = list.length - 1; i >= 0; i--) {
+            if (String(list[i].id) === String(id)) { list.splice(i, 1); break; }
+        }
+        saveNotifications(list);
+        renderNotifications();
+        renderOverviewNotif();
+        updateCounts();
+    }
+
+    function deleteRealNotif(id) {
+        if (realNotifs) {
+            for (var i = realNotifs.length - 1; i >= 0; i--) {
+                if (String(realNotifs[i].id) === String(id)) { realNotifs.splice(i, 1); break; }
+            }
+        }
+        renderNotifications();
+        renderOverviewNotif();
+        updateCounts();
+        if (window.ETNotifications && window.ETNotifications.refresh) { window.ETNotifications.refresh(); }
+        if (window.fetch) {
+            var body = new URLSearchParams();
+            body.append('id', String(id));
+            window.fetch('api/notification.php?action=delete', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: body.toString()
+            }).then(function (res) { return res.json().catch(function () { return null; }); })
+            .then(function (json) {
+                if (!json || !json.success) { syncRealNotifications(); }
+            })
+            .catch(function () { syncRealNotifications(); });
+        }
+    }
+
+    /* Remove EVERY notification permanently (real API or demo list). */
+    function clearAllNotifications() {
+        if (realNotifs !== null) { clearRealNotifs(); return; }
+        saveNotifications([]);
+        renderNotifications();
+        renderOverviewNotif();
+        updateCounts();
+    }
+
+    function clearRealNotifs() {
+        realNotifs = [];
+        notifState = 'loaded';
+        renderNotifications();
+        renderOverviewNotif();
+        updateCounts();
+        if (window.ETNotifications && window.ETNotifications.refresh) { window.ETNotifications.refresh(); }
+        if (window.fetch) {
+            window.fetch('api/notification.php?action=clear_all', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' }
+            }).then(function (res) { return res.json().catch(function () { return null; }); })
+            .then(function (json) {
+                if (!json || !json.success) { syncRealNotifications(); }
+            })
+            .catch(function () { syncRealNotifications(); });
+        }
     }
 
     /* ============================================================
@@ -3583,6 +3654,13 @@ function closeTicket() {
             if (ri !== null) { removeFavRoute(parseInt(ri, 10)); return; }
         }
 
+        var notifDel = el.closest('.dash-notif-del');
+        if (notifDel) {
+            var delId = notifDel.getAttribute('data-notif-del');
+            if (delId) { removeNotification(delId); }
+            return;
+        }
+
         var notif = el.closest('.dash-notif-item, .dash-notif-mini-item');
         if (notif) {
             var id = notif.getAttribute('data-notif-id');
@@ -3624,6 +3702,8 @@ function closeTicket() {
 
     var markAllBtn = document.getElementById('mark-all-read');
     if (markAllBtn) { markAllBtn.addEventListener('click', markAllRead); }
+    var clearAllNotifBtn = document.getElementById('clear-all-notif');
+    if (clearAllNotifBtn) { clearAllNotifBtn.addEventListener('click', clearAllNotifications); }
 /* ============================================================
        Forms — favorite route, profile, support
        ============================================================ */
