@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../config/auth.php';
+require_once __DIR__ . '/../config/notifications.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -248,6 +249,29 @@ function handle_register(): void
                     'status' => 'active',
                 ],
             ]);
+        }
+
+        /* Real notification: welcome. A new passenger gets exactly ONE
+           notification — the welcome message — never a fabricated sample
+           feed. Best-effort: a notification failure must not fail
+           registration. The message wording deliberately differs from the
+           old sample text so the inbox cleanup never touches it. */
+        if ($role === 'passenger') {
+            try {
+                createNotification(
+                    $pdo,
+                    (int) $userId,
+                    'general',
+                    'Welcome to ET Transport',
+                    'Welcome aboard, ' . $name . '! Your ET Transport account is ready. '
+                        . 'Complete your passenger info and a refund account in your '
+                        . 'profile to speed up future bookings.',
+                    null,
+                    'profile-edit'
+                );
+            } catch (Throwable $e) {
+                /* Best-effort only — never let a notification failure alter the response. */
+            }
         }
 
         $user = loginUser($userId);

@@ -96,6 +96,12 @@ function handle_list(): void
     try {
         $pdo = db();
 
+        /* One-time, best-effort cleanup: remove notifications fabricated by the
+           retired sample-feed seeder so real accounts only keep real entries.
+           Idempotent and isolated to this passenger; failures are swallowed so
+           the list never breaks. (See purge_old_sample_notifications below.) */
+        purge_old_sample_notifications($pdo, (int) $user['id']);
+
         $unreadStmt = $pdo->prepare(
             'SELECT COUNT(*) AS c FROM notifications
              WHERE user_id = :uid AND is_read = 0'
@@ -212,159 +218,43 @@ function handle_read_all(): void
 }
 
 /* ============================================================
-   POST seed — create a small sample notification feed for a
-   passenger account that has none yet (used to test the UI).
-   Idempotent: does nothing when the passenger already has
-   notifications. Sample feed for testing the notification UI.
+   Inbox cleanup for notifications fabricated by the retired
+   sample-feed seeder.
+
+   Accounts created before this fix may still hold the fabricated
+   rows the dashboard used to auto-seed. New installs never see
+   this path do any work. It deletes ONLY rows the real flows
+   (booking / payment / review / complaint / admin) can never
+   produce:
+
+     - "Gate Change", "Boarding Reminder", "Return Trip Reminder",
+       "Review Your Trip" and "Payment Received" — titles the app
+       never uses for a real event;
+     - the OLD sample "Welcome to ET Transport" wording (the real
+       welcome created at registration has different text);
+     - any row referencing the seeder placeholder "ET-PLACEHOLDER".
+
+   Idempotent, isolated to the current passenger, and best-effort:
+   a failure never breaks the notification list.
    ============================================================ */
-function handle_seed(): void
+function purge_old_sample_notifications(PDO $pdo, int $userId): void
 {
-    require_notification_post();
-    $user = require_active_passenger();
-
-    $userId = (int) $user['id'];
-    $pdo = db();
-
     try {
-        $countStmt = $pdo->prepare('SELECT COUNT(*) AS c FROM notifications WHERE user_id = :uid');
-        $countStmt->execute([':uid' => $userId]);
-        if ((int) $countStmt->fetch()['c'] > 0) {
-            auth_response(200, [
-                'success' => true,
-                'message' => 'Notifications already exist.',
-                'seeded'  => false,
-            ]);
-        }
-
-        /* Anchor the sample feed in REAL database rows so the messages carry
-           the passenger's actual booking/trip data (route, travel date,
-           reference, seat) wherever one exists. If the passenger has no
-           booking yet, fall back to a real upcoming trip from an approved,
-           listed company — never hard-coded fiction. */
-        $stmt = $pdo->prepare('
-            SELECT b.booking_reference,
-                   b.total_amount,
-                   t.departure_date,
-                   t.departure_time,
-                   r.from_city,
-                   r.to_city,
-                   c.name  AS company_name,
-                   c.slug  AS company_slug,
-                   (SELECT pp.seat_number
-                      FROM booking_passengers pp
-                     WHERE pp.booking_id = b.id
-                     ORDER BY pp.id ASC
-                     LIMIT 1) AS seat_number
-            FROM bookings b
-            JOIN trips t  ON t.id = b.trip_id
-            JOIN routes r ON r.id = t.route_id
-            JOIN companies c ON c.id = t.company_id
-            WHERE b.passenger_id = :uid
-            ORDER BY b.id DESC
-            LIMIT 1');
+        $stmt = $pdo->prepare(
+            "DELETE FROM notifications
+             WHERE user_id = :uid
+               AND (title = 'Gate Change'
+                    OR title = 'Boarding Reminder'
+                    OR title = 'Return Trip Reminder'
+                    OR title = 'Review Your Trip'
+                    OR title = 'Payment Received'
+                    OR message LIKE '%ET-PLACEHOLDER%'
+                    OR (title = 'Welcome to ET Transport'
+                        AND message LIKE '%Save your passenger info%'))"
+        );
         $stmt->execute([':uid' => $userId]);
-        $row = $stmt->fetch();
-        if ($row === false) {
-            $stmt = $pdo->prepare('
-                SELECT NULL AS booking_reference,
-                       t.price  AS total_amount,
-                       t.departure_date,
-                       t.departure_time,
-                       r.from_city,
-                       r.to_city,
-                       c.name  AS company_name,
-                       c.slug  AS company_slug,
-                       NULL    AS seat_number
-                FROM trips t
-                JOIN routes r ON r.id = t.route_id
-                JOIN companies c ON c.id = t.company_id
-                WHERE c.status = \'approved\' AND c.listed = 1
-                ORDER BY t.departure_date ASC
-                LIMIT 1');
-            $stmt->execute();
-            $row = $stmt->fetch();
-        }
-        if ($row === false) {
-            $row = [
-                'booking_reference' => 'ET-PLACEHOLDER',
-                'total_amount'      => 900.00,
-                'departure_date'    => '2026-09-20',
-                'departure_time'    => '06:30:00',
-                'from_city'         => 'Addis Ababa',
-                'to_city'           => 'Bahir Dar',
-                'company_name'      => 'Selam Bus',
-                'company_slug'      => 'selam-bus',
-                'seat_number'       => 'A1',
-            ];
-        }
-
-        $bookingRef  = (string) ($row['booking_reference'] ?? 'your booking');
-        $total       = number_format((float) ($row['total_amount'] ?? 0), 2);
-        $fromCity    = (string) ($row['from_city'] ?? 'Addis Ababa');
-        $toCity      = (string) ($row['to_city'] ?? '');
-        $travelDate  = (string) ($row['departure_date'] ?? '');
-        $departTime  = (string) ($row['departure_time'] ?? '');
-        $companyName = (string) ($row['company_name'] ?? 'Your bus company');
-        $companySlug = (string) ($row['company_slug'] ?? '');
-        $anchorSeat  = (string) ($row['seat_number'] ?? '');
-
-        $route      = $fromCity . ' → ' . $toCity;
-        $dateLabel  = $travelDate === '' ? 'your travel date' : $travelDate;
-        $timeLabel  = mb_substr((string) $departTime, 0, 5);
-        $companyTarget = $companySlug !== '' ? 'company-reviews:' . $companySlug : '';
-
-        /* Sample feed — minutes ago, type, title, message, is_read, target.
-           The target turns each notification into a deep link that the
-           dashboard list and the navbar bell resolve (tickets / trips /
-           profile-edit / complaints / company public page reviews). */
-        $seeds = [
-            [3,       'booking', 'Booking Confirmed',
-             'Your ' . $companyName . ' trip ' . $route . ' is confirmed. Ref: ' . $bookingRef
-                 . ($anchorSeat !== '' ? ' · Seat ' . $anchorSeat : '') . '.', 0, 'tickets'],
-            [6,       'payment', 'Payment Received',
-             'Payment of ETB ' . $total . ' for booking ' . $bookingRef . ' was received.', 0, 'tickets'],
-            [45,      'booking', 'Gate Change',
-             'Your ' . $toCity . ' departure moved to Platform 4 at Meskel Square Terminal.', 0, 'tickets'],
-            [1440,    'general', 'Boarding Reminder',
-             'Your bus to ' . $toCity . ' departs ' . $dateLabel . ($timeLabel !== '' ? ' at ' . $timeLabel : '')
-                 . ' from Meskel Square Terminal. Please arrive 30 minutes early.', 0, 'trips'],
-            [5760,    'review',  'Review Your Trip',
-             'How was your trip with ' . $companyName . ' from ' . $route
-                 . '? Share your feedback to help other passengers.', 1, $companyTarget],
-            [7200,    'booking', 'Return Trip Reminder',
-             'Your return coach to ' . $fromCity . ' departs soon — check in from the My Trips page.', 1, 'trips'],
-            [17280,   'general', 'Welcome to ET Transport',
-             'Save your passenger info and a refund account in your profile to pre-fill every booking.', 1, 'profile-edit'],
-        ];
-
-        foreach ($seeds as $seed) {
-            $createdAt = date('Y-m-d H:i:s', time() - ((int) $seed[0] * 60));
-            $insert = $pdo->prepare(
-                'INSERT INTO notifications (user_id, type, title, message, is_read, created_at, target)
-                 VALUES (:uid, :type, :title, :msg, :read, :created, :target)'
-            );
-            $insert->execute([
-                ':uid'     => $userId,
-                ':type'    => $seed[1],
-                ':title'   => $seed[2],
-                ':msg'     => $seed[3],
-                ':read'    => (int) $seed[4],
-                ':created' => $createdAt,
-                ':target'  => $seed[5] !== '' ? $seed[5] : null,
-            ]);
-        }
-
-        auth_response(200, [
-            'success' => true,
-            'message' => 'Sample notifications created.',
-            'seeded'  => true,
-            'count'   => count($seeds),
-        ]);
     } catch (Throwable $e) {
-        auth_response(500, [
-            'success' => false,
-            'message' => 'Notifications could not be created. Please try again.',
-        ]);
+        /* Best-effort only — never break the notification list. */
     }
 }
 
@@ -382,11 +272,8 @@ if ($action === 'read') {
 if ($action === 'read_all') {
     handle_read_all();
 }
-if ($action === 'seed') {
-    handle_seed();
-}
 
 auth_response(400, [
     'success' => false,
-    'message' => 'Unsupported action. Use action=list, read, read_all or seed.',
+    'message' => 'Unsupported action. Use action=list, read or read_all.',
 ]);

@@ -444,7 +444,6 @@
     var realNotifs = null;
     var notifState = 'idle'; // idle | loading | loaded | error
     var notifFilter = 'all'; // all | unread (applies to the demo + real lists)
-    var notifSeeded = false;  // one-shot: seed a sample feed for empty real accounts
     function reviewedStorage() {
         var obj = getJSON(KEY_REVIEWED, null);
         return (obj && typeof obj === 'object' && !Array.isArray(obj)) ? obj : {};
@@ -4222,26 +4221,10 @@ function closeTicket() {
                 .then(function (json) {
                     if (!json || !json.success || !Array.isArray(json.notifications)) {
                         notifState = 'error';
-                    } else if (json.notifications.length === 0 && !notifSeeded) {
-                        /* A real account with no notifications yet: seed a sample
-                           feed once so the section has something to test with. */
-                        notifSeeded = true;
-                        window.fetch('api/notification.php?action=seed', {
-                            method: 'POST',
-                            credentials: 'same-origin',
-                            headers: { 'Accept': 'application/json' }
-                        })
-                            .then(function (res) { return res.json().catch(function () { return {}; }); })
-                            .then(function () { syncRealNotifications(); })
-                            .catch(function () {
-                                realNotifs = [];
-                                notifState = 'loaded';
-                                renderNotifications();
-                                renderOverviewNotif();
-                                updateCounts();
-                            });
-                        return;
                     } else {
+                        /* Real account: show exactly what the API returned. When there
+                           are no notifications yet (e.g. a brand-new passenger), render
+                           a clean empty state — never fabricate a sample feed. */
                         realNotifs = json.notifications.map(apiNotifToDash);
                         notifState = 'loaded';
                     }
