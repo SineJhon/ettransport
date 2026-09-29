@@ -27,6 +27,9 @@ declare(strict_types=1);
  *                                                     (authenticated company role only)
  *   POST api/company.php?action=trip_delete         -> { success, message }  (cancelled only)
  *                                                     (authenticated company role only)
+ *   GET  api/company.php?action=passenger_data&trip_id=N -> { success, trip, passengers, count }
+ *                                                     (company role only; FULL passenger list for one of
+ *                                                      the company's trips — the driver's manifest)
  *   GET  api/company.php?action=revenue             -> { success, company_id, revenue }
  *                                                     (read-only revenue summary, company role only)
  *   GET  api/company.php?action=revenue_breakdown   -> { success, company_id, period, breakdown }
@@ -3775,6 +3778,101 @@ function handle_manifest(PDO $pdo): void
         'passengers' => $passengers,
     ]);
 }
+
+/** GET /api/company.php?action=passenger_data&trip_id=N — the FULL passenger
+    list for ONE of this company's trips, made for the bus driver and the
+    assigned crew: passenger name, age, sex, phone, seat number and booking
+    reference, ready to print / save as PDF.
+
+    Only ACTIVE (non-cancelled) bookings are included — the same rows counted
+    as "booked seats" in the trips view, so the driver manifest always lines up
+    with the trips screen. Ownership is enforced through trips.company_id: an
+    other-company or unknown trip answers with the same generic 404. */
+function handle_passenger_data(PDO $pdo): void
+{
+    if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
+        auth_response(405, [
+            'success' => false,
+            'message' => 'Method not allowed.',
+        ]);
+    }
+
+    $user = requireRole('company');
+    $company = require_company_scope($pdo, (int) $user['id']);
+    $companyId = (int) $company['id'];
+
+    $tripId = positive_int_or_error($_GET['trip_id'] ?? null, 'A valid trip id is required.');
+
+    $tripStmt = $pdo->prepare('
+        SELECT t.id, t.departure_date, t.departure_time, t.arrival_time, t.status,
+               r.from_city,
+               r.to_city,
+               bu.name AS bus_name,
+               bu.registration_number AS bus_registration,
+               bu.bus_type,
+               c.name AS company_name
+        FROM trips t
+        JOIN routes r    ON r.id = t.route_id
+        JOIN buses bu    ON bu.id = t.bus_id
+        JOIN companies c ON c.id = t.company_id
+        WHERE t.id = :trip_id AND t.company_id = :company_id
+        LIMIT 1
+    ');
+    $tripStmt->execute([':trip_id' => $tripId, ':company_id' => $companyId]);
+    $trip = $tripStmt->fetch();
+
+    if ($trip === false) {
+        auth_response(404, [
+            'success' => false,
+            'message' => 'Trip not found.',
+        ]);
+    }
+
+    /* Active travellers only — cancelled bookings released their seats and must
+       not be handed to the driver. Same filter as the trips view booked seats. */
+    $paxStmt = $pdo->prepare('
+        SELECT bp.name, bp.age, bp.gender, bp.phone, bp.seat_number,
+               b.booking_reference
+        FROM booking_passengers bp
+        JOIN bookings b ON b.id = bp.booking_id
+        WHERE b.trip_id = :trip_id
+          AND b.booking_status <> :cancelled
+        ORDER BY bp.id ASC
+    ');
+    $paxStmt->execute([':trip_id' => $tripId, ':cancelled' => 'cancelled']);
+
+    $passengers = [];
+    foreach ($paxStmt->fetchAll() as $p) {
+        $passengers[] = [
+            'name'              => $p['name'],
+            'age'               => $p['age'] !== null ? (int) $p['age'] : null,
+            'gender'            => $p['gender'],
+            'phone'             => $p['phone'],
+            'seat_number'       => $p['seat_number'],
+            'booking_reference' => $p['booking_reference'],
+        ];
+    }
+
+    auth_response(200, [
+        'success' => true,
+        'trip' => [
+            'id'               => (int) $trip['id'],
+            'departure_date'   => $trip['departure_date'],
+            'departure_time'   => $trip['departure_time'],
+            'arrival_time'     => $trip['arrival_time'],
+            'from_city'        => $trip['from_city'],
+            'to_city'          => $trip['to_city'],
+            'bus_name'         => $trip['bus_name'],
+            'bus_registration' => $trip['bus_registration'],
+            'bus_type'         => $trip['bus_type'],
+            'company_name'     => $trip['company_name'],
+            'status'           => $trip['status'],
+        ],
+        'passengers' => $passengers,
+        'count'      => count($passengers),
+    ]);
+}
+
 /* ============================================================
  Company revenue / payments (READ-ONLY reporting)
    ------------------------------------------------------------
@@ -5860,6 +5958,9 @@ function handle_complaint_update(PDO $pdo): void
     if ($action === 'manifest') {
         handle_manifest($pdo);
     }
+    if ($action === 'passenger_data') {
+        handle_passenger_data($pdo);
+    }
     if ($action === 'revenue') {
         handle_revenue($pdo);
     }
@@ -5920,7 +6021,7 @@ function handle_complaint_update(PDO $pdo): void
 
     auth_response(400, [
         'success' => false,
-        'message' => 'Unsupported action. Use action=list, action=get, action=overview, action=buses, action=bus_create, action=bus_update, action=trips, action=trip_create, action=trip_update, action=trip_status, action=trip_delete, action=bookings, action=booking_create, action=booking_cancel, action=refund_requests, action=refund_request_process, action=refund_request_reject, action=manifest, action=revenue, action=revenue_breakdown, action=payments, action=profile, action=profile_update, action=branches, action=branch_create, action=branch_update, action=branch_delete, action=parcels, action=parcel_create, action=parcel_update, action=parcel_delete, action=complaints, action=complaint_update, action=routes, action=route_create, action=route_update or action=route_delete.',
+        'message' => 'Unsupported action. Use action=list, action=get, action=overview, action=buses, action=bus_create, action=bus_update, action=trips, action=trip_create, action=trip_update, action=trip_status, action=trip_delete, action=bookings, action=booking_create, action=booking_cancel, action=refund_requests, action=refund_request_process, action=refund_request_reject, action=manifest, action=passenger_data, action=revenue, action=revenue_breakdown, action=payments, action=profile, action=profile_update, action=branches, action=branch_create, action=branch_update, action=branch_delete, action=parcels, action=parcel_create, action=parcel_update, action=parcel_delete, action=complaints, action=complaint_update, action=routes, action=route_create, action=route_update or action=route_delete.',
     ]);
 } catch (Throwable $e) {
     auth_response(500, [

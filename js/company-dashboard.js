@@ -198,6 +198,7 @@
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-routes" data-cd-view="routes">' + icon.route + '<span>Routes</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-trips" data-cd-view="trips">' + icon.fleet + '<span>Trips</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-passengers" data-cd-view="passengers">' + icon.passengers + '<span>Passengers</span></button>' +
+                  '<button type="button" role="tab" aria-selected="false" aria-controls="cd-passenger-data" data-cd-view="passenger-data">' + icon.passengers + '<span>Passenger Data</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-parcel" data-cd-view="parcel">' + icon.parcel + '<span>Parcel</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-revenue" data-cd-view="revenue">' + icon.revenue + '<span>Revenue</span></button>' +
                   '<button type="button" role="tab" aria-selected="false" aria-controls="cd-refunds" data-cd-view="refunds">' + icon.refund + '<span>Refund requests</span></button>' +
@@ -209,6 +210,7 @@
                   '<section id="cd-fleet" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Fleet register</h2><p>Add, edit and update the operating status of every vehicle.</p></div></div></section>' +
                   '<section id="cd-trips" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Trips</h2><p>Publish, update and manage each scheduled departure.</p></div></div></section>' +
                   '<section id="cd-passengers" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Passengers &amp; bookings</h2><p>Review bookings and view each passenger\'s digital ticket.</p></div></div></section>' +
+                  '<section id="cd-passenger-data" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Passenger Data</h2><p>The passenger list for the bus driver — pick a date and trip, then print it as paper for the crew.</p></div></div></section>' +
                   '<section id="cd-parcel" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Parcel &amp; freight</h2><p>Register and track parcels travelling with your buses.</p></div></div></section>' +
                   '<section id="cd-revenue" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Revenue &amp; payments</h2><p>Review paid and refunded passenger payments.</p></div></div></section>' +
                   '<section id="cd-refunds" class="cd-pane" role="tabpanel" hidden><div class="cd-pane-title"><div><h2>Refund requests</h2><p>Approve or reject passenger cancellation refunds — a refund is only saved to your revenue once you process it.</p></div></div></section>' +
@@ -237,6 +239,8 @@
         if (nodes.profile) { byId('cd-profile').appendChild(nodes.profile); }
         if (nodes.complaints) { byId('cd-complaints').appendChild(nodes.complaints); }
 
+        buildPassengerDataPane();
+
         function selectView(view) {
             var panes = document.querySelectorAll('.cd-content > .cd-pane');
             var buttons = document.querySelectorAll('[data-cd-view]');
@@ -253,15 +257,17 @@
                    after this page loaded show up without a full reload. */
                 if (view === 'complaints') { loadComplaints(); }
                 if (view === 'refunds') { loadRefundRequests(); }
+                if (view === 'passenger-data') { loadPassengerDataTrips(); }
             });
         }
         var quickActions = document.querySelectorAll('[data-cd-go]');
         for (var q = 0; q < quickActions.length; q++) { quickActions[q].addEventListener('click', function () { selectView(this.getAttribute('data-cd-go')); var target = byId(this.getAttribute('data-cd-action')); if (target) { target.click(); } }); }
         var requested = window.location.hash.replace('#', '');
-        if (requested === 'fleet' || requested === 'trips' || requested === 'passengers' || requested === 'parcel' || requested === 'revenue' || requested === 'refunds' || requested === 'routes' || requested === 'reviews' || requested === 'complaints' || requested === 'profile') {
+        if (requested === 'fleet' || requested === 'trips' || requested === 'passengers' || requested === 'passenger-data' || requested === 'parcel' || requested === 'revenue' || requested === 'refunds' || requested === 'routes' || requested === 'reviews' || requested === 'complaints' || requested === 'profile') {
             selectView(requested);
             if (requested === 'refunds') { loadRefundRequests(); }
             if (requested === 'complaints') { loadComplaints(); }
+            if (requested === 'passenger-data') { loadPassengerDataTrips(); }
         }
 
         var busForm = byId('bus-form');
@@ -7212,6 +7218,255 @@ function submitBranchForm() {
                 syncParcelDeletePassword();
             });
         }
+    }
+
+    /* ============================================================
+       Passenger Data — driver manifest for one trip
+       ------------------------------------------------------------
+       Pick a travel date, then one of that day's trips, and the view
+       renders the FULL passenger list (name, age, sex, phone, seat,
+       booking reference) from api/company.php?action=passenger_data.
+       The list can be printed / saved as PDF for the assigned crew
+       and the driver.
+       ============================================================ */
+    var pdataTrips = [];        // trips from api/company.php?action=trips
+    var pdataRequestId = 0;     // discards responses from superseded fetches
+
+    function buildPassengerDataPane() {
+        var pane = byId('cd-passenger-data');
+        if (!pane) { return; }
+        var wrap = document.createElement('div');
+        wrap.className = 'cd-pdata-wrap';
+        wrap.innerHTML =
+            '<div class="cd-pdata-controls">' +
+                '<label class="cd-pdata-field">Travel date<select id="pdata-date"><option value="">Select date&hellip;</option></select></label>' +
+                '<label class="cd-pdata-field">Trip<select id="pdata-trip"><option value="">Select a trip on that date</option></select></label>' +
+                '<button type="button" id="pdata-load" class="btn btn-primary" disabled>Load passenger list</button>' +
+                '<button type="button" id="pdata-print" class="btn btn-secondary" hidden>Print / Save as PDF</button>' +
+            '</div>' +
+            '<p id="pdata-msg" class="cd-pdata-msg" role="alert" hidden></p>' +
+            '<div id="pdata-result" class="cd-pdata-result" hidden></div>';
+        pane.appendChild(wrap);
+
+        var dateSel = byId('pdata-date');
+        if (dateSel) { dateSel.addEventListener('change', onPdataDateChange); }
+        var tripSel = byId('pdata-trip');
+        if (tripSel) { tripSel.addEventListener('change', onPdataTripChange); }
+        var loadBtn = byId('pdata-load');
+        if (loadBtn) { loadBtn.addEventListener('click', loadSelectedPassengerData); }
+        var printBtn = byId('pdata-print');
+        if (printBtn) { printBtn.addEventListener('click', printPassengerData); }
+    }
+
+    function pdataDepDate(t) { return String(t.departure_date || ''); }
+    function pdataHM(txt) { return String(txt || '').slice(0, 5); }
+
+    function pdataMessage(text, isError) {
+        var msg = byId('pdata-msg');
+        if (!msg) { return; }
+        msg.textContent = text || '';
+        msg.className = 'cd-pdata-msg' + (isError ? ' error' : '');
+        msg.hidden = false;
+    }
+
+    function pdataClearMessage() {
+        var msg = byId('pdata-msg');
+        if (msg) { msg.hidden = true; msg.textContent = ''; msg.className = 'cd-pdata-msg'; }
+    }
+
+    function pdataSetResult(html) {
+        var r = byId('pdata-result');
+        if (!r) { return; }
+        if (html === '') { r.hidden = true; r.innerHTML = ''; }
+        else { r.hidden = false; r.innerHTML = html; }
+    }
+
+    function loadPassengerDataTrips() {
+        var rid = ++pdataRequestId;
+        fetch('api/company.php?action=trips', {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        })
+        .then(function (res) {
+            return res.json().catch(function () {
+                return { success: false, message: 'Invalid server response.' };
+            }).then(function (json) {
+                return { ok: res.ok, status: res.status, data: json };
+            });
+        })
+        .then(function (result) {
+            if (rid !== pdataRequestId) { return; }
+            var trips = [];
+            var data = result.data || {};
+            if (result.ok && result.status === 200 && data.success) {
+                trips = (Array.isArray(data.trips) ? data.trips : []).filter(function (t) {
+                    return String(t.status || '').toLowerCase() !== 'cancelled';
+                });
+            }
+            pdataTrips = trips;
+            populatePdataDates();
+        })
+        .catch(function () {
+            if (rid !== pdataRequestId) { return; }
+            pdataTrips = [];
+            populatePdataDates();
+        });
+    }
+
+    function populatePdataDates() {
+        var dateSel = byId('pdata-date');
+        if (!dateSel) { return; }
+        var seen = {};
+        var dates = [];
+        for (var i = 0; i < pdataTrips.length; i++) {
+            var d = pdataDepDate(pdataTrips[i]);
+            if (d !== '' && !seen[d]) { seen[d] = true; dates.push(d); }
+        }
+        dates.sort();
+        dateSel.innerHTML = '<option value="">Select date&hellip;</option>';
+        for (var j = 0; j < dates.length; j++) {
+            var opt = document.createElement('option');
+            opt.value = dates[j];
+            opt.textContent = dates[j];
+            dateSel.appendChild(opt);
+        }
+        var tripSel = byId('pdata-trip');
+        if (tripSel) { tripSel.innerHTML = '<option value="">Select a trip on that date</option>'; }
+        var loadBtn = byId('pdata-load');
+        if (loadBtn) { loadBtn.disabled = true; }
+        var printBtn = byId('pdata-print');
+        if (printBtn) { printBtn.hidden = true; }
+        pdataSetResult('');
+        pdataClearMessage();
+        if (!dates.length) {
+            pdataMessage('No upcoming trips found. Schedule a trip in the Trips section first.');
+        }
+    }
+
+    function onPdataDateChange() {
+        var tripSel = byId('pdata-trip');
+        if (!tripSel) { return; }
+        var dateEl = byId('pdata-date');
+        var date = dateEl ? String(dateEl.value || '') : '';
+        tripSel.innerHTML = '<option value="">Select a trip on that date</option>';
+        var count = 0;
+        for (var i = 0; i < pdataTrips.length; i++) {
+            var t = pdataTrips[i];
+            if (pdataDepDate(t) === date) {
+                var opt = document.createElement('option');
+                opt.value = String(t.id);
+                opt.textContent = (t.from_city || '') + ' \u2192 ' + (t.to_city || '')
+                    + ' \u00b7 ' + pdataHM(t.departure_time)
+                    + (t.bus_name ? ' \u00b7 ' + t.bus_name : '');
+                tripSel.appendChild(opt);
+                count++;
+            }
+        }
+        var loadBtn = byId('pdata-load');
+        if (loadBtn) { loadBtn.disabled = count === 0; }
+        onPdataTripChange();
+    }
+
+    function onPdataTripChange() {
+        pdataSetResult('');
+        pdataClearMessage();
+        var printBtn = byId('pdata-print');
+        if (printBtn) { printBtn.hidden = true; }
+    }
+
+    function loadSelectedPassengerData() {
+        var tripSel = byId('pdata-trip');
+        if (!tripSel) { return; }
+        var tripId = String(tripSel.value || '');
+        if (tripId === '') {
+            pdataMessage('Please choose a trip first.', true);
+            return;
+        }
+        var rid = ++pdataRequestId;
+        fetch('api/company.php?action=passenger_data&trip_id=' + encodeURIComponent(tripId), {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        })
+        .then(function (res) {
+            return res.json().catch(function () {
+                return { success: false, message: 'Invalid server response.' };
+            }).then(function (json) {
+                return { ok: res.ok, status: res.status, data: json };
+            });
+        })
+        .then(function (result) {
+            if (rid !== pdataRequestId) { return; }
+            var data = result.data || {};
+            if (!result.ok || result.status !== 200 || !data.success) {
+                pdataSetResult('');
+                pdataMessage(result.status === 404
+                    ? 'Trip not found for your company.'
+                    : (data.message || 'Could not load the passenger list.'), true);
+                return;
+            }
+            renderPassengerData(data);
+        })
+        .catch(function () {
+            if (rid !== pdataRequestId) { return; }
+            pdataSetResult('');
+            pdataMessage('Network error — please try again.', true);
+        });
+    }
+
+    function renderPassengerData(data) {
+        var t = data.trip || {};
+        var pax = Array.isArray(data.passengers) ? data.passengers : [];
+
+        /* No bookings on this trip — do not render a manifest at all. */
+        if (!pax.length) {
+            pdataSetResult('');
+            pdataMessage('No bookings on this trip yet.');
+            var emptyPrintBtn = byId('pdata-print');
+            if (emptyPrintBtn) { emptyPrintBtn.hidden = true; }
+            return;
+        }
+
+        var meta =
+            '<div class="cd-pdata-meta-row"><span class="cd-pdata-meta-label">Route</span><span class="cd-pdata-meta-value">' + escHtml(t.from_city) + ' \u2192 ' + escHtml(t.to_city) + '</span></div>' +
+            '<div class="cd-pdata-meta-row"><span class="cd-pdata-meta-label">Departure</span><span class="cd-pdata-meta-value">' + escHtml(t.departure_date) + (t.departure_time ? ' at ' + escHtml(pdataHM(t.departure_time)) : '') + '</span></div>' +
+            (t.arrival_time ? '<div class="cd-pdata-meta-row"><span class="cd-pdata-meta-label">Arrival</span><span class="cd-pdata-meta-value">' + escHtml(pdataHM(t.arrival_time)) + '</span></div>' : '') +
+            '<div class="cd-pdata-meta-row"><span class="cd-pdata-meta-label">Bus</span><span class="cd-pdata-meta-value">' + escHtml(t.bus_name) + (t.bus_registration ? ' \u00b7 ' + escHtml(t.bus_registration) : '') + (t.bus_type ? ' \u00b7 ' + escHtml(t.bus_type) : '') + '</span></div>' +
+            '<div class="cd-pdata-meta-row"><span class="cd-pdata-meta-label">Passengers</span><span class="cd-pdata-meta-value">' + pax.length + ' traveler' + (pax.length === 1 ? '' : 's') + '</span></div>';
+
+        var rows = '';
+        for (var i = 0; i < pax.length; i++) {
+            var p = pax[i];
+            rows += '<tr>' +
+                '<td class="cd-pdata-num">' + (i + 1) + '</td>' +
+                '<td>' + escHtml(p.name) + '</td>' +
+                '<td>' + (p.age == null ? '\u2014' : escHtml(String(p.age))) + '</td>' +
+                '<td>' + escHtml(p.gender || '\u2014') + '</td>' +
+                '<td class="cd-pdata-phone">' + escHtml(p.phone || '\u2014') + '</td>' +
+                '<td>' + escHtml(p.seat_number || '\u2014') + '</td>' +
+                '</tr>';
+        }
+
+        var html =
+            '<div class="cd-pdata-head"><h3>Passenger manifest</h3><span class="cd-pdata-company">' + escHtml(t.company_name) + '</span></div>' +
+            '<div class="cd-pdata-meta">' + meta + '</div>' +
+            '<table class="cd-pdata-table">' +
+                '<thead><tr><th>#</th><th>Passenger name</th><th>Age</th><th>Sex</th><th>Phone</th><th>Seat</th></tr></thead>' +
+                '<tbody>' + rows + '</tbody>' +
+            '</table>' +
+            '<p class="cd-pdata-foot">Check travellers against this list at boarding and use the phone numbers for departure calls.</p>';
+
+        pdataSetResult(html);
+        pdataClearMessage();
+        var printBtn = byId('pdata-print');
+        if (printBtn) { printBtn.hidden = false; }
+    }
+
+    function printPassengerData() {
+        document.body.classList.add('cd-printing');
+        try { window.print(); } catch (e) { /* ignore */ }
+        setTimeout(function () { document.body.classList.remove('cd-printing'); }, 600);
     }
 
     document.addEventListener('DOMContentLoaded', function () {

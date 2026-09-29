@@ -1518,6 +1518,43 @@
             .cd-parcel-filters .cd-parcel-search-row,
             .cd-parcel-filters .cd-filter-actions { min-width: 0; }
         }
+    /* ---------- Passenger Data (driver manifest) ---------- */
+        .cd-pdata-wrap { display: grid; gap: 1.1rem; }
+        .cd-pdata-controls { display: flex; flex-wrap: wrap; gap: .75rem; align-items: flex-end; }
+        .cd-pdata-field { display: flex; flex-direction: column; gap: .3rem; font-size: .82rem; color: #6b7c76; }
+        .cd-pdata-field select { min-width: 11rem; padding: .5rem .6rem; border: 1px solid #ccdcd3; border-radius: 8px; background: #fff; color: #163a33; }
+        .cd-pdata-msg { margin: 0; color: #5c6d67; font-size: .88rem; line-height: 1.5; }
+        .cd-pdata-msg.error { color: #9f4034; }
+        .cd-pdata-msg:not([hidden]) { margin-top: .3rem; }
+        .cd-pdata-result { padding: 1.15rem 1.3rem; border: 1px solid #dce9e1; border-radius: 14px; background: #fbfdfc; }
+        .cd-pdata-head { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; flex-wrap: wrap; }
+        .cd-pdata-head h3 { margin: 0; color: #102c27; font: 800 1.25rem/1.1 'Outfit', 'Segoe UI', sans-serif; letter-spacing: -.025em; }
+        .cd-pdata-head .cd-pdata-company { color: #5c6d67; font-size: .9rem; }
+        .cd-pdata-meta { display: grid; gap: .45rem .8rem; }
+        .cd-pdata-meta-row { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: .4rem; font-size: .9rem; }
+        .cd-pdata-meta-label { color: #7d9189; }
+        .cd-pdata-meta-value { font-weight: 700; color: #163a33; white-space: nowrap; }
+        .cd-pdata-table { width: 100%; border-collapse: collapse; margin-top: .9rem; font-size: .92rem; }
+        .cd-pdata-table th, .cd-pdata-table td { border: 1px solid #d5e1da; padding: .5rem .7rem; text-align: left; }
+        .cd-pdata-table th { background: #e8f3ec; color: #163a33; font-weight: 700; }
+        .cd-pdata-table tbody tr:nth-child(even) { background: #f3f8f5; }
+        .cd-pdata-num { color: #7d9189; }
+        .cd-pdata-phone { white-space: nowrap; }
+        .cd-pdata-empty { text-align: center; color: #7d9189; padding: 1.2rem .6rem; }
+        .cd-pdata-foot { margin: .8rem 0 0; font-size: .84rem; color: #5c6d67; }
+        @media (max-width: 700px) {
+            .cd-pdata-controls { flex-direction: column; align-items: stretch; }
+            .cd-pdata-field select { width: 100%; }
+            .cd-pdata-controls .btn { width: 100%; }
+            .cd-pdata-meta-row { grid-template-columns: 6rem minmax(0, 1fr); }
+            .cd-pdata-table th, .cd-pdata-table td { padding: .42rem .5rem; }
+        }
+        @media print {
+            body.cd-printing * { visibility: hidden; }
+            body.cd-printing #pdata-result,
+            body.cd-printing #pdata-result * { visibility: visible; }
+            body.cd-printing #pdata-result { position: absolute; top: 0; left: 0; width: 100%; margin: 0; }
+        }
     </style>
 </head>
 <body data-auth-required="1" data-auth-role="company" data-auth-company-approved="1">
@@ -3104,6 +3141,6 @@
     <script src="js/auth.js"></script>
     <script src="js/cities.js"></script>
     <script src="js/city-picker.js?v=20260907-swap-fix-3-dispatch"></script>
-    <script src="js/company-dashboard.js?v=20260918-complaint-categories"></script>
+    <script src="js/company-dashboard.js?v=20260929-pdata-empty-state"></script>
 </body>
 </html>
