@@ -1706,14 +1706,6 @@ function handle_trip_status(PDO $pdo): void
         ]);
     }
 
-    /* The operator's own password is required for this sensitive action.
-       verify_current_password() derives the user from the server-side session,
-       never from the browser payload. */
-    $password = (string) ($input['password'] ?? '');
-    if ($password === '' || !verify_current_password($password)) {
-        auth_response(401, ['success' => false, 'message' => 'Your password was not accepted. Trip was not cancelled.']);
-    }
-
     try {
         $pdo->beginTransaction();
 
@@ -3153,14 +3145,6 @@ function handle_booking_cancel(PDO $pdo): void
         ]);
     }
 
-    /* The operator's own password is required for this sensitive action.
-       verify_current_password() derives the user from the server-side session,
-       never from the browser payload. */
-    $password = (string) ($input['password'] ?? '');
-    if ($password === '' || !verify_current_password($password)) {
-        auth_response(401, ['success' => false, 'message' => 'Your password was not accepted. Booking was not cancelled.']);
-    }
-
     $bookingStmt = $pdo->prepare('
         SELECT
             bk.id,
@@ -3210,7 +3194,11 @@ function handle_booking_cancel(PDO $pdo): void
        original payment_status — the operator deliberately kept the money, so
        it must keep showing as paid/pending/failed instead of silently
        flipping to 'refunded'. */
-    $newPaymentStatus = $refundType === 'none' ? $booking['payment_status'] : 'refunded';
+    /* The payment is NOT flipped to 'refunded' here: the chosen refund is staged
+       as a PENDING refund request below (visible in the Refund requests section)
+       and the money only lands as 'refunded' once the company processes it — the
+       same rule as the passenger-cancellation flow. */
+    $newPaymentStatus = $booking['payment_status'];
 
     $pdo->beginTransaction();
     try {
@@ -3232,28 +3220,42 @@ function handle_booking_cancel(PDO $pdo): void
             ':booking_id' => $bookingId,
         ]);
 
-        /* Real refund logic — a full or half refund must move the booking's
-           paid payment row(s) to 'refunded' INSIDE the same transaction, so
-           every revenue surface (overview revenue card, Revenue / Payments tab,
-           payments list) stops counting the refunded money as income and shows
-           it as a refunded payment. 'none' leaves the original payment status
-           untouched because the company deliberately kept the money. */
-        if ($refundType !== 'none') {
-            $updPay = $pdo->prepare("
-                UPDATE payments
-                SET status = 'refunded'
+        /* Stage the chosen refund as a PENDING refund request instead of paying it
+           out immediately: it appears in the company's Refund requests section, and
+           the money is only recorded as refunded once the company processes it there
+           (the same rule as the passenger-cancellation flow). No payment row is ever
+           fabricated as paid or refunded on this path. */
+        if ($refundType !== 'none' && $refundedAmount !== null) {
+            $dupStmt = $pdo->prepare('
+                SELECT id FROM refund_requests
                 WHERE booking_id = :booking_id
-                  AND status = 'paid'
-            ");
-            $updPay->execute([':booking_id' => $bookingId]);
+                  AND status IN (\'pending\', \'approved\')
+                LIMIT 1
+            ');
+            $dupStmt->execute([':booking_id' => $bookingId]);
+            if ($dupStmt->fetch() === false) {
+                $insRefund = $pdo->prepare('
+                    INSERT INTO refund_requests
+                        (booking_id, company_id, passenger_id, amount, refund_type, status)
+                    VALUES
+                        (:booking_id, :company_id, :passenger_id, :amount, :refund_type, \'pending\')'
+                );
+                $insRefund->execute([
+                    ':booking_id'   => $bookingId,
+                    ':company_id'   => $companyId,
+                    ':passenger_id' => (int) $booking['passenger_id'],
+                    ':amount'       => $refundedAmount,
+                    ':refund_type'  => $refundType,
+                ]);
+            }
         }
 
         $pdo->commit();
 
         if ($refundType === 'full') {
-            $notice = 'Booking cancelled successfully. Full refund of ETB ' . number_format($refundedAmount, 2) . ' recorded. Seat has been freed.';
+            $notice = 'Booking cancelled. Full refund of ETB ' . number_format($refundedAmount, 2) . ' is being requested. Process it from the Refund requests section to pay it out.';
         } elseif ($refundType === 'half') {
-            $notice = 'Booking cancelled successfully. Half refund of ETB ' . number_format($refundedAmount, 2) . ' recorded. Seat has been freed.';
+            $notice = 'Booking cancelled. Half refund of ETB ' . number_format($refundedAmount, 2) . ' is being requested. Process it from the Refund requests section to pay it out.';
         } else {
             $notice = 'Booking cancelled successfully. No refund was issued. Seat has been freed.';
         }
@@ -3264,9 +3266,9 @@ function handle_booking_cancel(PDO $pdo): void
            email / SMS / Telegram is ever sent. */
         try {
             $refundNote = $refundType === 'full'
-                ? 'A full refund of ETB ' . number_format($refundedAmount, 2) . ' has been issued.'
+                ? 'A full refund of ETB ' . number_format($refundedAmount, 2) . ' has been requested and will be paid once the company processes it.'
                 : ($refundType === 'half'
-                    ? 'A half refund of ETB ' . number_format($refundedAmount, 2) . ' has been issued.'
+                    ? 'A half refund of ETB ' . number_format($refundedAmount, 2) . ' has been requested and will be paid once the company processes it.'
                     : 'No refund was issued.');
             createNotification(
                 $pdo,

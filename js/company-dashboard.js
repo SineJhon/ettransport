@@ -1493,10 +1493,6 @@
        api/company.php?action=trip_status along with status=cancelled. */
     var pendingTripCancelReason = '';
 
-    /* Operator password given in the trip-cancel modal. Verified once by the
-       trip_status call (and by each booking_cancel in the cascade); captured
-       here so the per-booking popups don't re-prompt for it. */
-    var pendingTripCancelPassword = '';
 
     /* Quick-reason chips for the trip-cancel modal. Clicking one fills the
        trip reason textarea. */
@@ -1548,7 +1544,6 @@
         tripCancelActiveBookings = [];
         tripCancelBookingsReady = false;
         pendingTripCancelReason = '';
-        pendingTripCancelPassword = '';
         var modal = byId('trip-cancel-modal');
         if (modal) { modal.hidden = true; }
         var msg = byId('trip-cancel-msg');
@@ -1557,23 +1552,15 @@
         if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Cancel Trip'; }
         var reasonEl = byId('trip-cancel-reason');
         if (reasonEl) { reasonEl.value = ''; reasonEl.removeAttribute('aria-invalid'); }
-        var pwInput = byId('trip-cancel-password');
-        if (pwInput) { pwInput.value = ''; }
-        var pwErr = byId('trip-cancel-password-error');
-        if (pwErr) { pwErr.hidden = true; pwErr.textContent = ''; }
         var suggestions = byId('trip-cancel-reason-suggestions');
         if (suggestions) { suggestions.innerHTML = ''; }
     }
 
-    /* The trip-cancel confirm stays disabled until BOTH the booking list has
-       loaded and the operator's password has been typed — mirrors the admin
-       dashboard's password-confirm UX. */
+    /* The trip-cancel confirm stays disabled until the booking list has loaded. */
     function syncTripCancelConfirm() {
         var confirmBtn = byId('trip-cancel-confirm-btn');
         if (!confirmBtn) { return; }
-        var pwInput = byId('trip-cancel-password');
-        var pwOk = pwInput && String(pwInput.value || '').trim() !== '';
-        confirmBtn.disabled = !tripCancelBookingsReady || !pwOk;
+        confirmBtn.disabled = !tripCancelBookingsReady;
     }
 
     function renderTripCancelBookings(bookings) {
@@ -1666,11 +1653,6 @@
         var reasonEl = byId('trip-cancel-reason');
         if (reasonEl) { reasonEl.value = ''; reasonEl.removeAttribute('aria-invalid'); }
         pendingTripCancelReason = '';
-        pendingTripCancelPassword = '';
-        var pwInput = byId('trip-cancel-password');
-        if (pwInput) { pwInput.value = ''; }
-        var pwErr = byId('trip-cancel-password-error');
-        if (pwErr) { pwErr.hidden = true; pwErr.textContent = ''; }
         renderTripCancelReasonSuggestions();
 
         modal.hidden = false;
@@ -1742,24 +1724,13 @@
         if (reasonEl) { reasonEl.removeAttribute('aria-invalid'); }
         pendingTripCancelReason = reason;
 
-        /* Require the operator's password — verified server-side on every
-           cancel call (trip_status and each booking_cancel in the cascade). */
-        var pwInput = byId('trip-cancel-password');
-        var password = pwInput ? String(pwInput.value || '') : '';
-        if (!password) {
-            var pwErr = byId('trip-cancel-password-error');
-            if (pwErr) { pwErr.textContent = 'Enter your account password.'; pwErr.hidden = false; }
-            if (pwInput && pwInput.focus) { pwInput.focus(); }
-            return;
-        }
-        pendingTripCancelPassword = password;
 
         var active = (Array.isArray(tripCancelActiveBookings) ? tripCancelActiveBookings : []).slice();
         closeTripCancelModal();
 
         if (active.length === 0) {
             /* No active bookings — cancel the trip directly. */
-            cancelTrip(id, 0, reason, password);
+            cancelTrip(id, 0, reason);
             return;
         }
 
@@ -1784,10 +1755,9 @@
             var tripId = tripCancelState.tripId;
             var total = tripCancelState.total;
             var reason = tripCancelState.reason;
-            var password = pendingTripCancelPassword;
             tripCancelState = null;
             hideCancelBookingModal();
-            cancelTrip(tripId, total, reason, password);
+            cancelTrip(tripId, total, reason);
             return;
         }
         var booking = tripCancelState.queue[tripCancelState.index];
@@ -1818,7 +1788,7 @@
         }
     }
 
-    function cancelTrip(id, bookingCount, reason, password) {
+    function cancelTrip(id, bookingCount, reason) {
         var modal = byId('trip-cancel-modal');
         var msg = byId('trip-cancel-msg');
         var confirmBtn = byId('trip-cancel-confirm-btn');
@@ -1829,7 +1799,7 @@
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-            body: JSON.stringify({ trip_id: id, status: 'cancelled', reason: reason || '', password: password || '' })
+            body: JSON.stringify({ trip_id: id, status: 'cancelled', reason: reason || '' })
         })
             .then(function (res) {
                 return res.json().catch(function () {
@@ -1840,14 +1810,6 @@
             })
             .then(function (result) {
                 var data = result.data || {};
-                if (result.status === 401) {
-                    /* Password rejected mid-flow: the trip modal is already
-                       closed by the time cancelTrip runs, so surface the reason
-                       as a toast and restore the trip list. */
-                    toast(data.message || 'Your password was not accepted. Trip was not cancelled.');
-                    loadTrips();
-                    return;
-                }
                 if (!result.ok || result.status !== 200 || !data.success) {
                     if (modal && !modal.hidden && msg) {
                         msg.textContent = data.message || 'Unable to cancel the trip.';
@@ -2277,23 +2239,12 @@
         var reason = byId('cancel-reason');
         if (reason) { reason.value = ''; reason.removeAttribute('aria-invalid'); }
 
-        /* Password: reset the field, and hide the group during a trip-cancel
-           cascade — the password was already given in the trip-cancel modal. */
-        var cancelPwGroup = byId('cancel-password-group');
-        var pwInput = byId('cancel-password');
-        if (pwInput) { pwInput.value = ''; }
-        var pwErr = byId('cancel-password-error');
-        if (pwErr) { pwErr.hidden = true; pwErr.textContent = ''; }
-        var inCascade = !!tripCancelState;
-        if (cancelPwGroup) { cancelPwGroup.hidden = inCascade; }
-
         var msg = byId('cancel-modal-msg');
         if (msg) { msg.hidden = true; msg.textContent = ''; msg.className = 'cd-cancel-msg'; }
         var confirmBtn = byId('cancel-confirm-btn');
-        if (confirmBtn) { confirmBtn.textContent = 'Confirm Cancellation'; }
+        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Confirm Cancellation'; }
         var keepBtn = byId('cancel-keep-btn');
         if (keepBtn) { keepBtn.disabled = false; }
-        syncCancelBookingPassword();
 
         modal.hidden = false;
         if (reason) { reason.focus(); }
@@ -2312,29 +2263,11 @@
         var msg = byId('cancel-modal-msg');
         if (msg) { msg.hidden = true; msg.textContent = ''; msg.className = 'cd-cancel-msg'; }
         var confirmBtn = byId('cancel-confirm-btn');
-        if (confirmBtn) { confirmBtn.textContent = 'Confirm Cancellation'; }
+        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Confirm Cancellation'; }
         var keepBtn = byId('cancel-keep-btn');
         if (keepBtn) { keepBtn.disabled = false; }
-        var cancelPwGroup = byId('cancel-password-group');
-        if (cancelPwGroup) { cancelPwGroup.hidden = false; }
-        var pwInput = byId('cancel-password');
-        if (pwInput) { pwInput.value = ''; }
-        var pwErr = byId('cancel-password-error');
-        if (pwErr) { pwErr.hidden = true; pwErr.textContent = ''; }
-        syncCancelBookingPassword();
     }
 
-    /* Mirrors the admin dashboard's syncConfirmPassword: the confirm button
-       stays disabled until a password has been typed. During a trip-cancel
-       cascade the password was already given in the trip-cancel modal, so the
-       confirm is enabled immediately. */
-    function syncCancelBookingPassword() {
-        var confirmBtn = byId('cancel-confirm-btn');
-        if (!confirmBtn) { return; }
-        if (tripCancelState) { confirmBtn.disabled = false; return; }
-        var pwInput = byId('cancel-password');
-        confirmBtn.disabled = !pwInput || String(pwInput.value || '').trim() === '';
-    }
 
     function closeCancelBookingModal() {
         /* If the operator closes this popup in the middle of a trip-cancel
@@ -2376,25 +2309,6 @@
         }
         if (reasonEl) { reasonEl.removeAttribute('aria-invalid'); }
 
-        /* Password: in a trip-cancel cascade the password was already verified
-           in the trip-cancel modal; standalone, it comes from this field. */
-        var password = '';
-        var pwInput = byId('cancel-password');
-        if (tripCancelState) {
-            password = pendingTripCancelPassword;
-        } else {
-            password = pwInput ? String(pwInput.value || '') : '';
-            if (!password) {
-                var pwErr = byId('cancel-password-error');
-                if (pwErr) { pwErr.textContent = 'Enter your account password.'; pwErr.hidden = false; }
-                if (pwInput && pwInput.focus) { pwInput.focus(); }
-                var confirmBtn = byId('cancel-confirm-btn');
-                if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Confirm Cancellation'; }
-                var keepBtn = byId('cancel-keep-btn');
-                if (keepBtn) { keepBtn.disabled = false; }
-                return;
-            }
-        }
 
         var msg = byId('cancel-modal-msg');
         if (msg) { msg.hidden = true; msg.textContent = ''; msg.className = 'cd-cancel-msg'; }
@@ -2403,15 +2317,15 @@
         var keepBtn = byId('cancel-keep-btn');
         if (keepBtn) { keepBtn.disabled = true; }
 
-        cancelBooking(cancelBookingId, refundType, reason, password);
+        cancelBooking(cancelBookingId, refundType, reason);
     }
 
-    function cancelBooking(bookingId, refundType, reason, password) {
+    function cancelBooking(bookingId, refundType, reason) {
         fetch('api/company.php?action=booking_cancel', {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-            body: JSON.stringify({ booking_id: bookingId, refund_type: refundType, reason: reason, password: password || '' })
+            body: JSON.stringify({ booking_id: bookingId, refund_type: refundType, reason: reason })
         })
             .then(function (res) {
                 return res.json().catch(function () {
@@ -2422,26 +2336,6 @@
             })
             .then(function (result) {
                 var data = result.data || {};
-                if (result.status === 401) {
-                    var errMsg = byId('cancel-modal-msg');
-                    if (errMsg) {
-                        errMsg.hidden = false;
-                        errMsg.className = 'cd-cancel-msg cd-cancel-msg-error';
-                        errMsg.textContent = data.message || 'Your password was not accepted.';
-                    }
-                    var pwInput = byId('cancel-password');
-                    var pwErr = byId('cancel-password-error');
-                    if (!tripCancelState) {
-                        if (pwErr) { pwErr.textContent = data.message || 'Your password was not accepted.'; pwErr.hidden = false; }
-                        if (pwInput && pwInput.select) { pwInput.select(); }
-                        if (pwInput && pwInput.focus) { pwInput.focus(); }
-                    }
-                    var errConfirm = byId('cancel-confirm-btn');
-                    if (errConfirm) { errConfirm.disabled = false; errConfirm.textContent = 'Confirm Cancellation'; }
-                    var errKeep = byId('cancel-keep-btn');
-                    if (errKeep) { errKeep.disabled = false; }
-                    return;
-                }
                 if (!result.ok || result.status !== 200 || !data.success) {
                     var errMsg = byId('cancel-modal-msg');
                     if (errMsg) {
@@ -7987,14 +7881,6 @@ function submitBranchForm() {
         if (cancelKeep) { cancelKeep.addEventListener('click', closeCancelBookingModal); }
         var cancelConfirm = byId('cancel-confirm-btn');
         if (cancelConfirm) { cancelConfirm.addEventListener('click', submitCancelBooking); }
-        var cancelPwInput = byId('cancel-password');
-        if (cancelPwInput) {
-            cancelPwInput.addEventListener('input', function () {
-                var pwErr = byId('cancel-password-error');
-                if (pwErr) { pwErr.hidden = true; pwErr.textContent = ''; }
-                syncCancelBookingPassword();
-            });
-        }
         var cancelRefundRadios = document.querySelectorAll('input[name="cancel-refund-type"]');
         for (var cr = 0; cr < cancelRefundRadios.length; cr++) {
             cancelRefundRadios[cr].addEventListener('change', function () {
@@ -8128,14 +8014,6 @@ function submitBranchForm() {
         if (tripCancelKeep) { tripCancelKeep.addEventListener('click', closeTripCancelModal); }
         var tripCancelConfirm = byId('trip-cancel-confirm-btn');
         if (tripCancelConfirm) { tripCancelConfirm.addEventListener('click', confirmTripCancel); }
-        var tripCancelPwInput = byId('trip-cancel-password');
-        if (tripCancelPwInput) {
-            tripCancelPwInput.addEventListener('input', function () {
-                var pwErr = byId('trip-cancel-password-error');
-                if (pwErr) { pwErr.hidden = true; pwErr.textContent = ''; }
-                syncTripCancelConfirm();
-            });
-        }
 
         /* ----- Trip-delete confirmation modal wiring ----- */
         var tripDeleteModal = byId('trip-delete-modal');
