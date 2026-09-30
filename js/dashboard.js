@@ -2368,6 +2368,9 @@ function closeTicket() {
        ============================================================ */
     var currentComplaints = [];
     var complaintState = 'idle'; // idle | loading | loaded | error
+    /* Session memory of which complaint cards the passenger expanded
+       (keyed by complaint id) so re-renders keep their collapse state. */
+    var complaintExpanded = {};
 
     function complaintBadgeHtml(status) {
         var s = String(status || 'open').replace(/[^a-z_]/g, '');
@@ -2428,7 +2431,7 @@ function closeTicket() {
             return '<div class="dash-complaint-actions">' +
                 '<span class="dash-complaint-actions-hint">The company marked this as resolved. Please confirm, or reopen it if the issue continues.</span>' +
                 '<div class="dash-complaint-actions-btns">' +
-                    '<button type="button" class="btn btn-primary btn-sm" data-complaint-action="confirm" data-complaint-id="' + id + '">Confirm resolved</button>' +
+                    '<button type="button" class="btn btn-primary btn-sm" data-complaint-action="confirm_resolution" data-complaint-id="' + id + '">Confirm resolved</button>' +
                     '<button type="button" class="btn btn-secondary btn-sm" data-complaint-action="reopen" data-complaint-id="' + id + '">Reopen complaint</button>' +
                 '</div>' +
             '</div>';
@@ -2527,6 +2530,35 @@ function closeTicket() {
         });
     }
 
+    /* Expand / collapse one complaint card body. The choice is remembered in
+       complaintExpanded so re-renders (e.g. after an action or refresh) keep
+       the exact same collapse state for the session. */
+    function toggleComplaintCard(id, btn) {
+        var body = document.getElementById('complaint-body-' + id);
+        if (!body) { return; }
+        var expanding = body.hidden; // currently hidden → about to expand
+        body.hidden = !expanding;
+        complaintExpanded[id] = expanding ? true : false;
+        var card = btn && btn.closest ? btn.closest('.dash-complaint-card') : null;
+        var toggle = card && card.querySelector ? card.querySelector('.dash-complaint-toggle') : null;
+        if (card) {
+            card.classList.toggle('is-expanded', expanding);
+            card.classList.toggle('is-collapsed', !expanding);
+        }
+        /* Update the visible toggle button wherever the click came from
+           (button or clickable subject line). */
+        if (toggle) {
+            toggle.setAttribute('aria-expanded', expanding ? 'true' : 'false');
+            toggle.setAttribute('aria-label', expanding ? 'Collapse complaint details' : 'Expand complaint details');
+            toggle.setAttribute('title', expanding ? 'Collapse complaint details' : 'Expand complaint details');
+            toggle.textContent = expanding ? '\u00D7' : '+';
+            /* Short pop eases the glyph swap; restart it on repeated clicks. */
+            toggle.classList.remove('ico-pop');
+            void toggle.offsetWidth;
+            toggle.classList.add('ico-pop');
+        }
+    }
+
     function renderComplaints() {
         var list = document.getElementById('complaint-list');
         var empty = document.getElementById('complaint-empty');
@@ -2550,16 +2582,24 @@ function closeTicket() {
                     if (c.booking_reference) { parts.push('Booking ' + c.booking_reference); }
                     ctx = '<p class="dash-complaint-meta">' + escapeHtml(parts.join(' \u00b7 ')) + '</p>';
                 }
-                html += '<article class="dash-complaint-card">' +
+                /* Collapse defaults: touched cards keep their toggle state;
+                   complaints awaiting the passenger's confirmation start
+                   expanded so the confirm / reopen buttons are immediately
+                   visible without an extra click (unless already toggled). */
+                var expanded = complaintExpanded[c.id] === true || (!(c.id in complaintExpanded) && c.status === 'resolved_pending');
+                html += '<article class="dash-complaint-card ' + (expanded ? 'is-expanded' : 'is-collapsed') + '">' +
                     '<div class="dash-complaint-card-head">' +
                         '<span class="dash-complaint-company">' + escapeHtml((c.target === 'platform' ? 'ET Transport' : (c.company_name || 'Company'))) + '</span>' +
                         '<span class="dash-complaint-category">' + escapeHtml(complaintCategoryLabel(c.category)) + '</span>' +
                         complaintBadgeHtml(c.status) +
                         '<span class="dash-complaint-date">' + formatComplaintDate(c.created_at) + '</span>' +
+                        '<button type="button" class="dash-complaint-toggle" data-complaint-toggle="' + c.id + '" title="' + (expanded ? 'Collapse complaint details' : 'Expand complaint details') + '" aria-expanded="' + (expanded ? 'true' : 'false') + '" aria-controls="complaint-body-' + c.id + '" aria-label="' + (expanded ? 'Collapse complaint details' : 'Expand complaint details') + '">' + (expanded ? '\u00D7' : '+') + '</button>' +
                     '</div>' +
-                    '<h4 class="dash-complaint-subject">' + escapeHtml(c.subject) + '</h4>' +
+                    '<h4 class="dash-complaint-subject" data-complaint-toggle="' + c.id + '">' + escapeHtml(c.subject) + '</h4>' +
                     '<p class="dash-complaint-message">' + escapeHtml(c.message) + '</p>' +
-                    ctx + complaintThreadHtml(c) + complaintActionsHtml(c) +
+                    '<div class="dash-complaint-body" id="complaint-body-' + c.id + '"' + (expanded ? '' : ' hidden') + '>' +
+                        ctx + complaintThreadHtml(c) + complaintActionsHtml(c) +
+                    '</div>' +
                 '</article>';
             }
             list.innerHTML = html;
@@ -4430,10 +4470,15 @@ function closeTicket() {
             });
         }
 
-        /* Complaint card lifecycle actions: confirm / reopen / reply / escalate. */
+        /* Complaint card expand/collapse + lifecycle actions: confirm / reopen / reply / escalate. */
         var complaintList = document.getElementById('complaint-list');
         if (complaintList) {
             complaintList.addEventListener('click', function (ev) {
+                var toggleBtn = ev.target.closest ? ev.target.closest('[data-complaint-toggle]') : null;
+                if (toggleBtn && toggleBtn.getAttribute('data-complaint-toggle')) {
+                    toggleComplaintCard(toggleBtn.getAttribute('data-complaint-toggle'), toggleBtn);
+                    return;
+                }
                 var btn = ev.target.closest ? ev.target.closest('[data-complaint-action]') : null;
                 if (btn && btn.getAttribute('data-complaint-action')) { handleComplaintAction(btn); }
             });
