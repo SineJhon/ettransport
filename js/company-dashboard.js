@@ -4834,14 +4834,15 @@ function renderRefundCards() {
                 lines.push({ side: 'teller', avatar: '', html: complaintStatusTellerHtml(r) });
             } else {
                 var actorIsPassenger = r.actor === 'passenger';
+                var actorIsAdmin = r.actor === 'admin';
                 lines.push({
-                    side: actorIsPassenger ? 'passenger' : 'company',
+                    side: actorIsAdmin ? 'support' : (actorIsPassenger ? 'passenger' : 'company'),
                     avatar: actorIsPassenger
                         ? String(complaint.passenger_name || 'P').trim().charAt(0).toUpperCase() || 'P'
-                        : 'You',
+                        : (actorIsAdmin ? 'ET' : 'You'),
                     html: actorIsPassenger
                         ? complaintPassengerReplyHtml(r, complaint)
-                        : complaintChatBubbleHtml(r)
+                        : (actorIsAdmin ? complaintSupportReplyHtml(r) : complaintChatBubbleHtml(r))
                 });
             }
         }
@@ -4857,6 +4858,16 @@ function renderRefundCards() {
         return '<div class="cd-chat-bubble is-passenger">' +
             '<p>' + escHtml(r.message) + '</p>' +
             '<span class="cd-chat-bubble-meta">' + escHtml(complaint.passenger_name || 'Passenger') + (when ? ' \u00b7 ' + escHtml(when) : '') + '</span>' +
+        '</div>';
+    }
+
+    /* ET Transport Support reply bubble (right-aligned blue, keeps admin
+       engagement distinct from the company's own replies). */
+    function complaintSupportReplyHtml(r) {
+        var when = r.created_at ? chatTimeLabel(r.created_at) : '';
+        return '<div class="cd-chat-bubble is-support">' +
+            '<p>' + escHtml(r.message) + '</p>' +
+            '<span class="cd-chat-bubble-meta">ET Transport Support' + (when ? ' \u00b7 ' + escHtml(when) : '') + '</span>' +
         '</div>';
     }
 

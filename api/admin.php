@@ -1724,6 +1724,7 @@ function admin_complaint_payload(array $row, array $responses = []): array
         'status' => $row['status'],
         'route' => $row['route'] ?? null,
         'departure' => $row['departure'] ?? null,
+        'response_count' => (int) ($row['response_count'] ?? 0),
         'responses' => $responses,
         'created_at' => $row['created_at'] ?? '',
         'updated_at' => $row['updated_at'] ?? '',
@@ -1736,6 +1737,7 @@ function admin_fetch_complaint_rows(PDO $pdo, ?string $status = null, ?string $t
         SELECT c.id, c.passenger_id, c.company_id, c.booking_id, c.category, c.target,
                c.subject, c.message, c.status,
                c.created_at, c.updated_at,
+               (SELECT COUNT(*) FROM complaint_responses cr WHERE cr.complaint_id = c.id) AS response_count,
                u.name AS passenger_name,
                co.name AS company_name,
                co.logo AS company_logo,
@@ -1862,6 +1864,7 @@ function handle_admin_complaint(PDO $pdo): void
         SELECT c.id, c.passenger_id, c.company_id, c.booking_id, c.category, c.target,
                c.subject, c.message, c.status,
                c.created_at, c.updated_at,
+               (SELECT COUNT(*) FROM complaint_responses cr WHERE cr.complaint_id = c.id) AS response_count,
                u.name AS passenger_name,
                co.name AS company_name,
                b.booking_reference,
@@ -1965,7 +1968,7 @@ function handle_admin_complaint_update(PDO $pdo): void
         }
     }
 
-    $refetch = $pdo->prepare('SELECT id, passenger_id, company_id, booking_id, category, target, subject, message, status, created_at, updated_at, NULL AS response, NULL AS response_at, NULL AS passenger_name, NULL AS company_name, NULL AS booking_reference, NULL AS route, NULL AS departure_date, NULL AS departure_time FROM complaints WHERE id = :id LIMIT 1');
+    $refetch = $pdo->prepare('SELECT id, passenger_id, company_id, booking_id, category, target, subject, message, status, created_at, updated_at, (SELECT COUNT(*) FROM complaint_responses cr WHERE cr.complaint_id = id) AS response_count, NULL AS response, NULL AS response_at, NULL AS passenger_name, NULL AS company_name, NULL AS booking_reference, NULL AS route, NULL AS departure_date, NULL AS departure_time FROM complaints WHERE id = :id LIMIT 1');
     $refetch->execute([':id' => $complaintId]);
     $updated = $refetch->fetch();
 

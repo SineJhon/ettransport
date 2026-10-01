@@ -481,6 +481,11 @@
         .ad-chat-teller { display:grid; gap:.1rem; align-self:center; justify-items:center; max-width:86%; margin:.2rem auto; padding:.3rem .8rem; background:#e8f1ec; border:1px solid #d3e3d9; border-radius:999px; text-align:center; }
         .ad-chat-teller-text { color:#38624f; font-size:.74rem; font-weight:700; line-height:1.4; }
         .ad-chat-teller-meta { color:#7d9189; font-size:.62rem; font-weight:700; }
+        /* Loading state while the complaint conversation thread is fetched. */
+        .ad-complaint-modal-loading { flex:1 1 auto; display:grid; place-content:center; justify-items:center; gap:.7rem; padding:2rem; color:#647a71; text-align:center; }
+        .ad-complaint-modal-loading p { margin:0; font-size:.88rem; font-weight:700; }
+        .ad-complaint-modal-loading-spinner { width:2.2rem; height:2.2rem; border:3px solid #d9e8df; border-top-color:#187653; border-radius:50%; animation:ad-chat-spin .8s linear infinite; }
+        @keyframes ad-chat-spin { to { transform:rotate(360deg); } }
         @media (max-width:600px) { .ad-complaint-list { grid-template-columns:1fr; }.ad-complaint-co-grid { grid-template-columns:1fr; }.ad-complaint-modal-box { max-height:94vh; border-radius:16px 16px 10px 10px; }.ad-chat-head { flex-wrap:wrap; gap:.6rem; }.ad-chat-row { max-width:94%; } }
         .ad-review-card { position:relative; padding:1.1rem; display:flex; flex-direction:column; gap:.8rem; border:1px solid #dfeae4; border-radius:14px; background:#fff; box-shadow:0 1px 0 rgba(17,61,45,.02); transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
         .ad-review-card:hover { border-color:#b8d8c5; box-shadow:0 12px 24px rgba(25,71,54,.08); transform:translateY(-2px); }

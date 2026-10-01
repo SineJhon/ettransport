@@ -2175,7 +2175,7 @@ function renderDetail(c) {
                 if (c.route) { context += '<span>' + escHtml(c.route) + '</span>'; }
                 if (c.departure) { context += '<span>Departs ' + escHtml(c.departure) + '</span>'; }
             }
-            var responseCount = (Array.isArray(c.responses) && c.responses.length) ? c.responses.length : 0;
+            var responseCount = Number(c.response_count) || ((Array.isArray(c.responses) && c.responses.length) ? c.responses.length : 0);
             html += '<article class="ad-complaint-card' + (c.status === 'open' ? ' is-new' : '') + '" data-admin-complaint-id="' + c.id + '">' +
                 '<div class="ad-complaint-card-head">' +
                     '<span class="ad-complaint-avatar" aria-hidden="true">' + escHtml(initial) + '</span>' +
@@ -2601,12 +2601,78 @@ function adminComplaintTime(value) {
         }
     }
 
+    /* Show the modal with a "loading conversation" placeholder while the
+       full thread is being fetched. */
+    function renderAdminComplaintLoading(c) {
+        var box = byId('ad-complaint-modal-box'); if (!box) { return; }
+        var initial = String(c.passenger_name || 'P').trim().charAt(0).toUpperCase() || 'P';
+        box.innerHTML =
+            '<div class="ad-chat-head">' +
+                '<div class="ad-chat-head-person">' +
+                    '<span class="ad-complaint-avatar" aria-hidden="true">' + escHtml(initial) + '</span>' +
+                    '<div class="ad-chat-head-info">' +
+                        '<strong id="ad-complaint-modal-title">' + escHtml(c.subject) + '</strong>' +
+                        '<small>' + escHtml(c.passenger_name || 'Passenger') + ' &middot; ' + escHtml(adminComplaintCounterparty(c)) + '</small>' +
+                    '</div>' +
+                '</div>' +
+                '<button type="button" id="ad-complaint-close" class="ad-complaint-modal-close" aria-label="Close complaint">&times;</button>' +
+            '</div>' +
+            '<div class="ad-complaint-modal-loading" aria-live="polite">' +
+                '<span class="ad-complaint-modal-loading-spinner" aria-hidden="true"></span>' +
+                '<p>Loading conversation&hellip;</p>' +
+            '</div>';
+        var modal = byId('ad-complaint-modal');
+        if (modal) { modal.hidden = false; }
+    }
+
+    function scrollAdminComplaintThread() {
+        var modal = byId('ad-complaint-modal');
+        var thread = modal ? modal.querySelector('.ad-chat-thread') : null;
+        if (thread) { thread.scrollTop = thread.scrollHeight; }
+    }
+
     function openAdminComplaint(id) {
         var match = adminComplaints.filter(function (c) { return Number(c.id) === Number(id); })[0];
         if (!match) { return; }
         activeAdminComplaint = match;
         adminComplaintSending = false;
-        renderAdminComplaintModal();
+
+        /* The list rows carry only the summary (opening message). Fetch the
+           detail endpoint so the admin sees the ENTIRE conversation — the
+           passenger's reply threads, the company's responses and every status
+           teller — before showing the chat modal. */
+        renderAdminComplaintLoading(match);
+        fetch('api/admin.php?action=complaint&id=' + encodeURIComponent(id), {
+            method: 'GET', credentials: 'same-origin', headers: { 'Accept': 'application/json' }
+        })
+            .then(parseJson)
+            .then(function (result) {
+                var data = result.data || {};
+                if (!result.ok || result.status !== 200 || !data.success || !data.complaint) {
+                    throw new Error(data.message || 'Unable to load the conversation.');
+                }
+                activeAdminComplaint = data.complaint;
+                for (var i = 0; i < adminComplaints.length; i++) {
+                    if (Number(adminComplaints[i].id) === Number(data.complaint.id)) { adminComplaints[i] = data.complaint; }
+                }
+                var modalEl = byId('ad-complaint-modal');
+                if (modalEl && modalEl.hidden) { return; } /* admin closed the modal while loading */
+                renderAdminComplaintModal();
+                scrollAdminComplaintThread();
+            })
+            .catch(function (err) {
+                var modalEl = byId('ad-complaint-modal');
+                if (modalEl && modalEl.hidden) { return; }
+                /* Fall back to the summary copy so the admin can still act, but
+                   clearly flag that the live thread could not be loaded. */
+                activeAdminComplaint = match;
+                renderAdminComplaintModal();
+                var errEl = byId('ad-complaint-modal-error');
+                if (errEl) {
+                    errEl.textContent = 'Could not load the full conversation (' + (err && err.message ? err.message : 'network error') + '). The passenger and company messages below may be incomplete.';
+                    errEl.hidden = false;
+                }
+            });
     }
 
     function closeAdminComplaintModal() {
