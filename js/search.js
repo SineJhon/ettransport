@@ -101,30 +101,22 @@
     var dateNorm = normalizeDate(date);
 
 
- /* ---------- Shared mock data ----------
+ /* ---------- Data sources ----------
        js/company.js is loaded BEFORE this file and exposes the
        canonical company profiles (window.ETTransportCompanies)
-       and the 12 company trips
-       (window.ETTransportTrips). The 8 legacy trips (IDs 1Ã¢â‚¬â€œ8)
-       are kept here unchanged. Booking/passenger/payment/
-       confirmation already resolve every one of these IDs. */
+       and demo company trips (window.ETTransportTrips).
+       No legacy/demo trips are shown: the booking flow resolves
+       the selected trip from sessionStorage, not mock data. */
  /* the dataset comes from the boot loader at the bottom of
        this file. PRIMARY source: the real api/search.php response
-       (database-backed). The shared demo dataset is used only when the
-       URL carries ?mock=1 (explicit development fallback, never silent). */
+       (database-backed). No demo-trip fallback: a trip is visible to
+       passengers only when its company created it in the database. */
     var COMPANY_META = [];
     var COMPANY_TRIPS = [];
 
-    var LEGACY_TRIPS = [
-        { id: 1, company: 'Selam Express',    from: 'Addis Ababa', to: 'Arba Minch', depart: '06:30', arrive: '14:45', minutes: 495, price: 720,  rating: 4.8, type: 'Standard',   seats: 14, amenities: ['AC', 'Wi-Fi', 'Charging', 'Luggage'] },
-        { id: 2, company: 'Dashen Motors',    from: 'Addis Ababa', to: 'Arba Minch', depart: '07:45', arrive: '15:30', minutes: 465, price: 740,  rating: 4.4, type: 'Standard',   seats: 17, amenities: ['AC', 'Wi-Fi', 'Charging'] },
-        { id: 3, company: 'Ethio Abay Lines', from: 'Addis Ababa', to: 'Arba Minch', depart: '08:00', arrive: '16:30', minutes: 510, price: 650,  rating: 4.5, type: 'Standard', seats: 24, amenities: ['AC', 'Luggage'] },
-        { id: 4, company: 'SkyLink Coaches',  from: 'Addis Ababa', to: 'Arba Minch', depart: '10:15', arrive: '18:45', minutes: 510, price: 480,  rating: 4.2, type: 'Standard', seats: 8,  amenities: ['Luggage'] },
-        { id: 5, company: 'Lion Express',     from: 'Addis Ababa', to: 'Arba Minch', depart: '13:00', arrive: '21:00', minutes: 480, price: 850,  rating: 4.6, type: 'Standard',      seats: 6,  amenities: ['AC', 'Wi-Fi', 'Charging', 'Luggage'] },
-        { id: 6, company: 'GreenLion Travel', from: 'Addis Ababa', to: 'Arba Minch', depart: '15:30', arrive: '23:45', minutes: 495, price: 1100, rating: 4.9, type: 'Standard',      seats: 4,  amenities: ['AC', 'Wi-Fi', 'Charging'] },
-        { id: 7, company: 'Abay River Bus',   from: 'Addis Ababa', to: 'Arba Minch', depart: '18:00', arrive: '02:45', minutes: 525, price: 950,  rating: 4.3, type: 'Standard',   seats: 11, amenities: ['AC', 'Charging', 'Luggage'] },
-        { id: 8, company: 'Yeha Coaches',     from: 'Addis Ababa', to: 'Arba Minch', depart: '19:30', arrive: '04:00', minutes: 510, price: 1250, rating: 4.7, type: 'Standard',      seats: 3,  amenities: ['AC', 'Wi-Fi', 'Luggage'] }
-    ];
+    /* NOTE: the 8 legacy demo trips (for companies NOT in the database)
+       were removed. Passengers only ever see trips that companies have
+       actually created in the database (api/search.php). */
 
 
     /* Look up the canonical company profile for a trip's company name. */
@@ -136,8 +128,8 @@
         /* Live (API) mode only carries name/slug + rating â€” enrich with the
            shared catalog so real logos, fleet photos and review counts still
            resolve for known companies instead of showing initials placeholders.
-           Legacy trip names (e.g. "Selam Express") also alias to their operator
-           by first word ("Selam Bus") so they get the real logo too. */
+           The operator name is also aliased by first word to the real
+           catalog company so every trip gets the real logo too. */
         var shared = (window.ETTransportData && window.ETTransportData.companies) ||
             window.ETTransportCompanies;
         if (Array.isArray(shared)) {
@@ -236,10 +228,10 @@
     }
 
     /* Build the full searchable dataset from the CURRENT data source.
-       includeLegacy adds the 8 demo legacy trips (mock mode only);
-       real API trips already match the searched route on the server. */
-    function buildAllTrips(includeLegacy) {
-        allTrips = includeLegacy ? LEGACY_TRIPS.slice() : [];
+       Only real trips from the database (which companies created) are
+       ever shown to passengers. */
+    function buildAllTrips() {
+        allTrips = [];
         for (var ti = 0; ti < COMPANY_TRIPS.length; ti++) {
             var ct = COMPANY_TRIPS[ti];
             var cm = companyMetaFor(ct.company);
@@ -792,8 +784,8 @@
             if (src && !isGenericBusArt(src)) { return src; }
         }
 
-        /* Aliased companies: "Selam Express" -> "Selam Bus", "Abay River Bus"
-           -> "Abay Bus", so legacy trips reuse the real catalog photos. */
+        /* Aliased operators: a trip's company is matched to the real catalog
+           by first word so every card reuses the real fleet photos. */
         var word = String(t.company || '').split(/\s+/)[0].toLowerCase();
         var catalog = window.ETTransportCompanies || [];
         for (var ci = 0; ci < catalog.length; ci++) {
@@ -1587,10 +1579,10 @@
         }
     }
 
-    function bootFromDataset(tripRows, companiesMeta, includeLegacyTrips) {
+    function bootFromDataset(tripRows, companiesMeta) {
         COMPANY_TRIPS = Array.isArray(tripRows) ? tripRows : [];
         COMPANY_META = Array.isArray(companiesMeta) ? companiesMeta : [];
-        buildAllTrips(!!includeLegacyTrips);
+        buildAllTrips();
         companyList = buildCompanyList();
         priceBuckets = buildPriceBuckets();
         computeREC();
@@ -1598,36 +1590,9 @@
     }
 
     function start() {
-        /* Shared demo dataset, preferring trips that match the searched route
-           so the fallback list stays relevant when the DB has no rows for it. */
-        function demoDatasetForRoute() {
-            var demo = window.ETTransportData || {};
-            var demoCompanies = Array.isArray(demo.companies) ? demo.companies
-                : (Array.isArray(window.ETTransportCompanies) ? window.ETTransportCompanies : []);
-            var demoTrips = Array.isArray(demo.trips) ? demo.trips
-                : (Array.isArray(window.ETTransportTrips) ? window.ETTransportTrips : []);
-            var qFrom = String(from || '').toLowerCase();
-            var qTo = String(to || '').toLowerCase();
-            var match = demoTrips.filter(function (t) {
-                return t && String(t.from || '').toLowerCase() === qFrom &&
-                    String(t.to || '').toLowerCase() === qTo;
-            });
-            return { trips: (match.length ? match : demoTrips), companies: demoCompanies };
-        }
-
-        function bootDemoDataset() {
-            var d = demoDatasetForRoute();
-            bootFromDataset(d.trips, d.companies, true);
-        }
-
-        /* Explicit development fallback: ?mock=1 renders the shared demo
-           dataset. Normal users never hit this; API failures are shown. */
-        if (getParam('mock', '') === '1') {
-            bootDemoDataset();
-            return;
-        }
-
-        /* PRIMARY source: the real, database-backed search API. */
+        /* PRIMARY source: the real, database-backed search API.
+           No demo-trip fallback: a trip is visible to passengers only
+           when its company created it in the database. */
         if (typeof window.fetch !== 'function') {
             showSearchError('The search API is not reachable in this environment.');
             return;
@@ -1650,9 +1615,10 @@
                     throw new Error((json && json.message) || 'Unexpected search response.');
                 }
                 if (!json.trips.length) {
-                    /* Live database has no trips for this route/date â€” fall back
-                       to the shared demo dataset so results are never empty. */
-                    bootDemoDataset();
+                    /* No company has created a trip for this route/date on the
+                       selected day. Show an honest empty state instead of
+                       fabricating demo trips that companies did not create. */
+                    bootFromDataset([], []);
                     return;
                 }
                 var companyMeta = (json.companies || []).map(function (m) {
@@ -1665,7 +1631,7 @@
                         reviewCount: Number(m.review_count) || 0
                     };
                 });
-                bootFromDataset((json.trips || []).map(normalizeApiTrip), companyMeta, false);
+                bootFromDataset((json.trips || []).map(normalizeApiTrip), companyMeta);
             })
             .catch(function (err) {
                 if (window.console && window.console.error) {
